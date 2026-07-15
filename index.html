@@ -34,19 +34,19 @@ body { min-height:100vh; background:#0f1620; color:#e8eef5; font-family:"Segoe U
 
 /* ---------- GAME HOST ---------- */
 #gameHost { display:none; flex-direction:column; position:fixed; inset:0; width:100vw; height:100vh; background:#0d1620; z-index:50; }
-.host-bar { display:flex; align-items:center; gap:14px; padding:12px 24px; background:#172230; border-bottom:1px solid #2a3b4f; position:sticky; top:0; z-index:30; }
+.host-bar { display:flex; align-items:center; gap:14px; padding:12px 24px; background:#172230; border-bottom:1px solid #2a3b4f; flex-shrink:0; }
 .host-bar span { font-size:18px; font-weight:700; margin-right:auto; }
 #backBtn { background:#d9856b; color:#0f1620; border:none; font-family:inherit; font-weight:700; padding:8px 18px; border-radius:6px; cursor:pointer; }
-#gameMount { flex:1; display:flex; align-items:flex-start; justify-content:center; padding:20px; }
+#gameMount { flex:1; display:flex; align-items:center; justify-content:center; padding:16px; overflow:auto; }
 
 /* ---------- DINO GAME ---------- */
-.dinoWrap { display:flex; flex-direction:column; align-items:center; gap:12px; font-family:"Courier New",monospace; }
+.dinoWrap { display:flex; flex-direction:column; align-items:center; gap:10px; font-family:"Courier New",monospace; width:100%; height:100%; justify-content:center; }
+.dinoStage { position:relative; border-radius:12px; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,.5); width:100%; max-width:1600px; }
+.dinoStage canvas { display:block; width:100%; height:auto; }
 .dinoTop { display:flex; align-items:center; gap:16px; }
 .dinoTitle { font-size:22px; letter-spacing:3px; color:#ffd166; font-weight:800; }
 #shopBtn { font-family:inherit; font-size:14px; font-weight:700; padding:8px 16px; border:none; border-radius:8px; background:#ffd166; color:#0d1620; cursor:pointer; }
 #shopBtn:hover { filter:brightness(1.08); }
-.dinoStage { position:relative; border-radius:12px; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,.5); }
-.dinoStage canvas { display:block; }
 .dinoHint { font-size:12px; color:#8ba0b5; letter-spacing:1px; text-align:center; }
 #nameScreen { position:absolute; inset:0; background:rgba(8,12,18,.95); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; z-index:10; }
 #nameScreen h2 { color:#ffd166; font-size:22px; }
@@ -72,7 +72,7 @@ body { min-height:100vh; background:#0f1620; color:#e8eef5; font-family:"Segoe U
 .sbtn.use { background:#4fd1c5; color:#0d1620; }
 .sbtn.nope { background:#d9856b; color:#0d1620; }
 .tag.sel { font-size:12px; font-weight:700; color:#4fd1c5; padding:6px; }
-#board { width:820px; max-width:100%; background:#141d28; border:1px solid #2a3b4f; border-radius:12px; padding:16px 20px; }
+#board { width:100%; max-width:1000px; background:#141d28; border:1px solid #2a3b4f; border-radius:12px; padding:16px 20px; }
 #board h3 { color:#ffd166; font-size:16px; margin-bottom:10px; letter-spacing:2px; text-align:center; }
 .brow { display:flex; justify-content:space-between; padding:6px 10px; border-radius:6px; font-size:15px; }
 .brow.me { background:rgba(79,209,197,.15); }
@@ -165,8 +165,8 @@ function openExternal(g) {
   gameHost.style.display = 'flex';
   gameTitle.textContent = g.title;
   gameMount.innerHTML =
-    '<div style="width:100%;max-width:900px;display:flex;flex-direction:column;gap:10px;align-items:center">' +
-    '<iframe src="'+g.url+'" style="width:100%;height:70vh;border:2px solid #2a3b4f;border-radius:10px;background:#fff" allow="autoplay"></iframe>' +
+    '<div style="width:100%;height:100%;display:flex;flex-direction:column;gap:8px;align-items:center">' +
+    '<iframe src="'+g.url+'" style="width:100%;flex:1;border:2px solid #2a3b4f;border-radius:10px;background:#fff" allow="autoplay"></iframe>' +
     '<a href="'+g.url+'" target="_blank" style="color:#4fd1c5;font-size:14px;text-decoration:none">🔗 לא נטען? פתח את המשחק בחלון חדש</a>' +
     '</div>';
   activeCleanup = () => { gameMount.innerHTML=''; };
@@ -454,7 +454,7 @@ function mountDino(root) {
 //  משחק 2 — STAR CATCHER
 // ============================================================
 function mountCatch(root){
-  root.innerHTML='<canvas width="640" height="440" style="border:2px solid #2a3b4f;border-radius:8px;background:#0d1b2a;max-width:100%"></canvas>';
+  root.innerHTML='<canvas width="640" height="440" style="border:2px solid #2a3b4f;border-radius:8px;background:#0d1b2a;width:100%;max-width:900px;height:auto"></canvas>';
   const cv=root.querySelector('canvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
   let px=W/2,stars=[],score=0,miss=0,f=0,raf,running=true; const L={l:false,r:false};
   const kd=e=>{ if(e.code==='ArrowLeft')L.l=true; if(e.code==='ArrowRight')L.r=true; };
@@ -482,11 +482,11 @@ function mountMemory(root){
   const emojis=['🍎','🚀','🐸','🎸','⚽','🌈','👾','🍕'];
   let deck=[...emojis,...emojis].sort(()=>Math.random()-0.5).map((e,i)=>({e,i,up:false,done:false}));
   let first=null,lock=false,matched=0;
-  root.innerHTML='<div style="text-align:center"><div id="mi" style="color:#8ba0b5;margin-bottom:14px;font-size:15px">מצא את כל 8 הזוגות</div><div id="mb" style="display:grid;grid-template-columns:repeat(4,72px);gap:10px;justify-content:center"></div></div>';
+  root.innerHTML='<div style="text-align:center"><div id="mi" style="color:#8ba0b5;margin-bottom:18px;font-size:18px">מצא את כל 8 הזוגות</div><div id="mb" style="display:grid;grid-template-columns:repeat(4,100px);gap:14px;justify-content:center"></div></div>';
   const board=root.querySelector('#mb'),info=root.querySelector('#mi');
   function render(){ board.innerHTML='';
     deck.forEach(c=>{ const el=document.createElement('button');
-      el.style.cssText='width:72px;height:72px;font-size:30px;border-radius:10px;cursor:pointer;border:2px solid #2a3b4f;background:'+((c.up||c.done)?'#1e2c3d':'#172230')+';color:'+(c.done?'#4fd1c5':'#e8eef5');
+      el.style.cssText='width:100px;height:100px;font-size:42px;border-radius:12px;cursor:pointer;border:2px solid #2a3b4f;background:'+((c.up||c.done)?'#1e2c3d':'#172230')+';color:'+(c.done?'#4fd1c5':'#e8eef5');
       el.textContent=(c.up||c.done)?c.e:'❓'; el.onclick=()=>flip(c); board.appendChild(el); }); }
   function flip(c){ if(lock||c.up||c.done)return; c.up=true;render(); if(!first){first=c;return;} lock=true;
     if(first.e===c.e){ first.done=c.done=true;matched++;first=null;lock=false;render(); if(matched===8)info.textContent='🎉 ניצחת! מצאת את כל הזוגות'; }
