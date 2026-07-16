@@ -1,6 +1,6 @@
 // ============================================
 //  משחק: DINO RUNNER
-//  גרסה נקייה — רק דינוזאור, מימין לשמאל
+//  רק דינוזאור · מימין לשמאל · טבלת שיאים
 // ============================================
 
 const DINO_HTML = `
@@ -10,6 +10,7 @@ const DINO_HTML = `
     <canvas id="dc" width="820" height="300"></canvas>
   </div>
   <div class="dinoHint">רווח / ↑ = קפיצה • ↓ = התכופפות<br>ציפור גבוהה: רוץ מתחת · אמצע: קפוץ או התכופף · נמוכה: קפוץ מעל</div>
+  <div id="board"><h3>&#127942; טבלת שיאים</h3><div id="boardRows"></div></div>
 </div>
 `;
 
@@ -19,12 +20,44 @@ function mountDino(root) {
   const cv = scope.querySelector('#dc'), ctx = cv.getContext('2d');
   const W = cv.width, H = cv.height, GROUND = H - 46;
 
-  let myBest = 0;
-  try { myBest = parseInt(localStorage.getItem('dino:best')) || 0; } catch(e){}
-  function saveBest(sc){
-    if (sc > myBest) { myBest = sc; try { localStorage.setItem('dino:best', String(sc)); } catch(e){} }
+  // ---------- טבלת שיאים — 10 התוצאות הכי טובות ----------
+  let topScores = [];
+  try {
+    const raw = localStorage.getItem('dino:top');
+    if (raw) topScores = JSON.parse(raw) || [];
+  } catch(e){ topScores = []; }
+  if (!Array.isArray(topScores)) topScores = [];
+
+  let myBest = topScores.length ? topScores[0] : 0;
+  let lastScore = -1;
+
+  function saveScore(sc){
+    if (sc <= 0) return;
+    topScores.push(sc);
+    topScores.sort((a,b) => b-a);
+    topScores = topScores.slice(0, 10);
+    myBest = topScores[0];
+    try { localStorage.setItem('dino:top', JSON.stringify(topScores)); } catch(e){}
+    renderBoard();
   }
 
+  function renderBoard(){
+    const rows = scope.querySelector('#boardRows');
+    if (!rows) return;
+    if (topScores.length === 0) {
+      rows.innerHTML = '<div id="empty">עדיין אין שיאים — שחק כדי להתחיל!</div>';
+      return;
+    }
+    let html = '<div class="brow head"><span class="rank">#</span><span class="sc">ניקוד</span></div>';
+    topScores.forEach((s, i) => {
+      const medal = i===0 ? '🥇' : i===1 ? '🥈' : i===2 ? '🥉' : (i+1);
+      const isNew = s === lastScore ? ' me' : '';
+      html += '<div class="brow'+isNew+'"><span class="rank">'+medal+'</span><span class="sc">'+s+'</span></div>';
+    });
+    rows.innerHTML = html;
+  }
+
+  // ---------- טעינת הדינוזאור ----------
   const dinoImg = new Image();
   dinoImg.src = 'data:image/png;base64,' + SPRITES['dino'];
 
@@ -307,7 +340,8 @@ function mountDino(root) {
     state = 'dead'; shake = 12;
     const b = dino.box();
     burst(b.x+b.w/2, b.y+b.h/2, '217,133,107', 20);
-    saveBest(score);
+    lastScore = score;
+    saveScore(score);
   }
 
   const kd = e => {
@@ -327,6 +361,7 @@ function mountDino(root) {
     if (state === 'play') dino.jump(); else startGame();
   });
 
+  renderBoard();
   loop();
 
   return () => {
