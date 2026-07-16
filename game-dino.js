@@ -71,7 +71,7 @@ function mountDino(root) {
   const dino = {
     x: 80, y: GROUND, vy: 0, w: 62, h: 56, ground: true, duck: false,
     reset(){ this.y = GROUND; this.vy = 0; this.ground = true; this.duck = false; },
-    jump(){ if (this.ground) { this.vy = -10 ; this.ground = false; } },
+    jump(){ if (this.ground) { this.vy = -8 ; this.ground = false; } },
     box(){
       const h = this.duck && this.ground ? 30 : this.h;
       const w = this.duck && this.ground ? 70 : this.w;
