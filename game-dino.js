@@ -71,7 +71,7 @@ function mountDino(root) {
   const dino = {
     x: 80, y: GROUND, vy: 0, w: 62, h: 56, ground: true, duck: false,
     reset(){ this.y = GROUND; this.vy = 0; this.ground = true; this.duck = false; },
-    jump(){ if (this.ground) { this.vy = -9.0; this.ground = false; } },
+    jump(){ if (this.ground) { this.vy = -7.85; this.ground = false; } },
     box(){
       const h = this.duck && this.ground ? 30 : this.h;
       const w = this.duck && this.ground ? 70 : this.w;
@@ -98,7 +98,7 @@ function mountDino(root) {
     } else {
       const big = Math.random() < 0.5;
       let n;
-      if (big) n = [1,2,3,3,4][Math.floor(Math.random()*5)];
+      if (big) n = [1,2,2,3,3][Math.floor(Math.random()*5)];
       else n = 1 + Math.floor(Math.random()*3);
       const unit = big?22:15, baseH = big?54:32;
       obstacles.push({ type:'cactus', big, x: W+40, y: GROUND, w: unit*n, h: baseH, n, unit });
@@ -285,7 +285,7 @@ function mountDino(root) {
     drawBackground(); drawGround();
 
     if (state === 'play') {
-      dino.vy += 0.55;
+      dino.vy += 0.42;
       dino.y += dino.vy;
       if (dino.y >= GROUND) { dino.y = GROUND; dino.vy = 0; dino.ground = true; }
 
