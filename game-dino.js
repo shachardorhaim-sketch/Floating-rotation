@@ -71,7 +71,7 @@ function mountDino(root) {
   const dino = {
     x: 80, y: GROUND, vy: 0, w: 62, h: 56, ground: true, duck: false,
     reset(){ this.y = GROUND; this.vy = 0; this.ground = true; this.duck = false; },
-    jump(){ if (this.ground) { this.vy = -13.2; this.ground = false; } },
+    jump(){ if (this.ground) { this.vy = -9.0; this.ground = false; } },
     box(){
       const h = this.duck && this.ground ? 30 : this.h;
       const w = this.duck && this.ground ? 70 : this.w;
@@ -259,7 +259,7 @@ function mountDino(root) {
   function drawHUD(){
     ctx.fillStyle = '#e8eef5'; ctx.font = 'bold 20px monospace'; ctx.textAlign = 'right';
     ctx.fillText(String(score).padStart(5,'0'), W-20, 32);
-    ctx.font = 'bold 14px monospace'; ctx.fillStyle = '#8ba0b5';
+    ctx.font = 'bold 14px monospace'; ctx.fillStyle = '#e8eef5';
     ctx.fillText('HI '+String(myBest).padStart(5,'0'), W-20, 52);
     ctx.textAlign = 'left';
   }
