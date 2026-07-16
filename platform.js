@@ -35,7 +35,7 @@ const GAMES = [
   { id:'catch', title:'Star Catcher', desc:'תפוס כוכבים נופלים עם הסלסלה.', imgFile:'star-logo.png', icon:'⭐', badge:'CASUAL', bg:'#161736', mount:mountCatch },
   { id:'memory', title:'Memory Adjustment', desc:'מצא את כל הזוגות — 7 שלבים נגד השעון.', imgFile:'memory-logo.png', icon:'🧠', badge:'PUZZLE', bg:'linear-gradient(135deg,#1b4b3a,#0d1b2a)', mount:mountMemory },
   { id:'button', title:'אל תלחץ על הכפתור', desc:'משחק כפתור כאוטי ומצחיק — נוצר על ידי רובין!', img:BUTTON_LOGO, icon:'🔴', badge:'רובין', bg:'linear-gradient(135deg,#4b1b2a,#0d1b2a)', url:'https://unique-flan-89080c.netlify.app/' },
-  { id:'chess', title:'Chess', desc:'שחמט נגד המחשב או מול חבר.', icon:'♞', badge:'STRATEGY', bg:'linear-gradient(135deg,#3a2a1b,#0d1b2a)', mount:mountChess },
+  { id:'chess', title:'Chess Prestige', desc:'שחמט נגד המחשב או מול חבר.', imgFile:'chess-logo.png', icon:'♞', badge:'STRATEGY', bg:'#0a0a0a', mount:mountChess },
   { id:'soon', title:'משחק לחימה', desc:'המשחק הגדול מ־Godot — בקרוב!', icon:'⚔️', badge:'SOON', bg:'linear-gradient(135deg,#4b2a1b,#0d1b2a)', soon:true },
 ];
 
