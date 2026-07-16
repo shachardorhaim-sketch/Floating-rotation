@@ -4,6 +4,33 @@
 
 const DINO_HTML = "\n<div class=\"dinoWrap\">\n  <div class=\"dinoTop\"><span class=\"dinoTitle\">DINO RUNNER</span><button id=\"shopBtn\">&#128722; חנות</button></div>\n  <div class=\"dinoStage\">\n    <canvas id=\"dc\" width=\"820\" height=\"300\"></canvas>\n    <div id=\"nameScreen\">\n      <h2>מה השם שלך?</h2>\n      <input id=\"nameInput\" maxlength=\"12\" placeholder=\"לפחות 3 אותיות...\" />\n      <div id=\"nameErr\"></div>\n      <button class=\"dbtn\" id=\"saveNameBtn\">התחל לשחק</button>\n    </div>\n    <div id=\"shopScreen\">\n      <div class=\"shopHead\"><h2>&#128722; חנות דמויות</h2>\n        <div class=\"shopCoins\">&#128176; <span id=\"shopCoins\">0</span></div>\n        <button id=\"shopClose\">סגור ✕</button></div>\n      <div id=\"shopGrid\"></div>\n    </div>\n  </div>\n  <div class=\"dinoHint\">רווח / ↑ = קפיצה • ↓ = התכופפות<br>ציפור גבוהה: רוץ מתחת · אמצע: קפוץ או התכופף · נמוכה: קפוץ מעל</div>\n  <div id=\"board\"><h3>&#127942; טבלת שיאים</h3><div id=\"boardRows\"></div></div>\n</div>\n";
 
+
+// ---------- אחסון: עובד גם באתר החי (localStorage) וגם בצ'אט ----------
+const DB = {
+  _key(k, shared){ return 'dino:' + (shared ? 'g:' : 'u:') + k; },
+  async get(k, shared){
+    try {
+      const v = localStorage.getItem(this._key(k, shared));
+      return v === null ? null : { key:k, value:v, shared:!!shared };
+    } catch(e){ return null; }
+  },
+  async set(k, v, shared){
+    try { localStorage.setItem(this._key(k, shared), String(v)); return {key:k, value:String(v)}; }
+    catch(e){ return null; }
+  },
+  async list(prefix, shared){
+    try {
+      const full = this._key(prefix, shared);
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const lk = localStorage.key(i);
+        if (lk && lk.startsWith(full)) keys.push(lk.replace(this._key('', shared), ''));
+      }
+      return { keys, prefix, shared:!!shared };
+    } catch(e){ return { keys:[] }; }
+  }
+};
+
 function mountDino(root) {
   root.innerHTML = DINO_HTML;
   const scope = root;
@@ -27,29 +54,29 @@ function mountDino(root) {
   const shopScreen = scope.querySelector('#shopScreen');
 
   async function initPlayer() {
-    try { const s = await window.storage.get('playerName'); if (s&&s.value){ playerName=s.value; nameScreen.style.display='none'; state='menu'; await loadProfile(); } } catch(e){}
+    try { const s = await DB.get('playerName'); if (s&&s.value){ playerName=s.value; nameScreen.style.display='none'; state='menu'; await loadProfile(); } } catch(e){}
     loadBoard();
   }
   scope.querySelector('#saveNameBtn').onclick = async () => {
     const n = nameInput.value.trim(); const err = scope.querySelector('#nameErr');
     if (n.length<3){ err.textContent='השם חייב להיות לפחות 3 אותיות'; nameInput.focus(); return; }
-    try { const ex = await window.storage.get('score:'+n,true); const mine = await window.storage.get('playerName'); const isMine = mine&&mine.value===n;
+    try { const ex = await DB.get('score:'+n,true); const mine = await DB.get('playerName'); const isMine = mine&&mine.value===n;
       if (ex&&ex.value&&!isMine){ err.textContent='השם "'+n+'" כבר תפוס — בחר שם אחר'; nameInput.focus(); return; } } catch(e){}
-    err.textContent=''; playerName=n; try{ await window.storage.set('playerName',n); }catch(e){}
+    err.textContent=''; playerName=n; try{ await DB.set('playerName',n); }catch(e){}
     nameScreen.style.display='none'; state='menu'; await loadProfile();
   };
   nameInput.addEventListener('keydown',e=>{ if(e.key==='Enter') scope.querySelector('#saveNameBtn').click(); });
 
   async function loadProfile() {
-    try{ const c=await window.storage.get('coins:'+playerName); if(c&&c.value) totalCoins=parseInt(c.value)||0; }catch(e){}
-    try{ const o=await window.storage.get('owned:'+playerName); if(o&&o.value) owned=JSON.parse(o.value); }catch(e){}
-    try{ const cu=await window.storage.get('current:'+playerName); if(cu&&cu.value) current=cu.value; }catch(e){}
+    try{ const c=await DB.get('coins:'+playerName); if(c&&c.value) totalCoins=parseInt(c.value)||0; }catch(e){}
+    try{ const o=await DB.get('owned:'+playerName); if(o&&o.value) owned=JSON.parse(o.value); }catch(e){}
+    try{ const cu=await DB.get('current:'+playerName); if(cu&&cu.value) current=cu.value; }catch(e){}
     if(!owned.includes('dino')) owned.push('dino');
   }
   async function saveProfile() {
-    try{ await window.storage.set('coins:'+playerName,String(totalCoins)); }catch(e){}
-    try{ await window.storage.set('owned:'+playerName,JSON.stringify(owned)); }catch(e){}
-    try{ await window.storage.set('current:'+playerName,current); }catch(e){}
+    try{ await DB.set('coins:'+playerName,String(totalCoins)); }catch(e){}
+    try{ await DB.set('owned:'+playerName,JSON.stringify(owned)); }catch(e){}
+    try{ await DB.set('current:'+playerName,current); }catch(e){}
   }
   function openShop(){ renderShop(); shopScreen.style.display='flex'; }
   function closeShop(){ shopScreen.style.display='none'; }
@@ -74,19 +101,19 @@ function mountDino(root) {
   scope.querySelector('#shopClose').onclick=closeShop;
   scope.querySelector('#shopBtn').onclick=openShop;
 
-  async function loadBoard(){ try{ const mb=await window.storage.get('myBest:'+playerName); if(mb&&mb.value) myBest=parseInt(mb.value)||0; }catch(e){} renderBoard(); }
+  async function loadBoard(){ try{ const mb=await DB.get('myBest:'+playerName); if(mb&&mb.value) myBest=parseInt(mb.value)||0; }catch(e){} renderBoard(); }
   async function saveScore(sc,cg){
-    if(sc>myBest){ myBest=sc; try{ await window.storage.set('myBest:'+playerName,String(sc)); }catch(e){} }
+    if(sc>myBest){ myBest=sc; try{ await DB.set('myBest:'+playerName,String(sc)); }catch(e){} }
     totalCoins+=cg; await saveProfile();
-    try{ const key='score:'+playerName; let prev=0; try{ const p=await window.storage.get(key,true); if(p&&p.value) prev=parseInt(p.value)||0; }catch(e){}
-      if(sc>prev) await window.storage.set(key,String(sc),true); }catch(e){}
+    try{ const key='score:'+playerName; let prev=0; try{ const p=await DB.get(key,true); if(p&&p.value) prev=parseInt(p.value)||0; }catch(e){}
+      if(sc>prev) await DB.set(key,String(sc),true); }catch(e){}
     renderBoard();
   }
   async function renderBoard(){
     const rows=scope.querySelector('#boardRows');
-    try{ const list=await window.storage.list('score:',true);
+    try{ const list=await DB.list('score:',true);
       if(!list||!list.keys||list.keys.length===0){ rows.innerHTML='<div id="empty">עדיין אין שיאים — תהיה הראשון!</div>'; return; }
-      const ent=[]; for(const k of list.keys){ try{ const v=await window.storage.get(k,true); ent.push({name:k.replace('score:',''),score:parseInt(v.value)||0}); }catch(e){} }
+      const ent=[]; for(const k of list.keys){ try{ const v=await DB.get(k,true); ent.push({name:k.replace('score:',''),score:parseInt(v.value)||0}); }catch(e){} }
       ent.sort((a,b)=>b.score-a.score);
       let html='<div class="brow head"><span class="rank">#</span><span class="nm">שחקן</span><span class="sc">ניקוד</span></div>';
       ent.slice(0,10).forEach((e,i)=>{ const me=e.name===playerName?' me':''; const md=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
@@ -97,7 +124,7 @@ function mountDino(root) {
 
   const dino={ x:80,baseX:80,y:GROUND,vy:0,vx:0,w:62,h:56,ground:true,duck:false,
     reset(){ this.y=GROUND;this.vy=0;this.vx=0;this.x=this.baseX;this.ground=true;this.duck=false; },
-    jump(){ if(this.ground){ this.vy=-13.2; this.vx=-3.2; this.ground=false; } },   // קופץ קדימה — שמאלה
+    jump(){ if(this.ground){ this.vy=-13.2; this.ground=false; } },   // קפיצה ישרה למעלה
     box(){ const h=this.duck&&this.ground?30:this.h,w=this.duck&&this.ground?70:this.w; return {x:this.x+6,y:this.y-h+4,w:w-14,h:h-6}; } };
 
   let obstacles=[],collectibles=[],particles=[],clouds=[],stars=[];
@@ -289,14 +316,9 @@ function mountDino(root) {
     if(state==='play'){
       // כבידה + קפיצה קדימה
       dino.vy+=0.55; dino.y+=dino.vy;
-      dino.x += dino.vx;                       // תנועה קדימה בקפיצה
-      if(dino.x < 20) { dino.x = 20; dino.vx = 0; }   // לא יוצא מהמסך משמאל
-      if(!dino.ground) dino.vx *= 0.97;        // מאט בהדרגה באוויר
       if(dino.y>=GROUND){
-        dino.y=GROUND; dino.vy=0; dino.ground=true; dino.vx=0;
+        dino.y=GROUND; dino.vy=0; dino.ground=true;
       }
-      // חוזר בעדינות למקום ההתחלתי כשעל הקרקע
-      if(dino.ground && dino.x<dino.baseX) dino.x = Math.min(dino.baseX, dino.x+2.2);
       if(frame%Math.floor(74+Math.random()*40)===0)spawnObstacle();
       if(frame%55===0)spawnCoin(); if(frame%6===0) score++; if(speed<13)speed+=0.0018;
       const db=dino.box();
