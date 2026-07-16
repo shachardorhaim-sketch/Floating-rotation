@@ -19,14 +19,12 @@ function mountDino(root) {
   const cv = scope.querySelector('#dc'), ctx = cv.getContext('2d');
   const W = cv.width, H = cv.height, GROUND = H - 46;
 
-  // ---------- שיא אישי (נשמר בדפדפן) ----------
   let myBest = 0;
   try { myBest = parseInt(localStorage.getItem('dino:best')) || 0; } catch(e){}
   function saveBest(sc){
     if (sc > myBest) { myBest = sc; try { localStorage.setItem('dino:best', String(sc)); } catch(e){} }
   }
 
-  // ---------- טעינת הדינוזאור ----------
   const dinoImg = new Image();
   dinoImg.src = 'data:image/png;base64,' + SPRITES['dino'];
 
@@ -37,7 +35,6 @@ function mountDino(root) {
   let state = 'menu', score = 0, speed = 4, frame = 0, shake = 0, raf;
   let running = true;
 
-  // ---------- הדינוזאור ----------
   const dino = {
     x: 80, y: GROUND, vy: 0, w: 62, h: 56, ground: true, duck: false,
     reset(){ this.y = GROUND; this.vy = 0; this.ground = true; this.duck = false; },
@@ -55,7 +52,6 @@ function mountDino(root) {
 
   const BIRD_HIGH = GROUND-78, BIRD_MID = GROUND-44, BIRD_LOW = GROUND-16;
 
-  // ---------- יצירת מכשולים ----------
   function spawnObstacle(){
     const minGap = 240 + speed*16;
     if (obstacles.length > 0) {
@@ -81,7 +77,6 @@ function mountDino(root) {
     for (let i=0;i<n;i++) particles.push({ x, y, vx:(Math.random()-.5)*5, vy:(Math.random()-.5)*5-1, life:24, color });
   }
 
-  // ---------- רקע ----------
   function dayFactor(){ const p = (score%1000)/1000; return (Math.cos(p*2*Math.PI)+1)/2; }
   function mix(a,b,t){ return a.map((v,i)=>Math.round(v+(b[i]-v)*t)).join(','); }
   function roundRect(x,y,w,h,r){
@@ -103,10 +98,8 @@ function mountDino(root) {
       ctx.fillStyle = 'rgba(255,255,255,'+((0.45-t)*1.8)+')';
       stars.forEach(s => { ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,7); ctx.fill(); });
     }
-    // שמש/ירח — מימין (לכיוון שממנו באים המכשולים)
     ctx.fillStyle = t>0.45 ? '#ffd166' : '#dfe7ef';
     ctx.beginPath(); ctx.arc(W-100, 62+(1-t)*26, 26, 0, 7); ctx.fill();
-    // עננים נעים שמאלה
     ctx.fillStyle = 'rgba(255,255,255,'+(0.15+t*0.25)+')';
     clouds.forEach(c => {
       if (state==='play') c.x -= c.s*(speed/6);
@@ -130,18 +123,15 @@ function mountDino(root) {
     }
   }
 
-  // ---------- ציור הדינוזאור ----------
   function drawDino(){
     const ducking = dino.duck && dino.ground;
     const dH = ducking ? dino.h*0.55 : dino.h;
     const dW = ducking ? dino.w*1.35 : dino.w;
     const isRunning = dino.ground && !ducking && state === 'play';
 
-    // צל
     ctx.fillStyle = 'rgba(0,0,0,.22)';
     ctx.beginPath(); ctx.ellipse(dino.x+dW/2, GROUND+8, dW/2, 5, 0, 0, 7); ctx.fill();
 
-    // אנימציית ריצה
     if (isRunning && runFrames.length && runFrames[0].complete) {
       const fi = Math.floor(frame/4) % runFrames.length;
       const im = runFrames[fi];
@@ -150,7 +140,6 @@ function mountDino(root) {
       return;
     }
 
-    // עומד / באוויר / מתכופף
     const idleBob = dino.ground && !ducking && state !== 'play' ? Math.sin(frame*0.4)*1.5 : 0;
     const dY = dino.y - dH + idleBob;
     const im = (runFrames.length && runFrames[0].complete) ? runFrames[0] : dinoImg;
@@ -166,7 +155,6 @@ function mountDino(root) {
     }
   }
 
-  // ---------- ציור מכשולים ----------
   function drawObstacle(o){ if (o.type==='cactus') drawCactus(o); else drawBird(o); }
 
   function drawCactus(o){
@@ -198,14 +186,12 @@ function mountDino(root) {
     ctx.fillStyle = 'rgba(0,0,0,.12)';
     ctx.beginPath(); ctx.ellipse(cx, GROUND+8, 16, 4, 0, 0, 7); ctx.fill();
 
-    // קווי מהירות מאחור (מימין)
     ctx.strokeStyle = 'rgba(217,133,107,.35)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
     for (let i=0;i<3;i++) {
       const ly = cy-6+i*6;
       ctx.beginPath(); ctx.moveTo(cx+22+i*4, ly); ctx.lineTo(cx+38+i*6, ly); ctx.stroke();
     }
 
-    // הציפור פונה שמאלה (לכיוון השחקן)
     ctx.translate(cx,cy); ctx.scale(-1,1); ctx.translate(-cx,-cy);
     ctx.translate(cx,cy); ctx.rotate(-0.12); ctx.translate(-cx,-cy);
 
@@ -237,7 +223,6 @@ function mountDino(root) {
     ctx.restore();
   }
 
-  // ---------- HUD ----------
   function drawHUD(){
     ctx.fillStyle = '#e8eef5'; ctx.font = 'bold 20px monospace'; ctx.textAlign = 'right';
     ctx.fillText(String(score).padStart(5,'0'), W-20, 32);
@@ -257,7 +242,6 @@ function mountDino(root) {
     ctx.textAlign = 'left';
   }
 
-  // ---------- לולאת המשחק ----------
   function loop(){
     if (!running) return;
     raf = requestAnimationFrame(loop);
@@ -268,7 +252,6 @@ function mountDino(root) {
     drawBackground(); drawGround();
 
     if (state === 'play') {
-      // כבידה — קפיצה ישרה למעלה, בלי תזוזה הצידה
       dino.vy += 0.55;
       dino.y += dino.vy;
       if (dino.y >= GROUND) { dino.y = GROUND; dino.vy = 0; dino.ground = true; }
@@ -280,7 +263,7 @@ function mountDino(root) {
       const db = dino.box();
       for (let i = obstacles.length-1; i >= 0; i--) {
         const o = obstacles[i];
-        o.x -= speed;   // מכשולים נעים ימין → שמאל
+        o.x -= speed;
         const ob = o.type==='cactus' ? { x:o.x, y:o.y-o.h, w:o.w, h:o.h } : o;
         if (hit(db, ob)) die();
         if (o.x + o.w < -30) obstacles.splice(i,1);
@@ -327,7 +310,6 @@ function mountDino(root) {
     saveBest(score);
   }
 
-  // ---------- שליטה ----------
   const kd = e => {
     if (e.code === 'Space' || e.code === 'ArrowUp') {
       e.preventDefault();
@@ -336,7 +318,6 @@ function mountDino(root) {
     if (e.code === 'ArrowDown') { e.preventDefault(); dino.duck = true; }
   };
   const ku = e => { if (e.code === 'ArrowDown') dino.duck = false; };
-  // אם מאבדים פוקוס — משחררים את ההתכופפות
   const blur = () => { dino.duck = false; };
 
   document.addEventListener('keydown', kd);
@@ -348,7 +329,6 @@ function mountDino(root) {
 
   loop();
 
-  // ---------- ניקוי ----------
   return () => {
     running = false;
     cancelAnimationFrame(raf);
