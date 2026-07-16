@@ -32,7 +32,7 @@ document.getElementById('backBtn').onclick = backToStore;
 // ---------- קטלוג המשחקים בפלטפורמה ----------
 const GAMES = [
   { id:'dino', title:'Dino Runner', desc:'רוץ, קפוץ, אסוף מטבעות וקנה דמויות בחנות.', imgFile:'dino-logo.png', icon:'🦖', badge:'ARCADE', bg:'linear-gradient(135deg,#1b3a4b,#0d1b2a)', mount:mountDino },
-  { id:'catch', title:'Star Catcher', desc:'תפוס כוכבים נופלים עם הסלסלה.', icon:'⭐', badge:'CASUAL', bg:'linear-gradient(135deg,#2a1b4b,#0d1b2a)', mount:mountCatch },
+  { id:'catch', title:'Star Catcher', desc:'תפוס כוכבים נופלים עם הסלסלה.', imgFile:'star-logo.png', icon:'⭐', badge:'CASUAL', bg:'#161736', mount:mountCatch },
   { id:'memory', title:'Memory Adjustment', desc:'מצא את כל הזוגות — 7 שלבים נגד השעון.', imgFile:'memory-logo.png', icon:'🧠', badge:'PUZZLE', bg:'linear-gradient(135deg,#1b4b3a,#0d1b2a)', mount:mountMemory },
   { id:'button', title:'אל תלחץ על הכפתור', desc:'משחק כפתור כאוטי ומצחיק — נוצר על ידי רובין!', img:BUTTON_LOGO, icon:'🔴', badge:'רובין', bg:'linear-gradient(135deg,#4b1b2a,#0d1b2a)', url:'https://unique-flan-89080c.netlify.app/' },
   { id:'soon', title:'משחק לחימה', desc:'המשחק הגדול מ־Godot — בקרוב!', icon:'⚔️', badge:'SOON', bg:'linear-gradient(135deg,#4b2a1b,#0d1b2a)', soon:true },
