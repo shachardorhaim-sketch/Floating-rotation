@@ -74,3 +74,269 @@ body { min-height:100vh; background:#0f1620; color:#e8eef5; font-family:"Segoe U
 .brow .sc { color:#ffd166; font-weight:700; }
 .brow.head { color:#8ba0b5; font-size:12px; border-bottom:1px solid #2a3b4f; margin-bottom:4px; }
 #empty { color:#8ba0b5; text-align:center; padding:10px; font-size:14px; }
+
+
+/* ================================================
+   Memory Adjustment — להוסיף לסוף style.css
+   ================================================ */
+
+.mem-wrap {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  font-family: 'Rubik', system-ui, sans-serif;
+}
+
+/* רקע צבעוני מטושטש */
+.mem-bg {
+  position: absolute;
+  inset: 0;
+  background-image: url('memory-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  filter: saturate(1.1);
+  z-index: 0;
+}
+.mem-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 14, 30, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.mem-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 18px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ---- לוגו ---- */
+.mem-top { margin: 4px 0 14px; }
+.mem-logo {
+  height: 110px;
+  width: auto;
+  filter: drop-shadow(0 6px 20px rgba(0,0,0,0.45));
+}
+
+/* ---- HUD ---- */
+.mem-hud {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.mem-stat {
+  background: rgba(15, 22, 45, 0.72);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 12px;
+  padding: 7px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 74px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  backdrop-filter: blur(8px);
+}
+.mem-stat-l {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8fa3c8;
+  margin-bottom: 1px;
+}
+.mem-stat.mem-time span:last-child { color: #4ee1c1; }
+
+.mem-btn-icon {
+  background: rgba(15, 22, 45, 0.72);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 14px;
+  transition: all 0.18s;
+  backdrop-filter: blur(8px);
+}
+.mem-btn-icon:hover { border-color: #4ee1c1; transform: translateY(-2px); }
+.mem-btn-icon.on { border-color: #4ee1c1; box-shadow: 0 0 14px rgba(78,225,193,0.3); }
+
+/* ---- בר זמן ---- */
+.mem-barwrap {
+  width: 100%;
+  max-width: 640px;
+  height: 7px;
+  background: rgba(255,255,255,0.14);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+.mem-bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #4ee1c1, #6ee7ff);
+  border-radius: 99px;
+  transition: width 1s linear, background 0.4s;
+}
+.mem-bar.low {
+  background: linear-gradient(90deg, #ff6b6b, #ffa94d);
+  animation: memPulse 0.9s infinite;
+}
+@keyframes memPulse { 50% { opacity: 0.55; } }
+
+/* ---- לוח ---- */
+.mem-board {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  max-width: 780px;
+  perspective: 1200px;
+}
+.mem-board.size-28, .mem-board.size-32 { gap: 7px; max-width: 900px; }
+.mem-board.size-24 { gap: 8px; max-width: 840px; }
+
+/* ---- קלף ---- */
+.mem-card {
+  aspect-ratio: 3 / 4;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  perspective: 800px;
+}
+.mem-card-in {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.42s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+.mem-card.flip .mem-card-in { transform: rotateY(180deg); }
+
+.mem-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* גב הקלף */
+.mem-back {
+  background: linear-gradient(145deg, #2a3f6f 0%, #16244a 100%);
+  border: 2px solid rgba(120, 160, 255, 0.35);
+  color: rgba(140, 180, 255, 0.5);
+  font-size: 30px;
+  font-weight: 900;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.mem-card:hover .mem-back {
+  border-color: rgba(120, 200, 255, 0.75);
+  box-shadow: 0 6px 20px rgba(60,140,255,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+/* פנים הקלף */
+.mem-front {
+  background: linear-gradient(145deg, #ffffff 0%, #e8eefc 100%);
+  border: 2px solid rgba(255,255,255,0.9);
+  transform: rotateY(180deg);
+  font-size: 40px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+}
+
+/* גדלי אימוג'י לפי כמות קלפים */
+.size-20 .mem-front, .size-24 .mem-front { font-size: 34px; }
+.size-28 .mem-front, .size-32 .mem-front { font-size: 27px; }
+.size-28 .mem-back,  .size-32 .mem-back  { font-size: 22px; }
+
+/* קלף שהותאם */
+.mem-card.done { cursor: default; }
+.mem-card.done .mem-front {
+  background: linear-gradient(145deg, #d4fff2 0%, #a8f5e0 100%);
+  border-color: #4ee1c1;
+  box-shadow: 0 0 18px rgba(78,225,193,0.55);
+}
+.mem-card.done .mem-card-in { animation: memPop 0.42s ease; }
+@keyframes memPop {
+  0%   { transform: rotateY(180deg) scale(1); }
+  45%  { transform: rotateY(180deg) scale(1.13); }
+  100% { transform: rotateY(180deg) scale(1); }
+}
+
+/* ---- אוברליי ---- */
+.mem-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 10, 24, 0.82);
+  backdrop-filter: blur(10px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.mem-overlay.show { display: flex; animation: memFade 0.3s ease; }
+@keyframes memFade { from { opacity: 0; } }
+
+.mem-card-panel {
+  background: linear-gradient(160deg, #182a55 0%, #0e1730 100%);
+  border: 1px solid rgba(120, 170, 255, 0.3);
+  border-radius: 20px;
+  padding: 36px 44px;
+  text-align: center;
+  max-width: 420px;
+  box-shadow: 0 22px 60px rgba(0,0,0,0.6);
+}
+.mem-card-panel h2 {
+  color: #fff;
+  font-size: 27px;
+  margin: 0 0 12px;
+  font-weight: 800;
+}
+.mem-card-panel p {
+  color: #a8bcdd;
+  font-size: 15px;
+  line-height: 1.65;
+  margin: 0 0 24px;
+}
+.mem-card-panel b { color: #4ee1c1; }
+
+.mem-btn {
+  background: linear-gradient(135deg, #4ee1c1, #35c9e8);
+  color: #062033;
+  border: none;
+  border-radius: 12px;
+  padding: 13px 40px;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.16s, box-shadow 0.16s;
+}
+.mem-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(78,225,193,0.45);
+}
+
+/* ---- מובייל ---- */
+@media (max-width: 640px) {
+  .mem-logo { height: 72px; }
+  .mem-stat { min-width: 60px; padding: 5px 11px; font-size: 15px; }
+  .mem-board { gap: 6px; }
+  .mem-front { font-size: 27px; }
+  .size-28 .mem-front, .size-32 .mem-front { font-size: 18px; }
+  .mem-card-panel { padding: 28px 24px; margin: 16px; }
+}
