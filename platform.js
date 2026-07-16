@@ -62,17 +62,9 @@ GAMES.forEach(g => {
   grid.appendChild(card);
 });
 
-// פתיחת משחק חיצוני (של רובין) — מנסה iframe, עם כפתור גיבוי לחלון חדש
+// פתיחת משחק חיצוני (של רובין) — נפתח ישר בלשונית חדשה
 function openExternal(g) {
-  store.style.display = 'none';
-  gameHost.style.display = 'flex';
-  gameTitle.textContent = g.title;
-  gameMount.innerHTML =
-    '<div style="width:100%;height:100%;display:flex;flex-direction:column;gap:8px;align-items:center">' +
-    '<iframe src="'+g.url+'" style="width:100%;flex:1;border:2px solid #2a3b4f;border-radius:10px;background:#fff" allow="autoplay"></iframe>' +
-    '<a href="'+g.url+'" target="_blank" style="color:#4fd1c5;font-size:14px;text-decoration:none">🔗 לא נטען? פתח את המשחק בחלון חדש</a>' +
-    '</div>';
-  activeCleanup = () => { gameMount.innerHTML=''; };
+  window.open(g.url, '_blank');
 }
 
 // ============================================================
