@@ -141,3 +141,27 @@
   background: rgba(255, 255, 255, .2);
   border-radius: 2px;
 }
+/* ===== Dino Runner ===== */
+.dinoStage { max-width: 820px !important; margin: 0 auto !important; }
+.dinoStage canvas { max-height: 300px !important; }
+
+#board {
+  max-width: 340px; margin: 12px auto 0; max-height: 200px; overflow-y: auto;
+  background: rgba(15,22,45,.6); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px; padding: 8px 12px;
+}
+#board h3 {
+  position: sticky; top: 0; margin: 0 0 6px; padding: 3px 0; font-size: 13px;
+  background: #0f1620; color: #ffd166; text-align: center;
+}
+#board .brow {
+  display: flex; justify-content: space-between; padding: 2px 5px;
+  font-size: 12px; border-radius: 4px;
+}
+#board .brow.head { color: #8ba0b5; font-size: 9px; }
+#board .brow.me { background: rgba(255,209,102,.15); }
+#board .rank { color: #8ba0b5; }
+#board .sc { font-weight: 700; color: #ffd166; }
+#board #empty { color: #8ba0b5; font-size: 11px; text-align: center; padding: 10px 0; }
+#board::-webkit-scrollbar { width: 4px; }
+#board::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 2px; }
