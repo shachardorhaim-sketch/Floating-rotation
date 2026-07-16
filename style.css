@@ -356,3 +356,10 @@ body { min-height:100vh; background:#0f1620; color:#e8eef5; font-family:"Segoe U
   height: auto !important;
 }
 }
+.gcard .gthumb img {
+  object-fit: contain !important;
+  width: auto !important;
+  height: auto !important;
+  max-height: 110px !important;
+  max-width: 90% !important;
+}
