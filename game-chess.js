@@ -4,10 +4,16 @@
 // ============================================
 
 function mountChess(root){
-  root.innerHTML='<canvas width="760" height="620" style="display:block;width:min(100%,760px);height:auto;margin:auto;border-radius:18px;touch-action:none;background:#171917"></canvas>';
+  const isMobile = window.innerWidth < 700;
+  const CW = isMobile ? 420 : 760, CH = isMobile ? 560 : 620;
+  root.innerHTML='<canvas width="'+CW+'" height="'+CH+'" style="display:block;width:100%;max-width:'+CW+'px;height:auto;margin:auto;border-radius:18px;touch-action:none;background:#171917"></canvas>';
   const cv=root.querySelector('canvas'),ctx=cv.getContext('2d');
   let running=true,raf=0,last=performance.now(),screen='menu',mode='ai',level=1,turn='w',selected=null,legal=[],over='',thinking=0;
   const G={w:{k:'♔',q:'♕',r:'♖',b:'♗',n:'♘',p:'♙'},b:{k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'}},V={p:1,n:3,b:3,r:5,q:9,k:0};
+  const SQ = isMobile ? 50 : 66;
+  const BOARD = SQ*8;
+  const OX = Math.round((CW-BOARD)/2);
+  const OY = isMobile ? 110 : 65;
   let board=[];
 
   function reset(){
@@ -123,16 +129,16 @@ function mountChess(root){
       return;
     }
     if(screen==='level'){
-      if(y>240&&y<300){level=0;screen='game';reset();}
-      else if(y>315&&y<375){level=1;screen='game';reset();}
-      else if(y>390&&y<450){level=2;screen='game';reset();}
+      if(y>CH*0.39&&y<CH*0.39+60){level=0;screen='game';reset();}
+      else if(y>CH*0.51&&y<CH*0.51+60){level=1;screen='game';reset();}
+      else if(y>CH*0.63&&y<CH*0.63+60){level=2;screen='game';reset();}
       return;
     }
     if(screen!=='game')return;
-    if(over){if(y>535){screen='menu';reset();}return;}
-    if(x>650&&y<55){screen='menu';reset();return;}
+    if(over){if(y>CH*0.55){screen='menu';reset();}return;}
+    if(x>CW-110&&y<55){screen='menu';reset();return;}
     if(thinking||(mode==='ai'&&turn==='b'))return;
-    const size=66,ox=116,oy=65,c=Math.floor((x-ox)/size),r=Math.floor((y-oy)/size);
+    const size=SQ,ox=OX,oy=OY,c=Math.floor((x-ox)/size),r=Math.floor((y-oy)/size);
     if(!inside(r,c))return;
     const p=board[r][c];
     if(selected){
@@ -153,31 +159,31 @@ function mountChess(root){
   }
 
   function drawMenu(){
-    ctx.fillStyle='#171917';ctx.fillRect(0,0,760,620);
+    ctx.fillStyle='#171917';ctx.fillRect(0,0,CW,CH);
     ctx.textAlign='center';
-    ctx.fillStyle='#f3a84b';ctx.font='70px serif';ctx.fillText('♞',380,118);
-    ctx.fillStyle='#f4f0e8';ctx.font='800 42px system-ui';ctx.fillText('CHESS',380,180);
-    ctx.fillStyle='#9da199';ctx.font='17px system-ui';ctx.fillText('Choose how to play',380,218);
-    button(230,260,300,55,'PLAY COMPUTER',true);
-    button(230,330,300,55,'TWO PLAYERS',false);
+    ctx.fillStyle='#f3a84b';ctx.font='70px serif';ctx.fillText('♞',CW/2,CH*0.19);
+    ctx.fillStyle='#f4f0e8';ctx.font='800 42px system-ui';ctx.fillText('CHESS',CW/2,CH*0.29);
+    ctx.fillStyle='#9da199';ctx.font='17px system-ui';ctx.fillText('Choose how to play',CW/2,CH*0.35);
+    button(CW/2-150,CH*0.42,300,55,'PLAY COMPUTER',true);
+    button(CW/2-150,CH*0.53,300,55,'TWO PLAYERS',false);
   }
 
   function drawLevel(){
-    ctx.fillStyle='#171917';ctx.fillRect(0,0,760,620);
+    ctx.fillStyle='#171917';ctx.fillRect(0,0,CW,CH);
     ctx.textAlign='center';
-    ctx.fillStyle='#f4f0e8';ctx.font='800 36px system-ui';ctx.fillText('CHOOSE DIFFICULTY',380,172);
-    button(245,240,270,60,'EASY',false);
-    button(245,315,270,60,'MEDIUM',true);
-    button(245,390,270,60,'HARD',false);
+    ctx.fillStyle='#f4f0e8';ctx.font='800 36px system-ui';ctx.fillText('CHOOSE DIFFICULTY',CW/2,CH*0.28);
+    button(CW/2-135,CH*0.39,270,60,'EASY',false);
+    button(CW/2-135,CH*0.51,270,60,'MEDIUM',true);
+    button(CW/2-135,CH*0.63,270,60,'HARD',false);
   }
 
   function drawGame(){
-    ctx.fillStyle='#171917';ctx.fillRect(0,0,760,620);
+    ctx.fillStyle='#171917';ctx.fillRect(0,0,CW,CH);
     ctx.textBaseline='middle';ctx.textAlign='left';
     ctx.fillStyle='#f4f0e8';ctx.font='700 19px system-ui';
-    ctx.fillText(turn==='w'?'WHITE TO MOVE':'BLACK TO MOVE',25,30);
-    ctx.textAlign='right';ctx.fillStyle='#f3a84b';ctx.fillText('MENU',735,30);
-    const size=66,ox=116,oy=65;
+    ctx.font=(isMobile?'700 15px ':'700 19px ')+'system-ui';ctx.fillText(turn==='w'?'WHITE TO MOVE':'BLACK TO MOVE',isMobile?14:25,30);
+    ctx.textAlign='right';ctx.fillStyle='#f3a84b';ctx.fillText('MENU',CW-25,30);
+    const size=SQ,ox=OX,oy=OY;
     for(let r=0;r<8;r++)for(let c=0;c<8;c++){
       const x=ox+c*size,y=oy+r*size,dark=(r+c)%2;
       ctx.fillStyle=dark?'#9b6037':'#efd7aa';
@@ -188,13 +194,13 @@ function mountChess(root){
       }
       if(legal.some(m=>m[0]===r&&m[1]===c)){
         ctx.fillStyle='#f3a84b';
-        ctx.beginPath();ctx.arc(x+size/2,y+size/2,board[r][c]?26:8,0,Math.PI*2);
+        ctx.beginPath();ctx.arc(x+size/2,y+size/2,board[r][c]?size*0.39:size*0.12,0,Math.PI*2);
         board[r][c]?ctx.stroke():ctx.fill();
       }
       const p=board[r][c];
       if(p){
         ctx.textAlign='center';
-        ctx.font='52px "Arial Unicode MS","Segoe UI Symbol"';
+        ctx.font=Math.round(SQ*0.79)+'px "Arial Unicode MS","Segoe UI Symbol"';
         ctx.fillStyle=p.c==='w'?'#fff8e8':'#15120f';
         ctx.strokeStyle=p.c==='w'?'#5c412d':'#a9937e';
         ctx.lineWidth=1.3;
@@ -204,14 +210,14 @@ function mountChess(root){
     }
     if(thinking){
       ctx.textAlign='center';ctx.fillStyle='#f3a84b';ctx.font='700 16px system-ui';
-      ctx.fillText('COMPUTER IS THINKING…',380,606);
+      ctx.fillText('COMPUTER IS THINKING…',CW/2,CH-14);
     }
     if(over){
-      ctx.fillStyle='#111d';ctx.fillRect(116,245,528,110);
+      ctx.fillStyle='#111d';ctx.fillRect(OX,CH*0.40,BOARD,110);
       ctx.textAlign='center';ctx.fillStyle='#fff';ctx.font='800 34px system-ui';
-      ctx.fillText(over,380,285);
+      ctx.fillText(over,CW/2,CH*0.46);
       ctx.fillStyle='#f3a84b';ctx.font='700 16px system-ui';
-      ctx.fillText('CLICK BELOW TO RETURN TO MENU',380,330);
+      ctx.fillText('CLICK BELOW TO RETURN TO MENU',CW/2,CH*0.53);
     }
   }
 
@@ -228,7 +234,7 @@ function mountChess(root){
 
   function point(e){
     const r=cv.getBoundingClientRect();
-    return{x:(e.clientX-r.left)*760/r.width,y:(e.clientY-r.top)*620/r.height};
+    return{x:(e.clientX-r.left)*CW/r.width,y:(e.clientY-r.top)*CH/r.height};
   }
   function onPointer(e){const p=point(e);click(p.x,p.y);}
 
