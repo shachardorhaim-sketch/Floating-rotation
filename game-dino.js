@@ -18,6 +18,10 @@ const DINO_HTML = `
     <canvas id="dc" width="820" height="300"></canvas>
   </div>
   <div class="dinoHint">רווח / ↑ = קפיצה • ↓ = התכופפות<br>ציפור גבוהה: רוץ מתחת · אמצע: קפוץ או התכופף · נמוכה: קפוץ מעל</div>
+  <div class="dinoTouch" style="display:flex;gap:14px;justify-content:center;margin:12px auto 4px;max-width:400px;">
+    <button id="dinoJumpBtn" style="flex:1;padding:16px 0;font-size:17px;font-weight:700;color:#fff;border:none;border-radius:14px;background:linear-gradient(90deg,#2f8f52,#57c97e);box-shadow:0 4px 16px rgba(47,143,82,.4);cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;">⬆ קפיצה</button>
+    <button id="dinoDuckBtn" style="flex:1;padding:16px 0;font-size:17px;font-weight:700;color:#fff;border:none;border-radius:14px;background:linear-gradient(90deg,#3a6ea5,#5a9bd4);box-shadow:0 4px 16px rgba(58,110,165,.4);cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;">⬇ התכופפות</button>
+  </div>
   <div id="board"><h3>&#127942; טבלת שיאים</h3><div id="boardRows"></div></div>
 </div>
 `;
@@ -367,13 +371,13 @@ function mountDino(root) {
   }
 
   const kd = e => {
-    if (e.code === 'Space' || e.code === 'ArrowUp') {
+    if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
       e.preventDefault();
       if (state === 'play') dino.jump(); else startGame();
     }
-    if (e.code === 'ArrowDown') { e.preventDefault(); dino.duck = true; }
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); dino.duck = true; }
   };
-  const ku = e => { if (e.code === 'ArrowDown') dino.duck = false; };
+  const ku = e => { if (e.code === 'ArrowDown' || e.code === 'KeyS') dino.duck = false; };
   const blur = () => { dino.duck = false; };
 
   document.addEventListener('keydown', kd);
@@ -382,6 +386,19 @@ function mountDino(root) {
   cv.addEventListener('pointerdown', () => {
     if (state === 'play') dino.jump(); else startGame();
   });
+
+  // ---- כפתורי מגע (טלפון/טאבלט) ----
+  const jumpBtn = scope.querySelector('#dinoJumpBtn');
+  const duckBtn = scope.querySelector('#dinoDuckBtn');
+  if (jumpBtn) jumpBtn.addEventListener('pointerdown', e => { e.preventDefault(); if (state === 'play') dino.jump(); else startGame(); });
+  if (duckBtn) {
+    const dOn = e => { e.preventDefault(); dino.duck = true; };
+    const dOff = e => { e.preventDefault(); dino.duck = false; };
+    duckBtn.addEventListener('pointerdown', dOn);
+    duckBtn.addEventListener('pointerup', dOff);
+    duckBtn.addEventListener('pointerleave', dOff);
+    duckBtn.addEventListener('pointercancel', dOff);
+  }
 
   renderBoard();
   loop();
