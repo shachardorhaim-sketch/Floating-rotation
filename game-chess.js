@@ -297,6 +297,16 @@ function mountChess(root) {
     const names=en?['Carved','8-bit','Neon','Royal','Ice','Candy','Paper','Shadows','Natural wood','Club','Night','Marble','Ocean','Candy','Desert','Monochrome']:['מגולף','8־ביט','ניאון','מלכותי','קרח','סוכריות','נייר','צללים','עץ טבעי','מועדון','לילה','שיש','אוקיינוס','ממתקים','מדבר','מונוכרום'];
     $$('.ch-style-options strong').forEach((x,i)=>x.textContent=names[i]);
     $$('.ch-levels button').forEach((b,i)=>b.textContent=(en?['Easy','Medium','Hard','Impossible']:['קל','בינוני','קשה','בלתי אפשרי'])[i]);
+    // כפתורי "שני שחקנים" / "מרחוק" / "לתפריט" (היו חסרים בתרגום)
+    set('#ch-two-panel h3',en?'Two players':'שני שחקנים');
+    set('#ch-two-local',en?'👥 One device':'👥 על מכשיר אחד');
+    set('#ch-two-remote',en?'🌐 Remote (with code)':'🌐 מרחוק (עם קוד)');
+    set('#ch-remote-panel h3',en?'Remote game':'משחק מרחוק');
+    set('#ch-create-room',en?'➕ Create new room':'➕ צור חדר חדש');
+    set('#ch-join-room',en?'Join →':'הצטרף ←');
+    { const jc=$('#ch-join-code'); if(jc)jc.placeholder=en?'Enter code':'הקלד קוד'; }
+    $$('.ch-back').forEach(b=>b.textContent=en?'↩ Menu':'↩ לתפריט');
+    { const lm=$('#ch-lesson-menu'); if(lm)lm.textContent=en?'↩ Menu':'↩ לתפריט'; }
     $$('#ch-language-options button').forEach(b=>b.classList.toggle('ch-active',b.dataset.lang===lang));
     renderLesson(); if(state)render(); updateContinue();
   }
