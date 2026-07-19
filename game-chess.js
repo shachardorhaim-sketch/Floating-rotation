@@ -88,7 +88,7 @@ function mountChess(root) {
   // עיצוב: היפוך הלוח לשחקן השחור (במשחק מרחוק) — הכלים שלו למטה, כמו ב-Chess.com
   if(!document.getElementById('ch-flip-style')){
     const st=document.createElement('style'); st.id='ch-flip-style';
-    st.textContent='#ch-board.ch-flip{transform:rotate(180deg);}#ch-board.ch-flip .ch-piece,#ch-board.ch-flip .ch-coord{transform:rotate(180deg);}';
+    st.textContent='#ch-board{transition:transform 0.35s ease;}#ch-board.ch-flip{transform:rotate(180deg);}#ch-board.ch-flip .ch-piece,#ch-board.ch-flip .ch-coord{transform:rotate(180deg);}';
     document.head.appendChild(st);
   }
 
@@ -117,7 +117,7 @@ function mountChess(root) {
    {he:['שח ומט','כשהמלך מותקף הוא בשח. אם אין מהלך חוקי שמציל אותו — זה מט והמשחק נגמר.'],en:['Checkmate','When a king is attacked it is in check. If no legal move saves it, the game ends.'],pieces:[[0,7,'b','k'],[1,6,'w','q'],[2,5,'w','k']],focus:[[0,7]]}
   ];
   const TASKS={he:[['לחץ על המלך הלבן המסומן.','בחר אחת מהנקודות והזז את המלך משבצת אחת לכל כיוון.'],['לחץ על החייל המסומן.','זה המהלך הראשון שלו: הזז אותו שתי משבצות ישר קדימה בעזרת הנקודות.'],['לחץ על החייל הלבן.','בחר בעזרת הנקודות ואכול את הפרש או את הרץ באלכסון קדימה.'],['לחץ על החייל שנמצא ליד סוף הלוח.','הזז אותו לשורה האחרונה ובחר כלי להכתרה.'],['לחץ על הצריח המסומן.','בחר נקודה והזז את הצריח בקו ישר.'],['לחץ על הרץ המסומן.','הזז את הרץ באלכסון. אפשר גם לאכול את הצריח השחור.'],['לחץ על המלכה המסומנת.','הזז אותה בקו ישר או באלכסון. אפשר לאכול את אחד הכלים השחורים.'],['לחץ על הפרש המסומן.','הזז אותו שתי משבצות למעלה ואחת ימינה.'],null],en:[['Click the highlighted white king.','Use the dots to move the king one square in any direction.'],['Click the highlighted pawn.','This is its first move: move it two squares straight forward using the dots.'],['Click the white pawn.','Use the dots to capture either piece diagonally.'],['Click the pawn near the end.','Move it to the last rank and choose a promotion piece.'],['Click the highlighted rook.','Choose a dot and move it in a straight line.'],['Click the highlighted bishop.','Move it diagonally. You may also capture the black rook.'],['Click the highlighted queen.','Move straight or diagonally. You may capture either black piece.'],['Click the highlighted knight.','Move it two squares up and one right.'],null]};
-  const WORDS={he:{turn:'תור ה',white:'לבן',black:'שחור',move:'מהלך',check:' — שח',sure:'המשחק עדיין בעיצומו. לצאת לתפריט?',mateB:'השחור ניצח במט',mateW:'הלבן ניצח במט',stale:'תיקו — פט',insuf:'תיקו — אין מספיק כלים למט',saved:'משחק שמור',vs:'נגד המחשב',two:'שני שחקנים'},en:{turn:'Turn: ',white:'White',black:'Black',move:'Move',check:' — Check',sure:'The game is still in progress. Return to menu?',mateB:'Black wins by checkmate',mateW:'White wins by checkmate',stale:'Draw — stalemate',insuf:'Draw — insufficient material',saved:'Saved game',vs:'Computer',two:'Two players'}};
+  const WORDS={he:{turn:'תור ה',white:'לבן',black:'שחור',move:'מהלך',check:' — שח',sure:'המשחק עדיין בעיצומו. לצאת לתפריט?',mateB:'השחור ניצח במט',mateW:'הלבן ניצח במט',stale:'תיקו — פט',insuf:'תיקו — אין מספיק כלים למט',fifty:'תיקו — חוק 50 המהלכים',three:'תיקו — שלוש חזרות',saved:'משחק שמור',vs:'נגד המחשב',two:'שני שחקנים'},en:{turn:'Turn: ',white:'White',black:'Black',move:'Move',check:' — Check',sure:'The game is still in progress. Return to menu?',mateB:'Black wins by checkmate',mateW:'White wins by checkmate',stale:'Draw — stalemate',insuf:'Draw — insufficient material',fifty:'Draw — fifty-move rule',three:'Draw — threefold repetition',saved:'Saved game',vs:'Computer',two:'Two players'}};
   const tr=k=>WORDS[currentLang][k];
 
   // ---------- אחסון ----------
@@ -163,6 +163,7 @@ function mountChess(root) {
 
   function applyMove(s,from,m,promo='q'){
     const n=clone(s),p=n.board[from.r][from.c],target=n.board[m.r][m.c]; if(target)n.captured.push(target);
+    const wasPawn=p.t==='p', wasCapture=!!target||m.special==='ep'; // לחוק 50 המהלכים
     n.board[m.r][m.c]=p;n.board[from.r][from.c]=null;
     if(m.special==='ep'){const cr=m.r+(p.c==='w'?1:-1);n.captured.push(n.board[cr][m.c]);n.board[cr][m.c]=null;}
     if(m.special==='castleK'){n.board[m.r][5]=n.board[m.r][7];n.board[m.r][7]=null;}
@@ -171,15 +172,22 @@ function mountChess(root) {
     if(p.t==='k'){n.castling[p.c+'k']=0;n.castling[p.c+'q']=0;}
     if(p.t==='r'){if(from.r===7&&from.c===0)n.castling.wq=0;if(from.r===7&&from.c===7)n.castling.wk=0;if(from.r===0&&from.c===0)n.castling.bq=0;if(from.r===0&&from.c===7)n.castling.bk=0;}
     if(target?.t==='r'){if(m.r===7&&m.c===0)n.castling.wq=0;if(m.r===7&&m.c===7)n.castling.wk=0;if(m.r===0&&m.c===0)n.castling.bq=0;if(m.r===0&&m.c===7)n.castling.bk=0;}
-    n.ep=m.special==='double'?{r:(from.r+m.r)/2,c:m.c}:null;n.last={from,to:{r:m.r,c:m.c}};n.turn=p.c==='w'?'b':'w';if(n.turn==='w')n.full++;return n;
+    n.ep=m.special==='double'?{r:(from.r+m.r)/2,c:m.c}:null;n.last={from,to:{r:m.r,c:m.c}};n.turn=p.c==='w'?'b':'w';if(n.turn==='w')n.full++;
+    n.half=(wasPawn||wasCapture)?0:(s.half||0)+1; // מונה חצאי-מהלכים לחוק 50 המהלכים
+    return n;
   }
   function validMoves(s,r,c){const p=s.board[r][c];if(!p)return[];return rawMoves(s,r,c).filter(m=>!isCheck(applyMove(s,{r,c},m),p.c));}
   function allMoves(s,color){const a=[];for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(s.board[r][c]?.c===color)for(const m of validMoves(s,r,c))a.push(m);return a;}
   function insufficient(){const pieces=state.board.flat().filter(p=>p&&p.t!=='k');return pieces.length===0||(pieces.length===1&&['b','n'].includes(pieces[0].t));}
+  // מפתח עמדה לבדיקת שלוש חזרות (מיקום כלים + תור + זכויות הצרחה + en passant)
+  function posKey(s){ return JSON.stringify(s.board)+'|'+s.turn+'|'+s.castling.wk+s.castling.wq+s.castling.bk+s.castling.bq+'|'+(s.ep?s.ep.r+','+s.ep.c:'-'); }
+  function threefold(){ const k=posKey(state); let c=1; for(const h of history) if(posKey(h)===k) c++; return c>=3; }
   function finishTurn(){
     const moves=allMoves(state,state.turn),check=isCheck(state,state.turn);
     if(!moves.length){state.over=true;state.result=check?(state.turn==='w'?tr('mateB'):tr('mateW')):tr('stale');}
     else if(insufficient()){state.over=true;state.result=tr('insuf');}
+    else if((state.half||0)>=100){state.over=true;state.result=tr('fifty');}   // חוק 50 המהלכים
+    else if(threefold()){state.over=true;state.result=tr('three');}            // שלוש חזרות
   }
 
   // ---------- שמירה ----------
@@ -338,6 +346,8 @@ function mountChess(root) {
       if(r===7)sq.innerHTML+='<span class="ch-coord ch-file">'+String.fromCharCode(97+c)+'</span>';
       board.appendChild(sq);
     }
+    // מצב "על מכשיר אחד": הלוח מתהפך לפי התור, שכל שחקן רואה את הכלים שלו למטה
+    if(mode==='local') $('#ch-board').classList.toggle('ch-flip', state.turn==='b'&&!state.over);
     const check=checked?tr('check'):'';
     $('#ch-status').textContent=state.over?state.result:(tr('turn')+(state.turn==='w'?tr('white'):tr('black'))+check);
     $('#ch-move-count').textContent=tr('move')+' '+state.full;
