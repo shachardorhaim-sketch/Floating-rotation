@@ -446,10 +446,10 @@ function mountChess(root) {
   }
   // הגדרות הרמות (עומק חיפוש, תקציב זמן במ"ש, אחוז מהלכים אקראיים)
   const AI={
-    easy:   {depth:1, time:200,  random:0.55},
-    medium: {depth:2, time:450,  random:0.10},
-    hard:   {depth:3, time:900,  random:0},
-    master: {depth:4, time:1400, random:0}
+    easy:   {depth:1, time:100,  random:0.82},  // ~0-100: מתחיל, כמעט אקראי
+    medium: {depth:2, time:450,  random:0.35},  // ~100-1000: שחקן מזדמן
+    hard:   {depth:4, time:1500, random:0},     // ~1000-2000: שחקן טוב
+    master: {depth:4, time:1800, random:0}      // גיבוי אם Stockfish לא נטען
   };
   // ---------- Stockfish (מנוע אלוף עולם, לרמת "בלתי אפשרי") ----------
   let sf=null, sfReady=false, sfReq=0, sfPending=false;
