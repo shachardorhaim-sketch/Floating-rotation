@@ -184,6 +184,30 @@
               <div class="tetris-ov-title">מוכן?</div>
               <div class="tetris-ov-sub">לחץ להתחיל</div>
               <button class="tetris-btn" id="tetris-start-btn">התחל משחק</button>
+              <button id="tetris-how-btn" style="margin-top:10px;background:transparent;border:1px solid rgba(255,255,255,0.28);color:#fff;padding:10px 24px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;">📖 איך משחקים?</button>
+            </div>
+            <div class="tetris-overlay" id="tetris-tutorial" style="display:none;justify-content:flex-start;align-items:stretch;overflow-y:auto;padding:0;background:#0b0b12;">
+              <div style="padding:22px 20px;direction:rtl;text-align:right;">
+                <div style="font-size:23px;font-weight:800;text-align:center;margin-bottom:14px;background:linear-gradient(90deg,#22d3ee,#a855f7,#ec4899);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">איך משחקים טטריס? 🎮</div>
+                <div style="color:#fff;font-size:14.5px;line-height:1.75;">
+                  <b style="color:#22d3ee;">🎯 המטרה</b><br>
+                  קוביות בצורות שונות נופלות מלמעלה. סדר אותן כדי למלא <b>שורה שלמה</b> (כל 10 המשבצות) — והשורה נעלמת ומקבלים ניקוד! אם הערימה מגיעה לראש הלוח, המשחק נגמר.
+                  <br><br>
+                  <b style="color:#a855f7;">🕹️ שליטה (מקלדת)</b><br>
+                  <span class="tetris-kbd">←</span> <span class="tetris-kbd">→</span> להזיז &nbsp; <span class="tetris-kbd">↑</span> לסובב<br>
+                  <span class="tetris-kbd">↓</span> נפילה איטית &nbsp; <span class="tetris-kbd">רווח</span> להפיל מיד<br>
+                  <span class="tetris-kbd">P</span> השהיה
+                  <br><br>
+                  <b style="color:#22c55e;">📱 בטלפון</b><br>
+                  יש כפתורים מתחת ללוח. אפשר גם <b>להחזיק</b> ◀ ▶ ▼ כדי לזוז מהר.
+                  <br><br>
+                  <b style="color:#facc15;">💡 טיפים</b><br>
+                  • הצל השקוף מראה איפה הקובייה תנחת.<br>
+                  • כל 10 שורות עולים <b>שלב</b> — והקוביות נופלות מהר יותר!<br>
+                  • למלא <b>4 שורות בבת אחת</b> עם החלק הארוך = "טֶטְרִיס" 🏆 = הכי הרבה ניקוד!
+                </div>
+                <button class="tetris-btn" id="tetris-tut-close" style="margin-top:18px;width:100%;">הבנתי, בוא נשחק! ▶</button>
+              </div>
             </div>
             <div class="tetris-overlay" id="tetris-gameover" style="display:none;">
               <div class="tetris-ov-title">Game Over</div>
@@ -565,6 +589,9 @@
     }
     root.querySelector('#tetris-start-btn').onclick = startGame;
     root.querySelector('#tetris-again-btn').onclick = resetGame;
+    // מדריך "איך משחקים"
+    root.querySelector('#tetris-how-btn').onclick = () => { root.querySelector('#tetris-tutorial').style.display = 'flex'; };
+    root.querySelector('#tetris-tut-close').onclick = () => { root.querySelector('#tetris-tutorial').style.display = 'none'; };
     container.addEventListener('click', () => container.focus());
 
     // ציור ראשוני (מסך "מוכן?")
@@ -584,4 +611,4 @@
       root.innerHTML = '';
     };
   };
-})();
+})(););
