@@ -20,8 +20,8 @@ function mountChess(root) {
         <button class="ch-mode-card" id="ch-local-mode"><span class="ch-mode-icon">♙</span><span><strong>שני שחקנים</strong><small>שחקו יחד על אותו מסך</small></span><b>←</b></button>
         <button class="ch-mode-card ch-learn-card" id="ch-learn-mode"><span class="ch-mode-icon">?</span><span><strong>איך משחקים שחמט</strong><small>למדו בעזרת לוח הדגמה</small></span><b>←</b></button>
       </div>
-      <div id="ch-computer-panel" class="ch-setup-panel ch-hidden"><button class="ch-back">→ חזרה</button><h3>בחרו רמת קושי</h3><div class="ch-levels"><button data-level="easy">קל</button><button data-level="medium">בינוני</button><button data-level="hard">קשה</button></div></div>
-      <div id="ch-learn-panel" class="ch-setup-panel ch-tutorial-panel ch-hidden"><button class="ch-back">→ חזרה</button><div class="ch-lesson-count" id="ch-lesson-count"></div><h3 id="ch-lesson-title"></h3><p id="ch-lesson-text"></p><div id="ch-tutorial-board" class="ch-tutorial-board"></div><div class="ch-lesson-controls"><button id="ch-lesson-prev" class="ch-secondary">הקודם</button><button id="ch-lesson-next" class="ch-primary">הבא</button></div></div>
+      <div id="ch-computer-panel" class="ch-setup-panel ch-hidden"><button class="ch-back" style="background:#e0975a;color:#1a1a1a;padding:9px 18px;border-radius:8px;font-weight:800;font-size:14px;">↩ לתפריט</button><h3>בחרו רמת קושי</h3><div class="ch-levels"><button data-level="easy">קל</button><button data-level="medium">בינוני</button><button data-level="hard">קשה</button></div></div>
+      <div id="ch-learn-panel" class="ch-setup-panel ch-tutorial-panel ch-hidden"><button class="ch-back" style="background:#e0975a;color:#1a1a1a;padding:9px 18px;border-radius:8px;font-weight:800;font-size:14px;">↩ לתפריט</button><div class="ch-lesson-count" id="ch-lesson-count"></div><h3 id="ch-lesson-title"></h3><p id="ch-lesson-text"></p><div id="ch-tutorial-board" class="ch-tutorial-board"></div><div class="ch-lesson-controls"><button id="ch-lesson-prev" class="ch-secondary">הקודם</button><button id="ch-lesson-next" class="ch-primary">הבא</button></div></div>
     </div>
   </section>
 
