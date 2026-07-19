@@ -85,6 +85,13 @@ function mountChess(root) {
   const $$ = s => root.querySelectorAll(s);
   const shell = root.querySelector('.chessRoot');
 
+  // עיצוב: היפוך הלוח לשחקן השחור (במשחק מרחוק) — הכלים שלו למטה, כמו ב-Chess.com
+  if(!document.getElementById('ch-flip-style')){
+    const st=document.createElement('style'); st.id='ch-flip-style';
+    st.textContent='#ch-board.ch-flip{transform:rotate(180deg);}#ch-board.ch-flip .ch-piece,#ch-board.ch-flip .ch-coord{transform:rotate(180deg);}';
+    document.head.appendChild(st);
+  }
+
   // ---------- נתונים ----------
   const GLYPHS={w:{k:'♔',q:'♕',r:'♖',b:'♗',n:'♘',p:'♙'},b:{k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'}};
   const VALUES={p:1,n:3,b:3,r:5,q:9,k:0};
@@ -451,6 +458,7 @@ function mountChess(root) {
   // ---------- ניווט ----------
   function startGame(kind,label){
     LS.del('saved');mode=kind;newGame();
+    $('#ch-board').classList.remove('ch-flip'); // משחק רגיל — לוח לא הפוך
     $('#ch-mode-label').textContent=label;
     $('#ch-lobby').classList.add('ch-hidden');
     shell.querySelector('.ch-app').classList.remove('ch-hidden');
@@ -475,13 +483,24 @@ function mountChess(root) {
     conn.on('data', msg=>{
       if(!alive||!msg) return;
       if(msg.type==='move'){ commit(msg.from,msg.move,msg.promo,true); }
+      else if(msg.type==='ready'){
+        // אני המארח: היריב מוכן — מגריל צבעים אקראית
+        const hostColor = Math.random()<0.5 ? 'w' : 'b';
+        try{ conn.send({type:'start', yourColor:(hostColor==='w'?'b':'w')}); }catch(e){}
+        startRemoteGame(hostColor);
+      }
+      else if(msg.type==='start'){
+        // אני המצטרף: קיבלתי את הצבע שהוגרל לי
+        startRemoteGame(msg.yourColor);
+      }
       else if(msg.type==='restart'){ newGame(); }
     });
     conn.on('close', ()=>{ if(mode==='remote') rStatus('היריב התנתק. 😕'); });
   }
-  function startRemoteGame(host){
-    mode='remote'; myColor=host?'w':'b'; LS.del('saved'); newGame();
-    $('#ch-mode-label').textContent = 'מרחוק · ' + (host?'אתה הלבן ⚪':'אתה השחור ⚫');
+  function startRemoteGame(color){
+    mode='remote'; myColor=color; LS.del('saved'); newGame();
+    $('#ch-board').classList.toggle('ch-flip', color==='b'); // השחור רואה את הלוח הפוך
+    $('#ch-mode-label').textContent = 'מרחוק · ' + (color==='w'?'אתה הלבן ⚪':'אתה השחור ⚫');
     $('#ch-lobby').classList.add('ch-hidden');
     shell.querySelector('.ch-app').classList.remove('ch-hidden');
     updateContinue();
@@ -496,7 +515,7 @@ function mountChess(root) {
     net.peer.on('open', ()=>{ rStatus('שלח את הקוד לחבר 👆<br>מחכה שיצטרף...'); });
     net.peer.on('connection', conn=>{
       net.conn=conn;
-      conn.on('open', ()=>{ setupConn(conn); startRemoteGame(true); });
+      conn.on('open', ()=>{ setupConn(conn); rStatus('יריב מתחבר...'); }); // מחכה ל-ready מהמצטרף
     });
     net.peer.on('error', e=>{
       if(e&&e.type==='unavailable-id'){ createRoom(); } // קוד תפוס — צור חדש
@@ -514,10 +533,9 @@ function mountChess(root) {
     net.peer.on('open', ()=>{
       const conn=net.peer.connect('flrot-'+code);
       net.conn=conn;
-      let connected=false;
-      conn.on('open', ()=>{ connected=true; setupConn(conn); startRemoteGame(false); });
+      conn.on('open', ()=>{ setupConn(conn); try{ conn.send({type:'ready'}); }catch(e){} rStatus('מתחבר, מחכה להתחלה...'); });
       conn.on('error', ()=>rStatus('לא נמצא חדר עם הקוד הזה. 🤔'));
-      setTimeout(()=>{ if(!connected&&mode!=='remote') rStatus('לא הצלחתי להתחבר. בדוק את הקוד ונסה שוב.'); },8000);
+      setTimeout(()=>{ if(mode!=='remote') rStatus('לא הצלחתי להתחבר. בדוק את הקוד ונסה שוב.'); },9000);
     });
     net.peer.on('error', e=>{ rStatus('לא נמצא חדר עם הקוד הזה. 🤔'); });
   }
