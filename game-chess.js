@@ -451,13 +451,65 @@ function mountChess(root) {
     hard:   {depth:3, time:900,  random:0},
     master: {depth:4, time:1400, random:0}
   };
+  // ---------- Stockfish (מנוע אלוף עולם, לרמת "בלתי אפשרי") ----------
+  let sf=null, sfReady=false, sfReq=0, sfPending=false;
+  function toFEN(s){
+    let fen='';
+    for(let r=0;r<8;r++){ let e=0;
+      for(let c=0;c<8;c++){ const p=s.board[r][c];
+        if(!p){e++;continue;}
+        if(e){fen+=e;e=0;}
+        const ch={p:'p',n:'n',b:'b',r:'r',q:'q',k:'k'}[p.t];
+        fen+= p.c==='w'?ch.toUpperCase():ch;
+      }
+      if(e)fen+=e; if(r<7)fen+='/';
+    }
+    let cast=''; if(s.castling.wk)cast+='K'; if(s.castling.wq)cast+='Q'; if(s.castling.bk)cast+='k'; if(s.castling.bq)cast+='q';
+    const ep=s.ep?String.fromCharCode(97+s.ep.c)+(8-s.ep.r):'-';
+    return fen+' '+s.turn+' '+(cast||'-')+' '+ep+' '+(s.half||0)+' '+(s.full||1);
+  }
+  function initSF(){
+    if(sf||typeof Worker==='undefined')return;
+    try{
+      const blob=new Blob(["importScripts('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js');"],{type:'text/javascript'});
+      sf=new Worker(URL.createObjectURL(blob));
+      sf.onmessage=e=>{ const l=typeof e.data==='string'?e.data:((e.data&&e.data.data)||''); onSF(l); };
+      sf.onerror=()=>{ sf=null; sfReady=false; };
+      sf.postMessage('uci');
+    }catch(err){ sf=null; sfReady=false; }
+  }
+  function onSF(line){
+    if(!line)return;
+    if(line.indexOf('uciok')>=0){ sf.postMessage('setoption name Skill Level value 20'); sf.postMessage('isready'); }
+    else if(line.indexOf('readyok')>=0){ sfReady=true; }
+    else if(line.indexOf('bestmove')>=0){ sfPending=false; applySFMove(line.split(' ')[1]); }
+  }
+  function customMasterMove(){ const best=searchBest(state,AI.master); thinking=false; if(best)commit(best.from,best.m); }
+  function applySFMove(uci){
+    if(!alive||state.over||state.turn!=='b'||level!=='master'){thinking=false;return;}
+    if(!uci||uci==='(none)'){ customMasterMove(); return; }
+    const from={c:uci.charCodeAt(0)-97, r:8-parseInt(uci[1])};
+    const to={c:uci.charCodeAt(2)-97, r:8-parseInt(uci[3])};
+    const promo=uci[4]||'q';
+    const m=validMoves(state,from.r,from.c).find(x=>x.r===to.r&&x.c===to.c);
+    thinking=false;
+    if(m)commit(from,m,promo); else customMasterMove(); // אם משהו לא תואם — נופל למנוע המקומי
+  }
+  function sfGo(){
+    sfPending=true;
+    $('#ch-mode-label').textContent=(currentLang==='en'?'Computer · Impossible · Stockfish 🏆':'נגד המחשב · בלתי אפשרי · Stockfish 🏆');
+    sf.postMessage('position fen '+toFEN(state));
+    sf.postMessage('go movetime 1200');
+    const myReq=++sfReq;
+    setTimeout(()=>{ if(sfPending&&myReq===sfReq&&alive&&!state.over&&state.turn==='b'&&level==='master'){ sfPending=false; customMasterMove(); } },6000); // ביטחון: אם אין תשובה
+  }
   function computerMove(){
     if(!alive||state.over||state.turn!=='b')return;
     thinking=true;render();
-    setTimeout(()=>{ // נותן ל-UI לצייר "חושב..." לפני החיפוש הכבד
+    setTimeout(()=>{
       if(!alive||state.over||state.turn!=='b'){thinking=false;return;}
-      const cfg=AI[level]||AI.medium;
-      const best=searchBest(state,cfg);
+      if(level==='master'&&sfReady&&sf){ sfGo(); return; } // Stockfish
+      const best=searchBest(state,AI[level]||AI.medium); // מנוע מקומי
       thinking=false;
       if(best)commit(best.from,best.m);
     },40);
@@ -686,10 +738,12 @@ function mountChess(root) {
   updateContinue();
   loadAppearance();
   applyLanguage(LS.get('language')||'he');
+  initSF(); // טעינת Stockfish ברקע (לרמת "בלתי אפשרי")
 
   // ---------- ניקוי ----------
   return function cleanup(){
     alive=false;
+    try{ if(sf){ sf.terminate(); sf=null; } }catch(e){}
     closeNet();
     saveGame();
     window.removeEventListener('beforeunload',onUnload);
