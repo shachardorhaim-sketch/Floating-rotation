@@ -245,6 +245,10 @@
     let rafId = null;           // כדי לעצור את הלולאה ב-cleanup
     let alive = true;           // דגל: המשחק עדיין מותקן?
     let lastTime = 0;
+    let bag = [];               // שק 7 חלקים (אקראיות הוגנת)
+    let lockTimer = 0;          // טיימר השהיית נעילה
+    const LOCK_DELAY = 500;     // מ"ש עד שחלק ננעל אחרי שנוגע בקרקע
+    const holdStops = [];       // עצירת טיימרים של כפתורי מגע
 
     let highScore = parseInt(localStorage.getItem('tetris3d_high') || '0');
     elHigh.textContent = highScore;
@@ -255,12 +259,20 @@
       dropTime = 0; dropInterval = 800;
       score = 0; lines = 0; level = 1;
       gameOver = false; paused = false;
+      bag = []; lockTimer = 0;   // אתחול שק החלקים והנעילה
       nextType = pickPiece();
       updateStats();
     }
+    // בחירת חלק לפי "שק 7" — כל 7 החלקים בסדר אקראי לפני שחוזרים (הוגן)
     function pickPiece() {
-      const keys = Object.keys(PIECES);
-      return keys[Math.floor(Math.random() * keys.length)];
+      if (bag.length === 0) {
+        bag = Object.keys(PIECES);
+        for (let i = bag.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [bag[i], bag[j]] = [bag[j], bag[i]];
+        }
+      }
+      return bag.pop();
     }
     function spawn() {
       const type = nextType;
@@ -269,6 +281,7 @@
       currentColor = PIECES[type].color;
       currentX = Math.floor(COLS / 2) - Math.floor(currentPiece[0].length / 2);
       currentY = 0;
+      lockTimer = 0;   // חלק חדש — מאפסים את טיימר הנעילה
       drawNext();
       if (collides(0, 0, currentPiece)) {
         gameOver = true;
@@ -441,22 +454,35 @@
       if (dropTime > dropInterval) {
         dropTime = 0;
         if (!collides(0, 1, currentPiece)) currentY++;
-        else { merge(); clearLines(); spawn(); }
+      }
+      // השהיית נעילה: חלק שנוגע בקרקע ננעל רק אחרי חלון קצר (מאפשר תיקון ברגע האחרון)
+      if (collides(0, 1, currentPiece)) {
+        lockTimer += dt;
+        if (lockTimer >= LOCK_DELAY) { lockTimer = 0; merge(); clearLines(); spawn(); }
+      } else {
+        lockTimer = 0;
       }
       draw();
       rafId = requestAnimationFrame(loop);
     }
 
     // ---- פעולות (משותפות למקלדת ולכפתורי מגע) ----
-    function moveLeft()  { if (canPlay() && !collides(-1, 0, currentPiece)) { currentX--; draw(); } }
-    function moveRight() { if (canPlay() && !collides( 1, 0, currentPiece)) { currentX++; draw(); } }
+    function moveLeft()  { if (canPlay() && !collides(-1, 0, currentPiece)) { currentX--; lockTimer = 0; draw(); } }
+    function moveRight() { if (canPlay() && !collides( 1, 0, currentPiece)) { currentX++; lockTimer = 0; draw(); } }
     function softDrop()  { if (canPlay() && !collides(0, 1, currentPiece)) { currentY++; score += 1; updateStats(); draw(); } }
     function rotatePiece() {
       if (!canPlay()) return;
       const rotated = rotate(currentPiece);
-      const saved = currentPiece;
+      const saved = currentPiece, savedX = currentX, savedY = currentY;
       currentPiece = rotated;
-      if (collides(0, 0, rotated)) currentPiece = saved;
+      // "בעיטת קיר" — אם הסיבוב מתנגש, מנסים להזיז את החלק קצת כדי שיצליח
+      const kicks = [[0,0],[1,0],[-1,0],[2,0],[-2,0],[0,-1],[1,-1],[-1,-1]];
+      let ok = false;
+      for (const [kx, ky] of kicks) {
+        if (!collides(kx, ky, rotated)) { currentX += kx; currentY += ky; ok = true; break; }
+      }
+      if (!ok) { currentPiece = saved; currentX = savedX; currentY = savedY; }
+      else { lockTimer = 0; }
       draw();
     }
     function hardDrop() {
@@ -474,35 +500,46 @@
       pauseOverlay.style.display = paused ? 'flex' : 'none';
       if (!paused) { lastTime = 0; rafId = requestAnimationFrame(loop); }
     }
-    function canPlay() { return started && !gameOver && !paused; }
+    function canPlay() { return alive && started && !gameOver && !paused; }
 
     // ---- מקלדת ----
     function onKey(e) {
       if (!started) return;
-      if (e.key === 'p' || e.key === 'P') { togglePause(); e.preventDefault(); return; }
+      if (e.key === 'p' || e.key === 'P') { if (!e.repeat) togglePause(); e.preventDefault(); return; }
       if (gameOver || paused) return;
       let handled = true;
       if (e.key === 'ArrowLeft') moveLeft();
       else if (e.key === 'ArrowRight') moveRight();
       else if (e.key === 'ArrowDown') softDrop();
-      else if (e.key === 'ArrowUp') rotatePiece();
-      else if (e.key === ' ') hardDrop();
+      else if (e.key === 'ArrowUp') { if (!e.repeat) rotatePiece(); }   // סיבוב פעם אחת ללחיצה
+      else if (e.key === ' ') { if (!e.repeat) hardDrop(); }            // הפלה פעם אחת ללחיצה
       else handled = false;
       if (handled) e.preventDefault();
     }
     document.addEventListener('keydown', onKey);
 
-    // ---- כפתורי מגע ----
-    function tapBtn(id, fn) {
+    // ---- כפתורי מגע (עם תמיכה בהחזקה למהלכים חוזרים) ----
+    function holdBtn(id, fn, repeat) {
       const b = root.querySelector(id);
-      b.addEventListener('click', function (e) { e.preventDefault(); fn(); container.focus(); });
+      let delayT = null, repT = null;
+      const stop = () => { clearTimeout(delayT); clearInterval(repT); delayT = repT = null; };
+      holdStops.push(stop);
+      const start = (e) => {
+        e.preventDefault();
+        fn(); container.focus();
+        if (repeat) { delayT = setTimeout(() => { repT = setInterval(fn, 55); }, 170); }
+      };
+      b.addEventListener('pointerdown', start);
+      b.addEventListener('pointerup', stop);
+      b.addEventListener('pointerleave', stop);
+      b.addEventListener('pointercancel', stop);
     }
-    tapBtn('#tetris-t-left',   moveLeft);
-    tapBtn('#tetris-t-right',  moveRight);
-    tapBtn('#tetris-t-rotate', rotatePiece);
-    tapBtn('#tetris-t-down',   softDrop);
-    tapBtn('#tetris-t-drop',   hardDrop);
-    tapBtn('#tetris-t-pause',  togglePause);
+    holdBtn('#tetris-t-left',   moveLeft,    true);   // החזקה = תזוזה חוזרת
+    holdBtn('#tetris-t-right',  moveRight,   true);
+    holdBtn('#tetris-t-down',   softDrop,    true);   // החזקה = נפילה מהירה
+    holdBtn('#tetris-t-rotate', rotatePiece, false);  // לחיצה בודדת
+    holdBtn('#tetris-t-drop',   hardDrop,    false);
+    holdBtn('#tetris-t-pause',  togglePause, false);
 
     // ---- התחלה / שחק שוב ----
     function startGame() {
@@ -539,6 +576,7 @@
       alive = false;
       if (rafId) cancelAnimationFrame(rafId);
       document.removeEventListener('keydown', onKey);
+      holdStops.forEach(s => s());   // עצירת טיימרים של כפתורי מגע
       root.innerHTML = '';
     };
   };
