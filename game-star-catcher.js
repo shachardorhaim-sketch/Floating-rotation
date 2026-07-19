@@ -3,7 +3,12 @@
 //  הקובץ של רובין — כאן הוא עובד!
 // ============================================
 
+const SDICT = {"he": {"gameName": "תופס הכוכבים", "points": "נקודות", "lives": "נשארו", "level": "שלב", "best": "שיא", "mission": "המשימה שלך", "subtitle": "תפסו כוכבים והיזהרו ממטאורים", "startPlay": "מתחילים לשחק", "howPlay": "איך משחקים?", "levelMap": "מפת השלבים", "guideTitle": "מדריך המשחק", "starReg": "★ כוכב רגיל", "onePt": "נקודה אחת", "starGold": "★ כוכב זהב", "threePt": "3 נקודות", "starColor": "★ כוכב צבעוני", "fivePt": "5 נקודות", "meteor": "● מטאור", "losesLife": "מוריד חיים", "control": "↔ שליטה", "controlHow": "חצים, עכבר או אצבע", "miss": "−1 פספוס", "missDesc": "מוריד נקודה בלבד", "hudExplain": "למעלה: ניקוד, שלב וחיים  •  למטה: סל התפיסה", "levelReq": "שלב 1 דורש 10 נקודות, שלב 2 דורש 20, ועד שלב 30", "gotIt": "הבנתי, מתחילים!", "levelDone": "שלב {n} הושלם!", "nextGoal": "היעד הבא: {n} נקודות", "nextLevel": "לשלב הבא", "mapTitle": "מפת 30 השלבים", "back": "חזרה", "journeyEnd": "המסע הסתיים", "wellDone": "כל הכבוד!", "collected": "אספת {s} נקודות", "newGame": "משחק חדש", "conquered": "כבשת את החלל!", "allDone": "השלמת את כל 30 השלבים", "total": "סך הכול: {s} נקודות"}, "en": {"gameName": "Star Catcher", "points": "Points", "lives": "Lives", "level": "Level", "best": "Best", "mission": "Your mission", "subtitle": "Catch stars and avoid meteors", "startPlay": "Start playing", "howPlay": "How to play?", "levelMap": "Level map", "guideTitle": "Game guide", "starReg": "★ Regular star", "onePt": "One point", "starGold": "★ Gold star", "threePt": "3 points", "starColor": "★ Colorful star", "fivePt": "5 points", "meteor": "● Meteor", "losesLife": "Costs a life", "control": "↔ Control", "controlHow": "Arrows, mouse or finger", "miss": "−1 Miss", "missDesc": "Costs one point only", "hudExplain": "Top: score, level & lives  •  Bottom: the catch basket", "levelReq": "Level 1 needs 10 points, level 2 needs 20, up to level 30", "gotIt": "Got it, let's go!", "levelDone": "Level {n} complete!", "nextGoal": "Next goal: {n} points", "nextLevel": "Next level", "mapTitle": "Map of 30 levels", "back": "Back", "journeyEnd": "The journey is over", "wellDone": "Well done!", "collected": "You collected {s} points", "newGame": "New game", "conquered": "You conquered space!", "allDone": "You completed all 30 levels", "total": "Total: {s} points"}, "ar": {"gameName": "صائد النجوم", "points": "النقاط", "lives": "متبقٍ", "level": "المستوى", "best": "الأعلى", "mission": "مهمتك", "subtitle": "التقط النجوم واحذر النيازك", "startPlay": "ابدأ اللعب", "howPlay": "كيف ألعب؟", "levelMap": "خريطة المستويات", "guideTitle": "دليل اللعبة", "starReg": "★ نجمة عادية", "onePt": "نقطة واحدة", "starGold": "★ نجمة ذهبية", "threePt": "3 نقاط", "starColor": "★ نجمة ملونة", "fivePt": "5 نقاط", "meteor": "● نيزك", "losesLife": "يفقدك حياة", "control": "↔ التحكم", "controlHow": "الأسهم أو الفأرة أو الإصبع", "miss": "−1 إخفاق", "missDesc": "يفقدك نقطة فقط", "hudExplain": "الأعلى: النقاط والمستوى والحياة  •  الأسفل: سلة الالتقاط", "levelReq": "المستوى 1 يحتاج 10 نقاط، المستوى 2 يحتاج 20، حتى المستوى 30", "gotIt": "فهمت، لنبدأ!", "levelDone": "المستوى {n} اكتمل!", "nextGoal": "الهدف التالي: {n} نقطة", "nextLevel": "المستوى التالي", "mapTitle": "خريطة الـ30 مستوى", "back": "رجوع", "journeyEnd": "انتهت الرحلة", "wellDone": "أحسنت!", "collected": "جمعت {s} نقطة", "newGame": "لعبة جديدة", "conquered": "غزوت الفضاء!", "allDone": "أكملت كل الـ30 مستوى", "total": "المجموع: {s} نقطة"}, "zh": {"gameName": "接星星", "points": "分数", "lives": "剩余", "level": "关卡", "best": "最高", "mission": "你的任务", "subtitle": "接住星星,小心陨石", "startPlay": "开始游戏", "howPlay": "怎么玩?", "levelMap": "关卡地图", "guideTitle": "游戏指南", "starReg": "★ 普通星", "onePt": "1 分", "starGold": "★ 金星", "threePt": "3 分", "starColor": "★ 彩色星", "fivePt": "5 分", "meteor": "● 陨石", "losesLife": "扣一条命", "control": "↔ 控制", "controlHow": "方向键、鼠标或手指", "miss": "−1 未接住", "missDesc": "只扣一分", "hudExplain": "上方:分数、关卡和生命  •  下方:接球篮", "levelReq": "第 1 关需要 10 分,第 2 关需要 20 分,直到第 30 关", "gotIt": "明白了,开始!", "levelDone": "第 {n} 关完成!", "nextGoal": "下个目标:{n} 分", "nextLevel": "下一关", "mapTitle": "30 关地图", "back": "返回", "journeyEnd": "旅程结束", "wellDone": "做得好!", "collected": "你收集了 {s} 分", "newGame": "新游戏", "conquered": "你征服了太空!", "allDone": "你完成了全部 30 关", "total": "总计:{s} 分"}, "es": {"gameName": "Cazaestrellas", "points": "Puntos", "lives": "Vidas", "level": "Nivel", "best": "Récord", "mission": "Tu misión", "subtitle": "Atrapa estrellas y evita meteoros", "startPlay": "Empezar a jugar", "howPlay": "¿Cómo se juega?", "levelMap": "Mapa de niveles", "guideTitle": "Guía del juego", "starReg": "★ Estrella normal", "onePt": "Un punto", "starGold": "★ Estrella dorada", "threePt": "3 puntos", "starColor": "★ Estrella de color", "fivePt": "5 puntos", "meteor": "● Meteoro", "losesLife": "Quita una vida", "control": "↔ Control", "controlHow": "Flechas, ratón o dedo", "miss": "−1 Fallo", "missDesc": "Solo quita un punto", "hudExplain": "Arriba: puntos, nivel y vidas  •  Abajo: la cesta", "levelReq": "El nivel 1 necesita 10 puntos, el nivel 2 necesita 20, hasta el nivel 30", "gotIt": "¡Entendido, vamos!", "levelDone": "¡Nivel {n} completado!", "nextGoal": "Próxima meta: {n} puntos", "nextLevel": "Siguiente nivel", "mapTitle": "Mapa de 30 niveles", "back": "Volver", "journeyEnd": "El viaje terminó", "wellDone": "¡Bien hecho!", "collected": "Reuniste {s} puntos", "newGame": "Nuevo juego", "conquered": "¡Conquistaste el espacio!", "allDone": "Completaste los 30 niveles", "total": "Total: {s} puntos"}, "fr": {"gameName": "Attrape-Étoiles", "points": "Points", "lives": "Vies", "level": "Niveau", "best": "Record", "mission": "Ta mission", "subtitle": "Attrape les étoiles, évite les météores", "startPlay": "Commencer", "howPlay": "Comment jouer ?", "levelMap": "Carte des niveaux", "guideTitle": "Guide du jeu", "starReg": "★ Étoile normale", "onePt": "Un point", "starGold": "★ Étoile d'or", "threePt": "3 points", "starColor": "★ Étoile colorée", "fivePt": "5 points", "meteor": "● Météore", "losesLife": "Coûte une vie", "control": "↔ Contrôle", "controlHow": "Flèches, souris ou doigt", "miss": "−1 Raté", "missDesc": "Coûte un seul point", "hudExplain": "Haut : score, niveau et vies  •  Bas : le panier", "levelReq": "Le niveau 1 demande 10 points, le niveau 2 en demande 20, jusqu'au niveau 30", "gotIt": "Compris, on y va !", "levelDone": "Niveau {n} terminé !", "nextGoal": "Prochain objectif : {n} points", "nextLevel": "Niveau suivant", "mapTitle": "Carte des 30 niveaux", "back": "Retour", "journeyEnd": "Le voyage est fini", "wellDone": "Bravo !", "collected": "Tu as ramassé {s} points", "newGame": "Nouvelle partie", "conquered": "Tu as conquis l'espace !", "allDone": "Tu as terminé les 30 niveaux", "total": "Total : {s} points"}, "pt": {"gameName": "Caça-Estrelas", "points": "Pontos", "lives": "Vidas", "level": "Nível", "best": "Recorde", "mission": "Sua missão", "subtitle": "Pegue estrelas e evite meteoros", "startPlay": "Começar a jogar", "howPlay": "Como jogar?", "levelMap": "Mapa de níveis", "guideTitle": "Guia do jogo", "starReg": "★ Estrela normal", "onePt": "Um ponto", "starGold": "★ Estrela dourada", "threePt": "3 pontos", "starColor": "★ Estrela colorida", "fivePt": "5 pontos", "meteor": "● Meteoro", "losesLife": "Tira uma vida", "control": "↔ Controle", "controlHow": "Setas, mouse ou dedo", "miss": "−1 Erro", "missDesc": "Tira só um ponto", "hudExplain": "Cima: pontos, nível e vidas  •  Baixo: a cesta", "levelReq": "O nível 1 exige 10 pontos, o nível 2 exige 20, até o nível 30", "gotIt": "Entendi, vamos!", "levelDone": "Nível {n} concluído!", "nextGoal": "Próxima meta: {n} pontos", "nextLevel": "Próximo nível", "mapTitle": "Mapa dos 30 níveis", "back": "Voltar", "journeyEnd": "A jornada acabou", "wellDone": "Muito bem!", "collected": "Você juntou {s} pontos", "newGame": "Novo jogo", "conquered": "Você conquistou o espaço!", "allDone": "Você completou os 30 níveis", "total": "Total: {s} pontos"}, "ru": {"gameName": "Ловец звёзд", "points": "Очки", "lives": "Осталось", "level": "Уровень", "best": "Рекорд", "mission": "Твоя миссия", "subtitle": "Лови звёзды и избегай метеоров", "startPlay": "Начать игру", "howPlay": "Как играть?", "levelMap": "Карта уровней", "guideTitle": "Руководство", "starReg": "★ Обычная звезда", "onePt": "Одно очко", "starGold": "★ Золотая звезда", "threePt": "3 очка", "starColor": "★ Цветная звезда", "fivePt": "5 очков", "meteor": "● Метеор", "losesLife": "Отнимает жизнь", "control": "↔ Управление", "controlHow": "Стрелки, мышь или палец", "miss": "−1 Промах", "missDesc": "Отнимает только очко", "hudExplain": "Сверху: очки, уровень и жизни  •  Снизу: корзина", "levelReq": "Уровень 1 требует 10 очков, уровень 2 — 20, и так до уровня 30", "gotIt": "Понятно, поехали!", "levelDone": "Уровень {n} пройден!", "nextGoal": "Следующая цель: {n} очков", "nextLevel": "Следующий уровень", "mapTitle": "Карта 30 уровней", "back": "Назад", "journeyEnd": "Путешествие окончено", "wellDone": "Молодец!", "collected": "Ты собрал {s} очков", "newGame": "Новая игра", "conquered": "Ты покорил космос!", "allDone": "Ты прошёл все 30 уровней", "total": "Всего: {s} очков"}, "de": {"gameName": "Sternenfänger", "points": "Punkte", "lives": "Leben", "level": "Level", "best": "Rekord", "mission": "Deine Mission", "subtitle": "Fang Sterne und meide Meteoriten", "startPlay": "Losspielen", "howPlay": "Wie spielt man?", "levelMap": "Level-Karte", "guideTitle": "Spielanleitung", "starReg": "★ Normaler Stern", "onePt": "Ein Punkt", "starGold": "★ Goldener Stern", "threePt": "3 Punkte", "starColor": "★ Bunter Stern", "fivePt": "5 Punkte", "meteor": "● Meteorit", "losesLife": "Kostet ein Leben", "control": "↔ Steuerung", "controlHow": "Pfeile, Maus oder Finger", "miss": "−1 Verpasst", "missDesc": "Kostet nur einen Punkt", "hudExplain": "Oben: Punkte, Level & Leben  •  Unten: der Korb", "levelReq": "Level 1 braucht 10 Punkte, Level 2 braucht 20, bis Level 30", "gotIt": "Verstanden, los!", "levelDone": "Level {n} geschafft!", "nextGoal": "Nächstes Ziel: {n} Punkte", "nextLevel": "Nächstes Level", "mapTitle": "Karte mit 30 Levels", "back": "Zurück", "journeyEnd": "Die Reise ist vorbei", "wellDone": "Gut gemacht!", "collected": "Du hast {s} Punkte gesammelt", "newGame": "Neues Spiel", "conquered": "Du hast das All erobert!", "allDone": "Du hast alle 30 Level geschafft", "total": "Gesamt: {s} Punkte"}};
+function catchMakeT(){ let l='he'; try{ var _p=localStorage.getItem('flrot:lang'); if(_p) l=_p; }catch(e){} if(!SDICT[l]) l='he'; return k=>(SDICT[l]&&SDICT[l][k])||SDICT['he'][k]||k; }
 function mountCatch(root){
+  const ST = catchMakeT();
+  let _clng='he'; try{ var _cp=localStorage.getItem('flrot:lang'); if(_cp) _clng=_cp; }catch(e){}
+  const SRTL = (_clng==='he'||_clng==='ar');
   root.innerHTML = '<canvas width="640" height="440" style="width:100%;max-width:900px;aspect-ratio:640/440;display:block;margin:auto;border-radius:18px;touch-action:none;background:#090b2c"></canvas>';
   const cv = root.querySelector('canvas');
   const ctx = cv.getContext('2d');
@@ -247,6 +252,7 @@ function mountCatch(root){
     ctx.fillStyle = color || '#fff';
     ctx.textAlign = align || 'center';
     ctx.textBaseline = 'middle';
+    ctx.direction = SRTL ? 'rtl' : 'ltr';   // כיוון נכון לפי השפה (מונע היפוך טקסט)
     ctx.fillText(value,x,y);
   }
 
@@ -333,14 +339,14 @@ function mountCatch(root){
 
   function drawHud(){
     roundRect(10,9,620,48,13,'#0a0b2ccc','#ffffff20');
-    text('תופס הכוכבים',620,25,14,'#fff','right','900');
-    text('נקודות',532,20,9,'#8f91b1');
+    text(ST('gameName'),620,25,14,'#fff','right','900');
+    text(ST('points'),532,20,9,'#8f91b1');
     text(String(score),532,39,18,'#fff');
-    text('נשארו',450,20,9,'#8f91b1');
+    text(ST('lives'),450,20,9,'#8f91b1');
     text(String(Math.max(0,level*10-score)),450,39,18,'#fff');
-    text('שלב',370,20,9,'#8f91b1');
+    text(ST('level'),370,20,9,'#8f91b1');
     text(String(level),370,39,18,'#fff');
-    text('שיא',292,20,9,'#8f91b1');
+    text(ST('best'),292,20,9,'#8f91b1');
     text(String(highScore),292,39,18,'#fff');
     text('♥ '.repeat(lives)+'♡ '.repeat(3-lives),205,34,16,'#ff577b');
     button('♪',18,17,36,32,'sound');
@@ -363,21 +369,21 @@ function mountCatch(root){
     if(state==='playing') return;
     panel();
     if(state==='start'){
-      text('המשימה שלך',320,80,12,'#a99fff');
-      text('תופס הכוכבים',320,145,44,'#ffd85e','center','900');
-      text('תפסו כוכבים והיזהרו ממטאורים',320,195,15,'#bbbcd4');
-      button('מתחילים לשחק',220,230,200,45,'start');
-      button('איך משחקים?',240,285,160,34,'guide',true);
-      button('מפת השלבים',240,328,160,34,'map',true);
+      text(ST('mission'),320,80,12,'#a99fff');
+      text(ST('gameName'),320,145,44,'#ffd85e','center','900');
+      text(ST('subtitle'),320,195,15,'#bbbcd4');
+      button(ST('startPlay'),220,230,200,45,'start');
+      button(ST('howPlay'),240,285,160,34,'guide',true);
+      button(ST('levelMap'),240,328,160,34,'map',true);
     }else if(state==='guide'){
-      text('מדריך המשחק',320,62,30,'#ffd85e','center','900');
+      text(ST('guideTitle'),320,62,30,'#ffd85e','center','900');
       const items=[
-        ['★ כוכב רגיל','נקודה אחת','#a6efff'],
-        ['★ כוכב זהב','3 נקודות','#ffd956'],
-        ['★ כוכב צבעוני','5 נקודות','#f58cff'],
-        ['● מטאור','מוריד חיים','#ff577b'],
-        ['↔ שליטה','חצים, עכבר או אצבע','#a99fff'],
-        ['−1 פספוס','מוריד נקודה בלבד','#bfc0d8']
+        [ST('starReg'),ST('onePt'),'#a6efff'],
+        [ST('starGold'),ST('threePt'),'#ffd956'],
+        [ST('starColor'),ST('fivePt'),'#f58cff'],
+        [ST('meteor'),ST('losesLife'),'#ff577b'],
+        [ST('control'),ST('controlHow'),'#a99fff'],
+        [ST('miss'),ST('missDesc'),'#bfc0d8']
       ];
       items.forEach((it,i)=>{
         const col=i%2,row=Math.floor(i/2),x=105+col*225,y=105+row*62;
@@ -385,17 +391,17 @@ function mountCatch(root){
         text(it[0],x+190,y+17,13,it[2],'right','800');
         text(it[1],x+190,y+34,10,'#9294af','right');
       });
-      text('למעלה: ניקוד, שלב וחיים  •  למטה: סל התפיסה',320,310,11,'#999bb9');
-      text('שלב 1 דורש 10 נקודות, שלב 2 דורש 20, ועד שלב 30',320,334,11,'#999bb9');
-      button('הבנתי, מתחילים!',220,355,200,38,'start');
+      text(ST('hudExplain'),320,310,11,'#999bb9');
+      text(ST('levelReq'),320,334,11,'#999bb9');
+      button(ST('gotIt'),220,355,200,38,'start');
     }else if(state==='levelComplete'){
       text('★',320,105,60,'#ffd85e');
-      text('שלב '+(level-1)+' הושלם!',320,180,35,'#ffd85e','center','900');
-      text('היעד הבא: '+(level*10)+' נקודות',320,225,15,'#bbbcd4');
-      button('לשלב הבא',220,260,200,44,'continue');
-      button('מפת השלבים',240,315,160,34,'mapLevel',true);
+      text(ST('levelDone').replace('{n}',level-1),320,180,35,'#ffd85e','center','900');
+      text(ST('nextGoal').replace('{n}',level*10),320,225,15,'#bbbcd4');
+      button(ST('nextLevel'),220,260,200,44,'continue');
+      button(ST('levelMap'),240,315,160,34,'mapLevel',true);
     }else if(state==='map'){
-      text('מפת 30 השלבים',320,62,29,'#ffd85e','center','900');
+      text(ST('mapTitle'),320,62,29,'#ffd85e','center','900');
       for(let i=1;i<=30;i++){
         const col=(i-1)%10,row=Math.floor((i-1)/10),x=72+col*50,y=105+row*68;
         const done=i<level,current=i===level;
@@ -403,18 +409,18 @@ function mountCatch(root){
         text(done?'✓':String(i),x+21,y+17,15,done?'#19152e':'#fff');
         text(String(i*10),x+21,y+35,8,done?'#533a15':'#9092b1');
       }
-      button('חזרה',240,335,160,38,'back');
+      button(ST('back'),240,335,160,38,'back');
     }else if(state==='gameOver'){
-      text('המסע הסתיים',320,100,15,'#a99fff');
-      text('כל הכבוד!',320,170,43,'#ffd85e','center','900');
-      text('אספת '+totalScore+' נקודות',320,225,18,'#bbbcd4');
-      button('משחק חדש',220,270,200,44,'restart');
+      text(ST('journeyEnd'),320,100,15,'#a99fff');
+      text(ST('wellDone'),320,170,43,'#ffd85e','center','900');
+      text(ST('collected').replace('{s}',totalScore),320,225,18,'#bbbcd4');
+      button(ST('newGame'),220,270,200,44,'restart');
     }else if(state==='victory'){
       text('★',320,92,65,'#ffd85e');
-      text('כבשת את החלל!',320,165,39,'#ffd85e','center','900');
-      text('השלמת את כל 30 השלבים',320,215,18,'#bbbcd4');
-      text('סך הכול: '+totalScore+' נקודות',320,245,15,'#bbbcd4');
-      button('משחק חדש',220,290,200,44,'restart');
+      text(ST('conquered'),320,165,39,'#ffd85e','center','900');
+      text(ST('allDone'),320,215,18,'#bbbcd4');
+      text(ST('total').replace('{s}',totalScore),320,245,15,'#bbbcd4');
+      button(ST('newGame'),220,290,200,44,'restart');
     }
   }
 
