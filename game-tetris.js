@@ -329,10 +329,14 @@
       if (cleared) {
         lines += cleared;
         score += [0, 100, 300, 500, 800][cleared] * level;
-        level = Math.floor(lines / 10) + 1;
-        dropInterval = Math.max(80, 800 - (level - 1) * 60);
+        level = Math.min(200, Math.floor(lines / 10) + 1);   // עד 200 שלבים (כל 10 שורות)
+        dropInterval = levelSpeed(level);                    // כל שלב = מהיר יותר
         updateStats();
       }
+    }
+    // מהירות הנפילה לפי שלב — הדרגתית, מגיעה למהירה מאוד ברמות גבוהות (סגנון קלאסי)
+    function levelSpeed(lv) {
+      return Math.max(40, Math.round(800 * Math.pow(0.95, lv - 1)));
     }
     function updateStats() {
       elScore.textContent = score;
@@ -469,7 +473,7 @@
     // ---- פעולות (משותפות למקלדת ולכפתורי מגע) ----
     function moveLeft()  { if (canPlay() && !collides(-1, 0, currentPiece)) { currentX--; lockTimer = 0; draw(); } }
     function moveRight() { if (canPlay() && !collides( 1, 0, currentPiece)) { currentX++; lockTimer = 0; draw(); } }
-    function softDrop()  { if (canPlay() && !collides(0, 1, currentPiece)) { currentY++; score += 1; updateStats(); draw(); } }
+    function softDrop()  { if (canPlay() && !collides(0, 1, currentPiece)) { currentY++; dropTime = 0; draw(); } }  // בלי ניקוד — רק מזיז למטה
     function rotatePiece() {
       if (!canPlay()) return;
       const rotated = rotate(currentPiece);
