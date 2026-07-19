@@ -776,7 +776,8 @@ function mountChess(root) {
   newGame();
   updateContinue();
   loadAppearance();
-  applyLanguage(LS.get('language')||'he');
+  // עוקב אחרי שפת האתר: עברית → עברית, כל שפה אחרת → אנגלית (השחמט תומך בעברית ואנגלית)
+  applyLanguage((function(){ try{ var p=localStorage.getItem('flrot:lang'); if(p) return p==='he'?'he':'en'; }catch(e){} return LS.get('language')||'he'; })());
   initSF(); // טעינת Stockfish ברקע (לרמת "בלתי אפשרי")
 
   // ---------- ניקוי ----------
