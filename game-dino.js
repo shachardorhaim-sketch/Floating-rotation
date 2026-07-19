@@ -325,7 +325,9 @@ function mountDino(root) {
     drawBackground(); drawGround();
 
     if (state === 'play') {
-      dino.vy += 0.42;
+      // כבידה: כשמתכופפים באוויר (מחזיקים למטה/S) הכבידה כפולה — נפילה מהירה
+      const gravity = (dino.duck && !dino.ground) ? 0.84 : 0.42;
+      dino.vy += gravity;
       dino.y += dino.vy;
       if (dino.y >= GROUND) { dino.y = GROUND; dino.vy = 0; dino.ground = true; }
 
