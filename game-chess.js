@@ -155,7 +155,7 @@ function mountChess(root) {
    {ch:6,he:['כל הכבוד — סיימת את המדריך!','עכשיו אתה מכיר את כל הכלים, החוקים, עקרונות הפתיחה, הטקטיקות, המטים והסיומים — הבסיס המלא של שחקן ברמה 1000! הצעד הבא: שחק נגד המחשב ברמה "קל", נצח, ותעלה רמה. ככל שתתרגל יותר — כך תשתפר. בהצלחה, אלוף! 🏆'],en:['Well done — you finished the guide!','You now know all the pieces, the rules, opening principles, tactics, checkmates, and endgames — the full foundation of a 1000-level player! Next step: play the computer on Easy, win, and move up a level. The more you practice, the better you get. Good luck, champion! 🏆'],pieces:[[0,4,'b','k'],[0,0,'w','r'],[1,3,'w','p'],[1,4,'w','p'],[1,5,'w','p']]}
   ];
   const TASKS={he:[['לחץ על המלך הלבן המסומן.','בחר אחת מהנקודות והזז את המלך משבצת אחת לכל כיוון.'],['לחץ על החייל המסומן.','זה המהלך הראשון שלו — הזז אותו שתי משבצות ישר קדימה.'],['לחץ על החייל הלבן.','אכול את הפרש או את הרץ באלכסון קדימה.'],['לחץ על הצריח המסומן.','הזז אותו בקו ישר לאחת הנקודות.'],['לחץ על הרץ המסומן.','הזז אותו באלכסון. אפשר גם לאכול את הצריח השחור.'],['לחץ על הפרש המסומן.','הזז אותו בצורת ר אל אחת הנקודות.'],['לחץ על המלכה המסומנת.','הזז אותה בקו ישר או באלכסון. אפשר לאכול כלי שחור.'],null,null,['המלך בשח! לחץ עליו.','הזז את המלך למשבצת בטוחה מחוץ לקו הצריח.'],['המלך בשח מהצריח! לחץ על הרץ שלך.','הזז את הרץ כדי לעמוד בין הצריח למלך ולחסום.'],['המלך בשח מהפרש! לחץ על החייל שלך.','אכול את הפרש שנותן את השח.'],null,['לחץ על החייל שליד סוף הלוח.','הזז אותו לשורה האחרונה ובחר כלי להכתרה.'],null,null,['לחץ על חייל המרכז.','דחוף אותו שתי משבצות למרכז הלוח.'],['לחץ על הפרש (הסוס) המסומן.','פתח אותו אל המרכז.'],['לחץ על הרץ המסומן.','פתח אותו אל אלכסון פעיל במרכז.'],null,null,null,null,null,null,['לחץ על הפרש הלבן.','קפוץ למשבצת שתוקפת גם את המלך וגם את המלכה — מזלג!'],['לחץ על החייל הלבן.','דחוף אותו קדימה כדי לאיים על שני הכלים — מזלג חיילים!'],null,['לחץ על הרץ הלבן.','אכול את הפרש המסוכר — הוא לא יכול לברוח!'],['לחץ על הצריח הלבן.','תן שח למלך — הוא יזוז, ותאכל את המלכה מאחוריו!'],null,null,['לחץ על המלכה הלבנה.','מצא את המשבצת שנותנת שח למלך וגם תוקפת את הצריח.'],null,['לחץ על הצריח הלבן.','הזז אותו לשורה האחורית — המלך תקוע. מט!'],['לחץ על הצריח התחתון.','הזז אותו לשורה של המלך — מט הסולם!'],null,null,null,null,null,null,['לחץ על החייל.','דחוף אותו לשורה האחרונה והכתר מלכה!'],null,null,null],en:[['Click the highlighted white king.','Pick a dot and move the king one square in any direction.'],['Click the highlighted pawn.','This is its first move — push it two squares straight forward.'],['Click the white pawn.','Capture the knight or the bishop diagonally.'],['Click the highlighted rook.','Move it in a straight line to one of the dots.'],['Click the highlighted bishop.','Move it diagonally. You may also take the black rook.'],['Click the highlighted knight.','Move it in an L to one of the dots.'],['Click the highlighted queen.','Move straight or diagonally. You may take a black piece.'],null,null,['The king is in check! Click it.','Move the king to a safe square off the rook line.'],['Check from the rook! Click your bishop.','Move the bishop between the rook and the king to block.'],['Check from the knight! Click your pawn.','Capture the knight that gives check.'],null,['Click the pawn near the end.','Move it to the last rank and choose a promotion piece.'],null,null,['Click the central pawn.','Push it two squares to the center.'],['Click the highlighted knight.','Develop it toward the center.'],['Click the highlighted bishop.','Develop it onto an active central diagonal.'],null,null,null,null,null,null,['Click the white knight.','Jump to the square attacking both the king and the queen — a fork!'],['Click the white pawn.','Push it forward to threaten both pieces — a pawn fork!'],null,['Click the white bishop.','Capture the pinned knight — it cannot run away!'],['Click the white rook.','Check the king — it moves, and you take the queen behind it!'],null,null,['Click the white queen.','Find the square that checks the king and also attacks the rook.'],null,['Click the white rook.','Move it to the back rank — the king is trapped. Mate!'],['Click the lower rook.','Move it to the king rank — the ladder mate!'],null,null,null,null,null,null,['Click the pawn.','Push it to the last rank and promote to a queen!'],null,null,null]};
-  const WORDS={he:{turn:'תור ה',white:'לבן',black:'שחור',move:'מהלך',check:' — שח',sure:'המשחק עדיין בעיצומו. לצאת לתפריט?',mateB:'השחור ניצח במט',mateW:'הלבן ניצח במט',stale:'תיקו — פט',insuf:'תיקו — אין מספיק כלים למט',fifty:'תיקו — חוק 50 המהלכים',three:'תיקו — שלוש חזרות',saved:'משחק שמור',vs:'נגד המחשב',two:'שני שחקנים'},en:{turn:'Turn: ',white:'White',black:'Black',move:'Move',check:' — Check',sure:'The game is still in progress. Return to menu?',mateB:'Black wins by checkmate',mateW:'White wins by checkmate',stale:'Draw — stalemate',insuf:'Draw — insufficient material',fifty:'Draw — fifty-move rule',three:'Draw — threefold repetition',saved:'Saved game',vs:'Computer',two:'Two players'}};
+  const WORDS={"he": {"turn": "תור ה", "white": "לבן", "black": "שחור", "move": "מהלך", "check": " — שח", "sure": "המשחק עדיין בעיצומו. לצאת לתפריט?", "mateB": "השחור ניצח במט", "mateW": "הלבן ניצח במט", "stale": "תיקו — פט", "insuf": "תיקו — אין מספיק כלים למט", "fifty": "תיקו — חוק 50 המהלכים", "three": "תיקו — שלוש חזרות", "saved": "משחק שמור", "vs": "נגד המחשב", "two": "שני שחקנים"}, "en": {"turn": "Turn: ", "white": "White", "black": "Black", "move": "Move", "check": " — Check", "sure": "The game is still in progress. Return to menu?", "mateB": "Black wins by checkmate", "mateW": "White wins by checkmate", "stale": "Draw — stalemate", "insuf": "Draw — insufficient material", "fifty": "Draw — fifty-move rule", "three": "Draw — threefold repetition", "saved": "Saved game", "vs": "Computer", "two": "Two players"}, "ar": {"turn": "الدور: ", "white": "الأبيض", "black": "الأسود", "move": "حركة", "check": " — كش", "sure": "اللعبة ما زالت جارية. العودة إلى القائمة؟", "mateB": "الأسود يفوز بكش ملك", "mateW": "الأبيض يفوز بكش ملك", "stale": "تعادل — جمود", "insuf": "تعادل — مادة غير كافية", "fifty": "تعادل — قاعدة الخمسين نقلة", "three": "تعادل — تكرار ثلاثي", "saved": "لعبة محفوظة", "vs": "الكمبيوتر", "two": "لاعبان"}, "zh": {"turn": "轮到:", "white": "白方", "black": "黑方", "move": "走子", "check": " — 将军", "sure": "游戏仍在进行中。返回菜单吗?", "mateB": "黑方将死获胜", "mateW": "白方将死获胜", "stale": "和棋——逼和", "insuf": "和棋——子力不足", "fifty": "和棋——50步规则", "three": "和棋——三次重复", "saved": "已保存的游戏", "vs": "电脑", "two": "双人"}, "es": {"turn": "Turno: ", "white": "Blancas", "black": "Negras", "move": "Movimiento", "check": " — Jaque", "sure": "La partida sigue en curso. ¿Volver al menú?", "mateB": "Las negras ganan por jaque mate", "mateW": "Las blancas ganan por jaque mate", "stale": "Tablas — ahogado", "insuf": "Tablas — material insuficiente", "fifty": "Tablas — regla de 50 movimientos", "three": "Tablas — triple repetición", "saved": "Partida guardada", "vs": "Computadora", "two": "Dos jugadores"}, "fr": {"turn": "Tour : ", "white": "Blancs", "black": "Noirs", "move": "Coup", "check": " — Échec", "sure": "La partie est en cours. Revenir au menu ?", "mateB": "Les noirs gagnent par échec et mat", "mateW": "Les blancs gagnent par échec et mat", "stale": "Nulle — pat", "insuf": "Nulle — matériel insuffisant", "fifty": "Nulle — règle des 50 coups", "three": "Nulle — triple répétition", "saved": "Partie enregistrée", "vs": "Ordinateur", "two": "Deux joueurs"}, "pt": {"turn": "Vez: ", "white": "Brancas", "black": "Pretas", "move": "Jogada", "check": " — Xeque", "sure": "O jogo ainda está em andamento. Voltar ao menu?", "mateB": "As pretas vencem por xeque-mate", "mateW": "As brancas vencem por xeque-mate", "stale": "Empate — afogamento", "insuf": "Empate — material insuficiente", "fifty": "Empate — regra dos 50 lances", "three": "Empate — tripla repetição", "saved": "Jogo salvo", "vs": "Computador", "two": "Dois jogadores"}, "ru": {"turn": "Ход: ", "white": "Белые", "black": "Чёрные", "move": "Ход", "check": " — Шах", "sure": "Игра ещё идёт. Вернуться в меню?", "mateB": "Чёрные выигрывают матом", "mateW": "Белые выигрывают матом", "stale": "Ничья — пат", "insuf": "Ничья — недостаточно материала", "fifty": "Ничья — правило 50 ходов", "three": "Ничья — троекратное повторение", "saved": "Сохранённая игра", "vs": "Компьютер", "two": "Два игрока"}, "de": {"turn": "Zug: ", "white": "Weiß", "black": "Schwarz", "move": "Zug", "check": " — Schach", "sure": "Das Spiel läuft noch. Zurück zum Menü?", "mateB": "Schwarz gewinnt durch Schachmatt", "mateW": "Weiß gewinnt durch Schachmatt", "stale": "Remis — Patt", "insuf": "Remis — ungenügendes Material", "fifty": "Remis — 50-Züge-Regel", "three": "Remis — dreifache Wiederholung", "saved": "Gespeichertes Spiel", "vs": "Computer", "two": "Zwei Spieler"}};
   const tr=k=>WORDS[currentLang][k];
 
   // ---------- אחסון ----------
@@ -266,47 +266,47 @@ function mountChess(root) {
   }
   function loadAppearance(){ try{ const x=JSON.parse(LS.get('appearance'))||{}; applyAppearance(x.piece||'carved',x.board||'wood'); }catch(e){ applyAppearance(); } }
 
+  const CHUI={"he": {"welcome": "ברוכים הבאים", "welcomeH2": "איך משחקים<br><em>היום?</em>", "welcomeP": "בחרו יריב, הכינו את הכלים — וצאו לדרך.", "compStrong": "נגד המחשב", "compSmall": "בחרו רמה ושחקו מיד", "localStrong": "שני שחקנים", "localSmall": "שחקו יחד על אותו מסך", "continueG": "המשך משחק", "settings": "הגדרות", "learnStrong": "איך משחקים שחמט", "learnSmall": "למדו בעזרת לוח הדגמה", "prev": "הקודם", "chooseDiff": "בחרו רמת קושי", "menuBtn": "לתפריט <span>↗</span>", "undo": "↶&nbsp;&nbsp;בטל", "heroH1": "המהלך<br><em>שלך.</em>", "personalize": "התאמה אישית", "designSettings": "הגדרות עיצוב", "pieceStyle": "סגנון הכלים", "boardStyle": "סגנון הלוח", "language": "שפה", "twoLocal": "👥 על מכשיר אחד", "twoRemote": "🌐 מרחוק (עם קוד)", "remoteH3": "משחק מרחוק", "createRoom": "➕ צור חדר חדש", "joinRoom": "הצטרף ←", "enterCode": "הקלד קוד", "backMenu": "↩ לתפריט", "modeMaster": "נגד המחשב · בלתי אפשרי · Stockfish 🏆", "remotePrefix": "מרחוק · ", "remoteWhite": "אתה הלבן ⚪", "remoteBlack": "אתה השחור ⚫", "styleNames": ["מגולף", "8־ביט", "ניאון", "מלכותי", "קרח", "סוכריות", "נייר", "צללים", "עץ טבעי", "מועדון", "לילה", "שיש", "אוקיינוס", "ממתקים", "מדבר", "מונוכרום"], "levelNames": ["קל", "בינוני", "קשה", "בלתי אפשרי"], "diffNames": {"easy": "קל", "medium": "בינוני", "hard": "קשה", "master": "בלתי אפשרי"}}, "en": {"welcome": "WELCOME", "welcomeH2": "How will you<br><em>play today?</em>", "welcomeP": "Choose an opponent, set the pieces — and begin.", "compStrong": "Play the computer", "compSmall": "Choose a level and play now", "localStrong": "Two players", "localSmall": "Play together on one screen", "continueG": "Continue game", "settings": "Settings", "learnStrong": "How to play chess", "learnSmall": "Learn with a demonstration board", "prev": "Previous", "chooseDiff": "Choose difficulty", "menuBtn": "Menu <span>↗</span>", "undo": "↶&nbsp;&nbsp;Undo", "heroH1": "Your<br><em>move.</em>", "personalize": "PERSONALIZE", "designSettings": "Design settings", "pieceStyle": "Piece style", "boardStyle": "Board style", "language": "Language", "twoLocal": "👥 One device", "twoRemote": "🌐 Remote (with code)", "remoteH3": "Remote game", "createRoom": "➕ Create new room", "joinRoom": "Join →", "enterCode": "Enter code", "backMenu": "↩ Menu", "modeMaster": "Computer · Impossible · Stockfish 🏆", "remotePrefix": "Remote · ", "remoteWhite": "You are White ⚪", "remoteBlack": "You are Black ⚫", "styleNames": ["Carved", "8-bit", "Neon", "Royal", "Ice", "Candy", "Paper", "Shadows", "Natural wood", "Club", "Night", "Marble", "Ocean", "Candy", "Desert", "Monochrome"], "levelNames": ["Easy", "Medium", "Hard", "Impossible"], "diffNames": {"easy": "Easy", "medium": "Medium", "hard": "Hard", "master": "Impossible"}}, "ar": {"welcome": "مرحباً", "welcomeH2": "كيف <br><em>ستلعب اليوم؟</em>", "welcomeP": "اختر خصماً، رتّب القطع — وابدأ.", "compStrong": "العب ضد الكمبيوتر", "compSmall": "اختر مستوى والعب الآن", "localStrong": "لاعبان", "localSmall": "العبا معاً على شاشة واحدة", "continueG": "متابعة اللعبة", "settings": "الإعدادات", "learnStrong": "كيف تلعب الشطرنج", "learnSmall": "تعلّم بلوح توضيحي", "prev": "السابق", "chooseDiff": "اختر مستوى الصعوبة", "menuBtn": "القائمة <span>↗</span>", "undo": "↶&nbsp;&nbsp;تراجع", "heroH1": "دورك<br><em>للعب.</em>", "personalize": "تخصيص", "designSettings": "إعدادات التصميم", "pieceStyle": "نمط القطع", "boardStyle": "نمط اللوح", "language": "اللغة", "twoLocal": "👥 جهاز واحد", "twoRemote": "🌐 عن بعد (برمز)", "remoteH3": "لعبة عن بعد", "createRoom": "➕ أنشئ غرفة جديدة", "joinRoom": "انضم ←", "enterCode": "أدخل الرمز", "backMenu": "↩ القائمة", "modeMaster": "الكمبيوتر · مستحيل · Stockfish 🏆", "remotePrefix": "عن بعد · ", "remoteWhite": "أنت الأبيض ⚪", "remoteBlack": "أنت الأسود ⚫", "styleNames": ["محفور", "8-بت", "نيون", "ملكي", "جليد", "حلوى", "ورق", "ظلال", "خشب طبيعي", "نادٍ", "ليل", "رخام", "محيط", "حلوى", "صحراء", "أحادي اللون"], "levelNames": ["سهل", "متوسط", "صعب", "مستحيل"], "diffNames": {"easy": "سهل", "medium": "متوسط", "hard": "صعب", "master": "مستحيل"}}, "zh": {"welcome": "欢迎", "welcomeH2": "今天<br><em>怎么玩?</em>", "welcomeP": "选择对手,摆好棋子,开始吧。", "compStrong": "与电脑对战", "compSmall": "选择难度立即开始", "localStrong": "双人对战", "localSmall": "在同一屏幕上一起玩", "continueG": "继续游戏", "settings": "设置", "learnStrong": "如何下国际象棋", "learnSmall": "通过演示棋盘学习", "prev": "上一个", "chooseDiff": "选择难度", "menuBtn": "菜单 <span>↗</span>", "undo": "↶&nbsp;&nbsp;悔棋", "heroH1": "轮到<br><em>你了。</em>", "personalize": "个性化", "designSettings": "外观设置", "pieceStyle": "棋子样式", "boardStyle": "棋盘样式", "language": "语言", "twoLocal": "👥 同一设备", "twoRemote": "🌐 远程(用代码)", "remoteH3": "远程游戏", "createRoom": "➕ 创建新房间", "joinRoom": "加入 →", "enterCode": "输入代码", "backMenu": "↩ 菜单", "modeMaster": "电脑 · 不可能 · Stockfish 🏆", "remotePrefix": "远程 · ", "remoteWhite": "你执白 ⚪", "remoteBlack": "你执黑 ⚫", "styleNames": ["雕刻", "8位", "霓虹", "皇家", "冰", "糖果", "纸", "阴影", "天然木", "俱乐部", "夜晚", "大理石", "海洋", "糖果", "沙漠", "单色"], "levelNames": ["简单", "中等", "困难", "不可能"], "diffNames": {"easy": "简单", "medium": "中等", "hard": "困难", "master": "不可能"}}, "es": {"welcome": "BIENVENIDO", "welcomeH2": "¿Cómo<br><em>jugarás hoy?</em>", "welcomeP": "Elige un rival, coloca las piezas y empieza.", "compStrong": "Jugar contra la computadora", "compSmall": "Elige un nivel y juega ya", "localStrong": "Dos jugadores", "localSmall": "Jueguen juntos en una pantalla", "continueG": "Continuar partida", "settings": "Ajustes", "learnStrong": "Cómo jugar al ajedrez", "learnSmall": "Aprende con un tablero de demostración", "prev": "Anterior", "chooseDiff": "Elige la dificultad", "menuBtn": "Menú <span>↗</span>", "undo": "↶&nbsp;&nbsp;Deshacer", "heroH1": "Tu<br><em>jugada.</em>", "personalize": "PERSONALIZAR", "designSettings": "Ajustes de diseño", "pieceStyle": "Estilo de piezas", "boardStyle": "Estilo del tablero", "language": "Idioma", "twoLocal": "👥 Un dispositivo", "twoRemote": "🌐 Remoto (con código)", "remoteH3": "Partida remota", "createRoom": "➕ Crear sala nueva", "joinRoom": "Unirse →", "enterCode": "Escribe el código", "backMenu": "↩ Menú", "modeMaster": "Computadora · Imposible · Stockfish 🏆", "remotePrefix": "Remoto · ", "remoteWhite": "Tú eres Blancas ⚪", "remoteBlack": "Tú eres Negras ⚫", "styleNames": ["Tallado", "8-bits", "Neón", "Real", "Hielo", "Dulce", "Papel", "Sombras", "Madera natural", "Club", "Noche", "Mármol", "Océano", "Dulce", "Desierto", "Monocromo"], "levelNames": ["Fácil", "Medio", "Difícil", "Imposible"], "diffNames": {"easy": "Fácil", "medium": "Medio", "hard": "Difícil", "master": "Imposible"}}, "fr": {"welcome": "BIENVENUE", "welcomeH2": "Comment<br><em>jouer aujourd'hui ?</em>", "welcomeP": "Choisis un adversaire, place les pièces — et commence.", "compStrong": "Jouer contre l'ordinateur", "compSmall": "Choisis un niveau et joue", "localStrong": "Deux joueurs", "localSmall": "Jouez ensemble sur un écran", "continueG": "Continuer la partie", "settings": "Paramètres", "learnStrong": "Comment jouer aux échecs", "learnSmall": "Apprends avec un plateau de démo", "prev": "Précédent", "chooseDiff": "Choisis la difficulté", "menuBtn": "Menu <span>↗</span>", "undo": "↶&nbsp;&nbsp;Annuler", "heroH1": "À toi<br><em>de jouer.</em>", "personalize": "PERSONNALISER", "designSettings": "Réglages de design", "pieceStyle": "Style des pièces", "boardStyle": "Style du plateau", "language": "Langue", "twoLocal": "👥 Un appareil", "twoRemote": "🌐 À distance (avec code)", "remoteH3": "Partie à distance", "createRoom": "➕ Créer une salle", "joinRoom": "Rejoindre →", "enterCode": "Saisir le code", "backMenu": "↩ Menu", "modeMaster": "Ordinateur · Impossible · Stockfish 🏆", "remotePrefix": "À distance · ", "remoteWhite": "Tu es les Blancs ⚪", "remoteBlack": "Tu es les Noirs ⚫", "styleNames": ["Sculpté", "8-bit", "Néon", "Royal", "Glace", "Bonbon", "Papier", "Ombres", "Bois naturel", "Club", "Nuit", "Marbre", "Océan", "Bonbon", "Désert", "Monochrome"], "levelNames": ["Facile", "Moyen", "Difficile", "Impossible"], "diffNames": {"easy": "Facile", "medium": "Moyen", "hard": "Difficile", "master": "Impossible"}}, "pt": {"welcome": "BEM-VINDO", "welcomeH2": "Como você<br><em>vai jogar hoje?</em>", "welcomeP": "Escolha um oponente, posicione as peças — e comece.", "compStrong": "Jogar contra o computador", "compSmall": "Escolha um nível e jogue já", "localStrong": "Dois jogadores", "localSmall": "Joguem juntos numa tela", "continueG": "Continuar jogo", "settings": "Configurações", "learnStrong": "Como jogar xadrez", "learnSmall": "Aprenda com um tabuleiro de demonstração", "prev": "Anterior", "chooseDiff": "Escolha a dificuldade", "menuBtn": "Menu <span>↗</span>", "undo": "↶&nbsp;&nbsp;Desfazer", "heroH1": "Sua<br><em>jogada.</em>", "personalize": "PERSONALIZAR", "designSettings": "Ajustes de design", "pieceStyle": "Estilo das peças", "boardStyle": "Estilo do tabuleiro", "language": "Idioma", "twoLocal": "👥 Um dispositivo", "twoRemote": "🌐 Remoto (com código)", "remoteH3": "Jogo remoto", "createRoom": "➕ Criar sala nova", "joinRoom": "Entrar →", "enterCode": "Digite o código", "backMenu": "↩ Menu", "modeMaster": "Computador · Impossível · Stockfish 🏆", "remotePrefix": "Remoto · ", "remoteWhite": "Você é as Brancas ⚪", "remoteBlack": "Você é as Pretas ⚫", "styleNames": ["Esculpido", "8-bit", "Néon", "Real", "Gelo", "Doce", "Papel", "Sombras", "Madeira natural", "Clube", "Noite", "Mármore", "Oceano", "Doce", "Deserto", "Monocromo"], "levelNames": ["Fácil", "Médio", "Difícil", "Impossível"], "diffNames": {"easy": "Fácil", "medium": "Médio", "hard": "Difícil", "master": "Impossível"}}, "ru": {"welcome": "ДОБРО ПОЖАЛОВАТЬ", "welcomeH2": "Как ты<br><em>сыграешь сегодня?</em>", "welcomeP": "Выбери соперника, расставь фигуры — и начинай.", "compStrong": "Играть с компьютером", "compSmall": "Выбери уровень и играй", "localStrong": "Два игрока", "localSmall": "Играйте на одном экране", "continueG": "Продолжить игру", "settings": "Настройки", "learnStrong": "Как играть в шахматы", "learnSmall": "Учись на демо-доске", "prev": "Назад", "chooseDiff": "Выбери сложность", "menuBtn": "Меню <span>↗</span>", "undo": "↶&nbsp;&nbsp;Отмена", "heroH1": "Твой<br><em>ход.</em>", "personalize": "НАСТРОЙКА", "designSettings": "Настройки оформления", "pieceStyle": "Стиль фигур", "boardStyle": "Стиль доски", "language": "Язык", "twoLocal": "👥 Одно устройство", "twoRemote": "🌐 Онлайн (по коду)", "remoteH3": "Онлайн-игра", "createRoom": "➕ Создать комнату", "joinRoom": "Войти →", "enterCode": "Введите код", "backMenu": "↩ Меню", "modeMaster": "Компьютер · Невозможно · Stockfish 🏆", "remotePrefix": "Онлайн · ", "remoteWhite": "Ты за белых ⚪", "remoteBlack": "Ты за чёрных ⚫", "styleNames": ["Резной", "8-бит", "Неон", "Королевский", "Лёд", "Конфета", "Бумага", "Тени", "Дерево", "Клуб", "Ночь", "Мрамор", "Океан", "Конфета", "Пустыня", "Монохром"], "levelNames": ["Лёгкий", "Средний", "Сложный", "Невозможно"], "diffNames": {"easy": "Лёгкий", "medium": "Средний", "hard": "Сложный", "master": "Невозможно"}}, "de": {"welcome": "WILLKOMMEN", "welcomeH2": "Wie spielst<br><em>du heute?</em>", "welcomeP": "Wähle einen Gegner, stell die Figuren auf — und los.", "compStrong": "Gegen den Computer", "compSmall": "Level wählen und spielen", "localStrong": "Zwei Spieler", "localSmall": "Zusammen an einem Bildschirm", "continueG": "Spiel fortsetzen", "settings": "Einstellungen", "learnStrong": "Wie man Schach spielt", "learnSmall": "Lerne mit einem Demobrett", "prev": "Zurück", "chooseDiff": "Schwierigkeit wählen", "menuBtn": "Menü <span>↗</span>", "undo": "↶&nbsp;&nbsp;Zurück", "heroH1": "Du bist<br><em>am Zug.</em>", "personalize": "ANPASSEN", "designSettings": "Design-Einstellungen", "pieceStyle": "Figurenstil", "boardStyle": "Brettstil", "language": "Sprache", "twoLocal": "👥 Ein Gerät", "twoRemote": "🌐 Fern (mit Code)", "remoteH3": "Fernpartie", "createRoom": "➕ Neuen Raum erstellen", "joinRoom": "Beitreten →", "enterCode": "Code eingeben", "backMenu": "↩ Menü", "modeMaster": "Computer · Unmöglich · Stockfish 🏆", "remotePrefix": "Fern · ", "remoteWhite": "Du bist Weiß ⚪", "remoteBlack": "Du bist Schwarz ⚫", "styleNames": ["Geschnitzt", "8-Bit", "Neon", "Königlich", "Eis", "Bonbon", "Papier", "Schatten", "Naturholz", "Club", "Nacht", "Marmor", "Ozean", "Bonbon", "Wüste", "Monochrom"], "levelNames": ["Leicht", "Mittel", "Schwer", "Unmöglich"], "diffNames": {"easy": "Leicht", "medium": "Mittel", "hard": "Schwer", "master": "Unmöglich"}}};
+  function chT(k){ const D=CHUI[currentLang]||CHUI.en; return D[k]!=null?D[k]:CHUI.en[k]; }
   function applyLanguage(lang){
     currentLang=lang; LS.set('language',lang);
-    shell.dir = lang==='he'?'rtl':'ltr';
-    const en=lang==='en', set=(s,v,html=false)=>{const e=$(s);if(e)e[html?'innerHTML':'textContent']=v;};
-    set('.ch-lobby-copy .ch-eyebrow',en?'WELCOME':'ברוכים הבאים');
-    set('.ch-lobby-copy h2',en?'How will you<br><em>play today?</em>':'איך משחקים<br><em>היום?</em>',true);
-    set('.ch-lobby-copy>p:last-child',en?'Choose an opponent, set the pieces — and begin.':'בחרו יריב, הכינו את הכלים — וצאו לדרך.');
-    set('#ch-computer-mode strong',en?'Play the computer':'נגד המחשב');
-    set('#ch-computer-mode small',en?'Choose a level and play now':'בחרו רמה ושחקו מיד');
-    set('#ch-local-mode strong',en?'Two players':'שני שחקנים');
-    set('#ch-local-mode small',en?'Play together on one screen':'שחקו יחד על אותו מסך');
-    set('#ch-continue-game strong',en?'Continue game':'המשך משחק');
-    set('.ch-lobby-settings span',en?'Settings':'הגדרות');
-    set('#ch-learn-mode strong',en?'How to play chess':'איך משחקים שחמט');
-    set('#ch-learn-mode small',en?'Learn with a demonstration board':'למדו בעזרת לוח הדגמה');
-    set('#ch-lesson-prev',en?'Previous':'הקודם');
-    set('#ch-computer-panel h3',en?'Choose difficulty':'בחרו רמת קושי');
-    set('#ch-new-game',en?'Menu <span>↗</span>':'לתפריט <span>↗</span>',true);
-    set('#ch-undo',en?'↶&nbsp;&nbsp;Undo':'↶&nbsp;&nbsp;בטל',true);
+    shell.dir = (lang==='he'||lang==='ar')?'rtl':'ltr';
+    const set=(s,v,html=false)=>{const e=$(s);if(e)e[html?'innerHTML':'textContent']=v;};
+    set('.ch-lobby-copy .ch-eyebrow',chT('welcome'));
+    set('.ch-lobby-copy h2',chT('welcomeH2'),true);
+    set('.ch-lobby-copy>p:last-child',chT('welcomeP'));
+    set('#ch-computer-mode strong',chT('compStrong'));
+    set('#ch-computer-mode small',chT('compSmall'));
+    set('#ch-local-mode strong',chT('localStrong'));
+    set('#ch-local-mode small',chT('localSmall'));
+    set('#ch-continue-game strong',chT('continueG'));
+    set('.ch-lobby-settings span',chT('settings'));
+    set('#ch-learn-mode strong',chT('learnStrong'));
+    set('#ch-learn-mode small',chT('learnSmall'));
+    set('#ch-lesson-prev',chT('prev'));
+    set('#ch-computer-panel h3',chT('chooseDiff'));
+    set('#ch-new-game',chT('menuBtn'),true);
+    set('#ch-undo',chT('undo'),true);
     set('.ch-player-white strong',tr('white'));
     set('.ch-player-black strong',tr('black'));
-    set('.ch-hero-copy h1',en?'Your<br><em>move.</em>':'המהלך<br><em>שלך.</em>',true);
-    set('.ch-settings-card>.ch-eyebrow',en?'PERSONALIZE':'התאמה אישית');
-    set('#ch-settings-title',en?'Design settings':'הגדרות עיצוב');
+    set('.ch-hero-copy h1',chT('heroH1'),true);
+    set('.ch-settings-card>.ch-eyebrow',chT('personalize'));
+    set('#ch-settings-title',chT('designSettings'));
     const labels=$$('.ch-settings-card>label');
-    if(labels[0])labels[0].textContent=en?'Piece style':'סגנון הכלים';
-    if(labels[1])labels[1].textContent=en?'Board style':'סגנון הלוח';
-    set('#ch-language-label',en?'Language':'שפה');
-    const names=en?['Carved','8-bit','Neon','Royal','Ice','Candy','Paper','Shadows','Natural wood','Club','Night','Marble','Ocean','Candy','Desert','Monochrome']:['מגולף','8־ביט','ניאון','מלכותי','קרח','סוכריות','נייר','צללים','עץ טבעי','מועדון','לילה','שיש','אוקיינוס','ממתקים','מדבר','מונוכרום'];
-    $$('.ch-style-options strong').forEach((x,i)=>x.textContent=names[i]);
-    $$('.ch-levels button').forEach((b,i)=>b.textContent=(en?['Easy','Medium','Hard','Impossible']:['קל','בינוני','קשה','בלתי אפשרי'])[i]);
-    // כפתורי "שני שחקנים" / "מרחוק" / "לתפריט" (היו חסרים בתרגום)
-    set('#ch-two-panel h3',en?'Two players':'שני שחקנים');
-    set('#ch-two-local',en?'👥 One device':'👥 על מכשיר אחד');
-    set('#ch-two-remote',en?'🌐 Remote (with code)':'🌐 מרחוק (עם קוד)');
-    set('#ch-remote-panel h3',en?'Remote game':'משחק מרחוק');
-    set('#ch-create-room',en?'➕ Create new room':'➕ צור חדר חדש');
-    set('#ch-join-room',en?'Join →':'הצטרף ←');
-    { const jc=$('#ch-join-code'); if(jc)jc.placeholder=en?'Enter code':'הקלד קוד'; }
-    $$('.ch-back').forEach(b=>b.textContent=en?'↩ Menu':'↩ לתפריט');
-    { const lm=$('#ch-lesson-menu'); if(lm)lm.textContent=en?'↩ Menu':'↩ לתפריט'; }
+    if(labels[0])labels[0].textContent=chT('pieceStyle');
+    if(labels[1])labels[1].textContent=chT('boardStyle');
+    set('#ch-language-label',chT('language'));
+    $$('.ch-style-options strong').forEach((x,i)=>x.textContent=chT('styleNames')[i]);
+    $$('.ch-levels button').forEach((b,i)=>b.textContent=chT('levelNames')[i]);
+    set('#ch-two-panel h3',chT('localStrong'));
+    set('#ch-two-local',chT('twoLocal'));
+    set('#ch-two-remote',chT('twoRemote'));
+    set('#ch-remote-panel h3',chT('remoteH3'));
+    set('#ch-create-room',chT('createRoom'));
+    set('#ch-join-room',chT('joinRoom'));
+    { const jc=$('#ch-join-code'); if(jc)jc.placeholder=chT('enterCode'); }
+    $$('.ch-back').forEach(b=>b.textContent=chT('backMenu'));
+    { const lm=$('#ch-lesson-menu'); if(lm)lm.textContent=chT('backMenu'); }
     $$('#ch-language-options button').forEach(b=>b.classList.toggle('ch-active',b.dataset.lang===lang));
     renderLesson(); if(state)render(); updateContinue();
   }
@@ -545,7 +545,7 @@ function mountChess(root) {
   }
   function sfGo(){
     sfPending=true;
-    $('#ch-mode-label').textContent=(currentLang==='en'?'Computer · Impossible · Stockfish 🏆':'נגד המחשב · בלתי אפשרי · Stockfish 🏆');
+    $('#ch-mode-label').textContent=chT('modeMaster');
     sf.postMessage('position fen '+toFEN(state));
     sf.postMessage('go movetime 1200');
     const myReq=++sfReq;
@@ -577,15 +577,15 @@ function mountChess(root) {
 
   function renderLesson(){
     const board=$('#ch-tutorial-board');if(!board)return;
-    const x=LESSONS[lessonIndex],copy=x[currentLang]||x.he,pieces=tutorialPieces||x.pieces,task=TASKS[currentLang][lessonIndex],mover=pieces[0];
+    const x=LESSONS[lessonIndex],copy=x[currentLang]||x.en||x.he,pieces=tutorialPieces||x.pieces,task=(TASKS[currentLang]||TASKS.en)[lessonIndex],mover=pieces[0];
     const hints=tutorialDone?tutorialLegalMoves(mover,pieces):(x.hints||[]);
     const focus=tutorialDone?[[mover[0],mover[1]]]:(x.focus||[]);
-    let instruction=task?(tutorialDone?(currentLang==='en'?'✓ Great move! Keep practicing or press Next.':'✓ מהלך מצוין! אפשר להמשיך לתרגל או ללחוץ על הבא.'):task[tutorialSelected?1:0]):'';
+    let instruction=task?(tutorialDone?(currentLang==='he'?'✓ מהלך מצוין! אפשר להמשיך לתרגל או ללחוץ על הבא.':'✓ Great move! Keep practicing or press Next.'):task[tutorialSelected?1:0]):'';
     if(tutorialFeedback)instruction=tutorialFeedback;
     $('#ch-lesson-title').textContent=copy[0];
     $('#ch-lesson-text').textContent=copy[1]+(instruction?' '+instruction:'');
-    $('#ch-lesson-count').textContent=(currentLang==='en'?'LESSON':'שיעור')+' '+(lessonIndex+1)+' / '+LESSONS.length;
-    { const chp=CHAPTERS[x.ch]||CHAPTERS[0], cel=$('#ch-lesson-chapter'), bar=$('#ch-lesson-bar'); if(cel)cel.textContent=chp.icon+' '+(chp[currentLang]||chp.he); if(bar)bar.style.width=Math.round((lessonIndex+1)/LESSONS.length*100)+'%'; }
+    $('#ch-lesson-count').textContent=(currentLang==='he'?'שיעור':'LESSON')+' '+(lessonIndex+1)+' / '+LESSONS.length;
+    { const chp=CHAPTERS[x.ch]||CHAPTERS[0], cel=$('#ch-lesson-chapter'), bar=$('#ch-lesson-bar'); if(cel)cel.textContent=chp.icon+' '+(chp[currentLang]||chp.en||chp.he); if(bar)bar.style.width=Math.round((lessonIndex+1)/LESSONS.length*100)+'%'; }
     board.innerHTML='';
     board.classList.toggle('ch-mate-demo',lessonIndex===LESSONS.length-1);
     for(let r=0;r<8;r++)for(let c=0;c<8;c++){
@@ -598,7 +598,7 @@ function mountChess(root) {
       board.appendChild(s);
     }
     $('#ch-lesson-prev').disabled=lessonIndex===0;
-    $('#ch-lesson-next').textContent=lessonIndex===LESSONS.length-1?(currentLang==='en'?'Finish':'סיום'):(currentLang==='en'?'Next':'הבא');
+    $('#ch-lesson-next').textContent=lessonIndex===LESSONS.length-1?(currentLang==='he'?'סיום':'Finish'):(currentLang==='he'?'הבא':'Next');
   }
 
   function animateTutorialMove(from,to,piece,done){
@@ -616,7 +616,7 @@ function mountChess(root) {
 
   function chooseTutorialPromotion(pieces,moving){
     const box=$('#ch-promotion-options');box.innerHTML='';
-    $('#ch-promotion .ch-modal-card p').textContent=currentLang==='en'?'Choose a promotion piece':'בחר כלי להכתרת החייל';
+    $('#ch-promotion .ch-modal-card p').textContent=currentLang==='he'?'בחר כלי להכתרת החייל':'Choose a promotion piece';
     for(const t of['q','r','b','n']){
       const b=document.createElement('button');
       b.textContent=GLYPHS[moving[2]][t];
@@ -636,7 +636,7 @@ function mountChess(root) {
     }
     if(hints.some(q=>q[0]===r&&q[1]===c)){
       if(!tutorialDone&&x.target&&(r!==x.target[0]||c!==x.target[1])){
-        tutorialFeedback=currentLang==='en'?'Almost — follow the instruction above.':'כמעט — בצע את ההוראה שמעל הלוח.';
+        tutorialFeedback=currentLang==='he'?'כמעט — בצע את ההוראה שמעל הלוח.':'Almost — follow the instruction above.';
         renderLesson();return;
       }
       tutorialSelected=false;
@@ -695,7 +695,7 @@ function mountChess(root) {
   function startRemoteGame(color){
     mode='remote'; myColor=color; LS.del('saved'); newGame();
     $('#ch-board').classList.toggle('ch-flip', color==='b'); // השחור רואה את הלוח הפוך
-    $('#ch-mode-label').textContent = 'מרחוק · ' + (color==='w'?'אתה הלבן ⚪':'אתה השחור ⚫');
+    $('#ch-mode-label').textContent = chT('remotePrefix') + (color==='w'?chT('remoteWhite'):chT('remoteBlack'));
     $('#ch-lobby').classList.add('ch-hidden');
     shell.querySelector('.ch-app').classList.remove('ch-hidden');
     updateContinue();
@@ -764,7 +764,7 @@ function mountChess(root) {
   $$('#ch-language-options button').forEach(b=>b.onclick=()=>applyLanguage(b.dataset.lang));
   $$('.ch-levels button').forEach(b=>b.onclick=()=>{
     level=b.dataset.level;
-    const names=currentLang==='en'?{easy:'Easy',medium:'Medium',hard:'Hard',master:'Impossible'}:{easy:'קל',medium:'בינוני',hard:'קשה',master:'בלתי אפשרי'};
+    const names=chT('diffNames');
     startGame('computer',tr('vs')+' · '+names[level]);
   });
   $('#ch-new-game').onclick=()=>{
@@ -787,7 +787,7 @@ function mountChess(root) {
   updateContinue();
   loadAppearance();
   // עוקב אחרי שפת האתר: עברית → עברית, כל שפה אחרת → אנגלית (השחמט תומך בעברית ואנגלית)
-  applyLanguage((function(){ try{ var p=localStorage.getItem('flrot:lang'); if(p) return p==='he'?'he':'en'; }catch(e){} return LS.get('language')||'he'; })());
+  applyLanguage((function(){ var S=['he','en','ar','zh','es','fr','pt','ru','de']; try{ var p=localStorage.getItem('flrot:lang'); if(p) return S.indexOf(p)>=0?p:'en'; }catch(e){} return LS.get('language')||'he'; })());
   initSF(); // טעינת Stockfish ברקע (לרמת "בלתי אפשרי")
 
   // ---------- ניקוי ----------
