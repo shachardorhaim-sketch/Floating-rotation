@@ -20,7 +20,7 @@ function mountChess(root) {
         <button class="ch-mode-card" id="ch-local-mode"><span class="ch-mode-icon">♙</span><span><strong>שני שחקנים</strong><small>שחקו יחד על אותו מסך</small></span><b>←</b></button>
         <button class="ch-mode-card ch-learn-card" id="ch-learn-mode"><span class="ch-mode-icon">?</span><span><strong>איך משחקים שחמט</strong><small>למדו בעזרת לוח הדגמה</small></span><b>←</b></button>
       </div>
-      <div id="ch-computer-panel" class="ch-setup-panel ch-hidden"><button class="ch-back" style="background:#e0975a;color:#1a1a1a;padding:9px 18px;border-radius:8px;font-weight:800;font-size:14px;">↩ לתפריט</button><h3>בחרו רמת קושי</h3><div class="ch-levels"><button data-level="easy">קל</button><button data-level="medium">בינוני</button><button data-level="hard">קשה</button></div></div>
+      <div id="ch-computer-panel" class="ch-setup-panel ch-hidden"><button class="ch-back" style="background:#e0975a;color:#1a1a1a;padding:9px 18px;border-radius:8px;font-weight:800;font-size:14px;">↩ לתפריט</button><h3>בחרו רמת קושי</h3><div class="ch-levels" style="grid-template-columns:repeat(2,1fr);"><button data-level="easy">קל</button><button data-level="medium">בינוני</button><button data-level="hard">קשה</button><button data-level="master">בלתי אפשרי</button></div></div>
       <div id="ch-learn-panel" class="ch-setup-panel ch-tutorial-panel ch-hidden"><div class="ch-lesson-count" id="ch-lesson-count"></div><h3 id="ch-lesson-title"></h3><p id="ch-lesson-text"></p><div id="ch-tutorial-board" class="ch-tutorial-board"></div><div class="ch-lesson-controls"><button id="ch-lesson-menu" class="ch-secondary" style="background:#e0975a;color:#1a1a1a;font-weight:800;">↩ לתפריט</button><button id="ch-lesson-prev" class="ch-secondary">הקודם</button><button id="ch-lesson-next" class="ch-primary">הבא</button></div></div>
       <div id="ch-two-panel" class="ch-setup-panel ch-hidden"><button class="ch-back" style="background:#e0975a;color:#1a1a1a;padding:9px 18px;border-radius:8px;font-weight:800;font-size:14px;">↩ לתפריט</button><h3>שני שחקנים</h3><div style="display:grid;grid-template-columns:1fr;gap:10px;"><button id="ch-two-local" class="ch-net-btn" style="background:#30342f;color:#fff;padding:18px 10px;border:1px solid transparent;border-radius:6px;font-size:16px;cursor:pointer;">👥 על מכשיר אחד</button><button id="ch-two-remote" class="ch-net-btn" style="background:#30342f;color:#fff;padding:18px 10px;border:1px solid transparent;border-radius:6px;font-size:16px;cursor:pointer;">🌐 מרחוק (עם קוד)</button></div></div>
       <div id="ch-remote-panel" class="ch-setup-panel ch-hidden"><button class="ch-back" style="background:#e0975a;color:#1a1a1a;padding:9px 18px;border-radius:8px;font-weight:800;font-size:14px;">↩ לתפריט</button><h3>משחק מרחוק</h3><div style="display:grid;grid-template-columns:1fr;gap:10px;"><button id="ch-create-room" class="ch-net-btn" style="background:#30342f;color:#fff;padding:18px 10px;border:1px solid transparent;border-radius:6px;font-size:16px;cursor:pointer;">➕ צור חדר חדש</button><div style="display:flex;gap:8px;"><input id="ch-join-code" placeholder="הקלד קוד" maxlength="8" style="flex:1;padding:14px;background:#30342f;border:1px solid #444;color:#fff;border-radius:6px;text-transform:uppercase;font-size:18px;text-align:center;letter-spacing:3px;"><button id="ch-join-room" class="ch-net-btn" style="white-space:nowrap;background:#30342f;color:#fff;padding:14px;border:1px solid transparent;border-radius:6px;font-size:16px;cursor:pointer;">הצטרף ←</button></div></div><div id="ch-remote-code" style="margin-top:14px;font-size:30px;font-weight:800;letter-spacing:6px;color:#fff;text-align:center;"></div><div id="ch-remote-status" style="margin-top:10px;color:#e0975a;font-size:15px;min-height:22px;text-align:center;line-height:1.5;"></div></div>
@@ -134,7 +134,11 @@ function mountChess(root) {
     return b;
   }
   function newGame(){ state={board:initialBoard(),turn:'w',castling:{wk:1,wq:1,bk:1,bq:1},ep:null,half:0,full:1,last:null,captured:[],over:false}; history=[]; selected=null; legal=[]; render(); }
-  function clone(x){ return JSON.parse(JSON.stringify(x)); }
+  function clone(x){ // שכפול עמוק מהיר (חשוב למהירות ה-AI)
+    if(x===null||typeof x!=='object') return x;
+    if(Array.isArray(x)){ const a=new Array(x.length); for(let i=0;i<x.length;i++)a[i]=clone(x[i]); return a; }
+    const o={}; for(const k in x) o[k]=clone(x[k]); return o;
+  }
   function inBounds(r,c){ return r>=0&&r<8&&c>=0&&c<8; }
 
   function rawMoves(s,r,c,attacks=false){
@@ -254,7 +258,7 @@ function mountChess(root) {
     set('#ch-language-label',en?'Language':'שפה');
     const names=en?['Carved','8-bit','Neon','Royal','Ice','Candy','Paper','Shadows','Natural wood','Club','Night','Marble','Ocean','Candy','Desert','Monochrome']:['מגולף','8־ביט','ניאון','מלכותי','קרח','סוכריות','נייר','צללים','עץ טבעי','מועדון','לילה','שיש','אוקיינוס','ממתקים','מדבר','מונוכרום'];
     $$('.ch-style-options strong').forEach((x,i)=>x.textContent=names[i]);
-    $$('.ch-levels button').forEach((b,i)=>b.textContent=(en?['Easy','Medium','Hard']:['קל','בינוני','קשה'])[i]);
+    $$('.ch-levels button').forEach((b,i)=>b.textContent=(en?['Easy','Medium','Hard','Impossible']:['קל','בינוני','קשה','בלתי אפשרי'])[i]);
     $$('#ch-language-options button').forEach(b=>b.classList.toggle('ch-active',b.dataset.lang===lang));
     renderLesson(); if(state)render(); updateContinue();
   }
@@ -359,24 +363,104 @@ function mountChess(root) {
     $('#ch-black-captures').textContent=caps('w');
   }
 
-  // ---------- מחשב ----------
+  // ============================================================
+  //  מנוע AI: negamax + alpha-beta + טבלאות מיקום + quiescence
+  // ============================================================
+  const PVAL={p:100,n:320,b:330,r:500,q:900,k:20000};
+  const MATE=1000000;
+  // טבלאות מיקום (מנקודת מבט הלבן; r=0 שורה 8, r=7 שורה 1)
+  const PST={
+    p:[[0,0,0,0,0,0,0,0],[50,50,50,50,50,50,50,50],[10,10,20,30,30,20,10,10],[5,5,10,25,25,10,5,5],[0,0,0,20,20,0,0,0],[5,-5,-10,0,0,-10,-5,5],[5,10,10,-20,-20,10,10,5],[0,0,0,0,0,0,0,0]],
+    n:[[-50,-40,-30,-30,-30,-30,-40,-50],[-40,-20,0,0,0,0,-20,-40],[-30,0,10,15,15,10,0,-30],[-30,5,15,20,20,15,5,-30],[-30,0,15,20,20,15,0,-30],[-30,5,10,15,15,10,5,-30],[-40,-20,0,5,5,0,-20,-40],[-50,-40,-30,-30,-30,-30,-40,-50]],
+    b:[[-20,-10,-10,-10,-10,-10,-10,-20],[-10,0,0,0,0,0,0,-10],[-10,0,5,10,10,5,0,-10],[-10,5,5,10,10,5,5,-10],[-10,0,10,10,10,10,0,-10],[-10,10,10,10,10,10,10,-10],[-10,5,0,0,0,0,5,-10],[-20,-10,-10,-10,-10,-10,-10,-20]],
+    r:[[0,0,0,0,0,0,0,0],[5,10,10,10,10,10,10,5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[0,0,0,5,5,0,0,0]],
+    q:[[-20,-10,-10,-5,-5,-10,-10,-20],[-10,0,0,0,0,0,0,-10],[-10,0,5,5,5,5,0,-10],[-5,0,5,5,5,5,0,-5],[0,0,5,5,5,5,0,-5],[-10,5,5,5,5,5,0,-10],[-10,0,5,0,0,0,0,-10],[-20,-10,-10,-5,-5,-10,-10,-20]],
+    k:[[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-20,-30,-30,-40,-40,-30,-30,-20],[-10,-20,-20,-20,-20,-20,-20,-10],[20,20,0,0,0,0,20,20],[20,30,10,0,0,10,30,20]]
+  };
+  function evalBoard(s){ // + = טוב ללבן
+    let sc=0;
+    for(let r=0;r<8;r++)for(let c=0;c<8;c++){const p=s.board[r][c]; if(!p)continue;
+      const v=PVAL[p.t]+(p.c==='w'?PST[p.t][r][c]:PST[p.t][7-r][c]);
+      sc += p.c==='w' ? v : -v;
+    }
+    return sc;
+  }
+  function evalSide(s){ return (s.turn==='w'?1:-1)*evalBoard(s); } // מנקודת מבט מי שבתור
+  function isCap(s,mv){ return !!s.board[mv.m.r][mv.m.c] || mv.m.special==='ep'; }
+  function orderedMoves(s,color){
+    const list=[];
+    for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(s.board[r][c]?.c===color){
+      const mover=s.board[r][c];
+      for(const m of validMoves(s,r,c)){
+        const victim=s.board[m.r][m.c];
+        let sc=victim?10*PVAL[victim.t]-PVAL[mover.t]:(m.special==='ep'?900:0);
+        list.push({from:{r,c},m,sc});
+      }
+    }
+    list.sort((a,b)=>b.sc-a.sc);
+    return list;
+  }
+  function quiesce(s,alpha,beta){
+    let stand=evalSide(s);
+    if(stand>=beta)return beta;
+    if(stand>alpha)alpha=stand;
+    const moves=orderedMoves(s,s.turn);
+    for(const mv of moves){
+      if(!isCap(s,mv))continue;
+      const sc=-quiesce(applyMove(s,mv.from,mv.m,'q'),-beta,-alpha);
+      if(sc>=beta)return beta;
+      if(sc>alpha)alpha=sc;
+    }
+    return alpha;
+  }
+  let searchDeadline=0;
+  function negamax(s,depth,alpha,beta,ply){
+    if(performance.now()>searchDeadline)return alpha; // נגמר הזמן — עצירה מיידית
+    if(depth<=0)return quiesce(s,alpha,beta);
+    const moves=orderedMoves(s,s.turn);
+    if(!moves.length)return isCheck(s,s.turn)?-(MATE-ply):0;
+    for(const mv of moves){
+      const sc=-negamax(applyMove(s,mv.from,mv.m,'q'),depth-1,-beta,-alpha,ply+1);
+      if(sc>=beta)return beta;
+      if(sc>alpha)alpha=sc;
+    }
+    return alpha;
+  }
+  function searchBest(s,cfg){
+    const moves=orderedMoves(s,s.turn);
+    if(!moves.length)return null;
+    if(cfg.random&&Math.random()<cfg.random)return moves[Math.floor(Math.random()*moves.length)];
+    let best=moves[0];
+    searchDeadline=performance.now()+cfg.time;
+    for(let d=1;d<=cfg.depth;d++){
+      let alpha=-Infinity, localBest=null, aborted=false;
+      for(const mv of moves){
+        if(performance.now()>searchDeadline){aborted=true;break;}
+        const sc=-negamax(applyMove(s,mv.from,mv.m,'q'),d-1,-Infinity,-alpha,1);
+        if(localBest===null||sc>alpha){alpha=sc;localBest=mv;}
+      }
+      if(!aborted&&localBest)best=localBest; // מקבלים רק עומק שהושלם במלואו
+      if(aborted)break;
+    }
+    return best;
+  }
+  // הגדרות הרמות (עומק חיפוש, תקציב זמן במ"ש, אחוז מהלכים אקראיים)
+  const AI={
+    easy:   {depth:1, time:200,  random:0.55},
+    medium: {depth:2, time:450,  random:0.10},
+    hard:   {depth:3, time:900,  random:0},
+    master: {depth:4, time:1400, random:0}
+  };
   function computerMove(){
     if(!alive||state.over||state.turn!=='b')return;
     thinking=true;render();
-    const choices=[];
-    for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(state.board[r][c]?.c==='b')for(const m of validMoves(state,r,c)){
-      let score=state.board[m.r][m.c]?VALUES[state.board[m.r][m.c].t]*10:0;
-      const next=applyMove(state,{r,c},m);
-      if(isCheck(next,'w'))score+=3;
-      if(level==='hard'){
-        for(let rr=0;rr<8;rr++)for(let cc=0;cc<8;cc++)if(next.board[rr][cc]?.c==='w')for(const reply of validMoves(next,rr,cc))
-          score-=next.board[reply.r][reply.c]?VALUES[next.board[reply.r][reply.c].t]*6:0;
-      }
-      choices.push({from:{r,c},m,score:score+Math.random()*(level==='easy'?30:level==='medium'?8:2)});
-    }
-    choices.sort((a,b)=>b.score-a.score);
-    thinking=false;
-    if(choices[0])commit(choices[0].from,choices[0].m);
+    setTimeout(()=>{ // נותן ל-UI לצייר "חושב..." לפני החיפוש הכבד
+      if(!alive||state.over||state.turn!=='b'){thinking=false;return;}
+      const cfg=AI[level]||AI.medium;
+      const best=searchBest(state,cfg);
+      thinking=false;
+      if(best)commit(best.from,best.m);
+    },40);
   }
 
   // ---------- שיעורים ----------
@@ -579,7 +663,7 @@ function mountChess(root) {
   $$('#ch-language-options button').forEach(b=>b.onclick=()=>applyLanguage(b.dataset.lang));
   $$('.ch-levels button').forEach(b=>b.onclick=()=>{
     level=b.dataset.level;
-    const names=currentLang==='en'?{easy:'Easy',medium:'Medium',hard:'Hard'}:{easy:'קל',medium:'בינוני',hard:'קשה'};
+    const names=currentLang==='en'?{easy:'Easy',medium:'Medium',hard:'Hard',master:'Impossible'}:{easy:'קל',medium:'בינוני',hard:'קשה',master:'בלתי אפשרי'};
     startGame('computer',tr('vs')+' · '+names[level]);
   });
   $('#ch-new-game').onclick=()=>{
