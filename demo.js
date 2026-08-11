@@ -32,11 +32,16 @@
     var url = el('div', 'dmo-url');
     bar.append(dots, url);
 
-    // שורת הסימניות
-    var marks = el('div', 'dmo-marks');
+    // שורת הסימניות — מתחילה מוסתרת, כמו אצל רוב האנשים
+    var marks = el('div', 'dmo-marks off');
     var markLabel = el('span', 'dmo-marks-lbl', '☆');
     var chip = el('span', 'dmo-chip', t('d_bm'));
     marks.append(markLabel, chip);
+
+    // רמז המקלדת שמדליק את שורת הסימניות
+    var kbd = el('div', 'dmo-kbd');
+    kbd.append(el('kbd', null, 'Ctrl'), el('span', null, '+'),
+               el('kbd', null, 'Shift'), el('span', null, '+'), el('kbd', null, 'B'));
 
     // גוף העמוד
     var page = el('div', 'dmo-page');
@@ -52,18 +57,18 @@
       '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 2l7 18 2.5-7.5L21 10z" ' +
       'fill="#fff" stroke="#0d1620" stroke-width="1.4" stroke-linejoin="round"/></svg>';
 
-    win.append(bar, marks, page, ghost, cursor);
+    win.append(bar, marks, page, ghost, cursor, kbd);
 
     var pips = el('div', 'dmo-pips');
-    for (var i = 0; i < 4; i++) pips.append(el('i'));
+    for (var i = 0; i < 5; i++) pips.append(el('i'));
 
     var replay = el('button', 'dmo-replay', t('d_replay'));
 
     wrap.append(cap, win, pips, replay);
 
-    return { wrap: wrap, win: win, url: url, chip: chip, dragBtn: dragBtn, lines: lines,
-             panel: panel, ghost: ghost, cursor: cursor, capNum: capNum, capTxt: capTxt,
-             pips: pips, replay: replay };
+    return { wrap: wrap, win: win, url: url, marks: marks, chip: chip, kbd: kbd,
+             dragBtn: dragBtn, lines: lines, panel: panel, ghost: ghost, cursor: cursor,
+             capNum: capNum, capTxt: capTxt, pips: pips, replay: replay };
   }
 
   // ---------- הרצת ההנפשה ----------
@@ -78,7 +83,7 @@
 
     function caption(n, key) {
       step = n;
-      ui.capNum.textContent = n + '/4';
+      ui.capNum.textContent = n + '/5';
       ui.capTxt.textContent = t(key);
       [].forEach.call(ui.pips.children, function (p, i) {
         p.className = i === n - 1 ? 'on' : '';
@@ -91,6 +96,8 @@
     function reset() {
       ui.win.className = 'dmo-win';
       ui.url.textContent = 'floating-rotation';
+      ui.marks.classList.add('off');      // שורת הסימניות מתחילה מוסתרת
+      ui.kbd.classList.remove('on');
       ui.chip.classList.remove('in');
       ui.ghost.classList.remove('on');
       ui.dragBtn.classList.remove('grabbed');
@@ -125,11 +132,20 @@
 
     return (async function run() {
       while (!stop()) {
-        // ---- 1: גרירה לשורת הסימניות ----
-        // הכותרת נקבעת מיד, אחרת יש רגע פתיחה בלי טקסט
+        // ---- 1: קודם כל מדליקים את שורת הסימניות ----
+        // בלי זה אין לאן לגרור, וזה בדיוק מה שנכשל בפועל
         reset();
-        caption(1, 'd_step1');
+        caption(1, 'd_step0');
+        await wait(900); if (stop()) return;
+        ui.kbd.classList.add('on');
+        await wait(1100); if (stop()) return;
+        ui.marks.classList.remove('off');
+        await wait(900); if (stop()) return;
+        ui.kbd.classList.remove('on');
         await wait(700); if (stop()) return;
+
+        // ---- 2: גרירה לשורת הסימניות ----
+        caption(2, 'd_step1');
         ui.dragBtn.classList.add('show');
         await wait(500); if (stop()) return;
         cursorTo(50, 66);
@@ -146,7 +162,7 @@
         await wait(1200); if (stop()) return;
 
         // ---- 2: נכנסים לאתר אחר ----
-        caption(2, 'd_step2');
+        caption(3, 'd_step2');
         ui.dragBtn.classList.remove('show', 'grabbed');
         ui.url.textContent = 'any-website.com';
         ui.win.classList.add('loading');
@@ -157,7 +173,7 @@
         await wait(1700); if (stop()) return;
 
         // ---- 3: לוחצים על הסימנייה ----
-        caption(3, 'd_step3');
+        caption(4, 'd_step3');
         cursorTo(21, 26);
         await wait(900); if (stop()) return;
         ui.chip.classList.add('hit');
@@ -168,7 +184,7 @@
         await wait(1300); if (stop()) return;
 
         // ---- 4: בוחרים שפה והעמוד מתורגם ----
-        caption(4, 'd_step4');
+        caption(5, 'd_step4');
         cursorTo(78, 78);
         await wait(700); if (stop()) return;
         p.btn.classList.add('hit');

@@ -49,9 +49,9 @@
       drag:'⇱ גרור לשורת הסימניות',
       bm_t:'מתרגם האתרים — בלי התקנה',
       bm_d:'אותו תרגום עמודים ל-9 שפות, בלי תוסף ובלי מצב מפתח. גוררים קישור אחד לשורת הסימניות וזהו.',
-      b1:'להציג את שורת הסימניות בכרום: Ctrl + Shift + B (במק: Cmd + Shift + B).',
-      b2:'לגרור את הכפתור "⇱ גרור לשורת הסימניות" אל שורת הסימניות. זה הכל — אין התקנה.',
-      b3:'אם אי אפשר לגרור: קליק ימני על שורת הסימניות ← הוסף דף, ולהדביק את הכתובת של הקישור.',
+      b1:'הכי חשוב: מדליקים את שורת הסימניות עם Ctrl + Shift + B (במק: Cmd + Shift + B). אם אין רצועה מתחת לשורת הכתובת — אין לאן לגרור, והגרירה פשוט תיכשל.',
+      b2:'גוררים את הכפתור "⇱ גרור לשורת הסימניות" אל הרצועה שנפתחה. זה הכל — אין התקנה.',
+      b3:'לא עובד? השתמש בכפתור ההעתקה למעלה — הוא לא דורש גרירה בכלל. שים לב: הדבקה בשורת הכתובת לא תעבוד, כרום מוחק משם את המילה javascript מטעמי אבטחה.',
       bu1:'להיכנס לכל אתר שרוצים ולחוץ על הסימנייה.',
       bu2:'בפינה נפתח לוח קטן: לבחור שפה ולחוץ "תרגם את העמוד".',
       bu3:'תוך כדי יש ⏹ עצור, ובסיום ↩ החזר מקור שמחזיר את העמוד כפי שהיה.',
@@ -75,7 +75,13 @@
       s1_tr:'חדשות מתפרצות היום',
       s2_tr:'לקריאת הכתבה המלאה',
       s3_tr:'ספורט ומזג אוויר',
-      s4_tr:'הרשמה לעדכונים'
+      s4_tr:'הרשמה לעדכונים',
+      d_step0:'קודם כל: מדליקים את שורת הסימניות',
+      altH:'לא מצליח לגרור? יש דרך בלי גרירה',
+      altP:'העתק את הקוד, ואז: Ctrl+Shift+O פותח את מנהל הסימניות ← תפריט שלוש הנקודות ← "הוסף סימנייה חדשה" ← בשדה הכתובת מדביקים. שם: תרגם.',
+      copy:'📋 העתק את הקוד',
+      copied:'הועתק ✓',
+      copyFail:'הקוד למטה — סמן הכל (Ctrl+A) והעתק (Ctrl+C)'
     },
     en: {
       sec:'Downloads', ext:'Chrome extension', get:'⬇ Download', how:'How to install?', close:'Close',
@@ -96,9 +102,9 @@
       drag:'⇱ Drag to bookmarks bar',
       bm_t:'Web translator — no install',
       bm_d:'The same page translation into 9 languages, with no extension and no Developer mode. Drag one link to your bookmarks bar and you are done.',
-      b1:'Show the bookmarks bar in Chrome: Ctrl + Shift + B (Mac: Cmd + Shift + B).',
-      b2:'Drag the "⇱ Drag to bookmarks bar" button onto the bookmarks bar. That is it — nothing gets installed.',
-      b3:'If dragging is not possible: right-click the bookmarks bar, choose Add page, and paste the link address.',
+      b1:'Most important: turn on the bookmarks bar with Ctrl + Shift + B (Mac: Cmd + Shift + B). If there is no strip under the address bar, there is nowhere to drop and the drag will simply fail.',
+      b2:'Drag the "⇱ Drag to bookmarks bar" button onto that strip. That is it — nothing gets installed.',
+      b3:'Not working? Use the copy button above — it needs no dragging at all. Note: pasting into the address bar will not work, Chrome strips the word javascript from it for security.',
       bu1:'Go to any site and click the bookmark.',
       bu2:'A small panel opens in the corner: pick a language and press "Translate page".',
       bu3:'While it runs there is a ⏹ Stop, and when it finishes ↩ Restore original puts the page back.',
@@ -122,7 +128,13 @@
       s1_tr:'Breaking news today',
       s2_tr:'Read the full story',
       s3_tr:'Sports and weather',
-      s4_tr:'Subscribe for updates'
+      s4_tr:'Subscribe for updates',
+      d_step0:'First of all: turn on the bookmarks bar',
+      altH:'Cannot drag? There is a way without dragging',
+      altP:'Copy the code, then: Ctrl+Shift+O opens the bookmark manager → three-dot menu → "Add new bookmark" → paste into the URL field. Name it: Translate.',
+      copy:'📋 Copy the code',
+      copied:'Copied ✓',
+      copyFail:'The code is below — select all (Ctrl+A) and copy (Ctrl+C)'
     },
     ar: {
       sec:'للتحميل', ext:'إضافة كروم', get:'⬇ تحميل', how:'كيف أثبّتها؟', close:'إغلاق',
@@ -143,9 +155,9 @@
       drag:'⇱ اسحب إلى شريط المفضلة',
       bm_t:'مترجم المواقع — بدون تثبيت',
       bm_d:'نفس ترجمة الصفحات إلى 9 لغات، بدون إضافة وبدون وضع المطوّر. اسحب رابطاً واحداً إلى شريط المفضلة وانتهى الأمر.',
-      b1:'أظهر شريط المفضلة في كروم: Ctrl + Shift + B (على ماك: Cmd + Shift + B).',
-      b2:'اسحب زر "⇱ اسحب إلى شريط المفضلة" إلى الشريط. هذا كل شيء — لا يوجد تثبيت.',
-      b3:'إذا تعذّر السحب: انقر بزر الفأرة الأيمن على الشريط ← إضافة صفحة، والصق عنوان الرابط.',
+      b1:'الأهم: فعّل شريط المفضلة بـ Ctrl + Shift + B (ماك: Cmd + Shift + B). إذا لم يكن هناك شريط تحت شريط العنوان فلا يوجد مكان للإفلات، وسيفشل السحب.',
+      b2:'اسحب زر "⇱ اسحب إلى شريط المفضلة" إلى ذلك الشريط. هذا كل شيء — لا يوجد تثبيت.',
+      b3:'لا يعمل؟ استخدم زر النسخ أعلاه — لا يحتاج سحباً إطلاقاً. ملاحظة: اللصق في شريط العنوان لن ينجح، فكروم يحذف منه كلمة javascript لأسباب أمنية.',
       bu1:'ادخل إلى أي موقع واضغط على المفضلة.',
       bu2:'تُفتح لوحة صغيرة في الزاوية: اختر لغة واضغط "ترجم الصفحة".',
       bu3:'أثناء العمل يوجد ⏹ إيقاف، وعند الانتهاء ↩ استعادة الأصل يعيد الصفحة كما كانت.',
@@ -169,7 +181,13 @@
       s1_tr:'أخبار عاجلة اليوم',
       s2_tr:'اقرأ الخبر كاملاً',
       s3_tr:'الرياضة والطقس',
-      s4_tr:'اشترك في التحديثات'
+      s4_tr:'اشترك في التحديثات',
+      d_step0:'أولاً: فعّل شريط المفضلة',
+      altH:'لا تستطيع السحب؟ هناك طريقة بدون سحب',
+      altP:'انسخ الكود، ثم: Ctrl+Shift+O يفتح مدير المفضلة ← قائمة النقاط الثلاث ← "إضافة إشارة مرجعية" ← الصق في حقل العنوان. الاسم: ترجم.',
+      copy:'📋 انسخ الكود',
+      copied:'تم النسخ ✓',
+      copyFail:'الكود بالأسفل — حدّد الكل (Ctrl+A) وانسخ (Ctrl+C)'
     },
     zh: {
       sec:'下载', ext:'Chrome 扩展', get:'⬇ 下载', how:'如何安装?', close:'关闭',
@@ -190,9 +208,9 @@
       drag:'⇱ 拖到书签栏',
       bm_t:'网页翻译 — 免安装',
       bm_d:'同样可将网页翻译成 9 种语言,无需扩展、无需开发者模式。把一个链接拖到书签栏即可。',
-      b1:'在 Chrome 中显示书签栏:Ctrl + Shift + B(Mac:Cmd + Shift + B)。',
-      b2:'把「⇱ 拖到书签栏」按钮拖到书签栏上。就这样——什么都不用安装。',
-      b3:'如果无法拖动:右键点击书签栏 ←「添加网页」,然后粘贴该链接地址。',
+      b1:'最关键的一步:用 Ctrl + Shift + B 打开书签栏(Mac:Cmd + Shift + B)。如果地址栏下面没有那条栏,就没有地方可以放,拖拽必然失败。',
+      b2:'把「⇱ 拖到书签栏」按钮拖到那条栏上。就这样——什么都不用安装。',
+      b3:'还是不行?用上面的复制按钮——完全不需要拖拽。注意:粘贴到地址栏没有用,Chrome 出于安全会删掉其中的 javascript 一词。',
       bu1:'打开任意网站,点击这个书签。',
       bu2:'角落会打开一个小面板:选择语言,点「翻译页面」。',
       bu3:'过程中有 ⏹ 停止,完成后 ↩ 恢复原文可将页面还原。',
@@ -216,7 +234,13 @@
       s1_tr:'今日突发新闻',
       s2_tr:'阅读完整报道',
       s3_tr:'体育与天气',
-      s4_tr:'订阅最新消息'
+      s4_tr:'订阅最新消息',
+      d_step0:'第一步:打开书签栏',
+      altH:'拖不动?有不用拖拽的办法',
+      altP:'复制代码,然后:按 Ctrl+Shift+O 打开书签管理器 →三点菜单 →「添加新书签」→粘贴到网址栏。名称填:翻译。',
+      copy:'📋 复制代码',
+      copied:'已复制 ✓',
+      copyFail:'代码在下方——全选(Ctrl+A)并复制(Ctrl+C)'
     },
     es: {
       sec:'Descargas', ext:'Extensión de Chrome', get:'⬇ Descargar', how:'¿Cómo se instala?', close:'Cerrar',
@@ -237,9 +261,9 @@
       drag:'⇱ Arrastra a marcadores',
       bm_t:'Traductor web — sin instalar',
       bm_d:'La misma traducción de páginas a 9 idiomas, sin extensión y sin Modo de desarrollador. Arrastra un enlace a la barra de marcadores y listo.',
-      b1:'Muestra la barra de marcadores en Chrome: Ctrl + Shift + B (Mac: Cmd + Shift + B).',
-      b2:'Arrastra el botón "⇱ Arrastra a marcadores" a la barra. Ya está: no se instala nada.',
-      b3:'Si no puedes arrastrar: clic derecho en la barra ← Añadir página, y pega la dirección del enlace.',
+      b1:'Lo más importante: activa la barra de marcadores con Ctrl + Shift + B (Mac: Cmd + Shift + B). Si no hay una franja bajo la barra de direcciones, no hay dónde soltar y arrastrar fallará.',
+      b2:'Arrastra el botón "⇱ Arrastra a marcadores" hasta esa franja. Ya está: no se instala nada.',
+      b3:'¿No funciona? Usa el botón de copiar de arriba: no necesita arrastrar. Ojo: pegar en la barra de direcciones no sirve, Chrome le quita la palabra javascript por seguridad.',
       bu1:'Entra en cualquier sitio y pulsa el marcador.',
       bu2:'Se abre un panel en la esquina: elige idioma y pulsa "Traducir página".',
       bu3:'Durante el proceso hay ⏹ Detener, y al terminar ↩ Restaurar deja la página como estaba.',
@@ -263,7 +287,13 @@
       s1_tr:'Últimas noticias de hoy',
       s2_tr:'Leer la noticia completa',
       s3_tr:'Deportes y clima',
-      s4_tr:'Suscríbete a las novedades'
+      s4_tr:'Suscríbete a las novedades',
+      d_step0:'Lo primero: activa la barra de marcadores',
+      altH:'¿No puedes arrastrar? Hay una forma sin arrastrar',
+      altP:'Copia el código y luego: Ctrl+Shift+O abre el administrador de marcadores → menú de tres puntos → "Añadir marcador" → pega en el campo de URL. Nombre: Traducir.',
+      copy:'📋 Copiar el código',
+      copied:'Copiado ✓',
+      copyFail:'El código está abajo: selecciona todo (Ctrl+A) y copia (Ctrl+C)'
     },
     fr: {
       sec:'Téléchargements', ext:'Extension Chrome', get:'⬇ Télécharger', how:'Comment l\'installer ?', close:'Fermer',
@@ -284,9 +314,9 @@
       drag:'⇱ Glisse vers les favoris',
       bm_t:'Traducteur web — sans installation',
       bm_d:'La même traduction de pages en 9 langues, sans extension et sans Mode développeur. Glisse un lien dans la barre de favoris, c\'est tout.',
-      b1:'Affiche la barre de favoris dans Chrome : Ctrl + Maj + B (Mac : Cmd + Maj + B).',
-      b2:'Glisse le bouton « ⇱ Glisse vers les favoris » sur la barre. C\'est fini — rien n\'est installé.',
-      b3:'Si le glisser-déposer est impossible : clic droit sur la barre ← Ajouter une page, et colle l\'adresse du lien.',
+      b1:'Le plus important : affiche la barre de favoris avec Ctrl + Maj + B (Mac : Cmd + Maj + B). S\'il n\'y a pas de bande sous la barre d\'adresse, il n\'y a nulle part où déposer et le glisser échouera.',
+      b2:'Glisse le bouton « ⇱ Glisse vers les favoris » sur cette bande. C\'est fini — rien n\'est installé.',
+      b3:'Ça ne marche pas ? Utilise le bouton copier ci-dessus — aucun glisser nécessaire. Attention : coller dans la barre d\'adresse ne marchera pas, Chrome en retire le mot javascript par sécurité.',
       bu1:'Va sur n\'importe quel site et clique sur le favori.',
       bu2:'Un petit panneau s\'ouvre dans le coin : choisis une langue et clique « Traduire la page ».',
       bu3:'Pendant l\'opération il y a ⏹ Arrêter, et à la fin ↩ Restaurer remet la page comme avant.',
@@ -310,7 +340,13 @@
       s1_tr:'Dernières nouvelles du jour',
       s2_tr:'Lire l\'article complet',
       s3_tr:'Sports et météo',
-      s4_tr:'Abonne-toi aux mises à jour'
+      s4_tr:'Abonne-toi aux mises à jour',
+      d_step0:'Avant tout : affiche la barre de favoris',
+      altH:'Impossible de glisser ? Il y a une méthode sans glisser',
+      altP:'Copie le code, puis : Ctrl+Maj+O ouvre le gestionnaire de favoris → menu trois points → « Ajouter un favori » → colle dans le champ URL. Nom : Traduire.',
+      copy:'📋 Copier le code',
+      copied:'Copié ✓',
+      copyFail:'Le code est ci-dessous — tout sélectionner (Ctrl+A) et copier (Ctrl+C)'
     },
     pt: {
       sec:'Downloads', ext:'Extensão do Chrome', get:'⬇ Baixar', how:'Como instalar?', close:'Fechar',
@@ -331,9 +367,9 @@
       drag:'⇱ Arraste para os favoritos',
       bm_t:'Tradutor web — sem instalar',
       bm_d:'A mesma tradução de páginas para 9 idiomas, sem extensão e sem Modo de desenvolvedor. Arraste um link para a barra de favoritos e pronto.',
-      b1:'Mostre a barra de favoritos no Chrome: Ctrl + Shift + B (Mac: Cmd + Shift + B).',
-      b2:'Arraste o botão "⇱ Arraste para os favoritos" até a barra. É só isso — nada é instalado.',
-      b3:'Se não der para arrastar: clique com o botão direito na barra ← Adicionar página e cole o endereço do link.',
+      b1:'O mais importante: ative a barra de favoritos com Ctrl + Shift + B (Mac: Cmd + Shift + B). Se não houver uma faixa abaixo da barra de endereço, não há onde soltar e o arrastar vai falhar.',
+      b2:'Arraste o botão "⇱ Arraste para os favoritos" até essa faixa. É só isso — nada é instalado.',
+      b3:'Não funcionou? Use o botão de copiar acima — não precisa arrastar. Atenção: colar na barra de endereço não funciona, o Chrome remove a palavra javascript por segurança.',
       bu1:'Entre em qualquer site e clique no favorito.',
       bu2:'Abre um painel no canto: escolha o idioma e clique em "Traduzir página".',
       bu3:'Durante o processo há ⏹ Parar e, ao terminar, ↩ Restaurar devolve a página como estava.',
@@ -357,7 +393,13 @@
       s1_tr:'Notícias de última hora',
       s2_tr:'Leia a matéria completa',
       s3_tr:'Esportes e clima',
-      s4_tr:'Assine as novidades'
+      s4_tr:'Assine as novidades',
+      d_step0:'Antes de tudo: ative a barra de favoritos',
+      altH:'Não consegue arrastar? Existe um jeito sem arrastar',
+      altP:'Copie o código e depois: Ctrl+Shift+O abre o gerenciador de favoritos → menu de três pontos → "Adicionar novo favorito" → cole no campo de URL. Nome: Traduzir.',
+      copy:'📋 Copiar o código',
+      copied:'Copiado ✓',
+      copyFail:'O código está abaixo — selecione tudo (Ctrl+A) e copie (Ctrl+C)'
     },
     ru: {
       sec:'Загрузки', ext:'Расширение Chrome', get:'⬇ Скачать', how:'Как установить?', close:'Закрыть',
@@ -378,9 +420,9 @@
       drag:'⇱ Перетащи на панель закладок',
       bm_t:'Переводчик сайтов — без установки',
       bm_d:'Тот же перевод страниц на 9 языков, без расширения и без режима разработчика. Перетащи одну ссылку на панель закладок — и всё.',
-      b1:'Покажите панель закладок в Chrome: Ctrl + Shift + B (на Mac: Cmd + Shift + B).',
-      b2:'Перетащите кнопку «⇱ Перетащи на панель закладок» на панель. Всё — ничего не устанавливается.',
-      b3:'Если перетащить нельзя: правый клик по панели ← Добавить страницу и вставьте адрес ссылки.',
+      b1:'Самое важное: включите панель закладок сочетанием Ctrl + Shift + B (Mac: Cmd + Shift + B). Если под адресной строкой нет полосы, бросать некуда и перетаскивание просто не сработает.',
+      b2:'Перетащите кнопку «⇱ Перетащи на панель закладок» на эту полосу. Всё — ничего не устанавливается.',
+      b3:'Не работает? Используйте кнопку копирования выше — перетаскивание вообще не нужно. Учтите: вставка в адресную строку не сработает, Chrome удаляет оттуда слово javascript в целях безопасности.',
       bu1:'Зайдите на любой сайт и нажмите закладку.',
       bu2:'В углу откроется небольшая панель: выберите язык и нажмите «Перевести страницу».',
       bu3:'В процессе есть ⏹ Стоп, а по завершении ↩ Оригинал возвращает страницу в исходный вид.',
@@ -404,7 +446,13 @@
       s1_tr:'Срочные новости сегодня',
       s2_tr:'Читать статью целиком',
       s3_tr:'Спорт и погода',
-      s4_tr:'Подпишитесь на обновления'
+      s4_tr:'Подпишитесь на обновления',
+      d_step0:'Сначала: включите панель закладок',
+      altH:'Не получается перетащить? Есть способ без перетаскивания',
+      altP:'Скопируйте код, затем: Ctrl+Shift+O открывает диспетчер закладок → меню из трёх точек → «Добавить закладку» → вставьте в поле адреса. Имя: Перевести.',
+      copy:'📋 Скопировать код',
+      copied:'Скопировано ✓',
+      copyFail:'Код ниже — выделите всё (Ctrl+A) и скопируйте (Ctrl+C)'
     },
     de: {
       sec:'Downloads', ext:'Chrome-Erweiterung', get:'⬇ Herunterladen', how:'Wie installiere ich das?', close:'Schließen',
@@ -425,9 +473,9 @@
       drag:'⇱ In die Lesezeichenleiste ziehen',
       bm_t:'Web-Übersetzer — ohne Installation',
       bm_d:'Dieselbe Seitenübersetzung in 9 Sprachen, ohne Erweiterung und ohne Entwicklermodus. Einen Link in die Lesezeichenleiste ziehen, fertig.',
-      b1:'Lesezeichenleiste in Chrome einblenden: Strg + Umschalt + B (Mac: Cmd + Umschalt + B).',
-      b2:'Zieh den Knopf „⇱ In die Lesezeichenleiste ziehen" auf die Leiste. Das war\'s — es wird nichts installiert.',
-      b3:'Wenn Ziehen nicht geht: Rechtsklick auf die Leiste ← Seite hinzufügen und die Adresse des Links einfügen.',
+      b1:'Das Wichtigste: Blende die Lesezeichenleiste mit Strg + Umschalt + B ein (Mac: Cmd + Umschalt + B). Ohne diesen Streifen unter der Adressleiste gibt es kein Ziel, und das Ziehen schlägt schlicht fehl.',
+      b2:'Zieh den Knopf „⇱ In die Lesezeichenleiste ziehen" auf diesen Streifen. Das war\'s — es wird nichts installiert.',
+      b3:'Klappt nicht? Nimm den Kopier-Knopf oben — ganz ohne Ziehen. Achtung: Einfügen in die Adressleiste funktioniert nicht, Chrome entfernt dort das Wort javascript aus Sicherheitsgründen.',
       bu1:'Geh auf eine beliebige Seite und klick das Lesezeichen an.',
       bu2:'In der Ecke öffnet sich ein kleines Feld: Sprache wählen und „Seite übersetzen" klicken.',
       bu3:'Währenddessen gibt es ⏹ Stopp, und am Ende setzt ↩ Original die Seite zurück.',
@@ -451,7 +499,13 @@
       s1_tr:'Aktuelle Nachrichten heute',
       s2_tr:'Den ganzen Artikel lesen',
       s3_tr:'Sport und Wetter',
-      s4_tr:'Updates abonnieren'
+      s4_tr:'Updates abonnieren',
+      d_step0:'Zuerst: Lesezeichenleiste einblenden',
+      altH:'Ziehen klappt nicht? Es geht auch ohne',
+      altP:'Kopiere den Code, dann: Strg+Umschalt+O öffnet den Lesezeichen-Manager → Drei-Punkte-Menü → „Neues Lesezeichen hinzufügen" → ins URL-Feld einfügen. Name: Übersetzen.',
+      copy:'📋 Code kopieren',
+      copied:'Kopiert ✓',
+      copyFail:'Der Code steht unten — alles markieren (Strg+A) und kopieren (Strg+C)'
     }
   };
 
@@ -495,6 +549,7 @@
       '<div class="dl-head"><h2></h2><button class="dl-x">×</button></div>' +
       '<div class="dl-demo"></div>' +
       '<div class="dl-what"></div>' +
+      '<div class="dl-alt"><h4></h4><p></p><button class="dl-copy"></button></div>' +
       '<div class="dl-sec"><h3 class="dl-ih"></h3><ol class="dl-steps dl-install"></ol></div>' +
       '<div class="dl-sec"><h3 class="dl-uh"></h3><ol class="dl-steps dl-usage"></ol></div>' +
       '<div class="dl-note"><strong class="dl-nh"></strong><span class="dl-nt"></span></div>' +
@@ -510,17 +565,58 @@
   function mountDemo(d) {
     const box = ov.querySelector('.dl-demo');
     const what = ov.querySelector('.dl-what');
+    const alt = ov.querySelector('.dl-alt');
     stopDemo();
     box.textContent = '';
     what.textContent = '';
     if (d.kind !== 'bookmarklet' || !window.FLROT_DEMO) {
       box.style.display = 'none';
       what.style.display = 'none';
+      alt.style.display = 'none';
       return;
     }
     box.style.display = '';
     what.style.display = '';
+    alt.style.display = '';
     what.innerHTML = t('whatIs');
+
+    // מסלול חלופי: מעתיקים את הקוד ומדביקים בעורך הסימניות.
+    // עובד גם כששורת הסימניות מוסתרת, ובלי גרירה בכלל.
+    alt.querySelector('h4').textContent = t('altH');
+    alt.querySelector('p').textContent = t('altP');
+    const copyBtn = alt.querySelector('.dl-copy');
+    copyBtn.textContent = t('copy');
+    copyBtn.classList.remove('ok');
+
+    // ה-Clipboard API נכשל בשקט כשאין פוקוס או מחווה מוכרת, ולכן
+    // הקוד תמיד מוצג בתיבה מסומנת — משם Ctrl+C עובד תמיד.
+    copyBtn.onclick = async () => {
+      const link = document.getElementById('bmLink');
+      const url = link ? link.getAttribute('href') : '';
+
+      let box = alt.querySelector('.dl-code');
+      if (!box) {
+        box = document.createElement('textarea');
+        box.className = 'dl-code';
+        box.readOnly = true;
+        box.rows = 3;
+        box.dir = 'ltr';
+        alt.appendChild(box);
+      }
+      box.value = url;
+      box.style.display = 'block';
+      box.focus();
+      box.select();
+      box.setSelectionRange(0, url.length);
+
+      let ok = false;
+      try { await navigator.clipboard.writeText(url); ok = true; }
+      catch (e) {
+        try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
+      }
+      copyBtn.textContent = ok ? t('copied') : t('copyFail');
+      copyBtn.classList.toggle('ok', ok);
+    };
     const ui = window.FLROT_DEMO.build(t, lang);
     box.appendChild(ui.wrap);
     const mine = demoToken;
