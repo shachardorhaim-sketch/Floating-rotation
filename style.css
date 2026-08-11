@@ -596,3 +596,30 @@ body { min-height:100vh; background:#0f1620; color:#e8eef5; font-family:"Segoe U
   .ch-tutorial-board { width:min(100%,340px); }
   #ch-promotion-options button { width:56px; height:56px; font-size:34px; }
 }
+
+
+/* ================================================
+   אזור ההורדות
+   ================================================ */
+.dcard { cursor:default; }
+.dcard:hover { transform:translateY(-4px); border-color:#ffd166; }
+.dl-actions { display:flex; gap:8px; margin-top:12px; }
+.dl-get { flex:1; margin-top:0; text-align:center; text-decoration:none; background:#ffd166; color:#0f1620; display:block; }
+.dl-get:hover { filter:brightness(1.08); }
+.dl-how { background:#2a3b4f; color:#e8eef5; border:none; font-family:inherit; font-weight:700; font-size:13px; padding:9px 12px; border-radius:6px; cursor:pointer; white-space:nowrap; }
+.dl-how:hover { background:#354961; }
+.gbadge.dl-badge { color:#ffd166; }
+
+#dl-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:100; align-items:flex-start; justify-content:center; padding:24px; overflow-y:auto; }
+#dl-overlay.open { display:flex; }
+.dl-card { background:#141d28; border:1px solid #2a3b4f; border-radius:16px; max-width:640px; width:100%; padding:22px; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+.dl-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+.dl-head h2 { font-size:21px; }
+.dl-x { background:#d9856b; color:#0d1620; border:none; width:34px; height:34px; border-radius:8px; font-size:18px; font-weight:800; cursor:pointer; flex-shrink:0; }
+.dl-sec { margin-bottom:18px; }
+.dl-sec h3 { font-size:15px; margin-bottom:10px; color:#ffd166; }
+.dl-steps { padding-inline-start:22px; display:flex; flex-direction:column; gap:8px; }
+.dl-steps li { font-size:14px; line-height:1.6; color:#c3d1de; }
+.dl-note { background:rgba(217,133,107,.12); border:1px solid rgba(217,133,107,.35); border-radius:10px; padding:12px 14px; font-size:13px; line-height:1.6; color:#c3d1de; }
+.dl-note strong { color:#d9856b; }
+.dl-done { margin-top:16px; width:100%; background:#4fd1c5; color:#0f1620; border:none; font-family:inherit; font-weight:700; font-size:14px; padding:10px; border-radius:8px; cursor:pointer; }

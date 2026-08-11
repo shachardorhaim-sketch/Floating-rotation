@@ -226,6 +226,8 @@ function openExternal(g) {
     });
     updateSettingsLabels();
     ov.querySelectorAll('.set-lang-btn').forEach(b=> b.classList.toggle('active', b.dataset.lang===lang));
+    // מודיעים לשאר האתר (אזור ההורדות) שהשפה השתנתה
+    document.dispatchEvent(new CustomEvent('flrot:lang', { detail: lang }));
   }
 
   // ---------- init: restore saved prefs ----------
