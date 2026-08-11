@@ -623,3 +623,7 @@ body { min-height:100vh; background:#0f1620; color:#e8eef5; font-family:"Segoe U
 .dl-note { background:rgba(217,133,107,.12); border:1px solid rgba(217,133,107,.35); border-radius:10px; padding:12px 14px; font-size:13px; line-height:1.6; color:#c3d1de; }
 .dl-note strong { color:#d9856b; }
 .dl-done { margin-top:16px; width:100%; background:#4fd1c5; color:#0f1620; border:none; font-family:inherit; font-weight:700; font-size:14px; padding:10px; border-radius:8px; cursor:pointer; }
+
+/* קישור ה-bookmarklet — נועד לגרירה, לא ללחיצה */
+.bm-link { background:#4fd1c5; cursor:grab; user-select:none; }
+.bm-link:active { cursor:grabbing; }
