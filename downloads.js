@@ -55,7 +55,27 @@
       bu1:'להיכנס לכל אתר שרוצים ולחוץ על הסימנייה.',
       bu2:'בפינה נפתח לוח קטן: לבחור שפה ולחוץ "תרגם את העמוד".',
       bu3:'תוך כדי יש ⏹ עצור, ובסיום ↩ החזר מקור שמחזיר את העמוד כפי שהיה.',
-      bmnote:'עובד ברוב האתרים. באתרים בודדים עם מדיניות אבטחה נוקשה (למשל GitHub) הדפדפן עלול לחסום סימניות שמריצות קוד — שם צריך את התוסף. גם כאן הטקסט לתרגום נשלח לשירות של גוגל.'
+      bmnote:'עובד ברוב האתרים. באתרים בודדים עם מדיניות אבטחה נוקשה (למשל GitHub) הדפדפן עלול לחסום סימניות שמריצות קוד — שם צריך את התוסף. גם כאן הטקסט לתרגום נשלח לשירות של גוגל.',
+      howDemo:'▶ איך זה עובד?',
+      d_replay:'▶ הצג שוב',
+      d_bm:'תרגם',
+      d_langname:'עברית',
+      d_go:'תרגם',
+      d_stop:'⏹ עצור',
+      d_restore:'↩ החזר',
+      whatIs:'<b>סימנייה</b> היא קיצור דרך בדפדפן — בדרך כלל לוחצים עליה והיא פותחת אתר. הסימנייה הזאת שונה: במקום לפתוח אתר, היא <b>מתרגמת את האתר שאתה נמצא בו ברגע זה</b>. גוררים אותה פעם אחת לשורת הסימניות, ומאותו רגע היא שם לתמיד — בכל אתר, בלחיצה אחת. אין מה להתקין ואין מה להפעיל.',
+      d_step1:'פעם אחת בלבד: גוררים את הכפתור לשורת הסימניות',
+      d_step2:'אחר כך נכנסים לכל אתר באינטרנט',
+      d_step3:'לוחצים על הסימנייה שהוספת',
+      d_step4:'בוחרים שפה — והעמוד מתורגם',
+      s1_en:'Breaking news today',
+      s2_en:'Read the full story',
+      s3_en:'Sports and weather',
+      s4_en:'Subscribe for updates',
+      s1_tr:'חדשות מתפרצות היום',
+      s2_tr:'לקריאת הכתבה המלאה',
+      s3_tr:'ספורט ומזג אוויר',
+      s4_tr:'הרשמה לעדכונים'
     },
     en: {
       sec:'Downloads', ext:'Chrome extension', get:'⬇ Download', how:'How to install?', close:'Close',
@@ -82,7 +102,27 @@
       bu1:'Go to any site and click the bookmark.',
       bu2:'A small panel opens in the corner: pick a language and press "Translate page".',
       bu3:'While it runs there is a ⏹ Stop, and when it finishes ↩ Restore original puts the page back.',
-      bmnote:'Works on most sites. A few sites with a strict security policy (GitHub, for example) may block bookmarks that run code — use the extension there. The text to translate is still sent to Google\'s service.'
+      bmnote:'Works on most sites. A few sites with a strict security policy (GitHub, for example) may block bookmarks that run code — use the extension there. The text to translate is still sent to Google\'s service.',
+      howDemo:'▶ How does it work?',
+      d_replay:'▶ Play again',
+      d_bm:'Translate',
+      d_langname:'English',
+      d_go:'Translate',
+      d_stop:'⏹ Stop',
+      d_restore:'↩ Restore',
+      whatIs:'A <b>bookmark</b> is a shortcut in your browser — normally you click it and it opens a website. This one is different: instead of opening a site, it <b>translates the site you are already on</b>. You drag it to your bookmarks bar once, and from then on it stays there — any site, one click. Nothing to install, nothing to switch on.',
+      d_step1:'Just once: drag the button to your bookmarks bar',
+      d_step2:'Then go to any website you like',
+      d_step3:'Click the bookmark you added',
+      d_step4:'Pick a language — and the page is translated',
+      s1_en:'Últimas noticias de hoy',
+      s2_en:'Leer la noticia completa',
+      s3_en:'Deportes y clima',
+      s4_en:'Suscríbete a las novedades',
+      s1_tr:'Breaking news today',
+      s2_tr:'Read the full story',
+      s3_tr:'Sports and weather',
+      s4_tr:'Subscribe for updates'
     },
     ar: {
       sec:'للتحميل', ext:'إضافة كروم', get:'⬇ تحميل', how:'كيف أثبّتها؟', close:'إغلاق',
@@ -109,7 +149,27 @@
       bu1:'ادخل إلى أي موقع واضغط على المفضلة.',
       bu2:'تُفتح لوحة صغيرة في الزاوية: اختر لغة واضغط "ترجم الصفحة".',
       bu3:'أثناء العمل يوجد ⏹ إيقاف، وعند الانتهاء ↩ استعادة الأصل يعيد الصفحة كما كانت.',
-      bmnote:'يعمل في معظم المواقع. بعض المواقع ذات سياسة أمان صارمة (مثل GitHub) قد تمنع المفضلات التي تشغّل كوداً — استخدم الإضافة هناك. النص المراد ترجمته يُرسل أيضاً إلى خدمة جوجل.'
+      bmnote:'يعمل في معظم المواقع. بعض المواقع ذات سياسة أمان صارمة (مثل GitHub) قد تمنع المفضلات التي تشغّل كوداً — استخدم الإضافة هناك. النص المراد ترجمته يُرسل أيضاً إلى خدمة جوجل.',
+      howDemo:'▶ كيف يعمل؟',
+      d_replay:'▶ إعادة العرض',
+      d_bm:'ترجم',
+      d_langname:'العربية',
+      d_go:'ترجم',
+      d_stop:'⏹ إيقاف',
+      d_restore:'↩ استعادة',
+      whatIs:'<b>المفضلة</b> هي اختصار في المتصفح — عادةً تضغط عليها فتفتح موقعاً. هذه مختلفة: بدل أن تفتح موقعاً، فهي <b>تترجم الموقع الذي أنت فيه الآن</b>. تسحبها مرة واحدة إلى شريط المفضلة، ومن ثم تبقى هناك — أي موقع، بضغطة واحدة. لا شيء لتثبيته ولا شيء لتشغيله.',
+      d_step1:'مرة واحدة فقط: اسحب الزر إلى شريط المفضلة',
+      d_step2:'بعدها ادخل إلى أي موقع تريد',
+      d_step3:'اضغط على المفضلة التي أضفتها',
+      d_step4:'اختر لغة — وتُترجم الصفحة',
+      s1_en:'Breaking news today',
+      s2_en:'Read the full story',
+      s3_en:'Sports and weather',
+      s4_en:'Subscribe for updates',
+      s1_tr:'أخبار عاجلة اليوم',
+      s2_tr:'اقرأ الخبر كاملاً',
+      s3_tr:'الرياضة والطقس',
+      s4_tr:'اشترك في التحديثات'
     },
     zh: {
       sec:'下载', ext:'Chrome 扩展', get:'⬇ 下载', how:'如何安装?', close:'关闭',
@@ -136,7 +196,27 @@
       bu1:'打开任意网站,点击这个书签。',
       bu2:'角落会打开一个小面板:选择语言,点「翻译页面」。',
       bu3:'过程中有 ⏹ 停止,完成后 ↩ 恢复原文可将页面还原。',
-      bmnote:'在大多数网站上都能用。少数安全策略严格的网站(例如 GitHub)可能会阻止运行代码的书签——那里请用扩展。要翻译的文字同样会发送到谷歌的服务。'
+      bmnote:'在大多数网站上都能用。少数安全策略严格的网站(例如 GitHub)可能会阻止运行代码的书签——那里请用扩展。要翻译的文字同样会发送到谷歌的服务。',
+      howDemo:'▶ 它是怎么用的?',
+      d_replay:'▶ 再看一次',
+      d_bm:'翻译',
+      d_langname:'中文',
+      d_go:'翻译',
+      d_stop:'⏹ 停止',
+      d_restore:'↩ 恢复',
+      whatIs:'<b>书签</b>是浏览器里的快捷方式——通常点一下就打开一个网站。这个不一样:它不打开网站,而是<b>翻译你当前正在看的网站</b>。把它拖到书签栏一次,它就一直在那里——任何网站,点一下即可。不用安装,也不用开启任何东西。',
+      d_step1:'只需一次:把按钮拖到书签栏',
+      d_step2:'然后打开你想看的任意网站',
+      d_step3:'点击你刚添加的书签',
+      d_step4:'选择语言——页面就翻译好了',
+      s1_en:'Breaking news today',
+      s2_en:'Read the full story',
+      s3_en:'Sports and weather',
+      s4_en:'Subscribe for updates',
+      s1_tr:'今日突发新闻',
+      s2_tr:'阅读完整报道',
+      s3_tr:'体育与天气',
+      s4_tr:'订阅最新消息'
     },
     es: {
       sec:'Descargas', ext:'Extensión de Chrome', get:'⬇ Descargar', how:'¿Cómo se instala?', close:'Cerrar',
@@ -163,7 +243,27 @@
       bu1:'Entra en cualquier sitio y pulsa el marcador.',
       bu2:'Se abre un panel en la esquina: elige idioma y pulsa "Traducir página".',
       bu3:'Durante el proceso hay ⏹ Detener, y al terminar ↩ Restaurar deja la página como estaba.',
-      bmnote:'Funciona en la mayoría de sitios. Algunos con política de seguridad estricta (GitHub, por ejemplo) pueden bloquear marcadores que ejecutan código: ahí usa la extensión. El texto a traducir se envía igualmente al servicio de Google.'
+      bmnote:'Funciona en la mayoría de sitios. Algunos con política de seguridad estricta (GitHub, por ejemplo) pueden bloquear marcadores que ejecutan código: ahí usa la extensión. El texto a traducir se envía igualmente al servicio de Google.',
+      howDemo:'▶ ¿Cómo funciona?',
+      d_replay:'▶ Ver de nuevo',
+      d_bm:'Traducir',
+      d_langname:'Español',
+      d_go:'Traducir',
+      d_stop:'⏹ Detener',
+      d_restore:'↩ Restaurar',
+      whatIs:'Un <b>marcador</b> es un acceso directo del navegador: normalmente lo pulsas y abre una web. Este es distinto: en vez de abrir una web, <b>traduce la web en la que ya estás</b>. Lo arrastras una vez a la barra de marcadores y se queda ahí para siempre: cualquier sitio, un clic. Nada que instalar, nada que activar.',
+      d_step1:'Solo una vez: arrastra el botón a la barra de marcadores',
+      d_step2:'Después entra en cualquier web',
+      d_step3:'Pulsa el marcador que añadiste',
+      d_step4:'Elige idioma y la página se traduce',
+      s1_en:'Breaking news today',
+      s2_en:'Read the full story',
+      s3_en:'Sports and weather',
+      s4_en:'Subscribe for updates',
+      s1_tr:'Últimas noticias de hoy',
+      s2_tr:'Leer la noticia completa',
+      s3_tr:'Deportes y clima',
+      s4_tr:'Suscríbete a las novedades'
     },
     fr: {
       sec:'Téléchargements', ext:'Extension Chrome', get:'⬇ Télécharger', how:'Comment l\'installer ?', close:'Fermer',
@@ -190,7 +290,27 @@
       bu1:'Va sur n\'importe quel site et clique sur le favori.',
       bu2:'Un petit panneau s\'ouvre dans le coin : choisis une langue et clique « Traduire la page ».',
       bu3:'Pendant l\'opération il y a ⏹ Arrêter, et à la fin ↩ Restaurer remet la page comme avant.',
-      bmnote:'Fonctionne sur la plupart des sites. Quelques sites à politique de sécurité stricte (GitHub par exemple) peuvent bloquer les favoris qui exécutent du code — utilise l\'extension là-bas. Le texte à traduire est aussi envoyé au service de Google.'
+      bmnote:'Fonctionne sur la plupart des sites. Quelques sites à politique de sécurité stricte (GitHub par exemple) peuvent bloquer les favoris qui exécutent du code — utilise l\'extension là-bas. Le texte à traduire est aussi envoyé au service de Google.',
+      howDemo:'▶ Comment ça marche ?',
+      d_replay:'▶ Revoir',
+      d_bm:'Traduire',
+      d_langname:'Français',
+      d_go:'Traduire',
+      d_stop:'⏹ Arrêter',
+      d_restore:'↩ Restaurer',
+      whatIs:'Un <b>favori</b> est un raccourci du navigateur : normalement tu cliques dessus et il ouvre un site. Celui-ci est différent : au lieu d\'ouvrir un site, il <b>traduit le site où tu te trouves déjà</b>. Tu le glisses une fois dans la barre de favoris et il y reste — n\'importe quel site, un clic. Rien à installer, rien à activer.',
+      d_step1:'Une seule fois : glisse le bouton dans la barre de favoris',
+      d_step2:'Ensuite va sur le site de ton choix',
+      d_step3:'Clique sur le favori que tu as ajouté',
+      d_step4:'Choisis une langue — la page est traduite',
+      s1_en:'Breaking news today',
+      s2_en:'Read the full story',
+      s3_en:'Sports and weather',
+      s4_en:'Subscribe for updates',
+      s1_tr:'Dernières nouvelles du jour',
+      s2_tr:'Lire l\'article complet',
+      s3_tr:'Sports et météo',
+      s4_tr:'Abonne-toi aux mises à jour'
     },
     pt: {
       sec:'Downloads', ext:'Extensão do Chrome', get:'⬇ Baixar', how:'Como instalar?', close:'Fechar',
@@ -217,7 +337,27 @@
       bu1:'Entre em qualquer site e clique no favorito.',
       bu2:'Abre um painel no canto: escolha o idioma e clique em "Traduzir página".',
       bu3:'Durante o processo há ⏹ Parar e, ao terminar, ↩ Restaurar devolve a página como estava.',
-      bmnote:'Funciona na maioria dos sites. Alguns com política de segurança rígida (GitHub, por exemplo) podem bloquear favoritos que executam código — ali use a extensão. O texto a traduzir também é enviado ao serviço do Google.'
+      bmnote:'Funciona na maioria dos sites. Alguns com política de segurança rígida (GitHub, por exemplo) podem bloquear favoritos que executam código — ali use a extensão. O texto a traduzir também é enviado ao serviço do Google.',
+      howDemo:'▶ Como funciona?',
+      d_replay:'▶ Ver de novo',
+      d_bm:'Traduzir',
+      d_langname:'Português',
+      d_go:'Traduzir',
+      d_stop:'⏹ Parar',
+      d_restore:'↩ Restaurar',
+      whatIs:'Um <b>favorito</b> é um atalho do navegador: normalmente você clica e ele abre um site. Este é diferente: em vez de abrir um site, ele <b>traduz o site em que você já está</b>. Arraste uma vez para a barra de favoritos e ele fica lá para sempre — qualquer site, um clique. Nada para instalar, nada para ligar.',
+      d_step1:'Só uma vez: arraste o botão para a barra de favoritos',
+      d_step2:'Depois entre em qualquer site',
+      d_step3:'Clique no favorito que você adicionou',
+      d_step4:'Escolha o idioma — e a página é traduzida',
+      s1_en:'Breaking news today',
+      s2_en:'Read the full story',
+      s3_en:'Sports and weather',
+      s4_en:'Subscribe for updates',
+      s1_tr:'Notícias de última hora',
+      s2_tr:'Leia a matéria completa',
+      s3_tr:'Esportes e clima',
+      s4_tr:'Assine as novidades'
     },
     ru: {
       sec:'Загрузки', ext:'Расширение Chrome', get:'⬇ Скачать', how:'Как установить?', close:'Закрыть',
@@ -244,7 +384,27 @@
       bu1:'Зайдите на любой сайт и нажмите закладку.',
       bu2:'В углу откроется небольшая панель: выберите язык и нажмите «Перевести страницу».',
       bu3:'В процессе есть ⏹ Стоп, а по завершении ↩ Оригинал возвращает страницу в исходный вид.',
-      bmnote:'Работает на большинстве сайтов. Некоторые сайты со строгой политикой безопасности (например GitHub) могут блокировать закладки с кодом — там используйте расширение. Текст для перевода так же отправляется в сервис Google.'
+      bmnote:'Работает на большинстве сайтов. Некоторые сайты со строгой политикой безопасности (например GitHub) могут блокировать закладки с кодом — там используйте расширение. Текст для перевода так же отправляется в сервис Google.',
+      howDemo:'▶ Как это работает?',
+      d_replay:'▶ Показать снова',
+      d_bm:'Перевести',
+      d_langname:'Русский',
+      d_go:'Перевести',
+      d_stop:'⏹ Стоп',
+      d_restore:'↩ Оригинал',
+      whatIs:'<b>Закладка</b> — это ярлык в браузере: обычно вы нажимаете на неё, и она открывает сайт. Эта работает иначе: вместо того чтобы открыть сайт, она <b>переводит тот сайт, на котором вы уже находитесь</b>. Перетащите её один раз на панель закладок — и она останется там навсегда: любой сайт, одно нажатие. Ничего не нужно устанавливать и ничего включать.',
+      d_step1:'Всего один раз: перетащите кнопку на панель закладок',
+      d_step2:'Дальше заходите на любой сайт',
+      d_step3:'Нажмите на добавленную закладку',
+      d_step4:'Выберите язык — и страница переведена',
+      s1_en:'Breaking news today',
+      s2_en:'Read the full story',
+      s3_en:'Sports and weather',
+      s4_en:'Subscribe for updates',
+      s1_tr:'Срочные новости сегодня',
+      s2_tr:'Читать статью целиком',
+      s3_tr:'Спорт и погода',
+      s4_tr:'Подпишитесь на обновления'
     },
     de: {
       sec:'Downloads', ext:'Chrome-Erweiterung', get:'⬇ Herunterladen', how:'Wie installiere ich das?', close:'Schließen',
@@ -271,7 +431,27 @@
       bu1:'Geh auf eine beliebige Seite und klick das Lesezeichen an.',
       bu2:'In der Ecke öffnet sich ein kleines Feld: Sprache wählen und „Seite übersetzen" klicken.',
       bu3:'Währenddessen gibt es ⏹ Stopp, und am Ende setzt ↩ Original die Seite zurück.',
-      bmnote:'Funktioniert auf den meisten Seiten. Einige Seiten mit strenger Sicherheitsrichtlinie (z. B. GitHub) können Lesezeichen blockieren, die Code ausführen — nutze dort die Erweiterung. Der zu übersetzende Text geht ebenfalls an den Dienst von Google.'
+      bmnote:'Funktioniert auf den meisten Seiten. Einige Seiten mit strenger Sicherheitsrichtlinie (z. B. GitHub) können Lesezeichen blockieren, die Code ausführen — nutze dort die Erweiterung. Der zu übersetzende Text geht ebenfalls an den Dienst von Google.',
+      howDemo:'▶ Wie funktioniert das?',
+      d_replay:'▶ Nochmal ansehen',
+      d_bm:'Übersetzen',
+      d_langname:'Deutsch',
+      d_go:'Übersetzen',
+      d_stop:'⏹ Stopp',
+      d_restore:'↩ Original',
+      whatIs:'Ein <b>Lesezeichen</b> ist eine Verknüpfung im Browser — normalerweise klickst du darauf und es öffnet eine Website. Dieses hier ist anders: Statt eine Seite zu öffnen, <b>übersetzt es die Seite, auf der du gerade bist</b>. Einmal in die Lesezeichenleiste ziehen, und es bleibt dort — jede Seite, ein Klick. Nichts zu installieren, nichts einzuschalten.',
+      d_step1:'Nur einmal: zieh den Knopf in die Lesezeichenleiste',
+      d_step2:'Danach geh auf eine beliebige Website',
+      d_step3:'Klick auf das hinzugefügte Lesezeichen',
+      d_step4:'Sprache wählen — und die Seite ist übersetzt',
+      s1_en:'Breaking news today',
+      s2_en:'Read the full story',
+      s3_en:'Sports and weather',
+      s4_en:'Subscribe for updates',
+      s1_tr:'Aktuelle Nachrichten heute',
+      s2_tr:'Den ganzen Artikel lesen',
+      s3_tr:'Sport und Wetter',
+      s4_tr:'Updates abonnieren'
     }
   };
 
@@ -313,6 +493,8 @@
   ov.innerHTML =
     '<div class="dl-card">' +
       '<div class="dl-head"><h2></h2><button class="dl-x">×</button></div>' +
+      '<div class="dl-demo"></div>' +
+      '<div class="dl-what"></div>' +
       '<div class="dl-sec"><h3 class="dl-ih"></h3><ol class="dl-steps dl-install"></ol></div>' +
       '<div class="dl-sec"><h3 class="dl-uh"></h3><ol class="dl-steps dl-usage"></ol></div>' +
       '<div class="dl-note"><strong class="dl-nh"></strong><span class="dl-nt"></span></div>' +
@@ -320,7 +502,38 @@
     '</div>';
   document.body.appendChild(ov);
 
-  const closeGuide = () => ov.classList.remove('open');
+  // ---------- ההדגמה המונפשת ----------
+  let demoToken = 0;   // עולה בכל פתיחה/סגירה, וכך הלולאה הישנה יודעת לעצור
+
+  function stopDemo() { demoToken++; }
+
+  function mountDemo(d) {
+    const box = ov.querySelector('.dl-demo');
+    const what = ov.querySelector('.dl-what');
+    stopDemo();
+    box.textContent = '';
+    what.textContent = '';
+    if (d.kind !== 'bookmarklet' || !window.FLROT_DEMO) {
+      box.style.display = 'none';
+      what.style.display = 'none';
+      return;
+    }
+    box.style.display = '';
+    what.style.display = '';
+    what.innerHTML = t('whatIs');
+    const ui = window.FLROT_DEMO.build(t, lang);
+    box.appendChild(ui.wrap);
+    const mine = demoToken;
+    const alive = () => mine === demoToken && ov.classList.contains('open');
+    ui.replay.onclick = () => { stopDemo(); mountDemo(d); };
+    window.FLROT_DEMO.play(ui, t, lang, alive);
+  }
+
+  const closeGuide = () => {
+    stopDemo();
+    ov.querySelector('.dl-demo').textContent = '';   // לא משאירים הנפשה תלויה ב-DOM
+    ov.classList.remove('open');
+  };
   ov.querySelector('.dl-x').onclick = closeGuide;
   ov.querySelector('.dl-done').onclick = closeGuide;
   ov.onclick = e => { if (e.target === ov) closeGuide(); };
@@ -343,6 +556,7 @@
     fill('.dl-install', d.install);
     fill('.dl-usage', d.usage);
     ov.classList.add('open');
+    mountDemo(d);
   }
 
   // ---------- החלפת שפה ----------
@@ -359,7 +573,8 @@
       card.querySelector('.dl-get').textContent = d.kind === 'bookmarklet'
         ? t('drag')
         : t('get') + ' (' + d.size + ')';
-      card.querySelector('.dl-how').textContent = t('how');
+      card.querySelector('.dl-how').textContent =
+        d.kind === 'bookmarklet' ? t('howDemo') : t('how');
     });
     if (ov.classList.contains('open') && openFor) openGuide(openFor);
   }
