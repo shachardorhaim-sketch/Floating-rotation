@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מדריך — Floating rotation</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="guide-body">
+
+<header class="site-head">
+  <div class="logo">Floating<span>rotation</span></div>
+  <select id="langSel" class="g-lang"></select>
+  <a id="backLink" href="index.html" class="g-back">← חזרה לאתר</a>
+</header>
+
+<div class="g-wrap">
+
+  <div class="g-head">
+    <h1 id="gTitle">איך מחברים אותי</h1>
+    <p id="gSub">מדריך מלא — אני אלווה אותך שלב אחרי שלב</p>
+  </div>
+
+  <div class="g-main">
+
+    <!-- הבמה -->
+    <div class="g-stage-col">
+      <div class="g-narr-box"><p id="narr"></p></div>
+
+      <div id="stage" class="g-stage">
+        <div class="g-bar">
+          <div class="g-dots"><i></i><i></i><i></i></div>
+          <div class="g-url" id="gUrl"></div>
+        </div>
+
+        <div class="g-marks off" id="gMarks">
+          <span class="g-marks-lbl">☆</span>
+          <span class="g-chip" id="gChip"></span>
+        </div>
+
+        <div class="g-page">
+          <div class="g-drag" id="gDrag"></div>
+          <div class="g-lines" id="gLines"></div>
+          <div class="g-panel" id="gPanel">
+            <div class="gp-head">Floating rotation</div>
+            <div class="gp-sel"><span id="gpLang">עברית</span><b>▾</b></div>
+            <div class="gp-bar"><div class="gp-fill" id="gpFill"></div></div>
+            <div class="gp-btn" id="gpBtn"></div>
+          </div>
+        </div>
+
+        <div class="g-ghost" id="gGhost"></div>
+        <div class="g-cursor" id="gCursor">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 2l7 18 2.5-7.5L21 10z"
+            fill="#fff" stroke="#0d1620" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        </div>
+
+        <!-- רמז המקלדת -->
+        <div class="g-kbd" id="gKbd">
+          <kbd>Ctrl</kbd><span>+</span><kbd>Shift</kbd><span>+</span><kbd>B</kbd>
+        </div>
+
+        <!-- חץ שמצביע על המקום החסר -->
+        <div class="g-arrow" id="gArrow">↑</div>
+
+        <!-- מנהל הסימניות (המסלול החלופי) -->
+        <div class="g-mgr" id="gMgr">
+          <div class="gm-head"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd></div>
+          <div class="gm-row gm-name"></div>
+          <div class="gm-row gm-url">javascript:(function()…</div>
+        </div>
+      </div>
+
+      <div class="g-controls">
+        <button id="prevBtn">⏮</button>
+        <button id="playBtn" class="g-play">⏸</button>
+        <button id="nextBtn">⏭</button>
+        <span id="counter" class="g-counter"></span>
+      </div>
+    </div>
+
+    <!-- צד: שלבים + פעולה אמיתית -->
+    <aside class="g-side">
+      <h2 id="chaptersH">השלבים</h2>
+      <div id="chapters" class="g-chapters"></div>
+
+      <div class="g-do">
+        <h3 id="doItH">עשה את זה עכשיו — הכפתור אמיתי:</h3>
+        <a id="bmLink" class="g-bm" href="#" draggable="true">⇱ גרור אותי לשורת הסימניות</a>
+        <button id="copyBtn" class="g-copy">📋 העתק אותי</button>
+        <textarea id="codeBox" class="dl-code" readonly rows="3" dir="ltr"></textarea>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<footer class="site-foot">נבנה על ידי שחר דור-חיים ורובין שמואלי · Floating rotation 2026</footer>
+
+<script src="guide.js"></script>
+<script src="bookmarklet.js"></script>
+</body>
+</html>

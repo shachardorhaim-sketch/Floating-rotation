@@ -81,7 +81,8 @@
       altP:'העתק את הקוד, ואז: Ctrl+Shift+O פותח את מנהל הסימניות ← תפריט שלוש הנקודות ← "הוסף סימנייה חדשה" ← בשדה הכתובת מדביקים. שם: תרגם.',
       copy:'📋 העתק את הקוד',
       copied:'הועתק ✓',
-      copyFail:'הקוד למטה — סמן הכל (Ctrl+A) והעתק (Ctrl+C)'
+      copyFail:'הקוד למטה — סמן הכל (Ctrl+A) והעתק (Ctrl+C)',
+      fullGuide:'🎬 המדריך המלא — צעד אחרי צעד'
     },
     en: {
       sec:'Downloads', ext:'Chrome extension', get:'⬇ Download', how:'How to install?', close:'Close',
@@ -134,7 +135,8 @@
       altP:'Copy the code, then: Ctrl+Shift+O opens the bookmark manager → three-dot menu → "Add new bookmark" → paste into the URL field. Name it: Translate.',
       copy:'📋 Copy the code',
       copied:'Copied ✓',
-      copyFail:'The code is below — select all (Ctrl+A) and copy (Ctrl+C)'
+      copyFail:'The code is below — select all (Ctrl+A) and copy (Ctrl+C)',
+      fullGuide:'🎬 The full guide — step by step'
     },
     ar: {
       sec:'للتحميل', ext:'إضافة كروم', get:'⬇ تحميل', how:'كيف أثبّتها؟', close:'إغلاق',
@@ -187,7 +189,8 @@
       altP:'انسخ الكود، ثم: Ctrl+Shift+O يفتح مدير المفضلة ← قائمة النقاط الثلاث ← "إضافة إشارة مرجعية" ← الصق في حقل العنوان. الاسم: ترجم.',
       copy:'📋 انسخ الكود',
       copied:'تم النسخ ✓',
-      copyFail:'الكود بالأسفل — حدّد الكل (Ctrl+A) وانسخ (Ctrl+C)'
+      copyFail:'الكود بالأسفل — حدّد الكل (Ctrl+A) وانسخ (Ctrl+C)',
+      fullGuide:'🎬 الدليل الكامل — خطوة بخطوة'
     },
     zh: {
       sec:'下载', ext:'Chrome 扩展', get:'⬇ 下载', how:'如何安装?', close:'关闭',
@@ -240,7 +243,8 @@
       altP:'复制代码,然后:按 Ctrl+Shift+O 打开书签管理器 →三点菜单 →「添加新书签」→粘贴到网址栏。名称填:翻译。',
       copy:'📋 复制代码',
       copied:'已复制 ✓',
-      copyFail:'代码在下方——全选(Ctrl+A)并复制(Ctrl+C)'
+      copyFail:'代码在下方——全选(Ctrl+A)并复制(Ctrl+C)',
+      fullGuide:'🎬 完整教程——一步一步来'
     },
     es: {
       sec:'Descargas', ext:'Extensión de Chrome', get:'⬇ Descargar', how:'¿Cómo se instala?', close:'Cerrar',
@@ -293,7 +297,8 @@
       altP:'Copia el código y luego: Ctrl+Shift+O abre el administrador de marcadores → menú de tres puntos → "Añadir marcador" → pega en el campo de URL. Nombre: Traducir.',
       copy:'📋 Copiar el código',
       copied:'Copiado ✓',
-      copyFail:'El código está abajo: selecciona todo (Ctrl+A) y copia (Ctrl+C)'
+      copyFail:'El código está abajo: selecciona todo (Ctrl+A) y copia (Ctrl+C)',
+      fullGuide:'🎬 La guía completa — paso a paso'
     },
     fr: {
       sec:'Téléchargements', ext:'Extension Chrome', get:'⬇ Télécharger', how:'Comment l\'installer ?', close:'Fermer',
@@ -346,7 +351,8 @@
       altP:'Copie le code, puis : Ctrl+Maj+O ouvre le gestionnaire de favoris → menu trois points → « Ajouter un favori » → colle dans le champ URL. Nom : Traduire.',
       copy:'📋 Copier le code',
       copied:'Copié ✓',
-      copyFail:'Le code est ci-dessous — tout sélectionner (Ctrl+A) et copier (Ctrl+C)'
+      copyFail:'Le code est ci-dessous — tout sélectionner (Ctrl+A) et copier (Ctrl+C)',
+      fullGuide:'🎬 Le guide complet — étape par étape'
     },
     pt: {
       sec:'Downloads', ext:'Extensão do Chrome', get:'⬇ Baixar', how:'Como instalar?', close:'Fechar',
@@ -399,7 +405,8 @@
       altP:'Copie o código e depois: Ctrl+Shift+O abre o gerenciador de favoritos → menu de três pontos → "Adicionar novo favorito" → cole no campo de URL. Nome: Traduzir.',
       copy:'📋 Copiar o código',
       copied:'Copiado ✓',
-      copyFail:'O código está abaixo — selecione tudo (Ctrl+A) e copie (Ctrl+C)'
+      copyFail:'O código está abaixo — selecione tudo (Ctrl+A) e copie (Ctrl+C)',
+      fullGuide:'🎬 O guia completo — passo a passo'
     },
     ru: {
       sec:'Загрузки', ext:'Расширение Chrome', get:'⬇ Скачать', how:'Как установить?', close:'Закрыть',
@@ -452,7 +459,8 @@
       altP:'Скопируйте код, затем: Ctrl+Shift+O открывает диспетчер закладок → меню из трёх точек → «Добавить закладку» → вставьте в поле адреса. Имя: Перевести.',
       copy:'📋 Скопировать код',
       copied:'Скопировано ✓',
-      copyFail:'Код ниже — выделите всё (Ctrl+A) и скопируйте (Ctrl+C)'
+      copyFail:'Код ниже — выделите всё (Ctrl+A) и скопируйте (Ctrl+C)',
+      fullGuide:'🎬 Полное руководство — шаг за шагом'
     },
     de: {
       sec:'Downloads', ext:'Chrome-Erweiterung', get:'⬇ Herunterladen', how:'Wie installiere ich das?', close:'Schließen',
@@ -505,7 +513,8 @@
       altP:'Kopiere den Code, dann: Strg+Umschalt+O öffnet den Lesezeichen-Manager → Drei-Punkte-Menü → „Neues Lesezeichen hinzufügen" → ins URL-Feld einfügen. Name: Übersetzen.',
       copy:'📋 Code kopieren',
       copied:'Kopiert ✓',
-      copyFail:'Der Code steht unten — alles markieren (Strg+A) und kopieren (Strg+C)'
+      copyFail:'Der Code steht unten — alles markieren (Strg+A) und kopieren (Strg+C)',
+      fullGuide:'🎬 Die vollständige Anleitung — Schritt für Schritt'
     }
   };
 
@@ -582,6 +591,16 @@
 
     // מסלול חלופי: מעתיקים את הקוד ומדביקים בעורך הסימניות.
     // עובד גם כששורת הסימניות מוסתרת, ובלי גרירה בכלל.
+    // קישור למדריך המלא — נוסף פעם אחת, מעל ההדגמה
+    let guide = ov.querySelector('.dl-guide');
+    if (!guide) {
+      guide = document.createElement('a');
+      guide.className = 'dl-guide';
+      guide.href = 'guide.html';
+      ov.querySelector('.dl-card').insertBefore(guide, box);
+    }
+    guide.textContent = t('fullGuide');
+
     alt.querySelector('h4').textContent = t('altH');
     alt.querySelector('p').textContent = t('altP');
     const copyBtn = alt.querySelector('.dl-copy');
