@@ -64,7 +64,7 @@ const GAMES = [
   { id:'button', title:'אל תלחץ על הכפתור', desc:'משחק כפתור כאוטי ומצחיק — נוצר על ידי רובין!', img:BUTTON_LOGO, icon:'🔴', badge:'רובין', bg:'linear-gradient(135deg,#4b1b2a,#0d1b2a)', url:'https://unique-flan-89080c.netlify.app/' },
   { id:'chess', title:'Chess Prestige', desc:'שחמט נגד המחשב או מול חבר.', imgFile:'chess-logo.png', icon:'♞', badge:'STRATEGY', bg:'#0a0a0a', mount:mountChess },
   { id:'tetris', title:'Tetris', desc:'טטריס תלת-ממדי — סובב, הפל ונקה שורות!', imgFile:'tetris-logo.png', icon:'🟪', badge:'חדש!', bg:'linear-gradient(135deg,#2a1b4b,#0d1b2a)', mount:mountTetris },
-  { id:'pong', title:'פינג פונג', desc:'מול המחשב, מול חבר על אותו מחשב, או אונליין עם קוד חדר.', imgFile:'pong-logo.jpg', icon:'🏓', badge:'ספורט', bg:'linear-gradient(135deg,#123a2a,#0d1b2a)', mount:mountIframe('https://shachardorhaim-sketch.github.io/ping-pong-3d/') },
+  { id:'pong', title:'פינג פונג', desc:'מול המחשב, מול חבר על אותו מחשב, או אונליין עם קוד חדר.', imgFile:'pong-logo.jpg', icon:'🏓', badge:'ספורט', bg:'#00000f', mount:mountIframe('https://shachardorhaim-sketch.github.io/ping-pong-3d/') },
 ];
 
 const grid = document.getElementById('grid');
