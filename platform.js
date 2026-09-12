@@ -58,6 +58,7 @@ function mountIframe(url) {
 
 // ---------- קטלוג המשחקים בפלטפורמה ----------
 const GAMES = [
+  { id:'zombies', title:'מתקפת הזומבים', desc:'שרוד 20 מפות, חסל זומבים ובוסים ושדרג את הנשקים שלך.', imgFile:'zombie-attack/assets/last-stand-bg.png', icon:'🧟', badge:'חדש!', bg:'#151b15', mount:mountIframe('zombie-attack/') },
   { id:'dino', title:'Dino Runner', desc:'רוץ, קפוץ, אסוף מטבעות וקנה דמויות בחנות.', imgFile:'dino-logo.png', icon:'🦖', badge:'ARCADE', bg:'linear-gradient(135deg,#1b3a4b,#0d1b2a)', mount:mountDino },
   { id:'catch', title:'Star Catcher', desc:'תפוס כוכבים נופלים עם הסלסלה.', imgFile:'star-logo.png', icon:'⭐', badge:'CASUAL', bg:'#161736', mount:mountCatch },
   { id:'memory', title:'Memory Adjustment', desc:'מצא את כל הזוגות — 7 שלבים נגד השעון.', imgFile:'memory-logo.png', icon:'🧠', badge:'PUZZLE', bg:'linear-gradient(135deg,#1b4b3a,#0d1b2a)', mount:mountMemory },

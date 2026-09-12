@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#0a0c0b" />
+  <title>מתקפת הזומבים — משחק הישרדות</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800;900&family=Rubik+Mono+One&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=25" />
+</head>
+<body>
+  <main id="game-shell">
+    <canvas id="game" aria-label="משחק מתקפת הזומבים"></canvas>
+    <button id="fullscreen-btn" class="fullscreen-btn" aria-label="מעבר למסך מלא" title="מסך מלא (F)">
+      <span class="fullscreen-icon">⛶</span>
+      <b data-i18n="fullscreen">מסך מלא</b>
+    </button>
+    <button id="settings-btn" class="settings-btn hidden" aria-label="הגדרות" title="הגדרות">
+      <span>⚙</span>
+    </button>
+    <button id="pause-btn" class="pause-btn hidden" title="עצירת המשחק (Esc)">
+      <span>Ⅱ</span><b data-i18n="pause">עצור</b>
+    </button>
+
+    <section id="start-screen" class="screen active">
+      <div class="start-shade"></div>
+      <div class="start-content">
+        <p class="eyebrow" data-i18n="eyebrow">העולם נפל. אתה עדיין עומד.</p>
+        <h1><b data-i18n="titleFirst">מתקפת</b> <span data-i18n="titleSecond">הזומבים</span></h1>
+        <p class="tagline" data-i18n="tagline">פרוץ דרך 20 מפות, חסל את המוטציות ושדרג את הנשק לפני שהם ימצאו אותך.</p>
+        <p id="player-welcome" class="player-welcome hidden"></p>
+        <button id="start-btn" class="primary-btn"><span data-i18n="start">התחל מסע</span><b>←</b></button>
+        <button id="continue-btn" class="ghost-btn hidden" data-i18n="continue">המשך משלב שמור</button>
+        <button id="delete-profile-btn" class="delete-profile-btn hidden" data-i18n="deleteUser">מחק משתמש</button>
+        <div class="controls-hint">
+          <span><kbd>WASD</kbd> <i data-i18n="move">תנועה</i></span>
+          <span><kbd data-i18n="mouse">עכבר</kbd> <i data-i18n="aimFire">כיוון ותקיפה</i></span>
+          <span><kbd>R</kbd> <i data-i18n="reload">טעינה</i></span>
+          <span><kbd data-i18n="keysWheel">1–9 / גלגלת</kbd> <i data-i18n="switchWeapon">החלפת נשק</i></span>
+        </div>
+      </div>
+      <p class="version">PROTOTYPE // 01</p>
+    </section>
+
+    <header id="hud" class="hidden">
+      <div class="mission-block">
+        <span id="region-name">מפה 01</span>
+        <strong id="wave-name">גל 1</strong>
+        <div class="wave-pips" id="wave-pips"></div>
+      </div>
+    </header>
+
+    <aside id="weapon-hud" class="hidden">
+      <div class="gun-icon" id="gun-icon">⌁</div>
+      <div class="ammo"><strong id="ammo-text">12</strong><span>/ <b id="reserve-text">∞</b></span></div>
+      <div class="weapon-meta"><strong id="weapon-name">אקדח שירות</strong><small id="weapon-level">דרגה 1</small></div>
+      <div id="reload-indicator" class="reload-indicator hidden" data-i18n="reloading">טוען...</div>
+    </aside>
+
+    <aside id="weapon-inventory" class="weapon-inventory hidden">
+      <small id="weapon-inventory-title">ארסנל</small>
+      <div id="weapon-inventory-list"></div>
+    </aside>
+
+    <div id="boss-hud" class="hidden">
+      <div><span data-i18n="mutantThreat">איום מוטנטי</span><strong id="boss-name">הענק</strong></div>
+      <div class="boss-bar"><i id="boss-bar"></i></div>
+    </div>
+
+    <div id="announcement" class="announcement hidden"><small></small><strong></strong></div>
+    <div id="side-notification" class="side-notification hidden"><small></small><strong></strong></div>
+    <div id="crosshair"><i></i><i></i></div>
+
+    <section id="pause-screen" class="modal hidden">
+      <div class="modal-card pause-card">
+        <span class="device-eyebrow" data-i18n="pausedLabel">המשחק נעצר</span>
+        <h2 data-i18n="pausedTitle">הקרב מחכה לך</h2>
+        <p data-i18n="pausedText">ההתקדמות נשמרת רק כשיוצאים. מוות לא משנה את השמירה האחרונה שלך.</p>
+        <button id="resume-btn" class="primary-btn"><span data-i18n="resume">המשך במשחק</span><b>←</b></button>
+        <button id="save-exit-btn" class="ghost-btn" data-i18n="saveExit">שמור וצא לתפריט</button>
+      </div>
+    </section>
+
+    <section id="settings-screen" class="modal hidden">
+      <div class="modal-card settings-card">
+        <div class="modal-title"><div><span data-i18n="settingsLabel">מערכת</span><h2 data-i18n="settings">הגדרות</h2></div><b>⚙</b></div>
+        <label for="settings-name-input" data-i18n="playerName">שם השחקן</label>
+        <div class="settings-name-row">
+          <input id="settings-name-input" type="text" maxlength="18" autocomplete="nickname" />
+          <button id="save-name-btn" data-i18n="saveName">שמור שם</button>
+        </div>
+        <small id="settings-name-status" class="settings-status"></small>
+        <label data-i18n="controlMode">מצב שליטה</label>
+        <div class="settings-options">
+          <button id="settings-desktop" data-value="desktop"><span>▰</span><b data-i18n="computer">מחשב</b></button>
+          <button id="settings-mobile" data-value="mobile"><span>▯</span><b data-i18n="phone">טלפון</b></button>
+        </div>
+        <label data-i18n="language">שפה</label>
+        <div class="settings-options language-options">
+          <button id="language-he" data-value="he">עברית</button>
+          <button id="language-en" data-value="en">English</button>
+        </div>
+        <button id="close-settings-btn" class="primary-btn"><span data-i18n="closeSettings">סגור הגדרות</span><b>←</b></button>
+      </div>
+    </section>
+
+    <section id="upgrade-screen" class="modal hidden">
+      <div class="modal-card upgrade-card">
+        <div class="modal-title"><div><span data-i18n="workbench">שולחן עבודה</span><h2 data-i18n="chooseUpgrade">בחר שדרוג</h2></div><b id="shop-scrap">⌁ 0</b></div>
+        <p data-i18n="upgradeHelp">כל בחירה משנה את סגנון הלחימה. בחר בחוכמה לפני הגל הבא.</p>
+        <div id="upgrade-grid" class="upgrade-grid"></div>
+        <button id="skip-upgrade" class="ghost-btn" data-i18n="skipUpgrade">המשך ללא שדרוג</button>
+      </div>
+    </section>
+
+    <section id="weapon-reward-screen" class="modal hidden">
+      <div class="modal-card weapon-reward-card">
+        <div class="modal-title"><div><span data-i18n="bossLoot">שלל מהבוס</span><h2 data-i18n="chooseWeapon">בחר נשק חדש</h2></div><b id="arsenal-count">1 / 18</b></div>
+        <p data-i18n="weaponHelp">מוצגים רק נשקים שעדיין לא אספת. ככל שיש לך יותר נשקים, הסיכוי לנדירים עולה.</p>
+        <div id="weapon-choice-grid" class="weapon-choice-grid"></div>
+      </div>
+    </section>
+
+    <section id="device-screen" class="modal hidden">
+      <div class="modal-card device-card">
+        <span class="device-eyebrow" data-i18n="beforeBattle">לפני שיוצאים לקרב</span>
+        <h2 data-i18n="howPlaying">איך אתה משחק?</h2>
+        <p data-i18n="deviceHelp">נציג רק את אמצעי השליטה שמתאימים למכשיר שלך.</p>
+        <div class="device-options">
+          <button id="desktop-choice" class="device-choice">
+            <span class="device-icon">▰</span>
+            <strong data-i18n="viaComputer">דרך המחשב</strong>
+            <small data-i18n="desktopControls">מקלדת, עכבר וכוונת</small>
+            <b data-i18n="wasdMouse">WASD + עכבר</b>
+          </button>
+          <button id="mobile-choice" class="device-choice">
+            <span class="device-icon phone-icon">▯</span>
+            <strong data-i18n="viaPhone">דרך הטלפון</strong>
+            <small data-i18n="mobileControls">ג׳ויסטיק וכפתורי מגע</small>
+            <b data-i18n="screenControls">שליטה על המסך</b>
+          </button>
+        </div>
+        <button id="device-back" class="ghost-btn" data-i18n="back">חזרה</button>
+      </div>
+    </section>
+
+    <section id="starter-screen" class="modal hidden">
+      <div class="modal-card starter-card">
+        <span class="device-eyebrow" data-i18n="starterLabel">ציוד התחלתי</span>
+        <h2 data-i18n="starterTitle">עם מה יוצאים לדרך?</h2>
+        <p data-i18n="starterHelp">בחר נשק אחד להתחלת המסע. בהמשך תוכל לאסוף נשקים נוספים.</p>
+        <div class="starter-options">
+          <button class="starter-choice" data-starter="pistol">
+            <span class="starter-icon">⌖</span>
+            <strong data-i18n="starterPistol">אקדח שירות</strong>
+            <small data-i18n="starterPistolHelp">מאוזן, מהיר ומתאים לטווח בינוני</small>
+            <b>16.25 · 4.2 / ש׳</b>
+          </button>
+          <button class="starter-choice" data-starter="bat">
+            <span class="starter-icon">▰</span>
+            <strong data-i18n="starterBat">מחבט</strong>
+            <small data-i18n="starterBatHelp">חזק מקרוב, ללא תחמושת</small>
+            <b>20 · 1.35 / ש׳</b>
+          </button>
+          <button class="starter-choice" data-starter="bow">
+            <span class="starter-icon bow-starter-icon">➶</span>
+            <strong data-i18n="starterBow">קשת</strong>
+            <small data-i18n="starterBowHelp">חלשה אך שקטה — חץ כל 2 שניות</small>
+            <b>25 · 2 שנ׳ לירייה</b>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section id="profile-screen" class="modal hidden">
+      <div class="modal-card profile-card">
+        <span class="device-eyebrow" data-i18n="welcomeAshline">ברוך הבא למתקפת הזומבים</span>
+        <h2 data-i18n="whatName">איך קוראים לך?</h2>
+        <p data-i18n="profileHelp">השם והתקדמות המשחק יישמרו באופן פרטי בדפדפן הזה.</p>
+        <label for="player-name-input" data-i18n="playerName">שם השחקן</label>
+        <input id="player-name-input" type="text" maxlength="18" autocomplete="nickname" placeholder="הקלד שם..." />
+        <small id="profile-error" class="profile-error hidden" data-i18n="nameRequired">צריך להקליד שם כדי להמשיך</small>
+        <button id="create-profile-btn" class="primary-btn"><span data-i18n="createUser">צור משתמש</span><b>←</b></button>
+      </div>
+    </section>
+
+    <section id="game-over" class="modal hidden">
+      <div class="modal-card end-card">
+        <span class="danger-label" data-i18n="lineBroken">הקו נפרץ</span>
+        <h2 data-i18n="fellBattle">נפלת בקרב</h2>
+        <p id="death-stats">חיסולים: 0</p>
+        <button id="restart-btn" class="primary-btn"><span data-i18n="tryAgain">נסה שוב</span><b>↻</b></button>
+        <button id="menu-btn" class="ghost-btn" data-i18n="backMenu">חזרה לתפריט</button>
+      </div>
+    </section>
+
+    <section id="victory-screen" class="modal hidden">
+      <div class="modal-card end-card victory-card">
+        <span class="victory-label" data-i18n="lightReturned">האור חזר</span>
+        <h2 data-i18n="survived">שרדת את מתקפת הזומבים</h2>
+        <p id="victory-stats">העולם עדיין מסוכן — אבל היום, ניצחת.</p>
+        <button id="victory-restart" class="primary-btn"><span data-i18n="newJourney">מסע חדש</span><b>↻</b></button>
+      </div>
+    </section>
+
+    <div id="mobile-controls" class="hidden">
+      <div id="joystick" class="joystick"><i></i></div>
+      <button id="mobile-fire" data-i18n="fire">תקיפה</button>
+    </div>
+    <nav id="mobile-weapon-bar" class="hidden" aria-label="בחירת נשק"></nav>
+  </main>
+  <script src="game.js?v=25"></script>
+</body>
+</html>
