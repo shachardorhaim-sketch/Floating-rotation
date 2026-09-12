@@ -58,7 +58,7 @@ function mountIframe(url) {
 
 // ---------- קטלוג המשחקים בפלטפורמה ----------
 const GAMES = [
-  { id:'zombies', title:'מתקפת הזומבים', desc:'שרוד 20 מפות, חסל זומבים ובוסים ושדרג את הנשקים שלך.', imgFile:'zombie-attack/assets/last-stand-bg.png', icon:'🧟', badge:'חדש!', bg:'#151b15', mount:mountIframe('zombie-attack/') },
+  { id:'zombies', title:'מתקפת הזומבים', desc:'שרוד 20 מפות, חסל זומבים ובוסים ושדרג את הנשקים שלך.', imgFile:'zombie-attack/assets/last-stand-bg.png', imgFill:true, icon:'🧟', badge:'חדש!', bg:'#151b15', mount:mountIframe('zombie-attack/') },
   { id:'dino', title:'Dino Runner', desc:'רוץ, קפוץ, אסוף מטבעות וקנה דמויות בחנות.', imgFile:'dino-logo.png', icon:'🦖', badge:'ARCADE', bg:'linear-gradient(135deg,#1b3a4b,#0d1b2a)', mount:mountDino },
   { id:'catch', title:'Star Catcher', desc:'תפוס כוכבים נופלים עם הסלסלה.', imgFile:'star-logo.png', icon:'⭐', badge:'CASUAL', bg:'#161736', mount:mountCatch },
   { id:'memory', title:'Memory Adjustment', desc:'מצא את כל הזוגות — 7 שלבים נגד השעון.', imgFile:'memory-logo.png', icon:'🧠', badge:'PUZZLE', bg:'linear-gradient(135deg,#1b4b3a,#0d1b2a)', mount:mountMemory },
@@ -75,10 +75,15 @@ GAMES.forEach(g => {
   card.dataset.gid = g.id;
   card.tabIndex = 0;
   // תמיכה ב-3 סוגי תמונה: קובץ (imgFile), base64 (img), או אימוג'י (icon)
+  // imgFill:true — תמונת סצנה/רקע שממלאת את כל המשבצת (cover, בלי שוליים).
+  // ברירת מחדל — לוגו שמוצג במלואו וממורכז עם שוליים.
+  const imgStyle = g.imgFill
+    ? 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block'
+    : 'max-height:110px;max-width:90%';
   const thumbContent = g.imgFile
-    ? '<img src="'+g.imgFile+'" style="max-height:110px;max-width:90%"/>'
+    ? '<img src="'+g.imgFile+'" alt="" style="'+imgStyle+'"/>'
     : g.img
-    ? '<img src="data:image/png;base64,'+g.img+'" style="max-height:110px;max-width:90%"/>'
+    ? '<img src="data:image/png;base64,'+g.img+'" alt="" style="'+imgStyle+'"/>'
     : '<span class="gicon">'+g.icon+'</span>';
   card.innerHTML =
     '<div class="gthumb" style="background:'+g.bg+'">'+thumbContent+'<span class="gbadge">'+g.badge+'</span></div>' +
