@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link id="docFonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&family=Amatic+SC:wght@400;700&family=Assistant:wght@400;700&family=Bellefair&family=David+Libre:wght@400;700&family=Frank+Ruhl+Libre:wght@400;700;900&family=Fredoka:wght@400;700&family=Heebo:wght@400;700&family=IBM+Plex+Mono&family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&family=Karantina:wght@400;700&family=Miriam+Libre:wght@400;700&family=Noto+Sans+Hebrew:wght@400;700&family=Noto+Serif+Hebrew:wght@400;700&family=Rubik:wght@400;700&family=Secular+One&family=Solitreo&family=Suez+One&family=Varela+Round&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&amp;icon_names=abc,add,add_column_left,add_column_right,add_photo_alternate,add_reaction,add_row_above,add_row_below,arrow_back,arrow_drop_down,article,auto_awesome,auto_stories,backup,bar_chart,block,bookmark_add,calculate,calendar_today,chat,check,check_circle,checklist,checklist_rtl,chips,class,close,cloud_done,cloud_off,code,compress,computer,content_copy,crop_landscape,crop_portrait,css,delete,delete_forever,delete_sweep,description,desk,docs,done,done_all,download,draw,edit,edit_calendar,edit_note,emoji_symbols,error,event,expand,expand_less,expand_more,face,find_replace,flag,flip,folder_open,font_download,format_align_center,format_align_justify,format_align_left,format_align_right,format_bold,format_clear,format_color_fill,format_color_text,format_indent_decrease,format_indent_increase,format_italic,format_line_spacing,format_list_bulleted,format_list_numbered_rtl,format_paint,format_textdirection_l_to_r,format_textdirection_r_to_l,format_underlined,fullscreen,fullscreen_exit,function,gif,group,history,home,horizontal_rule,hourglass_top,html,image,info,ink_eraser,ink_highlighter,input,insert_page_break,install_desktop,keyboard,label,landscape,language,light,lightbulb,line_weight,link,list,lock,mail,margin,markdown,match_case,menu,more_horiz,movie,note,note_add,notes,pause,picture_as_pdf,play_arrow,playlist_add,portrait,print,record_voice_over,redo,refresh,remove,resize,restore,restore_from_trash,school,script,search,segment,select,select_all,send,settings_backup_restore,space_bar,spellcheck,star,start,sticky_note_2,stop,storage,strikethrough_s,style,subscript,summarize,superscript,swap_horiz,sync,tab,table,table_rows,tabs,tag,text_decrease,text_fields,text_increase,title,toast,toc,toolbar,translate,undo,upload_file,view_column,visibility,warning,west,width,work&amp;display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&amp;icon_names=abc,add,add_column_left,add_column_right,add_photo_alternate,add_reaction,add_row_above,add_row_below,arrow_back,arrow_drop_down,article,auto_awesome,auto_stories,backup,bar_chart,block,bookmark_add,calculate,calendar_today,chat,check,check_circle,checklist,checklist_rtl,chips,class,close,cloud_done,cloud_off,code,compress,computer,content_copy,crop_landscape,crop_portrait,css,delete,delete_forever,delete_sweep,description,desk,docs,done,done_all,download,draw,edit,edit_calendar,edit_note,emoji_symbols,error,event,expand,expand_less,expand_more,face,find_replace,flag,flip,folder_open,font_download,format_align_center,format_align_justify,format_align_left,format_align_right,format_bold,format_clear,format_color_fill,format_color_text,format_indent_decrease,format_indent_increase,format_italic,format_line_spacing,format_list_bulleted,format_list_numbered_rtl,format_paint,format_textdirection_l_to_r,format_textdirection_r_to_l,format_underlined,fullscreen,fullscreen_exit,function,gif,group,history,home,horizontal_rule,hourglass_top,html,image,info,ink_eraser,ink_highlighter,input,insert_page_break,install_desktop,keyboard,label,landscape,language,light,lightbulb,line_weight,link,list,lock,mail,margin,markdown,match_case,menu,more_horiz,movie,note,note_add,notes,pause,picture_as_pdf,play_arrow,playlist_add,portrait,print,record_voice_over,redo,refresh,remove,resize,restore,restore_from_trash,save,school,script,search,segment,select,select_all,send,settings_backup_restore,space_bar,spellcheck,star,start,sticky_note_2,stop,storage,strikethrough_s,style,subscript,summarize,superscript,swap_horiz,sync,tab,table,table_rows,tabs,tag,text_decrease,text_fields,text_increase,title,toast,toc,toolbar,translate,undo,upload_file,view_column,visibility,warning,west,width,work&amp;display=block">
 <style id="appcss">
 :root{
   --desk:#e3e8ef;--surface:#f9fafc;--surface-2:#f1f4f8;--surface-3:#e6ebf2;
@@ -87,6 +87,12 @@ button{cursor:pointer}
 .save-state{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--text-2);white-space:nowrap;border:0;background:none;padding:4px 7px;border-radius:6px;cursor:default}
 .save-state.error{color:var(--red);background:var(--red-soft);cursor:pointer}
 .save-state .ms{font-size:18px}
+.file-chip{display:inline-flex;align-items:center;gap:5px;min-width:0;max-width:230px;font-size:12.5px;color:var(--text-2);white-space:nowrap;border:1px solid var(--line);background:var(--surface-2);padding:3px 10px 3px 8px;border-radius:999px;cursor:pointer}
+.file-chip .txt{overflow:hidden;text-overflow:ellipsis}
+.file-chip .ms{font-size:17px}
+.file-chip:hover,.file-chip.dirty{border-color:var(--accent);color:var(--accent)}
+.file-chip.dirty{background:var(--accent-soft)}
+@media (max-width:640px){.file-chip .txt{display:none}.file-chip{padding:3px 6px}}
 .appbar-end{margin-inline-start:auto;display:flex;align-items:center;gap:6px;flex:none}
 .private{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--green);background:var(--green-soft);padding:3px 10px;border-radius:999px;white-space:nowrap;cursor:default}
 .private .ms{font-size:15px}
@@ -438,6 +444,7 @@ select.field{padding:0 8px}
     </div>
     <input id="docTitle" class="doc-title" type="text" placeholder="מסמך ללא שם" aria-label="שם המסמך" autocomplete="off" spellcheck="false">
     <button id="saveState" class="save-state" type="button" aria-live="polite"><span class="ms">cloud_done</span><span class="txt">נשמר</span></button>
+    <button id="fileChip" class="file-chip" type="button" hidden><span class="ms">description</span><span class="txt"></span></button>
     <div class="appbar-end">
       <span class="private" id="privateBadge"><span class="ms">lock</span><span>פרטי</span></span>
       <button class="icon-btn hide-sm" data-cmd="focus" title="מצב ריכוז: רק הדף (Esc ליציאה)" aria-label="מצב ריכוז"><span class="ms">fullscreen</span></button>
@@ -2138,6 +2145,7 @@ async function deleteForever(id, quiet) {
     await S.store.delBody(id, m.chunks || 1);
     await S.store.delMeta(id);
     lsDel('fink:bk:' + id);
+    fileLinks.del(id).catch(() => {});
     if (!quiet) toast('המסמך נמחק', { icon: 'delete_forever' });
   } catch (e) { toast(storeErrMsg(e)); }
 }
@@ -2178,6 +2186,7 @@ function loadIntoEditor({ id, meta, html, isSample }) {
   fontSel.value = pg.font; sizeSel.value = String(pg.fontSize); lhSel.value = String(pg.lh);
   desk.scrollTop = 0;
   setSave(isSample ? 'sample' : 'saved');
+  loadLink(isSample ? null : id);
   if (S.panel === 'outline') renderOutline();
   if (S.panel === 'versions') renderVersions();
   if (S.panel === 'find') runFind();
@@ -2223,9 +2232,10 @@ function promoteSample() {
   hideBanner(); lsSet('fink:last', c.id);
 }
 function openInitial() {
+  if (S.launchPending) return; // a file from the computer is opening instead
   const alive = aliveDocs(), last = lsGet('fink:last', null);
   const pick = alive.find(d => d.id === last) || alive[0];
-  if (pick) openDoc(pick.id); else loadSample();
+  if (pick) S.opening = openDoc(pick.id); else loadSample();
 }
 function onDocs(list, fromCache) {
   S.docs = list;
@@ -2287,6 +2297,7 @@ function setSave(state, msg) {
   b.querySelector('.txt').textContent = tx;
   b.classList.toggle('error', state === 'error');
   b.title = state === 'error' ? `${msg || ''} לחיצה תנסה לשמור שוב.` : state === 'sample' ? 'כשמתחילים לערוך, הדוגמה נשמרת כמסמך רגיל.' : '';
+  renderFileChip();
 }
 function markDirty() {
   if (!S.cur) return;
@@ -2987,6 +2998,40 @@ function htmlToMd(root) {
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
 }
 /* --- import & backup --- */
+/* text the way Windows tools save Hebrew: UTF-8 with or without a BOM, UTF-16, or the old windows-1255 */
+async function readText(f) {
+  const b = new Uint8Array(await f.arrayBuffer());
+  let text, bom = true;
+  if (b[0] === 0xFF && b[1] === 0xFE) text = new TextDecoder('utf-16le').decode(b);
+  else {
+    try { text = new TextDecoder('utf-8', { fatal: true }).decode(b); bom = b[0] === 0xEF && b[1] === 0xBB && b[2] === 0xBF; }
+    catch { text = new TextDecoder('windows-1255').decode(b); }
+  }
+  return { text, bom, crlf: text.includes('\r\n') };
+}
+/* a Word, text, Markdown or HTML file as the editor's HTML. For text files it also says how the file
+   was written (BOM, Windows line ends), so saving back into it keeps that */
+async function fileToHtml(f, ext) {
+  if (ext === 'docx') {
+    await loadScript(LIB.mammoth);
+    if (!window.mammoth) throw new Error('lib');
+    const res = await window.mammoth.convertToHtml({ arrayBuffer: await f.arrayBuffer() }, {
+      convertImage: window.mammoth.images.imgElement(async image => {
+        const b64 = await image.read('base64');
+        const bin = atob(b64), u = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+        let blob = new Blob([u], { type: image.contentType });
+        if (/^image\/(png|jpeg|gif|webp)$/.test(image.contentType)) blob = await shrinkImage(blob, 2000);
+        return { src: await storeImage(blob) };
+      }),
+    });
+    return { html: res.value };
+  }
+  if (ext === 'html' || ext === 'htm') return { html: await f.text() };
+  const { text, bom, crlf } = await readText(f);
+  const t = text.replace(/\r/g, '');
+  return { html: ext === 'txt' ? t.split('\n').map(l => `<p>${esc(l) || '<br>'}</p>`).join('') : mdToHtml(t), bom, crlf };
+}
 async function importFile(f) {
   if (!S.store) return;
   const ext = (f.name.split('.').pop() || '').toLowerCase();
@@ -2994,23 +3039,7 @@ async function importFile(f) {
   const busy = toast('מייבא את הקובץ…', { icon: 'upload_file', ms: 120000 });
   try {
     let html;
-    if (ext === 'docx') {
-      await loadScript(LIB.mammoth);
-      if (!window.mammoth) throw new Error('lib');
-      const res = await window.mammoth.convertToHtml({ arrayBuffer: await f.arrayBuffer() }, {
-        convertImage: window.mammoth.images.imgElement(async image => {
-          const b64 = await image.read('base64');
-          const bin = atob(b64), u = new Uint8Array(bin.length);
-          for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-          let blob = new Blob([u], { type: image.contentType });
-          if (/^image\/(png|jpeg|gif|webp)$/.test(image.contentType)) blob = await shrinkImage(blob, 2000);
-          return { src: await storeImage(blob) };
-        }),
-      });
-      html = res.value;
-    } else if (ext === 'txt') html = (await f.text()).replace(/\r/g, '').split('\n').map(l => `<p>${esc(l) || '<br>'}</p>`).join('');
-    else if (ext === 'md' || ext === 'markdown') html = mdToHtml(await f.text());
-    else if (ext === 'html' || ext === 'htm') html = await f.text();
+    if (/^(docx|txt|md|markdown|html?)$/.test(ext)) html = (await fileToHtml(f, ext)).html;
     else if (ext === 'doc') { toast('קבצי ‎.doc‎ ישנים לא נתמכים. אפשר לשמור אותם ב-Word כ-‎.docx‎ ולייבא.', { ms: 7000 }); return; }
     else { toast('אפשר לייבא קבצי Word ‏(docx), טקסט, Markdown או HTML', { ms: 6000 }); return; }
     const clean = sanitize(html);
@@ -3061,6 +3090,193 @@ function doPrint() {
     removeEventListener('beforeprint', f);
     if (!fired) toast('ההדפסה חסומה בחלון הזה. אפשר לשמור כ-PDF ולהדפיס ממנו.', { ms: 9000, icon: 'print', action: { label: 'שמירה כ-PDF', run: () => exportAs('pdf') } });
   }, 700);
+}
+
+/* =========================================================
+   files on the computer: "Open with" Floating Ink in File Explorer opens the
+   file here (manifest file_handlers), and Ctrl+S saves back into it, like in Word
+   ========================================================= */
+const NBSP = String.fromCharCode(0xA0), ZWSP = String.fromCharCode(0x200B), BOM = String.fromCharCode(0xFEFF);
+const DISK_KINDS = ['docx', 'txt', 'md'];
+const diskKind = name => { const e = (String(name).split('.').pop() || '').toLowerCase(); return e === 'markdown' ? 'md' : DISK_KINDS.includes(e) ? e : null; };
+const linkedHere = () => !!(S.link && S.cur && !S.cur.isSample && S.link.docId === S.cur.id);
+/* which document each file went into, with the file's handle. Its own database, so the documents'
+   database never needs a version upgrade (an older window left open would block one) */
+const fileLinks = {
+  mem: new Map(), dbp: null,
+  db() {
+    return this.dbp || (this.dbp = new Promise(res => {
+      try {
+        const rq = indexedDB.open('floating-ink-files', 1);
+        rq.onupgradeneeded = () => rq.result.createObjectStore('links');
+        rq.onsuccess = () => res(rq.result);
+        rq.onerror = rq.onblocked = () => res(null);
+      } catch { res(null); }
+    }));
+  },
+  req(db, mode, fn) {
+    return new Promise((res, rej) => {
+      const t = db.transaction('links', mode), r = fn(t.objectStore('links'));
+      t.oncomplete = () => res(r.result);
+      t.onerror = t.onabort = () => rej(t.error || new Error('aborted'));
+    });
+  },
+  async get(id) { const db = await this.db(); return (db ? await this.req(db, 'readonly', s => s.get(id)) : this.mem.get(id)) || null; },
+  async all() { const db = await this.db(); return (db ? await this.req(db, 'readonly', s => s.getAll()) : [...this.mem.values()]) || []; },
+  async put(rec) { const db = await this.db(); if (db) await this.req(db, 'readwrite', s => s.put(rec, rec.docId)); else this.mem.set(rec.docId, rec); },
+  async del(id) { const db = await this.db(); if (db) await this.req(db, 'readwrite', s => s.delete(id)); else this.mem.delete(id); },
+};
+async function loadLink(id) {
+  S.link = null; renderFileChip();
+  if (!id) return;
+  let rec = null;
+  try { rec = await fileLinks.get(id); } catch {}
+  if (rec && S.cur && S.cur.id === id) { S.link = rec; renderFileChip(); }
+}
+function renderFileChip() {
+  const b = $('#fileChip'), L = S.link, c = S.cur;
+  b.hidden = !linkedHere();
+  if (b.hidden) return;
+  const dirty = S.editVer !== S.savedVer || (c.meta.updatedAt || 0) > (L.synced || 0);
+  b.classList.toggle('dirty', dirty);
+  b.querySelector('.ms').textContent = dirty ? 'save' : 'description';
+  b.querySelector('.txt').textContent = L.name;
+  b.title = dirty ? `יש שינויים שעוד לא נשמרו לתוך "${L.name}" במחשב. לחיצה או Ctrl+S שומרים אותם.` : `המסמך פתוח מהקובץ "${L.name}" במחשב, והכל שמור בו.`;
+}
+/* the browser hands over the files the app was opened with. They wait until the documents list is
+   ready and whatever opened at start has finished opening */
+function setupFileLaunch() {
+  if (S.inClaude || !('launchQueue' in window)) return;
+  window.launchQueue.setConsumer(p => {
+    const files = [...((p && p.files) || [])].filter(f => f && f.kind === 'file');
+    if (!files.length) return;
+    S.launchPending = true;
+    openLaunched(files).finally(() => { S.launchPending = false; if (!S.cur && S.docsReady) openInitial(); });
+  });
+}
+async function openLaunched(files) {
+  for (let i = 0; !S.docsReady && i < 300; i++) await sleep(50);
+  if (!S.docsReady) return;
+  try { await S.opening; } catch {}
+  for (const hd of files) await openFromDisk(hd);
+}
+async function openFromDisk(hd) {
+  const kind = diskKind(hd.name);
+  if (!kind) { toast(`אי אפשר לפתוח כאן את "${hd.name}". אפשר לפתוח קבצי Word, טקסט ו-Markdown.`, { ms: 7000 }); return; }
+  const busy = toast('פותח את הקובץ…', { icon: 'description', ms: 120000 });
+  try {
+    const f = await hd.getFile();
+    let old = null;
+    for (const r of await fileLinks.all()) {
+      const m = findMeta(r.docId);
+      if (!m || m.trashed || !r.handle) continue;
+      try { if (await r.handle.isSameEntry(hd)) { old = r; break; } } catch {}
+    }
+    // opened here before and not changed since: the document here is the newest copy
+    if (old && old.mod === f.lastModified) { old.handle = hd; await fileLinks.put(old); await openDoc(old.docId); await loadLink(old.docId); return; }
+    // File Explorer's "New > Word document" makes an empty 0-byte file
+    const got = f.size ? await fileToHtml(f, kind) : { html: '' };
+    const html = sanitize(got.html) || '<p><br></p>';
+    const rec = { ...(old || {}), handle: hd, name: f.name, kind, mod: f.lastModified, bom: !!got.bom, crlf: !!got.crlf };
+    if (!f.size) rec.warned = true;
+    if (old) {
+      // changed outside since then (for example in Word): what was here goes to "versions", then the file is shown
+      await openDoc(old.docId);
+      const c = S.cur;
+      if (!c || c.id !== old.docId) return;
+      await createVersion(c, cleanHTML(), 'לפני שהקובץ השתנה מבחוץ');
+      snapshot(); ed.innerHTML = html; afterChange();
+      await flushSave();
+      rec.synced = c.meta.updatedAt;
+      toast('הקובץ השתנה מאז שנפתח כאן בפעם הקודמת, אז הוא נטען מחדש. מה שהיה כאן לפני כן שמור ב"גרסאות".', { icon: 'history', ms: 8000 });
+    } else {
+      if (!(await createDoc({ title: f.name.replace(/\.[^.]+$/, ''), html }))) return;
+      rec.docId = S.cur.id; rec.synced = S.cur.meta.updatedAt;
+    }
+    await fileLinks.put(rec);
+    await loadLink(rec.docId);
+  } catch (e) {
+    console.error(e);
+    toast(e && e.message === 'lib' ? 'לא הצלחתי לטעון את הכלי שקורא קבצי Word. כדאי לבדוק את החיבור לאינטרנט.' : `לא הצלחתי לפתוח את "${hd.name}"`, { ms: 7000 });
+  } finally { busy.remove(); }
+}
+/* plain text, one line per paragraph. (innerText leaves a blank line after every paragraph,
+   so a text file would grow on every save) */
+function htmlToText(root) {
+  const out = [];
+  const inline = n => n.nodeType === 3 ? n.data.replace(/[\r\n]+/g, ' ').replaceAll(NBSP, ' ').replaceAll(ZWSP, '')
+    : n.nodeType !== 1 || n.tagName === 'IMG' ? '' : n.tagName === 'BR' ? '\n' : [...n.childNodes].map(inline).join('');
+  const list = (l, p) => {
+    let i = 1;
+    for (const li of l.children) {
+      if (li.tagName === 'UL' || li.tagName === 'OL') { list(li, p + '  '); continue; }
+      const mark = l.classList.contains('checklist') ? (li.dataset.checked === 'true' ? '☑ ' : '☐ ') : l.tagName === 'OL' ? `${i++}. ` : '• ';
+      const before = out.length;
+      walk(li, p + mark, p + '  ');
+      if (out.length === before) out.push((p + mark).trimEnd());
+    }
+  };
+  const walk = (el, pre, rest) => {
+    const start = out.length, lead = () => out.length === start ? pre : rest;
+    let run = [];
+    const flush = () => {
+      // the <br> at the end of a paragraph only holds it open; it isn't a line of its own
+      if (run.some(n => n.nodeType === 1 || n.data.trim())) for (const l of run.map(inline).join('').replace(/\n$/, '').split('\n')) out.push(lead() + l);
+      run = [];
+    };
+    for (const n of el.childNodes) {
+      if (n.nodeType !== 1 || !BLOCK_TAGS.has(n.tagName)) { run.push(n); continue; }
+      flush();
+      const t = n.tagName, before = out.length, p = lead();
+      if (t === 'UL' || t === 'OL') list(n, p);
+      else if (t === 'TR') out.push(p + [...n.cells].map(td => htmlToText(td).replace(/\n+/g, ' ').trim()).join('\t'));
+      else if (t === 'PRE') for (const l of n.innerText.replace(/\n$/, '').split('\n')) out.push(lead() + l);
+      else if (t === 'HR') out.push(n.classList.contains('page-break') ? '' : '---');
+      else walk(n, p, rest);
+      if (out.length === before && /^(P|H[1-6]|DIV|BLOCKQUOTE)$/.test(t)) out.push(p.trimEnd());
+    }
+    flush();
+  };
+  walk(root, '', '');
+  return out.join('\n');
+}
+function diskText(L) {
+  let t = L.kind === 'md' ? htmlToMd(ed) : htmlToText(ed);
+  if (L.crlf) t = t.replace(/\r?\n/g, '\r\n');
+  return (L.bom ? BOM : '') + t;
+}
+/* Ctrl+S, or the file button, in a document opened from the computer */
+async function saveToFile() {
+  const c = S.cur, L = S.link;
+  if (!linkedHere() || S.fileSaving) return;
+  S.fileSaving = true;
+  let busy = null;
+  try {
+    if (L.kind === 'docx' && !L.warned) {
+      if (!(await confirmBox('לשמור לתוך הקובץ?', `השינויים יישמרו לתוך "${L.name}" במחשב. אם הקובץ נוצר בוורד, ייתכן שחלק מהעיצובים המיוחדים שלו (כמו כותרת עליונה או הערות) לא יישמרו. השאלה הזאת לא תופיע שוב לקובץ הזה.`, 'לשמור'))) return;
+      L.warned = true;
+    }
+    // asking needs the key press or click that started this, so it comes before anything slow
+    let p = await L.handle.queryPermission({ mode: 'readwrite' });
+    if (p !== 'granted') p = await L.handle.requestPermission({ mode: 'readwrite' });
+    if (p !== 'granted') { toast('בלי אישור לשנות את הקובץ אי אפשר לשמור לתוכו. השינויים שמורים כאן באפליקציה.', { ms: 7000 }); return; }
+    await flushSave();
+    busy = toast('שומר לקובץ…', { icon: 'save', ms: 120000 });
+    const data = L.kind === 'docx' ? await buildDocx() : diskText(L);
+    if (S.cur !== c) return;
+    const w = await L.handle.createWritable();
+    try { await w.write(data); await w.close(); }
+    catch (e) { try { await w.abort(); } catch {} throw e; }
+    L.mod = (await L.handle.getFile()).lastModified;
+    L.synced = c.meta.updatedAt || Date.now();
+    await fileLinks.put(L);
+    toast(`נשמר לתוך ${L.name}`, { icon: 'check' });
+  } catch (e) {
+    console.error(e);
+    toast(e && e.message === 'lib' ? 'לא הצלחתי לטעון את כלי השמירה. כדאי לבדוק את החיבור לאינטרנט.'
+      : e && e.name === 'NotFoundError' ? `הקובץ "${L.name}" לא נמצא. אולי הוא הועבר או נמחק. אפשר לשמור עותק מהתפריט "שמירת עותק כקובץ".`
+      : `השמירה לתוך "${L.name}" לא הצליחה. אם הוא פתוח בתוכנה אחרת (כמו וורד), כדאי לסגור אותה ולנסות שוב. השינויים שמורים כאן באפליקציה.`, { ms: 9000 });
+  } finally { S.fileSaving = false; if (busy) busy.remove(); renderFileChip(); }
 }
 
 /* =========================================================
@@ -3215,7 +3431,7 @@ function onGlobalKey(e) {
   }
   if (!(e.ctrlKey || e.metaKey)) return;
   const c = e.code;
-  if (c === 'KeyS' && !e.altKey) { e.preventDefault(); if (S.cur) saveNow(true); return; }
+  if (c === 'KeyS' && !e.altKey) { e.preventDefault(); if (linkedHere()) saveToFile(); else if (S.cur) saveNow(true); return; }
   if (MODALS.length || !S.cur) return;
   if (c === 'KeyF' && !e.altKey && !e.shiftKey) { e.preventDefault(); openPanel('find'); return; }
   if (c === 'KeyH' && !e.altKey && !e.shiftKey) { e.preventDefault(); openPanel('find', { replace: true }); return; }
@@ -3305,6 +3521,7 @@ function wire() {
   title.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); restoreSel(); } });
   title.addEventListener('blur', () => { if (S.cur && S.cur.meta.title && S.cur.meta.title !== title.value.trim()) { S.cur.meta.title = title.value.trim(); markDirty(); } });
   $('#saveState').addEventListener('click', () => { if (S.saveState === 'error') saveNow(true); });
+  $('#fileChip').addEventListener('click', () => saveToFile());
   ed.addEventListener('input', e => { if (!e.isComposing) ensureBlocks(); if (e.inputType === 'insertParagraph') fixNewLi(); if (selectedImg && !ed.contains(selectedImg)) deselectImg(); onEdited(); });
   ed.addEventListener('beforeinput', e => { if (e.inputType === 'historyUndo') { e.preventDefault(); undo(); } else if (e.inputType === 'historyRedo') { e.preventDefault(); redo(); } });
   ed.addEventListener('keydown', onEditorKey);
@@ -3405,6 +3622,7 @@ async function boot() {
   setZoom(PREFS.zoom || 100);
   applySpell();
   setDrawer(isNarrow() ? false : PREFS.drawer !== false);
+  setupFileLaunch();
   const store = await initStore();
   if (!store) return;
   S.store = store; S.mode = store.kind;
