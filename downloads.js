@@ -10,9 +10,11 @@
       id: 'ink',
       kind: 'app',
       url: 'ink/',
-      imgFile: 'ink-logo.png',
+      imgFile: 'ink/floating-ink.webp',
+      imgFull: true,            // the promo picture fills the thumbnail's height, shown whole
+      promo: 'ink/floating-ink.webp',
       badge: 'app',
-      bg: 'linear-gradient(135deg,#243a9e,#0d1b2a)',
+      bg: '#fefefe',
       install: ['k1','k2','k3','k4'],
       usage:   ['ku1','ku2','ku3','ku4'],
       noteKey: 'inknote'
@@ -658,7 +660,7 @@
       : '<a class="gplay dl-get" href="'+d.file+'" download></a>';
     card.innerHTML =
       '<div class="gthumb" style="background:'+d.bg+'">' +
-        '<img src="'+d.imgFile+'" alt="" style="max-height:96px;max-width:90%">' +
+        '<img src="'+d.imgFile+'" alt="" style="'+(d.imgFull ? 'height:100%;max-width:100%;object-fit:contain' : 'max-height:96px;max-width:90%')+'">' +
         '<span class="gbadge dl-badge"></span>' +
       '</div>' +
       '<div class="gbody">' +
@@ -699,10 +701,21 @@
     stopDemo();
     box.textContent = '';
     what.textContent = '';
+    // the link to the bookmarklet's full guide belongs to the bookmarklet card only
+    const oldGuide = ov.querySelector('.dl-guide');
+    if (oldGuide) oldGuide.style.display = d.kind === 'bookmarklet' ? '' : 'none';
     if (d.kind !== 'bookmarklet' || !window.FLROT_DEMO) {
-      box.style.display = 'none';
       what.style.display = 'none';
       alt.style.display = 'none';
+      // an app card shows its promo picture where the bookmarklet shows its demo
+      if (d.promo) {
+        const pic = document.createElement('img');
+        pic.src = d.promo;
+        pic.alt = t(d.id + '_t');
+        pic.style.cssText = 'display:block;width:100%;max-width:420px;margin:0 auto 6px;border-radius:12px;background:#fefefe';
+        box.appendChild(pic);
+        box.style.display = '';
+      } else box.style.display = 'none';
       return;
     }
     box.style.display = '';

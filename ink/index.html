@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Floating Ink</title>
 <meta name="description" content="Floating Ink — מעבד תמלילים בעברית: עיצוב כמו בוורד, טבלאות, תמונות, ציור ביד ושמירה כ-Word וכ-PDF. המסמכים נשמרים רק במכשיר שלך.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Floating rotation">
+<meta property="og:title" content="Floating Ink">
+<meta property="og:description" content="מעבד תמלילים פרטי בעברית – הכל נשמר אצלך. מתקינים ישר מהדפדפן.">
+<meta property="og:url" content="https://floatingrotations.com/ink/">
+<meta property="og:image" content="https://floatingrotations.com/ink/floating-ink.jpg">
+<meta property="og:image:width" content="1254">
+<meta property="og:image:height" content="1254">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#f9fafc" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#141a29" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -68,7 +77,7 @@ button{cursor:pointer}
 #app{height:100%;display:flex;flex-direction:column;min-height:0}
 #appbar{flex:none;display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--surface);min-width:0}
 .brand{display:flex;align-items:center;gap:7px;flex:none}
-.brand svg{width:22px;height:22px;display:block}
+.brand img{width:28px;height:28px;display:block;border-radius:7px}
 .wordmark{font:800 20px/1 var(--ui);letter-spacing:.3px;direction:ltr}
 .wordmark b{color:var(--accent);font-weight:800}
 .doc-title{flex:1 1 auto;min-width:60px;max-width:520px;border:1px solid transparent;border-radius:8px;background:transparent;padding:6px 10px;font-weight:600;font-size:15px;color:var(--text)}
@@ -424,7 +433,7 @@ select.field{padding:0 8px}
   <header id="appbar">
     <button class="icon-btn" id="btnDrawer" title="המסמכים שלי" aria-label="המסמכים שלי" aria-expanded="true"><span class="ms">folder_open</span></button>
     <div class="brand" aria-hidden="true">
-      <svg viewBox="0 0 24 24"><path style="fill:var(--accent)" d="M12 2.5c-.4 0-.8.2-1 .6C9.2 6.2 5.5 11 5.5 14.6A6.5 6.5 0 0 0 12 21a6.5 6.5 0 0 0 6.5-6.4C18.5 11 14.8 6.2 13 3.1c-.2-.4-.6-.6-1-.6z"/><path d="M9.2 15.2a3 3 0 0 0 2.6 2.6" style="stroke:var(--surface)" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".9"/></svg>
+      <img src="icons/mark-64.png" alt="" width="28" height="28">
       <span class="wordmark">Floating<b>Ink</b></span>
     </div>
     <input id="docTitle" class="doc-title" type="text" placeholder="מסמך ללא שם" aria-label="שם המסמך" autocomplete="off" spellcheck="false">
@@ -957,7 +966,7 @@ const SAFE_TAGS = new Set('P DIV BR SPAN B STRONG I EM U S STRIKE DEL INS SUB SU
 const DROP_TAGS = new Set('SCRIPT STYLE IFRAME FRAME OBJECT EMBED SVG MATH TEMPLATE NOSCRIPT LINK META BUTTON INPUT SELECT TEXTAREA FORM TITLE HEAD CANVAS VIDEO AUDIO SOURCE TRACK PICTURE MAP AREA'.split(' '));
 const STYLE_KEEP = ['font-weight', 'font-style', 'text-decoration-line', 'color', 'background-color', 'font-size', 'font-family', 'text-align', 'direction', 'line-height', 'margin-inline-start', 'width', 'vertical-align'];
 const SAFE_CLASS = /^(checklist|callout|callout-(note|tip|warn|important)|toc|toc-title|toc-l[1-3]|toc-dots|toc-pg|page-break|img-(right|center|left))$/;
-const SAFE_SRC = /^(data:image\/(png|jpe?g|gif|webp|svg\+xml);base64,[a-z0-9+/=\s]+|\/_blob\/[A-Za-z0-9_-]+)$/i;
+const SAFE_SRC = /^(data:image\/(png|jpe?g|gif|webp|svg\+xml);base64,[a-z0-9+/=\s]+|\/_blob\/[A-Za-z0-9_-]+|floating-ink\.webp)$/i;
 function sanitize(html, paste) {
   const doc = new DOMParser().parseFromString('<body>' + String(html || '') + '</body>', 'text/html');
   cleanNode(doc.body, !!paste);
@@ -2021,7 +2030,7 @@ const outlineSoon = debounce(renderOutline, 400);
    ========================================================= */
 const today = () => new Date().toLocaleDateString('he-IL');
 const longDate = () => new Date().toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-const WELCOME = '<h1>ברוכים הבאים ל-Floating Ink</h1><p>זה מסמך לדוגמה שמראה מה אפשר לעשות כאן. אפשר לערוך אותו, למחוק אותו, או ללחוץ על <b>מסמך חדש</b> ולהתחיל מדף ריק.</p><div class="callout callout-note"><p><b>פרטי לגמרי.</b> המסמכים נשמרים רק במכשיר שלך, ושום דבר לא נשלח לשום שרת. כדאי לגבות מדי פעם: <b>קובץ ← גיבוי הכל</b>.</p></div><h2>מה יש כאן</h2><ul><li><b>עיצוב כמו בוורד:</b> גופנים בעברית, צבעים, <span style="background-color: #ffe45c">מרקר</span>, כותרות, רשימות וטבלאות.</li><li><b>הוספה:</b> תמונות, ציור ביד, סמלים למתמטיקה, אימוג׳י, תאריך עברי ותוכן עניינים.</li><li><b>כלים:</b> חיפוש והחלפה, ספירת מילים, יעד מילים, הקראה בקול, מחשבון ותיקון שפת הקלדה.</li><li><b>קבצים:</b> שמירה כ-Word וכ-PDF, ייבוא מ-Word, גרסאות קודמות וסל מחזור.</li></ul><h2>משימות לדוגמה</h2><ul class="checklist"><li data-checked="true">לפתוח את Floating Ink</li><li>להתקין אותו במחשב או בטלפון</li><li>להוסיף טבלה או ציור</li></ul><h2>איך מתקינים</h2><ul><li><b>במחשב (כרום או Edge):</b> כפתור <b>התקנה</b> למעלה, או סמל ההתקנה בצד שורת הכתובת.</li><li><b>באנדרואיד:</b> תפריט ⋮ ← התקנת האפליקציה.</li><li><b>באייפון:</b> בספארי, כפתור השיתוף ← הוספה למסך הבית.</li></ul><p>אחרי ההתקנה Floating Ink נפתח כמו תוכנה רגילה, גם בלי אינטרנט.</p><h2>קיצורי מקלדת</h2><table><tbody><tr><th>קיצור</th><th>מה הוא עושה</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>מודגש / נטוי / קו תחתון</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>ביטול / חזרה</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>חיפוש / חיפוש והחלפה</td></tr><tr><td>Ctrl+K</td><td>הוספת קישור</td></tr><tr><td>Ctrl+Shift+X</td><td>תיקון שפת הקלדה</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>כותרת 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>שמירה (Floating Ink גם שומר לבד)</td></tr></tbody></table><div class="callout callout-tip"><p><b>טיפ:</b> הקלדת באנגלית בטעות, למשל akuo במקום שלום? מסמנים את המילים ולוחצים Ctrl+Shift+X.</p></div><p style="text-align: center"><small>Floating Ink הוא חלק מ-<a href="https://floatingrotations.com">Floating rotation</a></small></p>';
+const WELCOME = '<img src="floating-ink.webp" alt="Floating Ink" class="img-center" style="width: 62%"><h1>ברוכים הבאים ל-Floating Ink</h1><p>זה מסמך לדוגמה שמראה מה אפשר לעשות כאן. אפשר לערוך אותו, למחוק אותו, או ללחוץ על <b>מסמך חדש</b> ולהתחיל מדף ריק.</p><div class="callout callout-note"><p><b>פרטי לגמרי.</b> המסמכים נשמרים רק במכשיר שלך, ושום דבר לא נשלח לשום שרת. כדאי לגבות מדי פעם: <b>קובץ ← גיבוי הכל</b>.</p></div><h2>מה יש כאן</h2><ul><li><b>עיצוב כמו בוורד:</b> גופנים בעברית, צבעים, <span style="background-color: #ffe45c">מרקר</span>, כותרות, רשימות וטבלאות.</li><li><b>הוספה:</b> תמונות, ציור ביד, סמלים למתמטיקה, אימוג׳י, תאריך עברי ותוכן עניינים.</li><li><b>כלים:</b> חיפוש והחלפה, ספירת מילים, יעד מילים, הקראה בקול, מחשבון ותיקון שפת הקלדה.</li><li><b>קבצים:</b> שמירה כ-Word וכ-PDF, ייבוא מ-Word, גרסאות קודמות וסל מחזור.</li></ul><h2>משימות לדוגמה</h2><ul class="checklist"><li data-checked="true">לפתוח את Floating Ink</li><li>להתקין אותו במחשב או בטלפון</li><li>להוסיף טבלה או ציור</li></ul><h2>איך מתקינים</h2><ul><li><b>במחשב (כרום או Edge):</b> כפתור <b>התקנה</b> למעלה, או סמל ההתקנה בצד שורת הכתובת.</li><li><b>באנדרואיד:</b> תפריט ⋮ ← התקנת האפליקציה.</li><li><b>באייפון:</b> בספארי, כפתור השיתוף ← הוספה למסך הבית.</li></ul><p>אחרי ההתקנה Floating Ink נפתח כמו תוכנה רגילה, גם בלי אינטרנט.</p><h2>קיצורי מקלדת</h2><table><tbody><tr><th>קיצור</th><th>מה הוא עושה</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>מודגש / נטוי / קו תחתון</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>ביטול / חזרה</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>חיפוש / חיפוש והחלפה</td></tr><tr><td>Ctrl+K</td><td>הוספת קישור</td></tr><tr><td>Ctrl+Shift+X</td><td>תיקון שפת הקלדה</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>כותרת 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>שמירה (Floating Ink גם שומר לבד)</td></tr></tbody></table><div class="callout callout-tip"><p><b>טיפ:</b> הקלדת באנגלית בטעות, למשל akuo במקום שלום? מסמנים את המילים ולוחצים Ctrl+Shift+X.</p></div><p style="text-align: center"><small>Floating Ink הוא חלק מ-<a href="https://floatingrotations.com">Floating rotation</a></small></p>';
 const TEMPLATES = [
   { name: 'מסמך ריק', desc: 'דף חלק', icon: 'description', html: () => '<p><br></p>' },
   { name: 'עבודה לבית הספר', desc: 'עמוד שער, מבוא, פרקים וסיכום', icon: 'school', html: () => `<h1 style="text-align: center">שם העבודה</h1><p style="text-align: center">עבודה בנושא: </p><p><br></p><table><tbody><tr><th>שם</th><td><br></td></tr><tr><th>כיתה</th><td><br></td></tr><tr><th>מורה</th><td><br></td></tr><tr><th>מקצוע</th><td><br></td></tr><tr><th>תאריך הגשה</th><td>${today()}</td></tr></tbody></table><hr class="page-break"><h2>מבוא</h2><p>על מה העבודה, ולמה בחרתי בנושא הזה.</p><h2>פרק ראשון</h2><p><br></p><h2>פרק שני</h2><p><br></p><h2>סיכום</h2><p>מה למדתי, ומה המסקנה שלי.</p><h2>מקורות</h2><ul><li><br></li></ul>` },
