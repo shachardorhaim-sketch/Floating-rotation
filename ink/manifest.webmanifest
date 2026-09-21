@@ -1,0 +1,19 @@
+{
+  "id": "./",
+  "name": "Floating Ink",
+  "short_name": "Floating Ink",
+  "description": "מעבד תמלילים בעברית: עיצוב כמו בוורד, טבלאות, תמונות, ציור ביד ושמירה כ-Word וכ-PDF. המסמכים נשמרים רק במכשיר שלך.",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#e3e8ef",
+  "theme_color": "#f9fafc",
+  "categories": ["productivity", "education"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

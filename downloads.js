@@ -7,6 +7,17 @@
   // ---------- הקטלוג ----------
   const DOWNLOADS = [
     {
+      id: 'ink',
+      kind: 'app',
+      url: 'ink/',
+      imgFile: 'ink-logo.png',
+      badge: 'app',
+      bg: 'linear-gradient(135deg,#243a9e,#0d1b2a)',
+      install: ['k1','k2','k3','k4'],
+      usage:   ['ku1','ku2','ku3','ku4'],
+      noteKey: 'inknote'
+    },
+    {
       id: 'mangatrans',
       file: 'downloads/MangaTrans.zip',
       size: '10 MB',
@@ -33,6 +44,18 @@
     he: {
       sec:'להורדה', ext:'תוסף לכרום', get:'⬇ הורדה', how:'איך מתקינים?', close:'סגור',
       installH:'התקנה', usageH:'שימוש', noteH:'שים לב',
+      app:"אפליקציה", openApp:"↗ פתיחה והתקנה",
+      ink_t:"Floating Ink — מעבד תמלילים",
+      ink_d:"כמו Word, בעברית ובחינם: עיצוב, טבלאות, תמונות, ציור ביד ושמירה כ-Word וכ-PDF. המסמכים נשמרים רק אצלך.",
+      k1:"ללחוץ על \"פתיחה והתקנה\" — האפליקציה נפתחת בלשונית חדשה.",
+      k2:"במחשב (כרום או Edge): ללחוץ על הכפתור \"התקנה\" בראש האפליקציה, או על סמל ההתקנה בצד שורת הכתובת.",
+      k3:"באנדרואיד: תפריט ⋮ ← \"התקנת האפליקציה\" או \"הוספה למסך הבית\".",
+      k4:"באייפון: לפתוח בספארי, ללחוץ על כפתור השיתוף ← \"הוספה למסך הבית\".",
+      ku1:"אחרי ההתקנה Floating Ink נפתח כמו תוכנה רגילה, גם בלי אינטרנט.",
+      ku2:"מסמך חדש: קובץ ← מסמך חדש, ואפשר לבחור תבנית (עבודה לבית הספר, סיפור, מכתב…).",
+      ku3:"הכל נשמר לבד. כדי לשלוח למורה או לחבר: קובץ ← שמירה כ-Word או כ-PDF.",
+      ku4:"הקלדת באנגלית בטעות? מסמנים ולוחצים Ctrl+Shift+X, והמילים חוזרות לעברית.",
+      inknote:"המסמכים נשמרים רק בדפדפן שבו כתבת אותם. אם מוחקים את נתוני הגלישה הם נמחקים — כדאי לגבות מדי פעם: קובץ ← גיבוי הכל.",
       mangatrans_t:'MangaTrans — תרגום עמודים ומנגה',
       mangatrans_d:'מתרגם כל עמוד באינטרנט ל-9 שפות בלחיצה, עם כפתור עצירה והחזרה למקור. וגם: תרגום בועות מנגה מתוך תמונה.',
       i1:'לפרוס את קובץ ה-ZIP לתיקייה קבועה במחשב (למשל Documents\\MangaTrans). חשוב שהתיקייה לא תימחק — כרום טוען את התוסף ממנה בכל פעם.',
@@ -87,6 +110,18 @@
     en: {
       sec:'Downloads', ext:'Chrome extension', get:'⬇ Download', how:'How to install?', close:'Close',
       installH:'Installation', usageH:'Usage', noteH:'Note',
+      app:"APP", openApp:"↗ Open & install",
+      ink_t:"Floating Ink — Word Processor",
+      ink_d:"Like Word, free and in Hebrew: formatting, tables, images, freehand drawing, and saving as Word or PDF. Your documents stay on your device.",
+      k1:"Click \"Open & install\" — the app opens in a new tab.",
+      k2:"On a computer (Chrome or Edge): click the \"התקנה\" (Install) button at the top of the app, or the install icon at the end of the address bar.",
+      k3:"On Android: menu ⋮ → \"Install app\" or \"Add to Home screen\".",
+      k4:"On iPhone: open it in Safari, tap Share → \"Add to Home Screen\".",
+      ku1:"Once installed, Floating Ink opens like a regular program — even offline.",
+      ku2:"New document: קובץ (File) → מסמך חדש, and you can pick a template.",
+      ku3:"Everything saves automatically. To send it to someone: קובץ → save as Word or PDF.",
+      ku4:"The menus are in Hebrew, but you can write in any language.",
+      inknote:"Documents are saved only in the browser you wrote them in. Clearing your browsing data deletes them — back up from time to time: קובץ → גיבוי הכל (Back up everything).",
       mangatrans_t:'MangaTrans — Page & Manga Translator',
       mangatrans_d:'Translates any web page into 9 languages in one click, with a stop button and restore. Plus: manga bubble translation from images.',
       i1:'Unzip the file into a permanent folder (e.g. Documents\\MangaTrans). Do not delete it — Chrome loads the extension from there every time.',
@@ -141,6 +176,18 @@
     ar: {
       sec:'للتحميل', ext:'إضافة كروم', get:'⬇ تحميل', how:'كيف أثبّتها؟', close:'إغلاق',
       installH:'التثبيت', usageH:'الاستخدام', noteH:'ملاحظة',
+      app:"تطبيق", openApp:"↗ فتح وتثبيت",
+      ink_t:"Floating Ink — معالج نصوص",
+      ink_d:"مثل Word، مجاني وبالعبرية: تنسيق وجداول وصور ورسم حر وحفظ كملف Word أو PDF. مستنداتك تبقى على جهازك.",
+      k1:"اضغط على \"فتح وتثبيت\" — سيفتح التطبيق في علامة تبويب جديدة.",
+      k2:"على الكمبيوتر (Chrome أو Edge): اضغط زر \"התקנה\" (تثبيت) أعلى التطبيق، أو أيقونة التثبيت في نهاية شريط العنوان.",
+      k3:"على أندرويد: القائمة ⋮ ← \"تثبيت التطبيق\" أو \"إضافة إلى الشاشة الرئيسية\".",
+      k4:"على آيفون: افتحه في Safari، ثم اضغط مشاركة ← \"إضافة إلى الشاشة الرئيسية\".",
+      ku1:"بعد التثبيت يفتح Floating Ink كبرنامج عادي، حتى بدون إنترنت.",
+      ku2:"مستند جديد: קובץ (ملف) ← מסמך חדש، ويمكنك اختيار قالب.",
+      ku3:"كل شيء يُحفظ تلقائياً. لإرساله: קובץ ← حفظ كملف Word أو PDF.",
+      ku4:"قوائم التطبيق بالعبرية، لكن يمكنك الكتابة بأي لغة.",
+      inknote:"تُحفظ المستندات فقط في المتصفح الذي كتبتها فيه. مسح بيانات التصفح يحذفها — احفظ نسخة احتياطية من حين لآخر: קובץ ← גיבוי הכל.",
       mangatrans_t:'MangaTrans — مترجم الصفحات والمانغا',
       mangatrans_d:'يترجم أي صفحة ويب إلى 9 لغات بنقرة واحدة، مع زر إيقاف واستعادة الأصل. وأيضاً: ترجمة فقاعات المانغا من الصور.',
       i1:'فك ضغط الملف في مجلد دائم (مثل Documents\\MangaTrans). لا تحذفه — كروم يحمّل الإضافة منه في كل مرة.',
@@ -195,6 +242,18 @@
     zh: {
       sec:'下载', ext:'Chrome 扩展', get:'⬇ 下载', how:'如何安装?', close:'关闭',
       installH:'安装', usageH:'使用方法', noteH:'注意',
+      app:"应用", openApp:"↗ 打开并安装",
+      ink_t:"Floating Ink — 文字处理器",
+      ink_d:"像 Word 一样,免费且支持希伯来语:排版、表格、图片、手绘,并可保存为 Word 或 PDF。文档只保存在你的设备上。",
+      k1:"点击\"打开并安装\"——应用会在新标签页中打开。",
+      k2:"在电脑上(Chrome 或 Edge):点击应用顶部的\"התקנה\"(安装)按钮,或地址栏末尾的安装图标。",
+      k3:"在安卓上:菜单 ⋮ → \"安装应用\"或\"添加到主屏幕\"。",
+      k4:"在 iPhone 上:用 Safari 打开,点击分享 → \"添加到主屏幕\"。",
+      ku1:"安装后,Floating Ink 像普通软件一样打开,离线也能用。",
+      ku2:"新建文档:קובץ(文件)→ מסמך חדש,还可以选择模板。",
+      ku3:"一切都会自动保存。要发给别人:קובץ → 保存为 Word 或 PDF。",
+      ku4:"菜单是希伯来语的,但你可以用任何语言写作。",
+      inknote:"文档只保存在你书写时使用的浏览器中。清除浏览数据会删除它们——请不时备份:קובץ → גיבוי הכל(全部备份)。",
       mangatrans_t:'MangaTrans — 网页与漫画翻译',
       mangatrans_d:'一键将任意网页翻译成 9 种语言,带停止按钮和还原功能。另外还支持从图片翻译漫画对话气泡。',
       i1:'将 ZIP 解压到一个固定文件夹(例如 Documents\\MangaTrans)。请勿删除——Chrome 每次都从那里加载扩展。',
@@ -249,6 +308,18 @@
     es: {
       sec:'Descargas', ext:'Extensión de Chrome', get:'⬇ Descargar', how:'¿Cómo se instala?', close:'Cerrar',
       installH:'Instalación', usageH:'Uso', noteH:'Nota',
+      app:"APP", openApp:"↗ Abrir e instalar",
+      ink_t:"Floating Ink — Procesador de textos",
+      ink_d:"Como Word, gratis y en hebreo: formato, tablas, imágenes, dibujo a mano y guardar como Word o PDF. Tus documentos se quedan en tu dispositivo.",
+      k1:"Pulsa \"Abrir e instalar\": la app se abre en una pestaña nueva.",
+      k2:"En el ordenador (Chrome o Edge): pulsa el botón \"התקנה\" (Instalar) arriba en la app, o el icono de instalación al final de la barra de direcciones.",
+      k3:"En Android: menú ⋮ → \"Instalar aplicación\" o \"Añadir a pantalla de inicio\".",
+      k4:"En iPhone: ábrela en Safari y pulsa Compartir → \"Añadir a pantalla de inicio\".",
+      ku1:"Una vez instalada, Floating Ink se abre como un programa normal, incluso sin internet.",
+      ku2:"Documento nuevo: קובץ (Archivo) → מסמך חדש, y puedes elegir una plantilla.",
+      ku3:"Todo se guarda solo. Para enviarlo: קובץ → guardar como Word o PDF.",
+      ku4:"Los menús están en hebreo, pero puedes escribir en cualquier idioma.",
+      inknote:"Los documentos se guardan solo en el navegador donde los escribiste. Si borras los datos de navegación, se borran: haz una copia de seguridad de vez en cuando (קובץ → גיבוי הכל).",
       mangatrans_t:'MangaTrans — Traductor de páginas y manga',
       mangatrans_d:'Traduce cualquier página web a 9 idiomas con un clic, con botón de parada y restauración. Además: traducción de bocadillos de manga desde imágenes.',
       i1:'Descomprime el archivo en una carpeta permanente (por ejemplo Documents\\MangaTrans). No la borres: Chrome carga la extensión desde ahí cada vez.',
@@ -303,6 +374,18 @@
     fr: {
       sec:'Téléchargements', ext:'Extension Chrome', get:'⬇ Télécharger', how:'Comment l\'installer ?', close:'Fermer',
       installH:'Installation', usageH:'Utilisation', noteH:'À noter',
+      app:"APPLI", openApp:"↗ Ouvrir et installer",
+      ink_t:"Floating Ink — Traitement de texte",
+      ink_d:"Comme Word, gratuit et en hébreu : mise en forme, tableaux, images, dessin à main levée et enregistrement en Word ou PDF. Tes documents restent sur ton appareil.",
+      k1:"Clique sur « Ouvrir et installer » : l’appli s’ouvre dans un nouvel onglet.",
+      k2:"Sur ordinateur (Chrome ou Edge) : clique sur le bouton « התקנה » (Installer) en haut de l’appli, ou sur l’icône d’installation au bout de la barre d’adresse.",
+      k3:"Sur Android : menu ⋮ → « Installer l’application » ou « Ajouter à l’écran d’accueil ».",
+      k4:"Sur iPhone : ouvre-la dans Safari, puis Partager → « Sur l’écran d’accueil ».",
+      ku1:"Une fois installée, Floating Ink s’ouvre comme un logiciel normal, même hors ligne.",
+      ku2:"Nouveau document : קובץ (Fichier) → מסמך חדש, et tu peux choisir un modèle.",
+      ku3:"Tout s’enregistre tout seul. Pour l’envoyer : קובץ → enregistrer en Word ou PDF.",
+      ku4:"Les menus sont en hébreu, mais tu peux écrire dans n’importe quelle langue.",
+      inknote:"Les documents sont enregistrés uniquement dans le navigateur où tu les as écrits. Effacer les données de navigation les supprime : fais une sauvegarde de temps en temps (קובץ → גיבוי הכל).",
       mangatrans_t:'MangaTrans — Traducteur de pages et manga',
       mangatrans_d:'Traduit n\'importe quelle page web en 9 langues en un clic, avec bouton d\'arrêt et restauration. Et aussi : traduction des bulles de manga depuis les images.',
       i1:'Décompresse le fichier dans un dossier permanent (par ex. Documents\\MangaTrans). Ne le supprime pas — Chrome y charge l\'extension à chaque fois.',
@@ -357,6 +440,18 @@
     pt: {
       sec:'Downloads', ext:'Extensão do Chrome', get:'⬇ Baixar', how:'Como instalar?', close:'Fechar',
       installH:'Instalação', usageH:'Uso', noteH:'Atenção',
+      app:"APP", openApp:"↗ Abrir e instalar",
+      ink_t:"Floating Ink — Processador de texto",
+      ink_d:"Como o Word, grátis e em hebraico: formatação, tabelas, imagens, desenho à mão e salvar como Word ou PDF. Seus documentos ficam no seu aparelho.",
+      k1:"Clique em \"Abrir e instalar\": o app abre em uma nova aba.",
+      k2:"No computador (Chrome ou Edge): clique no botão \"התקנה\" (Instalar) no topo do app, ou no ícone de instalação no fim da barra de endereço.",
+      k3:"No Android: menu ⋮ → \"Instalar app\" ou \"Adicionar à tela inicial\".",
+      k4:"No iPhone: abra no Safari e toque em Compartilhar → \"Adicionar à Tela de Início\".",
+      ku1:"Depois de instalado, o Floating Ink abre como um programa normal, mesmo sem internet.",
+      ku2:"Documento novo: קובץ (Arquivo) → מסמך חדש, e você pode escolher um modelo.",
+      ku3:"Tudo é salvo sozinho. Para enviar: קובץ → salvar como Word ou PDF.",
+      ku4:"Os menus estão em hebraico, mas você pode escrever em qualquer idioma.",
+      inknote:"Os documentos ficam salvos só no navegador em que você os escreveu. Limpar os dados de navegação apaga tudo — faça um backup de vez em quando (קובץ → גיבוי הכל).",
       mangatrans_t:'MangaTrans — Tradutor de páginas e mangá',
       mangatrans_d:'Traduz qualquer página da web para 9 idiomas com um clique, com botão de parar e restaurar. E ainda: tradução de balões de mangá a partir de imagens.',
       i1:'Extraia o arquivo para uma pasta permanente (por exemplo Documents\\MangaTrans). Não apague — o Chrome carrega a extensão de lá sempre.',
@@ -411,6 +506,18 @@
     ru: {
       sec:'Загрузки', ext:'Расширение Chrome', get:'⬇ Скачать', how:'Как установить?', close:'Закрыть',
       installH:'Установка', usageH:'Использование', noteH:'Важно',
+      app:"ПРИЛОЖЕНИЕ", openApp:"↗ Открыть и установить",
+      ink_t:"Floating Ink — текстовый редактор",
+      ink_d:"Как Word, бесплатно и на иврите: оформление, таблицы, картинки, рисование от руки и сохранение в Word или PDF. Документы остаются на твоём устройстве.",
+      k1:"Нажми «Открыть и установить» — приложение откроется в новой вкладке.",
+      k2:"На компьютере (Chrome или Edge): нажми кнопку «התקנה» (Установить) вверху приложения или значок установки в конце адресной строки.",
+      k3:"На Android: меню ⋮ → «Установить приложение» или «Добавить на главный экран».",
+      k4:"На iPhone: открой в Safari и нажми «Поделиться» → «На экран „Домой“».",
+      ku1:"После установки Floating Ink открывается как обычная программа — даже без интернета.",
+      ku2:"Новый документ: קובץ (Файл) → מסמך חדש, можно выбрать шаблон.",
+      ku3:"Всё сохраняется само. Чтобы отправить: קובץ → сохранить как Word или PDF.",
+      ku4:"Меню на иврите, но писать можно на любом языке.",
+      inknote:"Документы хранятся только в том браузере, где они созданы. Очистка данных браузера удалит их — время от времени делай резервную копию (קובץ → גיבוי הכל).",
       mangatrans_t:'MangaTrans — переводчик страниц и манги',
       mangatrans_d:'Переводит любую веб-страницу на 9 языков одним нажатием, с кнопкой остановки и возвратом оригинала. А также: перевод облачков манги с картинок.',
       i1:'Распакуйте архив в постоянную папку (например Documents\\MangaTrans). Не удаляйте её — Chrome каждый раз загружает расширение оттуда.',
@@ -465,6 +572,18 @@
     de: {
       sec:'Downloads', ext:'Chrome-Erweiterung', get:'⬇ Herunterladen', how:'Wie installiere ich das?', close:'Schließen',
       installH:'Installation', usageH:'Verwendung', noteH:'Hinweis',
+      app:"APP", openApp:"↗ Öffnen & installieren",
+      ink_t:"Floating Ink — Textverarbeitung",
+      ink_d:"Wie Word, kostenlos und auf Hebräisch: Formatierung, Tabellen, Bilder, Freihandzeichnen und Speichern als Word oder PDF. Deine Dokumente bleiben auf deinem Gerät.",
+      k1:"Klicke auf „Öffnen & installieren“ – die App öffnet sich in einem neuen Tab.",
+      k2:"Am Computer (Chrome oder Edge): Klicke oben in der App auf „התקנה“ (Installieren) oder auf das Installationssymbol am Ende der Adressleiste.",
+      k3:"Auf Android: Menü ⋮ → „App installieren“ oder „Zum Startbildschirm hinzufügen“.",
+      k4:"Auf dem iPhone: In Safari öffnen, dann Teilen → „Zum Home-Bildschirm“.",
+      ku1:"Nach der Installation öffnet sich Floating Ink wie ein normales Programm – auch offline.",
+      ku2:"Neues Dokument: קובץ (Datei) → מסמך חדש, und du kannst eine Vorlage wählen.",
+      ku3:"Alles wird automatisch gespeichert. Zum Verschicken: קובץ → als Word oder PDF speichern.",
+      ku4:"Die Menüs sind auf Hebräisch, aber du kannst in jeder Sprache schreiben.",
+      inknote:"Die Dokumente werden nur in dem Browser gespeichert, in dem du sie geschrieben hast. Wenn du die Browserdaten löschst, sind sie weg – mach ab und zu eine Sicherung (קובץ → גיבוי הכל).",
       mangatrans_t:'MangaTrans — Seiten- und Manga-Übersetzer',
       mangatrans_d:'Übersetzt jede Webseite mit einem Klick in 9 Sprachen, mit Stopp-Knopf und Wiederherstellung. Außerdem: Übersetzung von Manga-Sprechblasen aus Bildern.',
       i1:'Entpacke die Datei in einen festen Ordner (z. B. Documents\\MangaTrans). Nicht löschen — Chrome lädt die Erweiterung jedes Mal von dort.',
@@ -534,6 +653,8 @@
     const action = d.kind === 'bookmarklet'
       ? '<a class="gplay dl-get bm-link" id="bmLink" href="#" draggable="true"' +
         ' title="' + (d.dragTip || '') + '"></a>'
+      : d.kind === 'app'
+      ? '<a class="gplay dl-get" href="'+d.url+'" target="_blank" rel="noopener"></a>'
       : '<a class="gplay dl-get" href="'+d.file+'" download></a>';
     card.innerHTML =
       '<div class="gthumb" style="background:'+d.bg+'">' +
@@ -687,6 +808,8 @@
       card.querySelector('.dl-badge').textContent = t(d.badge);
       card.querySelector('.dl-get').textContent = d.kind === 'bookmarklet'
         ? t('drag')
+        : d.kind === 'app'
+        ? t('openApp')
         : t('get') + ' (' + d.size + ')';
       card.querySelector('.dl-how').textContent =
         d.kind === 'bookmarklet' ? t('howDemo') : t('how');
