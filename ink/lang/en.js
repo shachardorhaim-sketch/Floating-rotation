@@ -455,7 +455,31 @@ window.INK_I18N = {
 "בצד שמאל, הטקסט מסביב": "On the left, with text wrapped around it",
 "תמונה בצד שמאל": "Image on the Left",
 "מחיקת התמונה": "Delete Image",
-"יציאה ממצב ריכוז": "Exit Focus Mode"
+"יציאה ממצב ריכוז": "Exit Focus Mode",
+"{0} יצר את המסמך \"{1}\"": "{0} created the document \"{1}\"",
+"{0} כתב ב-\"{1}\"": "{0} wrote in \"{1}\"",
+"{0} כתב מחדש את \"{1}\"": "{0} rewrote \"{1}\"",
+"{0} קרא את \"{1}\"": "{0} read \"{1}\"",
+"{0} ראה את רשימת המסמכים": "{0} looked at the list of documents",
+"{0} שינה את השם ל-\"{1}\"": "{0} renamed the document to \"{1}\"",
+"איך מחברים את קלוד?": "How do I connect Claude?",
+"אתה": "You",
+"הודעה לקלוד…": "Message to Claude…",
+"הורדת המחבר": "Download the connector",
+"חיבור ל-AI": "Connect AI",
+"חיבור ל-AI: קלוד עובד איתך בתוך Floating Ink": "Connect AI: Claude works with you inside Floating Ink",
+"כאן יופיעו ההודעות של קלוד ומה שהוא עושה במסמכים.": "Claude's messages and what it does in your documents will show up here.",
+"כבוי. כדי שקלוד יוכל לעבוד כאן, מסמנים את התיבה למעלה.": "Off. To let Claude work here, check the box above.",
+"כותבים לקלוד, למשל: תכתוב לי ב-Floating Ink סיכום על מערכת השמש.": "Write to Claude, for example: Write me a summary about the solar system in Floating Ink.",
+"כשהחיבור פתוח, קלוד יכול לקרוא ולשנות את המסמכים כאן, ומה שהוא קורא נשלח אליו כמו כל הודעה שכותבים לו. כל שינוי אפשר לבטל עם Ctrl+Z.": "While the connection is on, Claude can read and change the documents here, and whatever it reads is sent to it like any message you write to it. You can undo every change with Ctrl+Z.",
+"לאפשר ל-AI לעבוד ב-Floating Ink": "Let AI work in Floating Ink",
+"לפני שכתוב של עוזר": "Before an assistant's rewrite",
+"מורידים את המחבר של Floating Ink:": "Download the Floating Ink connector:",
+"מחובר! אפשר לבקש מקלוד לעבוד ב-Floating Ink.": "Connected! You can ask Claude to work in Floating Ink.",
+"מחכה למחבר של Floating Ink במחשב… אם עוד לא התקנת אותו, ההוראות למטה.": "Waiting for the Floating Ink connector on this computer… If you haven't installed it yet, the steps are below.",
+"מסמנים כאן למעלה את התיבה. אם הדפדפן שואל אם לאפשר גישה לאפליקציות במחשב, מאשרים.": "Check the box at the top here. If the browser asks whether to allow access to apps on this device, allow it.",
+"פותחים את הקובץ שירד. אפליקציית Claude במחשב תציע להתקין אותו, ומאשרים.": "Open the downloaded file. The Claude app on your computer will offer to install it: confirm.",
+"פתיחה": "Open"
 },
 "plurals": {
 "{n} מילים": {
@@ -497,6 +521,10 @@ window.INK_I18N = {
 "שוחזרו {n} מסמכים": {
 "one": "{n} document restored",
 "other": "{n} documents restored"
+},
+"{0} החליף {n} מקומות ב-\"{1}\"": {
+"one": "{0} replaced {n} place in \"{1}\"",
+"other": "{0} replaced {n} places in \"{1}\""
 }
 },
 "welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Welcome to Floating Ink</h1><p>This is a sample document that shows what you can do here. You can edit it, delete it, or click <b>New Document</b> to start from a blank page.</p><div class=\"callout callout-note\"><p><b>Completely private.</b> Your documents are saved only on your device, and nothing is sent to any server. You should back up every so often: <b>File → Back Up Everything</b>.</p></div><h2>What's here</h2><ul><li><b>Word-like formatting:</b> fonts, colors, <span style=\"background-color: #ffe45c\">highlighter</span>, headings, lists, and tables.</li><li><b>Insert:</b> images, freehand drawing, math symbols, emoji, the date, and a table of contents.</li><li><b>Tools:</b> find and replace, word count, word goal, read aloud, calculator, and Hebrew/English keyboard fix.</li><li><b>Files:</b> save as Word and PDF, import from Word, previous versions, and Recycle Bin.</li></ul><h2>Sample tasks</h2><ul class=\"checklist\"><li data-checked=\"true\">Open Floating Ink</li><li>Install it on your computer or phone</li><li>Add a table or a drawing</li></ul><h2>How to install</h2><ul><li><b>On a computer (Chrome or Edge):</b> the <b>Install</b> button at the top, or the install icon next to the address bar.</li><li><b>On Android:</b> Menu ⋮ → Install App.</li><li><b>On iPhone:</b> In Safari, Share button → Add to Home Screen.</li></ul><p>After installing, Floating Ink opens like a regular program, even without internet.</p><h2>Keyboard shortcuts</h2><table><tbody><tr><th>Shortcut</th><th>What it does</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Bold / Italic / Underline</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Undo / Redo</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Find / Find and Replace</td></tr><tr><td>Ctrl+K</td><td>Insert Link</td></tr><tr><td>Ctrl+Shift+X</td><td>Hebrew/English Keyboard Fix</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Heading 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Save (Floating Ink also saves by itself)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Tip:</b> You can set a word-count goal in the Tools tab to track your progress as you write.</p></div><p style=\"text-align: center\"><small>Floating Ink is part of <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",

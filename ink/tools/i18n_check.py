@@ -117,7 +117,9 @@ call = re.compile(r'(?<![\w$.])(T|TN|N_)\(\s*$')
 for a, b in literals(js):
     m = call.search(js[max(0, a - 8):a])
     if m and '${' not in js[a:b] and HEB.search(js[a:b]):
-        (plurals if m.group(1) == 'TN' else strings).add(cook(js[a:b]))
+        key = cook(js[a:b])
+        # N_() marks keys shown later; one with {n} is shown through TN, so it's a plural
+        (plurals if m.group(1) == 'TN' or (m.group(1) == 'N_' and '{n}' in key) else strings).add(key)
 static = StaticText(); static.feed(html[html.index('<body'):html.rindex('<script>')])
 strings |= static.found
 

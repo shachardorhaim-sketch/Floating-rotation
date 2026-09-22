@@ -51,7 +51,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link id="docFonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&family=Amatic+SC:wght@400;700&family=Assistant:wght@400;700&family=Bellefair&family=David+Libre:wght@400;700&family=Frank+Ruhl+Libre:wght@400;700;900&family=Fredoka:wght@400;700&family=Heebo:wght@400;700&family=IBM+Plex+Mono&family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&family=Karantina:wght@400;700&family=Miriam+Libre:wght@400;700&family=Noto+Sans+Hebrew:wght@400;700&family=Noto+Serif+Hebrew:wght@400;700&family=Rubik:wght@400;700&family=Secular+One&family=Solitreo&family=Suez+One&family=Varela+Round&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&amp;icon_names=abc,add,add_column_left,add_column_right,add_photo_alternate,add_reaction,add_row_above,add_row_below,arrow_back,arrow_drop_down,article,auto_awesome,auto_stories,backup,bar_chart,block,bookmark_add,calculate,calendar_today,chat,check,check_circle,checklist,checklist_rtl,chips,class,close,cloud_done,cloud_off,code,compress,computer,content_copy,crop_landscape,crop_portrait,css,delete,delete_forever,delete_sweep,description,desk,docs,done,done_all,download,draw,edit,edit_calendar,edit_note,emoji_symbols,error,event,expand,expand_less,expand_more,face,find_replace,flag,flip,folder_open,font_download,format_align_center,format_align_justify,format_align_left,format_align_right,format_bold,format_clear,format_color_fill,format_color_text,format_indent_decrease,format_indent_increase,format_italic,format_line_spacing,format_list_bulleted,format_list_numbered,format_list_numbered_rtl,format_paint,format_textdirection_l_to_r,format_textdirection_r_to_l,format_underlined,fullscreen,fullscreen_exit,function,gif,group,history,home,horizontal_rule,hourglass_top,html,image,info,ink_eraser,ink_highlighter,input,insert_page_break,install_desktop,keyboard,label,landscape,language,light,lightbulb,line_weight,link,list,lock,mail,margin,markdown,match_case,menu,more_horiz,movie,note,note_add,notes,pause,picture_as_pdf,play_arrow,playlist_add,portrait,print,record_voice_over,redo,refresh,remove,resize,restore,restore_from_trash,save,school,script,search,segment,select,select_all,send,settings_backup_restore,space_bar,spellcheck,star,start,sticky_note_2,stop,storage,strikethrough_s,style,subscript,summarize,superscript,swap_horiz,sync,tab,table,table_rows,tabs,tag,text_decrease,text_fields,text_increase,title,toast,toc,toolbar,translate,undo,upload_file,view_column,visibility,warning,west,width,work&amp;display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&amp;icon_names=abc,add,add_column_left,add_column_right,add_photo_alternate,add_reaction,add_row_above,add_row_below,arrow_back,arrow_drop_down,article,auto_awesome,auto_stories,backup,bar_chart,block,bookmark_add,calculate,calendar_today,chat,check,check_circle,checklist,checklist_rtl,chips,class,close,cloud_done,cloud_off,code,compress,computer,content_copy,crop_landscape,crop_portrait,css,delete,delete_forever,delete_sweep,description,desk,docs,done,done_all,download,draw,edit,edit_calendar,edit_note,emoji_symbols,error,event,expand,expand_less,expand_more,face,find_replace,flag,flip,folder_open,font_download,format_align_center,format_align_justify,format_align_left,format_align_right,format_bold,format_clear,format_color_fill,format_color_text,format_indent_decrease,format_indent_increase,format_italic,format_line_spacing,format_list_bulleted,format_list_numbered,format_list_numbered_rtl,format_paint,format_textdirection_l_to_r,format_textdirection_r_to_l,format_underlined,fullscreen,fullscreen_exit,function,gif,group,history,home,horizontal_rule,hourglass_top,html,image,info,ink_eraser,ink_highlighter,input,insert_page_break,install_desktop,keyboard,label,landscape,language,light,lightbulb,line_weight,link,list,lock,mail,margin,markdown,match_case,menu,more_horiz,movie,note,note_add,notes,pause,picture_as_pdf,play_arrow,playlist_add,portrait,print,record_voice_over,redo,refresh,remove,resize,restore,restore_from_trash,save,school,script,search,segment,select,select_all,send,settings_backup_restore,smart_toy,space_bar,spellcheck,star,start,sticky_note_2,stop,storage,strikethrough_s,style,subscript,summarize,superscript,swap_horiz,sync,tab,table,table_rows,tabs,tag,text_decrease,text_fields,text_increase,title,toast,toc,toolbar,translate,undo,upload_file,view_column,visibility,warning,west,width,work&amp;display=block">
 <style id="appcss">
 :root{
   --desk:#e3e8ef;--surface:#f9fafc;--surface-2:#f1f4f8;--surface-3:#e6ebf2;
@@ -347,6 +347,22 @@ select.field{padding:0 8px}
 .ai-text.thinking{color:var(--text-3)}
 .ai-err{color:var(--red);font-size:13px;margin:0 0 10px}
 .ai-note{font-size:11.5px;color:var(--text-3);margin:4px 0 0}
+/* Connect AI panel */
+.icon-btn.link-on{color:var(--accent)}
+.link-switch{display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer}
+.link-state{margin:10px 0 12px;padding:8px 10px;border-radius:8px;background:var(--surface-2);font-size:13px;color:var(--text-2)}
+.link-state.ready{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.link-log{display:flex;flex-direction:column;gap:8px;max-height:44vh;overflow:auto;padding:2px}
+.link-msg{background:var(--surface-2);border-radius:10px;padding:7px 10px;font-size:13.5px}
+.link-msg.me{background:var(--accent-soft)}
+.link-msg b{display:block;font-size:12px;color:var(--text-2);margin-bottom:2px}
+.link-txt{white-space:pre-wrap;overflow-wrap:anywhere}
+.link-act{display:flex;gap:6px;align-items:flex-start;font-size:12px;color:var(--text-3)}
+.link-act .ms{font-size:15px}
+.link-ask{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.link-help{margin-top:12px;font-size:13px}
+.link-help summary{cursor:pointer;font-weight:600}
+.link-help ol{padding-inline-start:20px;margin:8px 0;display:flex;flex-direction:column;gap:6px}
 .ai-off{text-align:center;color:var(--text-2);padding:24px 8px}
 .ai-off .ms{font-size:34px;color:var(--accent);width:auto}
 .ai-good{display:flex;align-items:center;gap:6px;color:var(--green);margin:0 0 8px}
@@ -484,6 +500,7 @@ select.field{padding:0 8px}
     <button id="fileChip" class="file-chip" type="button" hidden><span class="ms">description</span><span class="txt"></span></button>
     <div class="appbar-end">
       <span class="private" id="privateBadge"><span class="ms">lock</span><span>פרטי</span></span>
+      <button class="icon-btn" id="btnLink" title="חיבור ל-AI: קלוד עובד איתך בתוך Floating Ink" aria-label="חיבור ל-AI"><span class="ms">smart_toy</span></button>
       <button class="icon-btn" id="btnLang" title="שפה" aria-label="שפה"><span class="ms">language</span></button>
       <button class="icon-btn hide-sm" data-cmd="focus" title="מצב ריכוז: רק הדף (Esc ליציאה)" aria-label="מצב ריכוז"><span class="ms">fullscreen</span></button>
       <button class="install-btn" id="btnInstall" hidden title="התקנה במחשב או בטלפון, כמו תוכנה רגילה"><span class="ms">install_desktop</span><span>התקנה</span></button>
@@ -730,6 +747,25 @@ select.field{padding:0 8px}
           <button class="btn primary" data-cmd="saveVersion"><span class="ms">bookmark_add</span>שמירת גרסה עכשיו</button>
           <div id="verList"></div>
         </div>
+        <div class="view" data-view="link" hidden>
+          <label class="link-switch"><input type="checkbox" id="linkOn"><span>לאפשר ל-AI לעבוד ב-Floating Ink</span></label>
+          <div class="link-state" id="linkState"></div>
+          <div class="link-log" id="linkLog" aria-live="polite"></div>
+          <div class="link-ask">
+            <textarea id="linkMsg" class="field" rows="2" placeholder="הודעה לקלוד…"></textarea>
+            <button class="btn primary" id="linkSend"><span class="ms flip">send</span>שליחה</button>
+          </div>
+          <details class="link-help" id="linkHelp">
+            <summary>איך מחברים את קלוד?</summary>
+            <ol>
+              <li>מורידים את המחבר של Floating Ink: <a href="connector/floating-ink.mcpb" download>הורדת המחבר</a></li>
+              <li>פותחים את הקובץ שירד. אפליקציית Claude במחשב תציע להתקין אותו, ומאשרים.</li>
+              <li>מסמנים כאן למעלה את התיבה. אם הדפדפן שואל אם לאפשר גישה לאפליקציות במחשב, מאשרים.</li>
+              <li>כותבים לקלוד, למשל: תכתוב לי ב-Floating Ink סיכום על מערכת השמש.</li>
+            </ol>
+          </details>
+          <p class="muted small">כשהחיבור פתוח, קלוד יכול לקרוא ולשנות את המסמכים כאן, ומה שהוא קורא נשלח אליו כמו כל הודעה שכותבים לו. כל שינוי אפשר לבטל עם Ctrl+Z.</p>
+        </div>
         <div class="view" data-view="ai" hidden>
           <div id="aiOff" class="ai-off" hidden></div>
           <div id="aiOn">
@@ -837,6 +873,7 @@ const N_ = he => he;
 const HE_ONE = {
   '{n} מילים': 'מילה אחת', '{n} תווים': 'תו אחד', '{n} דקות': 'דקה', '{n} עמודות': 'עמודה אחת', '{n} שורות': 'שורה אחת',
   'תוקנו {n} רווחים מיותרים': 'תוקן רווח מיותר אחד', 'הוחלפו {n} מקומות': 'הוחלף מקום אחד', 'שוחזרו {n} מסמכים': 'שוחזר מסמך אחד',
+  '{0} החליף {n} מקומות ב-"{1}"': '{0} החליף מקום אחד ב-"{1}"',
   '{n} מסמכים יימחקו לתמיד. אי אפשר לבטל את זה.': 'מסמך אחד יימחק לתמיד. אי אפשר לבטל את זה.',
   'בגיבוי יש {n} מסמכים. הם יתווספו למחברת כמסמכים חדשים, בלי למחוק שום דבר.': 'בגיבוי יש מסמך אחד. הוא יתווסף למחברת כמסמך חדש, בלי למחוק שום דבר.',
 };
@@ -2527,7 +2564,7 @@ async function restoreVersion(v, html) {
 /* =========================================================
    side panel
    ========================================================= */
-const PANEL_TITLES = { find: T('חיפוש והחלפה'), outline: T('מבנה המסמך'), versions: T('גרסאות קודמות'), ai: T('עוזר חכם') };
+const PANEL_TITLES = { find: T('חיפוש והחלפה'), outline: T('מבנה המסמך'), versions: T('גרסאות קודמות'), ai: T('עוזר חכם'), link: T('חיבור ל-AI') };
 function openPanel(view, opts = {}) {
   if (!S.cur) return;
   $('#side').hidden = false;
@@ -2546,6 +2583,7 @@ function openPanel(view, opts = {}) {
   } else if (view === 'outline') renderOutline();
   else if (view === 'versions') renderVersions();
   else if (view === 'ai') { refreshAI(); updateScope(); }
+  else if (view === 'link') renderLinkPanel();
 }
 function closePanel() { $('#side').hidden = true; if (S.panel === 'find') clearFindHL(); S.panel = null; applyZoom(); }
 
@@ -2709,19 +2747,43 @@ function replaceInScope(wrong, right, scope) {
   ed.normalize(); afterChange();
   return hits.length;
 }
+/* Markdown's inline marks: **bold**, *italic*, ~~strike~~, `code`, [link](https://...) */
+const mdInline = s => esc(s)
+  .replace(/`([^`]+)`/g, '<code>$1</code>')
+  .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+  .replace(/(^|[^*])\*(?!\s)([^*]+?)\*(?!\*)/g, '$1<i>$2</i>')
+  .replace(/~~(.+?)~~/g, '<s>$1</s>')
+  .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+|mailto:[^)\s]+)\)/g, '<a href="$2">$1</a>');
+/* Markdown blocks: # to ####, lists, "- [ ]" checklists, | tables |, > quotes, --- lines and ``` code */
 function mdToHtml(t) {
-  const inl = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*(?!\s)([^*]+?)\*(?!\*)/g, '$1<i>$2</i>');
-  let out = '', list = null;
-  const flush = () => { if (list) { out += `</${list}>`; list = null; } };
+  let out = '', list = null, table = null, code = null;
+  const flush = () => {
+    if (list) { out += `</${list === 'check' ? 'ul' : list}>`; list = null; }
+    if (table) { out += '<table><tbody>' + table.map((r, i) => '<tr>' + r.map(c => i ? `<td>${mdInline(c) || '<br>'}</td>` : `<th>${mdInline(c) || '<br>'}</th>`).join('') + '</tr>').join('') + '</tbody></table>'; table = null; }
+  };
+  const open = kind => { if (list !== kind) { flush(); out += kind === 'check' ? '<ul class="checklist">' : `<${kind}>`; list = kind; } };
   for (const raw of String(t).replace(/\r/g, '').split('\n')) {
     const line = raw.trim();
     let m;
+    if (code !== null) { if (/^```/.test(line)) { out += `<pre>${esc(code.join('\n')) || '<br>'}</pre>`; code = null; } else code.push(raw); continue; }
+    if (/^```/.test(line)) { flush(); code = []; continue; }
     if (!line) { flush(); continue; }
-    if ((m = /^[-*•]\s+(.*)$/.exec(line))) { if (list !== 'ul') { flush(); out += '<ul>'; list = 'ul'; } out += `<li>${inl(m[1])}</li>`; }
-    else if ((m = /^\d+[.)]\s+(.*)$/.exec(line))) { if (list !== 'ol') { flush(); out += '<ol>'; list = 'ol'; } out += `<li>${inl(m[1])}</li>`; }
-    else if ((m = /^(#{1,3})\s+(.*)$/.exec(line))) { flush(); out += `<h${m[1].length}>${inl(m[2])}</h${m[1].length}>`; }
-    else { flush(); out += `<p>${inl(line)}</p>`; }
+    if (/^\|.*\|$/.test(line)) {
+      if (/^\|[\s:|-]+\|$/.test(line)) continue;   // the |---|---| line under the header
+      if (list) flush();
+      (table = table || []).push(line.slice(1, -1).split('|').map(c => c.trim()));
+      continue;
+    }
+    if (table) flush();
+    if ((m = /^[-*•]\s+\[( |x|X)\]\s+(.*)$/.exec(line))) { open('check'); out += `<li${m[1] === ' ' ? '' : ' data-checked="true"'}>${mdInline(m[2]) || '<br>'}</li>`; }
+    else if ((m = /^[-*•]\s+(.*)$/.exec(line))) { open('ul'); out += `<li>${mdInline(m[1])}</li>`; }
+    else if ((m = /^\d+[.)]\s+(.*)$/.exec(line))) { open('ol'); out += `<li>${mdInline(m[1])}</li>`; }
+    else if ((m = /^(#{1,4})\s+(.*)$/.exec(line))) { flush(); out += `<h${m[1].length}>${mdInline(m[2])}</h${m[1].length}>`; }
+    else if (/^(-{3,}|\*{3,}|_{3,})$/.test(line)) { flush(); out += '<hr>'; }
+    else if ((m = /^>\s?(.*)$/.exec(line))) { flush(); out += `<blockquote>${mdInline(m[1]) || '<br>'}</blockquote>`; }
+    else { flush(); out += `<p>${mdInline(line)}</p>`; }
   }
+  if (code !== null) out += `<pre>${esc(code.join('\n'))}</pre>`;
   flush();
   return out;
 }
@@ -3377,6 +3439,179 @@ async function saveToFile() {
 }
 
 /* =========================================================
+   Connect AI: Claude working inside Floating Ink. The Floating Ink connector (ink/connector) runs on
+   this computer as a Claude extension. While "Connect AI" is on, this page listens to it, runs each
+   request on the documents in this browser, where the user watches it happen, and sends back the result
+   ========================================================= */
+const LINK_URL = 'http://127.0.0.1:47821';
+const LINK = { es: null, state: 'off', timer: 0, wait: 2000, queue: Promise.resolve(), log: lsGet('fink:aichat', []) };
+function linkStart() {
+  linkStop();
+  if (!PREFS.aiLink || S.inClaude) return;
+  setLinkState('waiting');
+  let es;
+  try { es = new EventSource(LINK_URL + '/events'); } catch { linkRetry(); return; }
+  LINK.es = es;
+  es.addEventListener('hello', () => { LINK.wait = 2000; setLinkState('ready'); });
+  es.addEventListener('call', e => {
+    let c = null;
+    try { c = JSON.parse(e.data); } catch {}
+    if (c) LINK.queue = LINK.queue.then(() => runLinkCall(c));   // one request at a time, even from two windows
+  });
+  es.onerror = () => { es.close(); if (LINK.es === es) { LINK.es = null; setLinkState('waiting'); linkRetry(); } };
+}
+function linkRetry() { clearTimeout(LINK.timer); LINK.timer = setTimeout(linkStart, LINK.wait); LINK.wait = Math.min(LINK.wait * 2, 30000); }
+function linkStop() {
+  clearTimeout(LINK.timer);
+  if (LINK.es) { LINK.es.close(); LINK.es = null; }
+  setLinkState('off');
+}
+function setLinkState(state) {
+  LINK.state = state;
+  $('#btnLink').classList.toggle('link-on', state === 'ready');
+  if (S.panel === 'link') renderLinkState();
+}
+async function runLinkCall(c) {
+  let out;
+  try {
+    const fn = LINK_TOOLS[c.tool];
+    if (!fn) throw new Error('Unknown tool: ' + c.tool);
+    for (let i = 0; !S.docsReady && i < 40; i++) await sleep(250);
+    out = { ok: true, result: await fn(c.args || {}, String(c.client || 'AI').slice(0, 40)) };
+  } catch (e) { out = { ok: false, error: String((e && e.message) || e) }; }
+  try { await fetch(LINK_URL + '/result', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ id: c.id, ...out }) }); } catch {}
+}
+/* the document a request is about: by id, or the one open on screen. It opens, so the user sees the change */
+async function linkDoc(id) {
+  if (id && (!S.cur || S.cur.id !== id)) {
+    if (!findMeta(id)) throw new Error(`No document with id "${id}". Call list_documents to see the ids.`);
+    await openDoc(id);
+  }
+  if (!S.cur) throw new Error('No document is open in Floating Ink.');
+  return S.cur;
+}
+const linkTitle = () => displayTitle(S.cur.meta);
+const userSel = () => { const r = lastRange; return r && !r.collapsed && inEditor(r.startContainer) ? r.cloneRange() : null; };
+const LINK_TOOLS = {
+  async list_documents(a, who) {
+    linkAct(who, N_('{0} ראה את רשימת המסמכים'));
+    return aliveDocs().map(d => ({ id: d.id, title: displayTitle(d), words: d.words || 0, updated: new Date(d.updatedAt || 0).toISOString(), open: !!(S.cur && !S.cur.isSample && S.cur.id === d.id) }));
+  },
+  async read_document({ id }, who) {
+    const sel = !id || (S.cur && S.cur.id === id) ? userSel() : null;
+    await linkDoc(id);
+    linkAct(who, N_('{0} קרא את "{1}"'), linkTitle());
+    return { id: S.cur.id, title: linkTitle(), markdown: htmlToMd(ed), ...(sel ? { selected_text: sel.toString() } : {}) };
+  },
+  async create_document({ title, content }, who) {
+    const html = sanitize(mdToHtml(String(content || ''))) || '<p><br></p>';
+    const id = await createDoc({ title: String(title || '').trim().slice(0, 200), html, page: { dir: guessDir(html) } });
+    if (!id) throw new Error('Could not create the document.');
+    placeCaretAtEnd();   // a new document selects its title for the user to type over; not this one
+    linkAct(who, N_('{0} יצר את המסמך "{1}"'), linkTitle());
+    return { id, title: linkTitle() };
+  },
+  async write_in_document({ id, content, where }, who) {
+    const md = String(content || '').trim();
+    if (!md) throw new Error('Nothing to write.');
+    const r = (where === 'after_selection' || where === 'replace_selection') && (!id || (S.cur && S.cur.id === id)) ? userSel() : null;
+    await linkDoc(id);
+    const html = sanitize(mdToHtml(md));
+    // one line with no Markdown blocks stays inside the paragraph instead of starting a new one
+    const inline = !md.includes('\n') && !/^([-*•]\s|\d+[.)]\s|#|>|\||```)/.test(md);
+    snapshot();
+    if (r && inEditor(r.startContainer)) {
+      if (where === 'after_selection') r.collapse(false);
+      setRange(r);
+      document.execCommand('insertHTML', false, inline ? sanitize(mdInline(md)) : html);
+    } else {
+      if (ed.children.length === 1 && !ed.textContent.trim() && !ed.querySelector('img,table,hr')) ed.textContent = '';   // a new, empty document
+      const frag = document.createRange().createContextualFragment(html);
+      const first = frag.firstChild, last = frag.lastChild;
+      if (where === 'start') ed.prepend(frag); else ed.append(frag);
+      const shown = where === 'start' ? first : last;
+      if (shown && shown.scrollIntoView) shown.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+    afterChange();
+    linkAct(who, N_('{0} כתב ב-"{1}"'), linkTitle());
+    return 'Done.';
+  },
+  async replace_text({ id, find, replace }, who) {
+    await linkDoc(id);
+    const n = find ? replaceInScope(String(find), String(replace ?? ''), null) : 0;
+    linkAct(who, N_('{0} החליף {n} מקומות ב-"{1}"'), linkTitle(), { n });
+    return { replaced: n };
+  },
+  async replace_document({ id, content }, who) {
+    await linkDoc(id);
+    const html = sanitize(mdToHtml(String(content || ''))) || '<p><br></p>';
+    if (!S.cur.isSample) { await flushSave(); await createVersion(S.cur, cleanHTML(), N_('לפני שכתוב של עוזר')); }
+    snapshot(); ed.innerHTML = html; afterChange();
+    desk.scrollTop = 0;
+    linkAct(who, N_('{0} כתב מחדש את "{1}"'), linkTitle());
+    return 'Done. The previous content is kept in the document\'s saved versions.';
+  },
+  async rename_document({ id, title }, who) {
+    await linkDoc(id);
+    const t = String(title || '').trim().slice(0, 200);
+    if (!t) throw new Error('The title is empty.');
+    S.cur.meta.title = t; $('#docTitle').value = t; markDirty(); renderDocs(); updateDocTitle();
+    linkAct(who, N_('{0} שינה את השם ל-"{1}"'), t);
+    return 'Done.';
+  },
+  async send_message({ text }, who) {
+    const t = String(text || '').trim().slice(0, 4000);
+    if (!t) throw new Error('The message is empty.');
+    linkAdd({ from: who, kind: 'msg', text: t });
+    return 'Sent.';
+  },
+  async read_messages() {
+    return LINK.log.filter(m => m.kind === 'msg').slice(-30).map(m => ({ from: m.from === 'user' ? 'the user' : m.from, text: m.text, time: new Date(m.t).toISOString() }));
+  },
+};
+/* the panel's log: what each assistant did, and the messages between the user and the assistants.
+   An action is kept as its Hebrew key and values, so it shows in whatever language is on later */
+function linkAct(who, key, ...args) {
+  const opt = args.length && typeof args[args.length - 1] === 'object' ? args.pop() : {};
+  linkAdd({ from: who, kind: 'act', key, args: [who, ...args], ...(opt.n != null ? { n: opt.n } : {}) });
+}
+const actText = m => m.text || (m.n != null ? TN(m.key, m.n, ...m.args) : T(m.key, ...m.args));
+function linkAdd(m) {
+  LINK.log.push({ ...m, t: Date.now() });
+  if (LINK.log.length > 200) LINK.log.splice(0, LINK.log.length - 200);
+  lsSet('fink:aichat', LINK.log);
+  if (S.panel === 'link') renderLinkLog();
+  else if (m.kind === 'msg' && m.from !== 'user') toast(`${m.from}: ${m.text.slice(0, 120)}`, { icon: 'smart_toy', ms: 6000, action: { label: T('פתיחה'), run: () => openPanel('link') } });
+}
+function renderLinkPanel() {
+  $('#linkOn').checked = !!PREFS.aiLink;
+  $('#linkHelp').open = LINK.state !== 'ready';
+  renderLinkState(); renderLinkLog();
+}
+function renderLinkState() {
+  const b = $('#linkState');
+  b.classList.toggle('ready', LINK.state === 'ready');
+  b.textContent = LINK.state === 'ready' ? T('מחובר! אפשר לבקש מקלוד לעבוד ב-Floating Ink.')
+    : LINK.state === 'waiting' ? T('מחכה למחבר של Floating Ink במחשב… אם עוד לא התקנת אותו, ההוראות למטה.')
+    : T('כבוי. כדי שקלוד יוכל לעבוד כאן, מסמנים את התיבה למעלה.');
+}
+function renderLinkLog() {
+  const box = $('#linkLog');
+  box.textContent = '';
+  if (!LINK.log.length) { box.append(h('p', { class: 'muted small', text: T('כאן יופיעו ההודעות של קלוד ומה שהוא עושה במסמכים.') })); return; }
+  for (const m of LINK.log.slice(-80)) box.append(m.kind === 'act'
+    ? h('div', { class: 'link-act' }, icon('edit_note'), h('span', { text: actText(m) }))
+    : h('div', { class: 'link-msg' + (m.from === 'user' ? ' me' : '') }, h('b', { text: m.from === 'user' ? T('אתה') : m.from }), h('div', { class: 'link-txt', dir: 'auto', text: m.text })));
+  box.scrollTop = box.scrollHeight;
+}
+function sendLinkMsg() {
+  const t = $('#linkMsg').value.trim();
+  if (!t) return;
+  $('#linkMsg').value = '';
+  linkAdd({ from: 'user', kind: 'msg', text: t });
+}
+
+/* =========================================================
    drawing
    ========================================================= */
 function openDraw() {
@@ -3620,6 +3855,10 @@ function wire() {
   $('#saveState').addEventListener('click', () => { if (S.saveState === 'error') saveNow(true); });
   $('#fileChip').addEventListener('click', () => saveToFile());
   $('#btnLang').addEventListener('click', () => openLangMenu($('#btnLang')));
+  $('#btnLink').addEventListener('click', () => S.panel === 'link' ? closePanel() : openPanel('link'));
+  $('#linkOn').addEventListener('change', e => { PREFS.aiLink = e.target.checked; savePrefs(); if (PREFS.aiLink) linkStart(); else linkStop(); renderLinkPanel(); });
+  $('#linkSend').addEventListener('click', sendLinkMsg);
+  $('#linkMsg').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendLinkMsg(); } });
   ed.addEventListener('input', e => { if (!e.isComposing) ensureBlocks(); if (e.inputType === 'insertParagraph') fixNewLi(); if (selectedImg && !ed.contains(selectedImg)) deselectImg(); onEdited(); });
   ed.addEventListener('beforeinput', e => { if (e.inputType === 'historyUndo') { e.preventDefault(); undo(); } else if (e.inputType === 'historyRedo') { e.preventDefault(); redo(); } });
   ed.addEventListener('keydown', onEditorKey);
@@ -3760,6 +3999,7 @@ async function boot() {
   $('#drawerFoot').textContent = local ? T('נשמר רק במכשיר הזה. שום דבר לא נשלח לשרת.') : T('נשמר בחשבון שלך. רק לך יש גישה.');
   $('#privateBadge').title = local ? T('המסמכים נשמרים רק במכשיר הזה, ושום דבר לא נשלח לשרת.') : T('המחברת פרטית: רק החשבון שלך יכול לפתוח אותה ולקרוא את המסמכים.');
   setupInstall();
+  if (S.inClaude) $('#btnLink').hidden = true; else if (PREFS.aiLink) linkStart();   // inside Claude the page can't reach this computer
   store.watchDocs(onDocs, () => toast(T('החיבור לרשימת המסמכים נקטע. כדאי לרענן את הדף.'), { ms: 8000 }));
 }
 boot();

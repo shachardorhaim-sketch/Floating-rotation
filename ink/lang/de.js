@@ -455,7 +455,31 @@ window.INK_I18N = {
 "בצד שמאל, הטקסט מסביב": "Links, Text umfließt es",
 "תמונה בצד שמאל": "Bild links",
 "מחיקת התמונה": "Bild löschen",
-"יציאה ממצב ריכוז": "Fokusmodus verlassen"
+"יציאה ממצב ריכוז": "Fokusmodus verlassen",
+"{0} יצר את המסמך \"{1}\"": "{0} hat das Dokument „{1}“ erstellt",
+"{0} כתב ב-\"{1}\"": "{0} hat in „{1}“ geschrieben",
+"{0} כתב מחדש את \"{1}\"": "{0} hat „{1}“ neu geschrieben",
+"{0} קרא את \"{1}\"": "{0} hat „{1}“ gelesen",
+"{0} ראה את רשימת המסמכים": "{0} hat sich die Dokumentliste angesehen",
+"{0} שינה את השם ל-\"{1}\"": "{0} hat das Dokument in „{1}“ umbenannt",
+"איך מחברים את קלוד?": "Wie verbinde ich Claude?",
+"אתה": "Du",
+"הודעה לקלוד…": "Nachricht an Claude…",
+"הורדת המחבר": "Connector herunterladen",
+"חיבור ל-AI": "KI verbinden",
+"חיבור ל-AI: קלוד עובד איתך בתוך Floating Ink": "KI verbinden: Claude arbeitet mit dir direkt in Floating Ink",
+"כאן יופיעו ההודעות של קלוד ומה שהוא עושה במסמכים.": "Hier erscheinen die Nachrichten von Claude und was er in deinen Dokumenten macht.",
+"כבוי. כדי שקלוד יוכל לעבוד כאן, מסמנים את התיבה למעלה.": "Aus. Damit Claude hier arbeiten kann, setze oben das Häkchen.",
+"כותבים לקלוד, למשל: תכתוב לי ב-Floating Ink סיכום על מערכת השמש.": "Schreib Claude, zum Beispiel: Schreib mir in Floating Ink eine Zusammenfassung über das Sonnensystem.",
+"כשהחיבור פתוח, קלוד יכול לקרוא ולשנות את המסמכים כאן, ומה שהוא קורא נשלח אליו כמו כל הודעה שכותבים לו. כל שינוי אפשר לבטל עם Ctrl+Z.": "Solange die Verbindung an ist, kann Claude die Dokumente hier lesen und ändern, und was er liest, wird ihm wie jede Nachricht geschickt, die du ihm schreibst. Jede Änderung kannst du mit Ctrl+Z rückgängig machen.",
+"לאפשר ל-AI לעבוד ב-Floating Ink": "KI in Floating Ink arbeiten lassen",
+"לפני שכתוב של עוזר": "Vor dem Umschreiben durch den Assistenten",
+"מורידים את המחבר של Floating Ink:": "Lade den Floating-Ink-Connector herunter:",
+"מחובר! אפשר לבקש מקלוד לעבוד ב-Floating Ink.": "Verbunden! Du kannst Claude bitten, in Floating Ink zu arbeiten.",
+"מחכה למחבר של Floating Ink במחשב… אם עוד לא התקנת אותו, ההוראות למטה.": "Warte auf den Floating-Ink-Connector auf dem Computer… Wenn du ihn noch nicht installiert hast, stehen die Schritte unten.",
+"מסמנים כאן למעלה את התיבה. אם הדפדפן שואל אם לאפשר גישה לאפליקציות במחשב, מאשרים.": "Setze oben das Häkchen. Wenn der Browser fragt, ob er auf Apps auf diesem Gerät zugreifen darf, erlaube es.",
+"פותחים את הקובץ שירד. אפליקציית Claude במחשב תציע להתקין אותו, ומאשרים.": "Öffne die heruntergeladene Datei. Die Claude-App auf dem Computer bietet an, ihn zu installieren: bestätige.",
+"פתיחה": "Öffnen"
 },
 "plurals": {
 "{n} מילים": {
@@ -497,6 +521,10 @@ window.INK_I18N = {
 "שוחזרו {n} מסמכים": {
 "one": "{n} Dokument wiederhergestellt",
 "other": "{n} Dokumente wiederhergestellt"
+},
+"{0} החליף {n} מקומות ב-\"{1}\"": {
+"one": "{0} hat {n} Stelle in „{1}“ ersetzt",
+"other": "{0} hat {n} Stellen in „{1}“ ersetzt"
 }
 },
 "welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Willkommen bei Floating Ink</h1><p>Das ist ein Beispieldokument, das zeigt, was du hier machen kannst. Du kannst es bearbeiten, löschen oder auf <b>Neues Dokument</b> klicken und mit einer leeren Seite beginnen.</p><div class=\"callout callout-note\"><p><b>Komplett privat.</b> Die Dokumente werden nur auf deinem Gerät gespeichert, und nichts wird an irgendeinen Server gesendet. Sichere sie am besten ab und zu: <b>Datei → Alles sichern</b>.</p></div><h2>Was es hier gibt</h2><ul><li><b>Formatierung wie in Word:</b> Schriftarten, Farben, <span style=\"background-color: #ffe45c\">Textmarker</span>, Überschriften, Listen und Tabellen.</li><li><b>Einfügen:</b> Bilder, Zeichnungen von Hand, Mathesymbole, Emoji, Datum und Inhaltsverzeichnis.</li><li><b>Werkzeuge:</b> Suchen und Ersetzen, Wörter zählen, Wortziel, Vorlesen, Rechner und Tastaturlayout-Korrektur.</li><li><b>Dateien:</b> Speichern als Word und als PDF, Import aus Word, frühere Versionen und Papierkorb.</li></ul><h2>Beispielaufgaben</h2><ul class=\"checklist\"><li data-checked=\"true\">Floating Ink öffnen</li><li>Es auf dem Computer oder Handy installieren</li><li>Eine Tabelle oder Zeichnung hinzufügen</li></ul><h2>So installierst du es</h2><ul><li><b>Am Computer (Chrome oder Edge):</b> Der Button <b>Installieren</b> oben, oder das Installationssymbol neben der Adressleiste.</li><li><b>Auf Android:</b> Menü ⋮ → App installieren.</li><li><b>Auf dem iPhone:</b> In Safari: Teilen-Symbol → Zum Home-Bildschirm.</li></ul><p>Nach der Installation öffnet sich Floating Ink wie eine normale Software, auch ohne Internet.</p><h2>Tastenkombinationen</h2><table><tbody><tr><th>Tastenkombination</th><th>Was sie macht</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Fett / Kursiv / Unterstrichen</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Rückgängig / Wiederholen</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Suchen / Suchen und Ersetzen</td></tr><tr><td>Ctrl+K</td><td>Link einfügen</td></tr><tr><td>Ctrl+Shift+X</td><td>Tastaturlayout (Hebräisch/Englisch)</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Überschrift 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Speichern (Floating Ink speichert auch von selbst)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Tipp:</b> Du kannst dir ein Wortziel setzen. Deinen Fortschritt siehst du dann unten in der Statusleiste.</p></div><p style=\"text-align: center\"><small>Floating Ink ist Teil von <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",
