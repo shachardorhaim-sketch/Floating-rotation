@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -56,6 +56,7 @@ const TOOLS = [
       'returns nothing if no message arrived; call it again if the user is still expecting you there.',
     inputSchema: { type: 'object', properties: { seconds: { type: 'number', description: 'How long to keep listening, 5 to 55. Default 45.' } } }, annotations: { readOnlyHint: true } },
 ];
+const NEW_MSG = 'While you were working, the user wrote this to you in the Floating Ink chat panel. Answer it (send_message puts your answer in that panel), and call wait_for_message to stay with them:';
 const NO_MSG = 'No message from the user in Floating Ink yet. If they are still working there and waiting for you, call wait_for_message again; otherwise finish your turn.';
 
 /* ---------- the hub: owns the port, holds the browser's connection ---------- */
@@ -106,8 +107,15 @@ const waiters = new Set();            // { proc, resolve, timer }
 const CANCELLED = Symbol('cancelled');
 const tellApp = () => { if (app) app.write('event: waiting\ndata: ' + JSON.stringify({ n: waiters.size }) + '\n\n'); };
 
+function cursorFor(proc) {
+  if (!cursors.has(proc)) {                              // the first time: also what was written in the last two minutes
+    const seen = msgs.filter(m => Date.now() - m.t > 120000);
+    cursors.set(proc, seen.length ? seen[seen.length - 1].seq : 0);
+  }
+  return cursors.get(proc);
+}
 function freshFor(proc) {
-  const fresh = msgs.filter(m => m.seq > cursors.get(proc));
+  const fresh = msgs.filter(m => m.seq > cursorFor(proc));
   if (fresh.length) cursors.set(proc, fresh[fresh.length - 1].seq);
   return fresh.map(m => ({ from: 'the user', text: m.text, time: new Date(m.t).toISOString() }));
 }
@@ -124,10 +132,6 @@ function newMessage(text) {
 }
 function hubWait(args, proc, hooks) {
   const secs = Math.min(Math.max(Number(args && args.seconds) || 45, 5), 55);
-  if (!cursors.has(proc)) {                              // the first time: also what was written in the last two minutes
-    const seen = msgs.filter(m => Date.now() - m.t > 120000);
-    cursors.set(proc, seen.length ? seen[seen.length - 1].seq : 0);
-  }
   const already = freshFor(proc);                        // a message that arrived while it was busy working
   if (already.length) return Promise.resolve(already);
   return new Promise(resolve => {
@@ -192,14 +196,11 @@ const server = http.createServer(async (req, res) => {
   if (path === '/call' && req.method === 'POST' && !origin) {
     try {
       const r = await readBody(req);
-      let result;
-      if (r.tool === 'wait_for_message') {
-        const hooks = {};                   // the other copy hung up: stop waiting, and leave the message for it
-        res.on('close', () => { if (!res.writableEnded && hooks.cancel) hooks.cancel(); });
-        result = await hubWait(r.args, r.proc || 'unknown', hooks);
-        if (result === CANCELLED) return;
-      } else result = await sendToApp(r.tool, r.args, r.client);
-      res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ ok: true, result }));
+      const hooks = {};                     // the other copy hung up: stop waiting, and leave the message for it
+      res.on('close', () => { if (!res.writableEnded && hooks.cancel) hooks.cancel(); });
+      const out = await hubCall(r.tool, r.args, r.client, hooks, r.proc || 'unknown');
+      if (out === CANCELLED) return;
+      res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ ok: true, ...out }));
     } catch (e) {
       res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ ok: false, error: e.message }));
     }
@@ -228,7 +229,7 @@ function postToHub(tool, args, client, hooks) {
       let data = '';
       res.setEncoding('utf8');
       res.on('data', c => { data += c; });
-      res.on('end', () => { try { const r = JSON.parse(data); r.ok ? resolve(r.result) : reject(new Error(r.error)); } catch (e) { reject(e); } });
+      res.on('end', () => { try { const r = JSON.parse(data); r.ok ? resolve({ result: r.result, pending: r.pending || [] }) : reject(new Error(r.error)); } catch (e) { reject(e); } });
     });
     if (hooks) hooks.cancel = () => req.destroy();
     req.on('error', reject);
@@ -236,13 +237,21 @@ function postToHub(tool, args, client, hooks) {
   });
 }
 async function callApp(tool, args, client, hooks) {
-  const here = () => tool === 'wait_for_message' ? hubWait(args, PROC, hooks) : sendToApp(tool, args, client);
-  if (isHub) return here();
+  if (isHub) return hubCall(tool, args, client, hooks);
   try { return await postToHub(tool, args, client, hooks); }
   catch (e) {
     if (e.code !== 'ECONNREFUSED' || !(await becomeHub())) throw e;
-    return here();
+    return hubCall(tool, args, client, hooks);
   }
+}
+/* in the hub: run the call, and hand back whatever the user wrote that this copy has not been given yet,
+   so an assistant that is working here notices the message even when it is not listening for one */
+async function hubCall(tool, args, client, hooks, proc = PROC) {
+  if (tool === 'wait_for_message') {
+    const result = await hubWait(args, proc, hooks);
+    return result === CANCELLED ? CANCELLED : { result, pending: [] };
+  }
+  return { result: await sendToApp(tool, args, client), pending: freshFor(proc) };
 }
 
 /* ---------- MCP over stdio ---------- */
@@ -287,10 +296,13 @@ async function handle(msg) {
     inflight.set(id, hooks);
     const tick = keepAlive(name, params);
     try {
-      const result = await callApp(name, (params && params.arguments) || {}, clientName, hooks);
-      if (hooks.cancelled || result === CANCELLED) return;
+      const out = await callApp(name, (params && params.arguments) || {}, clientName, hooks);
+      if (hooks.cancelled || out === CANCELLED) return;
+      const { result, pending } = out;
       const nothing = name === 'wait_for_message' && Array.isArray(result) && !result.length;
-      return reply(id, { content: [{ type: 'text', text: nothing ? NO_MSG : typeof result === 'string' ? result : JSON.stringify(result, null, 2) }] });
+      let text = nothing ? NO_MSG : typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+      if (pending && pending.length) text += '\n\n' + NEW_MSG + pending.map(m => '\n- "' + m.text + '"').join('');
+      return reply(id, { content: [{ type: 'text', text }] });
     } catch (e) {
       if (hooks.cancelled) return;
       return reply(id, { content: [{ type: 'text', text: e.message }], isError: true });
