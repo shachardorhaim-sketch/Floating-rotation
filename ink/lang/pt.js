@@ -478,8 +478,8 @@ window.INK_I18N = {
 "מחובר! אפשר לבקש מקלוד לעבוד ב-Floating Ink.": "Conectado! Você pode pedir ao Claude para trabalhar no Floating Ink.",
 "מחכה למחבר של Floating Ink במחשב… אם עוד לא התקנת אותו, ההוראות למטה.": "Aguardando o conector do Floating Ink no computador… Se você ainda não instalou, os passos estão abaixo.",
 "מסמנים כאן למעלה את התיבה. אם הדפדפן שואל אם לאפשר גישה לאפליקציות במחשב, מאשרים.": "Marque a caixa aqui em cima. Se o navegador perguntar se deve permitir o acesso aos apps do dispositivo, permita.",
-"פותחים את הקובץ שירד. אפליקציית Claude במחשב תציע להתקין אותו, ומאשרים.": "Abra o arquivo baixado. O app do Claude no computador vai oferecer para instalar: confirme.",
-"פתיחה": "Abrir"
+"פתיחה": "Abrir",
+"באפליקציית Claude שבמחשב: הגדרות ← Plugins (תוספים) ← Add ← Upload plugin, ובוחרים את הקובץ שירד.": "No app do Claude no computador: Configurações → Plugins → Add → Upload plugin, e escolha o arquivo que você baixou."
 },
 "plurals": {
 "{n} מילים": {

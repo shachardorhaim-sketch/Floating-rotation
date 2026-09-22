@@ -1,0 +1,16 @@
+{
+  "name": "floating-ink",
+  "displayName": "Floating Ink",
+  "version": "1.0.0",
+  "description": "Work with Claude inside Floating Ink, the word processor from floatingrotations.com: Claude reads, writes and edits your documents while you watch. Open Floating Ink, click the robot button and turn on \"Connect AI\".",
+  "author": { "name": "Floating rotation", "url": "https://floatingrotations.com" },
+  "homepage": "https://floatingrotations.com/ink/",
+  "license": "MIT",
+  "keywords": ["writing", "documents", "word processor", "floating ink"],
+  "mcpServers": {
+    "floating-ink": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/index.js"]
+    }
+  }
+}

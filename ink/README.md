@@ -29,7 +29,10 @@ python ink/tools/i18n_check.py
 - `connector/server/index.js` — המחבר: שרת MCP בלי תלויות, שקלוד מפעיל ומדבר איתו דרך stdin/stdout. הוא פותח את `http://127.0.0.1:47821`, והאפליקציה בדפדפן מתחברת אליו כשמסמנים "לאפשר ל-AI לעבוד": היא מקבלת כל בקשה כ-Server-Sent Event, מריצה אותה על המסמכים שבדפדפן ושולחת את התוצאה ב-POST. המסמכים לא יוצאים מהמחשב, חוץ ממה שקלוד קורא.
 - כמה חלונות של קלוד יכולים להיות מחוברים ביחד: העותק הראשון של המחבר מחזיק את הפורט, והאחרים מעבירים אליו את הבקשות (`/call`).
 - הכלים: `list_documents`, `read_document`, `create_document`, `write_in_document`, `replace_text`, `replace_document` (שומר קודם גרסה), `rename_document`, `send_message`, `read_messages`. התוכן עובר ב-Markdown (`mdToHtml` / `htmlToMd`).
-- `connector/floating-ink.mcpb` — הקובץ שאפליקציית Claude במחשב מתקינה כתוסף (zip של `manifest.json`, `icon.png` ו-`server/`). בונים אותו מחדש אחרי שינוי במחבר:
+- שתי אריזות של אותו מחבר, כי לגרסאות שונות של אפליקציית Claude יש מסכים שונים:
+  - `connector/floating-ink-plugin.zip` — תוסף (`.claude-plugin/plugin.json` עם `mcpServers`). מתקינים בהגדרות ← Plugins ← Add ← Upload plugin. זו הדרך שעבדה בגרסה של ספטמבר 2026, והקישור בחלונית מצביע עליה.
+  - `connector/floating-ink.mcpb` — תוסף בפורמט הישן (`manifest.json` ו-`server/`), למסך Extensions. בגרסה החדשה אין מסך כזה, ומסך Connectors מקבל רק כתובות אינטרנט.
+  - בונים את שתיהן מחדש אחרי שינוי במחבר:
 
 ```bash
 python ink/tools/build_connector.py
