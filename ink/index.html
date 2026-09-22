@@ -3585,13 +3585,17 @@ function linkAdd(m) {
 }
 function renderLinkPanel() {
   $('#linkOn').checked = !!PREFS.aiLink;
-  $('#linkHelp').open = LINK.state !== 'ready';
   renderLinkState(); renderLinkLog();
 }
 function renderLinkState() {
   const b = $('#linkState');
-  b.classList.toggle('ready', LINK.state === 'ready');
-  b.textContent = LINK.state === 'ready' ? T('מחובר! אפשר לבקש מקלוד לעבוד ב-Floating Ink.')
+  const ready = LINK.state === 'ready';
+  b.classList.toggle('ready', ready);
+  // once it's connected the how-to is done with: it goes away, and comes back open if the link drops
+  const help = $('#linkHelp');
+  help.hidden = ready;
+  help.open = true;
+  b.textContent = ready ? T('מחובר! אפשר לבקש מקלוד לעבוד ב-Floating Ink.')
     : LINK.state === 'waiting' ? T('מחכה למחבר של Floating Ink במחשב… אם עוד לא התקנת אותו, ההוראות למטה.')
     : T('כבוי. כדי שקלוד יוכל לעבוד כאן, מסמנים את התיבה למעלה.');
 }
