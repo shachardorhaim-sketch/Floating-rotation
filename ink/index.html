@@ -3,6 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+/* the language: the one chosen on the site (flrot:lang, shared with the games), else Hebrew if the browser
+   lists it at all, else the browser's first language we have. Anything but Hebrew loads lang/<code>.js
+   before the app starts; Hebrew is the source text inside the app */
+(function () {
+  var all = ['he', 'en', 'ar', 'zh', 'es', 'fr', 'pt', 'ru', 'de'], l = null, i, c;
+  try { l = localStorage.getItem('flrot:lang'); } catch (e) {}
+  if (all.indexOf(l) < 0) {
+    var nav = navigator.languages || [navigator.language || ''], codes = [];
+    for (i = 0; i < nav.length; i++) { c = String(nav[i]).slice(0, 2).toLowerCase(); codes.push(c === 'iw' ? 'he' : c); }
+    l = codes.indexOf('he') >= 0 ? 'he' : null;
+    for (i = 0; i < codes.length && !l; i++) if (all.indexOf(codes[i]) >= 0) l = codes[i];
+    l = l || 'he';
+  }
+  var root = document.documentElement;
+  root.lang = l; root.dir = l === 'he' || l === 'ar' ? 'rtl' : 'ltr';
+  /* scripts the Hebrew fonts don't cover: their own interface font, and two document fonts (FONTS in the app) */
+  var f = { ar: ['"IBM Plex Sans Arabic"', 'Amiri:wght@400;700&family=Cairo:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700'],
+            ru: ['"Noto Sans"', 'Noto+Sans:wght@400;500;600;700&family=Noto+Serif:wght@400;700'],
+            zh: ['"Noto Sans SC"', 'Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;700'] }[l];
+  if (f) {
+    document.write('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=' + f[1] + '&display=swap">');
+    root.style.setProperty('--ui', f[0] + ',"IBM Plex Sans Hebrew","Segoe UI",Arial,sans-serif');
+  }
+  if (l !== 'he') document.write('<script src="lang/' + l + '.js"><\/script>');
+})();
+</script>
 <title>Floating Ink</title>
 <meta name="description" content="Floating Ink — מעבד תמלילים בעברית: עיצוב כמו בוורד, טבלאות, תמונות, ציור ביד ושמירה כ-Word וכ-PDF. המסמכים נשמרים רק במכשיר שלך.">
 <meta property="og:type" content="website">
@@ -24,7 +51,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link id="docFonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&family=Amatic+SC:wght@400;700&family=Assistant:wght@400;700&family=Bellefair&family=David+Libre:wght@400;700&family=Frank+Ruhl+Libre:wght@400;700;900&family=Fredoka:wght@400;700&family=Heebo:wght@400;700&family=IBM+Plex+Mono&family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&family=Karantina:wght@400;700&family=Miriam+Libre:wght@400;700&family=Noto+Sans+Hebrew:wght@400;700&family=Noto+Serif+Hebrew:wght@400;700&family=Rubik:wght@400;700&family=Secular+One&family=Solitreo&family=Suez+One&family=Varela+Round&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&amp;icon_names=abc,add,add_column_left,add_column_right,add_photo_alternate,add_reaction,add_row_above,add_row_below,arrow_back,arrow_drop_down,article,auto_awesome,auto_stories,backup,bar_chart,block,bookmark_add,calculate,calendar_today,chat,check,check_circle,checklist,checklist_rtl,chips,class,close,cloud_done,cloud_off,code,compress,computer,content_copy,crop_landscape,crop_portrait,css,delete,delete_forever,delete_sweep,description,desk,docs,done,done_all,download,draw,edit,edit_calendar,edit_note,emoji_symbols,error,event,expand,expand_less,expand_more,face,find_replace,flag,flip,folder_open,font_download,format_align_center,format_align_justify,format_align_left,format_align_right,format_bold,format_clear,format_color_fill,format_color_text,format_indent_decrease,format_indent_increase,format_italic,format_line_spacing,format_list_bulleted,format_list_numbered_rtl,format_paint,format_textdirection_l_to_r,format_textdirection_r_to_l,format_underlined,fullscreen,fullscreen_exit,function,gif,group,history,home,horizontal_rule,hourglass_top,html,image,info,ink_eraser,ink_highlighter,input,insert_page_break,install_desktop,keyboard,label,landscape,language,light,lightbulb,line_weight,link,list,lock,mail,margin,markdown,match_case,menu,more_horiz,movie,note,note_add,notes,pause,picture_as_pdf,play_arrow,playlist_add,portrait,print,record_voice_over,redo,refresh,remove,resize,restore,restore_from_trash,save,school,script,search,segment,select,select_all,send,settings_backup_restore,space_bar,spellcheck,star,start,sticky_note_2,stop,storage,strikethrough_s,style,subscript,summarize,superscript,swap_horiz,sync,tab,table,table_rows,tabs,tag,text_decrease,text_fields,text_increase,title,toast,toc,toolbar,translate,undo,upload_file,view_column,visibility,warning,west,width,work&amp;display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&amp;icon_names=abc,add,add_column_left,add_column_right,add_photo_alternate,add_reaction,add_row_above,add_row_below,arrow_back,arrow_drop_down,article,auto_awesome,auto_stories,backup,bar_chart,block,bookmark_add,calculate,calendar_today,chat,check,check_circle,checklist,checklist_rtl,chips,class,close,cloud_done,cloud_off,code,compress,computer,content_copy,crop_landscape,crop_portrait,css,delete,delete_forever,delete_sweep,description,desk,docs,done,done_all,download,draw,edit,edit_calendar,edit_note,emoji_symbols,error,event,expand,expand_less,expand_more,face,find_replace,flag,flip,folder_open,font_download,format_align_center,format_align_justify,format_align_left,format_align_right,format_bold,format_clear,format_color_fill,format_color_text,format_indent_decrease,format_indent_increase,format_italic,format_line_spacing,format_list_bulleted,format_list_numbered,format_list_numbered_rtl,format_paint,format_textdirection_l_to_r,format_textdirection_r_to_l,format_underlined,fullscreen,fullscreen_exit,function,gif,group,history,home,horizontal_rule,hourglass_top,html,image,info,ink_eraser,ink_highlighter,input,insert_page_break,install_desktop,keyboard,label,landscape,language,light,lightbulb,line_weight,link,list,lock,mail,margin,markdown,match_case,menu,more_horiz,movie,note,note_add,notes,pause,picture_as_pdf,play_arrow,playlist_add,portrait,print,record_voice_over,redo,refresh,remove,resize,restore,restore_from_trash,save,school,script,search,segment,select,select_all,send,settings_backup_restore,space_bar,spellcheck,star,start,sticky_note_2,stop,storage,strikethrough_s,style,subscript,summarize,superscript,swap_horiz,sync,tab,table,table_rows,tabs,tag,text_decrease,text_fields,text_increase,title,toast,toc,toolbar,translate,undo,upload_file,view_column,visibility,warning,west,width,work&amp;display=block">
 <style id="appcss">
 :root{
   --desk:#e3e8ef;--surface:#f9fafc;--surface-2:#f1f4f8;--surface-3:#e6ebf2;
@@ -69,6 +96,7 @@ button{cursor:pointer}
 .ms{font-family:"Material Symbols Rounded";font-weight:normal;font-style:normal;font-size:20px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;width:1em;overflow:hidden;flex:none;font-feature-settings:"liga";-webkit-font-smoothing:antialiased;font-variation-settings:"FILL" 0,"wght" 400,"GRAD" 0,"opsz" 24;user-select:none}
 .ms.fill{font-variation-settings:"FILL" 1,"wght" 400,"GRAD" 0,"opsz" 24}
 .flip{transform:scaleX(-1)}
+:root[dir=ltr] .flip{transform:none}
 .grow{flex:1}
 .muted{color:var(--text-3)}
 .small{font-size:12px}
@@ -124,6 +152,15 @@ button{cursor:pointer}
 .gb{flex:1;display:flex;align-items:center;gap:3px}
 .gb.col{flex-direction:column;align-items:stretch;justify-content:center;gap:4px}
 .row{display:flex;align-items:center;gap:2px}
+/* left to right, the alignment buttons read left, center, right, justify */
+:root[dir=ltr] .row>[data-cmd=alignL]{order:1}
+:root[dir=ltr] .row>[data-cmd=alignC]{order:2}
+:root[dir=ltr] .row>[data-cmd=alignR]{order:3}
+:root[dir=ltr] .row>[data-cmd=alignJ],:root[dir=ltr] .row>[data-cmd=alignJ]~*{order:4}
+.lang-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;min-width:280px}
+.lang-grid button{border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:8px;padding:8px 6px;font-weight:600;font-size:13.5px}
+.lang-grid button:hover{border-color:var(--accent)}
+.lang-grid button.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .gn{font-size:11px;color:var(--text-3);text-align:center;padding:3px 0 1px;white-space:nowrap}
 .rb{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:30px;height:30px;padding:0 5px;border:1px solid transparent;border-radius:7px;background:none;color:var(--text);font-weight:500;font-size:12.5px;white-space:nowrap}
 .rb:hover{background:var(--surface-3)}
@@ -186,7 +223,7 @@ button{cursor:pointer}
 /* ---------- document content (shared with exports) ---------- */
 .doc{font-family:var(--doc-font,"Assistant"),"Assistant",Arial,sans-serif;font-size:var(--doc-size,12pt);line-height:var(--doc-lh,1.5);color:#1b1f2a;overflow-wrap:break-word;text-align:start}
 .doc::after{content:"";display:block;clear:both}
-.doc.empty>p:first-child::before{content:"מתחילים לכתוב כאן…";position:absolute;color:#9aa3b6;pointer-events:none}
+.doc.empty>p:first-child::before{content:var(--t-start,"מתחילים לכתוב כאן…");position:absolute;color:#9aa3b6;pointer-events:none}
 .doc p{margin:0 0 .5em}
 .doc h1{font-size:2em;line-height:1.2;margin:.5em 0 .35em;font-weight:700}
 .doc h2{font-size:1.5em;line-height:1.25;margin:.8em 0 .3em;font-weight:700}
@@ -215,7 +252,7 @@ button{cursor:pointer}
 .doc a{color:#2743d8;text-decoration:underline}
 .doc hr{border:0;border-top:1.5px solid #c3cad8;margin:1em 0}
 .doc hr.page-break{border-top:1.5px dashed #97a3bd;margin:1.6em 0;overflow:visible;position:relative}
-.doc hr.page-break::after{content:"מעבר עמוד";position:absolute;top:-.8em;left:50%;transform:translateX(-50%);padding:0 .7em;background:var(--page-color,#fff);font:500 11px/1.6 var(--ui);color:#8a93a8}
+.doc hr.page-break::after{content:var(--t-break,"מעבר עמוד");position:absolute;top:-.8em;left:50%;transform:translateX(-50%);padding:0 .7em;background:var(--page-color,#fff);font:500 11px/1.6 var(--ui);color:#8a93a8}
 .doc .callout{margin:.6em 0;padding:.6em 1em;border-radius:6px;border-inline-start:4px solid}
 .doc .callout>:last-child{margin-bottom:0}
 .doc .callout-note{background:#e9eeff;border-color:#2743d8}
@@ -435,7 +472,7 @@ select.field{padding:0 8px}
 </head>
 <body>
 
-<div id="app" dir="rtl" lang="he">
+<div id="app">
   <header id="appbar">
     <button class="icon-btn" id="btnDrawer" title="המסמכים שלי" aria-label="המסמכים שלי" aria-expanded="true"><span class="ms">folder_open</span></button>
     <div class="brand" aria-hidden="true">
@@ -447,6 +484,7 @@ select.field{padding:0 8px}
     <button id="fileChip" class="file-chip" type="button" hidden><span class="ms">description</span><span class="txt"></span></button>
     <div class="appbar-end">
       <span class="private" id="privateBadge"><span class="ms">lock</span><span>פרטי</span></span>
+      <button class="icon-btn" id="btnLang" title="שפה" aria-label="שפה"><span class="ms">language</span></button>
       <button class="icon-btn hide-sm" data-cmd="focus" title="מצב ריכוז: רק הדף (Esc ליציאה)" aria-label="מצב ריכוז"><span class="ms">fullscreen</span></button>
       <button class="install-btn" id="btnInstall" hidden title="התקנה במחשב או בטלפון, כמו תוכנה רגילה"><span class="ms">install_desktop</span><span>התקנה</span></button>
       <button class="ai-btn ai-only" data-cmd="aiPanel" title="עוזר כתיבה חכם"><span class="ms">auto_awesome</span><span>עוזר חכם</span></button>
@@ -488,9 +526,9 @@ select.field{padding:0 8px}
 
     <div class="panel" data-panel="home">
       <div class="grp"><div class="gb col">
-        <button class="rb" data-cmd="undo" title="ביטול (Ctrl+Z)" aria-label="ביטול"><span class="ms flip">undo</span></button>
+        <button class="rb" data-cmd="undo" title="ביטול (Ctrl+Z)" aria-label="ביטול פעולה"><span class="ms flip">undo</span></button>
         <button class="rb" data-cmd="redo" title="חזרה (Ctrl+Y)" aria-label="חזרה"><span class="ms flip">redo</span></button>
-      </div><div class="gn">ביטול</div></div>
+      </div><div class="gn" data-t="ביטול@undo">ביטול</div></div>
       <div class="grp"><div class="gb col">
         <div class="row">
           <select id="fontSel" class="sel font-sel" title="גופן" aria-label="גופן"></select>
@@ -670,7 +708,7 @@ select.field{padding:0 8px}
       <div id="banner" hidden></div>
       <div id="sheet" class="paper-plain">
         <div id="guides" aria-hidden="true"></div>
-        <div id="editor" class="doc" contenteditable="false" spellcheck="true" dir="rtl" lang="he" role="textbox" aria-multiline="true" aria-label="גוף המסמך"></div>
+        <div id="editor" class="doc" contenteditable="false" spellcheck="true" dir="rtl" role="textbox" aria-multiline="true" aria-label="גוף המסמך"></div>
       </div>
       <div id="loading"><span class="dots">טוען</span></div>
     </section>
@@ -779,19 +817,53 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 function lsGet(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } }
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } }
 function lsDel(k) { try { localStorage.removeItem(k); } catch {} }
-const nf = new Intl.NumberFormat('he-IL');
+/* language. <head> loads lang/<code>.js for anything but Hebrew, which sets window.INK_I18N.
+   Hebrew is the source text: the key of every translation, and the fallback when one is missing */
+const I18N = window.INK_I18N || null;
+if (!I18N && document.documentElement.lang !== 'he') {
+  // the translation didn't load (offline before it was ever saved): Hebrew, laid out for Hebrew
+  Object.assign(document.documentElement, { lang: 'he', dir: 'rtl' });
+  document.documentElement.style.removeProperty('--ui');
+}
+const LANG = (I18N && I18N.lang) || 'he';
+const LOCALE = (I18N && I18N.locale) || 'he-IL';
+const UI_DIR = (I18N && I18N.dir) || 'rtl';
+const fill = (s, args) => args.length ? s.replace(/\{(\d)\}/g, (m, i) => args[i] ?? '') : s;
+/* T('text {0}', x). A key can carry a context after @ ('ביטול@undo') when one Hebrew word means two things */
+function T(he, ...args) { return fill((I18N && I18N.strings[he]) || he.replace(/@\w+$/, ''), args); }
+/* marks a Hebrew label that is stored and shown later through T, so the translation list picks it up */
+const N_ = he => he;
+/* counted phrases: the key is the Hebrew plural with {n}, and each language picks its form by its own plural rules */
+const HE_ONE = {
+  '{n} מילים': 'מילה אחת', '{n} תווים': 'תו אחד', '{n} דקות': 'דקה', '{n} עמודות': 'עמודה אחת', '{n} שורות': 'שורה אחת',
+  'תוקנו {n} רווחים מיותרים': 'תוקן רווח מיותר אחד', 'הוחלפו {n} מקומות': 'הוחלף מקום אחד', 'שוחזרו {n} מסמכים': 'שוחזר מסמך אחד',
+  '{n} מסמכים יימחקו לתמיד. אי אפשר לבטל את זה.': 'מסמך אחד יימחק לתמיד. אי אפשר לבטל את זה.',
+  'בגיבוי יש {n} מסמכים. הם יתווספו למחברת כמסמכים חדשים, בלי למחוק שום דבר.': 'בגיבוי יש מסמך אחד. הוא יתווסף למחברת כמסמך חדש, בלי למחוק שום דבר.',
+};
+const pluralRules = new Intl.PluralRules(LOCALE);
+function TN(he, n, ...args) {
+  const f = I18N && I18N.plurals && I18N.plurals[he];
+  const s = f ? (typeof f === 'string' ? f : f[pluralRules.select(n)] || f.other) : (n === 1 && HE_ONE[he]) || he;
+  return fill(s.replace(/\{n\}/g, fmt(n)), args);
+}
+const nf = new Intl.NumberFormat(LOCALE);
 const fmt = n => nf.format(n);
 function relTime(t) {
   const s = (Date.now() - t) / 1000;
+  if (LANG !== 'he') {
+    if (s >= 86400 * 7) return new Date(t).toLocaleDateString(LOCALE);
+    const rtf = new Intl.RelativeTimeFormat(LOCALE, { numeric: 'auto' }), ago = (v, u) => rtf.format(-Math.max(1, Math.round(v)), u);
+    return s < 45 ? rtf.format(0, 'second') : s < 3570 ? ago(s / 60, 'minute') : s < 86400 ? ago(s / 3600, 'hour') : ago(s / 86400, 'day');
+  }
   if (s < 45) return 'עכשיו';
   const m = Math.round(s / 60), hr = Math.round(s / 3600), d = Math.round(s / 86400);
   if (s < 3570) return m <= 1 ? 'לפני דקה' : `לפני ${m} דקות`;
   if (s < 86400) return hr <= 1 ? 'לפני שעה' : hr === 2 ? 'לפני שעתיים' : `לפני ${hr} שעות`;
   if (s < 86400 * 7) return d <= 1 ? 'אתמול' : d === 2 ? 'שלשום' : `לפני ${d} ימים`;
-  return new Date(t).toLocaleDateString('he-IL');
+  return new Date(t).toLocaleDateString(LOCALE);
 }
-const fmtDateTime = t => new Date(t).toLocaleString('he-IL', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-const wordsLabel = n => n === 1 ? 'מילה אחת' : fmt(n) + ' מילים';
+const fmtDateTime = t => new Date(t).toLocaleString(LOCALE, { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+const wordsLabel = n => TN('{n} מילים', n);
 const WORD_RE = /[\p{L}\p{N}][\p{L}\p{N}\p{M}'"״׳’-]*/gu;
 const countWords = t => (String(t).match(WORD_RE) || []).length;
 const firstFamily = ff => String(ff || '').split(',')[0].trim().replace(/^["']|["']$/g, '');
@@ -803,7 +875,7 @@ function rgbHex(c) {
   if (m[4] !== undefined) { const a = m[4].endsWith('%') ? parseFloat(m[4]) / 100 : parseFloat(m[4]); if (a === 0) return null; }
   return [m[1], m[2], m[3]].map(x => (+x).toString(16).padStart(2, '0')).join('');
 }
-const safeName = t => String(t || '').replace(/[\\/:*?"<>|\x00-\x1f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'מסמך';
+const safeName = t => String(t || '').replace(/[\\/:*?"<>|\x00-\x1f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || T('מסמך');
 const scriptCache = {};
 function loadScript(src) {
   return scriptCache[src] || (scriptCache[src] = new Promise((res, rej) => {
@@ -825,16 +897,18 @@ const LIB = {
   mammoth: 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.12.3/mammoth.browser.min.js',
   html2pdf: 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.14.0/html2pdf.bundle.min.js',
 };
-const FONTS = ['Assistant', 'Heebo', 'Rubik', 'Noto Sans Hebrew', 'IBM Plex Sans Hebrew', 'Varela Round', 'Alef', 'Fredoka', 'Frank Ruhl Libre', 'David Libre', 'Noto Serif Hebrew', 'Miriam Libre', 'Bellefair', 'Suez One', 'Secular One', 'Karantina', 'Amatic SC', 'Solitreo', 'Arial', 'Times New Roman', 'Courier New'];
+/* Arabic, Russian and Chinese get two fonts that have their letters first (loaded in <head>) */
+const LANG_FONTS = { ar: ['Cairo', 'Amiri'], ru: ['Noto Sans', 'Noto Serif'], zh: ['Noto Sans SC', 'Noto Serif SC'] }[LANG] || [];
+const FONTS = [...LANG_FONTS, 'Assistant', 'Heebo', 'Rubik', 'Noto Sans Hebrew', 'IBM Plex Sans Hebrew', 'Varela Round', 'Alef', 'Fredoka', 'Frank Ruhl Libre', 'David Libre', 'Noto Serif Hebrew', 'Miriam Libre', 'Bellefair', 'Suez One', 'Secular One', 'Karantina', 'Amatic SC', 'Solitreo', 'Arial', 'Times New Roman', 'Courier New'];
 const FONT_NAMES = new Set(FONTS);
 const SIZES = [8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 60, 72];
 const PAGE_SIZES = { A4: [210, 297], A5: [148, 210], Letter: [215.9, 279.4] };
 const MARGINS = { narrow: 12.7, normal: 25.4, wide: 38.1 };
-const PAGE_COLORS = [['#ffffff', 'לבן'], ['#fbf8f1', 'שמנת'], ['#eef3ff', 'תכלת'], ['#eef8f1', 'מנטה'], ['#fdf0f4', 'ורוד'], ['#f1f2f5', 'אפור']];
-const DEFAULT_PAGE = { size: 'A4', orient: 'portrait', margin: 'normal', paper: 'plain', color: '#ffffff', font: 'Assistant', fontSize: 12, lh: 1.5 };
-const TEXT_COLORS = [['#1b1f2a', 'שחור'], ['#5a6580', 'אפור'], ['#2743d8', 'כחול'], ['#1a86d0', 'תכלת'], ['#1d8249', 'ירוק'], ['#0e8a8c', 'טורקיז'], ['#7a3fc9', 'סגול'], ['#c2388a', 'ורוד'], ['#cf3727', 'אדום'], ['#d9701a', 'כתום'], ['#8a5a1e', 'חום'], ['#ffffff', 'לבן']];
-const HL_COLORS = [['#ffe45c', 'צהוב'], ['#b9f0ae', 'ירוק'], ['#bfe0ff', 'כחול'], ['#ffc9e2', 'ורוד'], ['#ffd5a8', 'כתום'], ['#e3d3ff', 'סגול'], ['#d9dde6', 'אפור'], ['transparent', 'בלי מרקר']];
-const CELL_COLORS = [['#eaf0ff', 'כחול'], ['#e3f4e9', 'ירוק'], ['#fff2d6', 'צהוב'], ['#fde7e3', 'אדום'], ['#f1e9ff', 'סגול'], ['#eef0f4', 'אפור'], ['transparent', 'בלי צבע']];
+const PAGE_COLORS = [['#ffffff', T('לבן')], ['#fbf8f1', T('שמנת')], ['#eef3ff', T('תכלת')], ['#eef8f1', T('מנטה')], ['#fdf0f4', T('ורוד')], ['#f1f2f5', T('אפור')]];
+const DEFAULT_PAGE = { size: 'A4', orient: 'portrait', margin: 'normal', paper: 'plain', color: '#ffffff', font: LANG_FONTS[0] || 'Assistant', fontSize: 12, lh: 1.5 };
+const TEXT_COLORS = [['#1b1f2a', T('שחור')], ['#5a6580', T('אפור')], ['#2743d8', T('כחול')], ['#1a86d0', T('תכלת')], ['#1d8249', T('ירוק')], ['#0e8a8c', T('טורקיז')], ['#7a3fc9', T('סגול')], ['#c2388a', T('ורוד')], ['#cf3727', T('אדום')], ['#d9701a', T('כתום')], ['#8a5a1e', T('חום')], ['#ffffff', T('לבן')]];
+const HL_COLORS = [['#ffe45c', T('צהוב')], ['#b9f0ae', T('ירוק')], ['#bfe0ff', T('כחול')], ['#ffc9e2', T('ורוד')], ['#ffd5a8', T('כתום')], ['#e3d3ff', T('סגול')], ['#d9dde6', T('אפור')], ['transparent', T('בלי מרקר')]];
+const CELL_COLORS = [['#eaf0ff', T('כחול')], ['#e3f4e9', T('ירוק')], ['#fff2d6', T('צהוב')], ['#fde7e3', T('אדום')], ['#f1e9ff', T('סגול')], ['#eef0f4', T('אפור')], ['transparent', T('בלי צבע')]];
 
 /* =========================================================
    state
@@ -953,10 +1027,10 @@ class IdbStore {
 }
 function storeErrMsg(e) {
   const c = e && e.code;
-  if (c === 'quota_exceeded') return 'אין מקום למסמכים נוספים. אפשר לפנות מקום בסל המחזור.';
-  if (c === 'invalid_argument') return 'אין הרשאה לשמור כאן.';
-  if (c === 'revoked' || c === 'not_granted') return 'הגישה לשמירה נסגרה. כדאי לרענן את הדף.';
-  return S.mode === 'db' ? 'אין חיבור כרגע. ננסה לשמור שוב.' : 'השמירה במכשיר לא הצליחה. ננסה שוב.';
+  if (c === 'quota_exceeded') return T('אין מקום למסמכים נוספים. אפשר לפנות מקום בסל המחזור.');
+  if (c === 'invalid_argument') return T('אין הרשאה לשמור כאן.');
+  if (c === 'revoked' || c === 'not_granted') return T('הגישה לשמירה נסגרה. כדאי לרענן את הדף.');
+  return S.mode === 'db' ? T('אין חיבור כרגע. ננסה לשמור שוב.') : T('השמירה במכשיר לא הצליחה. ננסה שוב.');
 }
 async function withRetry(fn) {
   try { return await fn(); }
@@ -1117,7 +1191,7 @@ function applySnap(sn) {
 }
 function undo() {
   snapshotSoon.cancel(); snapshot();
-  if (H.idx <= 0) { toast('אין מה לבטל', { icon: 'undo' }); return; }
+  if (H.idx <= 0) { toast(T('אין מה לבטל'), { icon: 'undo' }); return; }
   H.idx--; applySnap(H.stack[H.idx]);
 }
 function redo() {
@@ -1167,7 +1241,7 @@ function modal({ title, body, actions = [], wide = false, onClose }) {
     close(v) { if (done) return; done = true; back.remove(); const i = MODALS.indexOf(m); if (i >= 0) MODALS.splice(i, 1); if (onClose) onClose(v); },
   };
   const box = h('div', { class: 'modal' + (wide ? ' wide' : ''), role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
-    h('header', {}, h('h3', { text: title }), h('button', { class: 'icon-btn', 'aria-label': 'סגירה', onclick: () => m.close(null) }, icon('close'))),
+    h('header', {}, h('h3', { text: title }), h('button', { class: 'icon-btn', 'aria-label': T('סגירה'), onclick: () => m.close(null) }, icon('close'))),
     bodyEl);
   if (actions.length) box.append(h('footer', {}, actions.map(a => h('button', {
     class: 'btn' + (a.kind ? ' ' + a.kind : ''),
@@ -1180,14 +1254,14 @@ function modal({ title, body, actions = [], wide = false, onClose }) {
   setTimeout(() => { const f = box.querySelector('[autofocus]') || box.querySelector('input:not([type=range]):not([type=color]),textarea,select'); if (f) f.focus(); }, 30);
   return m;
 }
-function confirmBox(title, text, okLabel = 'אישור', danger = false) {
-  return new Promise(res => modal({ title, body: h('p', { text }), actions: [{ label: okLabel, kind: danger ? 'danger' : 'primary', value: true }, { label: 'ביטול', value: false }], onClose: v => res(v === true) }));
+function confirmBox(title, text, okLabel = T('אישור'), danger = false) {
+  return new Promise(res => modal({ title, body: h('p', { text }), actions: [{ label: okLabel, kind: danger ? 'danger' : 'primary', value: true }, { label: T('ביטול'), value: false }], onClose: v => res(v === true) }));
 }
-function promptBox(title, label, value = '', okLabel = 'שמירה') {
+function promptBox(title, label, value = '', okLabel = T('שמירה')) {
   return new Promise(res => {
     let out = null;
     const inp = h('input', { class: 'field', type: 'text', value, autofocus: true });
-    const m = modal({ title, body: h('label', { class: 'fld' }, h('span', { text: label }), inp), actions: [{ label: okLabel, kind: 'primary', run: () => { out = inp.value; } }, { label: 'ביטול', value: false }], onClose: v => res(v === true ? out : null) });
+    const m = modal({ title, body: h('label', { class: 'fld' }, h('span', { text: label }), inp), actions: [{ label: okLabel, kind: 'primary', run: () => { out = inp.value; } }, { label: T('ביטול'), value: false }], onClose: v => res(v === true ? out : null) });
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') { out = inp.value; m.close(true); } });
     setTimeout(() => inp.select(), 40);
   });
@@ -1198,7 +1272,7 @@ function openPop(anchor, content) {
   closePopover();
   const pop = $('#pop'); pop.textContent = ''; pop.append(content); pop.hidden = false;
   const r = anchor.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
-  const left = clamp(r.right - pw, 8, Math.max(8, innerWidth - pw - 8));
+  const left = clamp(UI_DIR === 'rtl' ? r.right - pw : r.left, 8, Math.max(8, innerWidth - pw - 8));
   let top = r.bottom + 6;
   if (top + ph > innerHeight - 8) top = Math.max(8, r.top - ph - 6);
   pop.style.left = left + 'px'; pop.style.top = top + 'px';
@@ -1214,12 +1288,12 @@ function showBanner(text, actions = [], ic = 'info') {
 }
 function hideBanner() { $('#banner').hidden = true; }
 async function copyText(t) {
-  try { await navigator.clipboard.writeText(t); toast('הועתק', { icon: 'content_copy' }); return; } catch {}
+  try { await navigator.clipboard.writeText(t); toast(T('הועתק'), { icon: 'content_copy' }); return; } catch {}
   const ta = h('textarea', { style: { position: 'fixed', opacity: '0', top: '0' } }); ta.value = t;
   document.body.append(ta); ta.select();
   let ok = false; try { ok = document.execCommand('copy'); } catch {}
   ta.remove();
-  toast(ok ? 'הועתק' : 'ההעתקה לא הצליחה. אפשר לסמן את הטקסט ולהעתיק ידנית.');
+  toast(ok ? T('הועתק') : T('ההעתקה לא הצליחה. אפשר לסמן את הטקסט ולהעתיק ידנית.'));
 }
 
 /* =========================================================
@@ -1266,12 +1340,12 @@ function swatches(list, pick) {
   return h('div', { class: 'sw-grid' }, list.map(([c, n]) => h('button', { class: 'sw' + (c === 'transparent' ? ' none' : ''), style: c === 'transparent' ? {} : { background: c }, title: n, 'aria-label': n, onclick: () => { pick(c); closePopover(); } })));
 }
 function openColors(anchor, kind) {
-  const custom = h('input', { type: 'color', value: kind === 'fore' ? S.lastFore : S.lastHl, 'aria-label': 'צבע אחר' });
+  const custom = h('input', { type: 'color', value: kind === 'fore' ? S.lastFore : S.lastHl, 'aria-label': T('צבע אחר') });
   custom.addEventListener('change', () => { applyColor(kind, custom.value); closePopover(); });
   openPop(anchor, h('div', {},
-    h('div', { class: 'pop-t', text: kind === 'fore' ? 'צבע הטקסט' : 'צבע המרקר' }),
+    h('div', { class: 'pop-t', text: kind === 'fore' ? T('צבע הטקסט') : T('צבע המרקר') }),
     swatches(kind === 'fore' ? TEXT_COLORS : HL_COLORS, c => applyColor(kind, c)),
-    h('label', { class: 'custom-c' }, custom, h('span', { text: 'צבע אחר…' }))));
+    h('label', { class: 'custom-c' }, custom, h('span', { text: T('צבע אחר…') }))));
 }
 let painter = null;
 function togglePainter() {
@@ -1283,7 +1357,7 @@ function togglePainter() {
   for (let a = el; a && a !== ed; a = a.parentElement) { const c = getComputedStyle(a); if (c.display !== 'inline') break; if (rgbHex(c.backgroundColor)) { bg = c.backgroundColor; break; } }
   painter = { bold: document.queryCommandState('bold'), italic: document.queryCommandState('italic'), underline: document.queryCommandState('underline'), strikeThrough: document.queryCommandState('strikeThrough'), color: cs.color, bg, font: firstFamily(cs.fontFamily), size: pxToPt(parseFloat(cs.fontSize)) };
   $('#btnPainter').classList.add('on');
-  toast('עכשיו מסמנים את הטקסט שיקבל את העיצוב', { icon: 'format_paint' });
+  toast(T('עכשיו מסמנים את הטקסט שיקבל את העיצוב'), { icon: 'format_paint' });
 }
 function applyPainter() {
   const r = curRange();
@@ -1363,18 +1437,18 @@ function fixNewLi() {
 function openTableGrid(anchor) {
   const R = 8, C = 10;
   const grid = h('div', { class: 'tgrid', style: { gridTemplateColumns: `repeat(${C},20px)` } });
-  const lbl = h('div', { class: 'tg-lbl', text: 'בוחרים גודל' });
+  const lbl = h('div', { class: 'tg-lbl', text: T('בוחרים גודל') });
   const cells = [];
   for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) { const i = h('i', { 'data-r': r, 'data-c': c }); cells.push(i); grid.append(i); }
   grid.addEventListener('mouseover', e => {
     const i = e.target.closest('i'); if (!i) return;
     const rr = +i.dataset.r, cc = +i.dataset.c;
     for (const x of cells) x.classList.toggle('hl', +x.dataset.r <= rr && +x.dataset.c <= cc);
-    lbl.textContent = `${cc + 1} עמודות × ${rr + 1} שורות`;
+    lbl.textContent = `${TN('{n} עמודות', cc + 1)} × ${TN('{n} שורות', rr + 1)}`;
   });
   grid.addEventListener('mousedown', e => e.preventDefault());
   grid.addEventListener('click', e => { const i = e.target.closest('i'); if (!i) return; closePopover(); insertTable(+i.dataset.r + 1, +i.dataset.c + 1); });
-  openPop(anchor, h('div', {}, h('div', { class: 'pop-t', text: 'הוספת טבלה' }), grid, lbl));
+  openPop(anchor, h('div', {}, h('div', { class: 'pop-t', text: T('הוספת טבלה') }), grid, lbl));
 }
 function insertTable(rows, cols) {
   let html = '<table data-new="1"><tbody>';
@@ -1385,7 +1459,7 @@ function insertTable(rows, cols) {
 }
 function tableOp(op) {
   const cell = closestInEd('td,th');
-  if (!cell) { toast('קודם לוחצים בתוך תא בטבלה'); return; }
+  if (!cell) { toast(T('קודם לוחצים בתוך תא בטבלה')); return; }
   const row = cell.parentElement, table = cell.closest('table'), ci = [...row.cells].indexOf(cell);
   snapshot();
   const rtl = getComputedStyle(table).direction === 'rtl';
@@ -1438,8 +1512,8 @@ function selectedCells() {
   return cells.length ? cells : [closestInEd('td,th')].filter(Boolean);
 }
 function openCellColors(anchor) {
-  if (!closestInEd('td,th')) { toast('קודם לוחצים בתוך תא בטבלה'); return; }
-  openPop(anchor, h('div', {}, h('div', { class: 'pop-t', text: 'צבע התא' }), swatches(CELL_COLORS, c => {
+  if (!closestInEd('td,th')) { toast(T('קודם לוחצים בתוך תא בטבלה')); return; }
+  openPop(anchor, h('div', {}, h('div', { class: 'pop-t', text: T('צבע התא') }), swatches(CELL_COLORS, c => {
     snapshot();
     for (const cell of selectedCells()) cell.style.backgroundColor = c === 'transparent' ? '' : c;
     afterChange();
@@ -1481,14 +1555,14 @@ async function storeImage(blob) {
   const a = S.caps.assets;
   if (a) {
     try { const r = await a.upload(blob); return '/_blob/' + r.id; }
-    catch (e) { if (e && e.code === 'quota_or_state') toast('נגמר המקום לתמונות במחברת. התמונה תישמר בתוך המסמך.'); }
+    catch (e) { if (e && e.code === 'quota_or_state') toast(T('נגמר המקום לתמונות במחברת. התמונה תישמר בתוך המסמך.')); }
   }
   const url = await blobToDataURL(blob);
   if (S.mode === 'local' && url.length > 1.5e6) throw new Error('too_big');
   return url;
 }
 async function insertImageBlob(blob, widthPct) {
-  const t = toast('מוסיף את התמונה…', { icon: 'image', ms: 30000 });
+  const t = toast(T('מוסיף את התמונה…'), { icon: 'image', ms: 30000 });
   try {
     const dataUrl = await blobToDataURL(blob);
     const im = await loadImg(dataUrl);
@@ -1496,11 +1570,11 @@ async function insertImageBlob(blob, widthPct) {
     const src = await storeImage(blob);
     insertHTML(`<img src="${esc(src)}" alt="" class="img-center" style="width: ${pct}%">`);
   } catch (e) {
-    toast(e && e.message === 'too_big' ? 'התמונה גדולה מדי לשמירה בדפדפן הזה' : 'לא הצלחתי להוסיף את התמונה');
+    toast(e && e.message === 'too_big' ? T('התמונה גדולה מדי לשמירה בדפדפן הזה') : T('לא הצלחתי להוסיף את התמונה'));
   } finally { t.remove(); }
 }
 async function insertImageFile(file) {
-  if (!/^image\//.test(file.type)) { toast('זה לא קובץ תמונה'); return; }
+  if (!/^image\//.test(file.type)) { toast(T('זה לא קובץ תמונה')); return; }
   const blob = /image\/(gif|svg)/.test(file.type) ? file : await shrinkImage(file, 2000);
   await insertImageBlob(blob);
 }
@@ -1522,7 +1596,7 @@ function openLinkDialog() {
   const txt = h('input', { class: 'field', type: 'text', value: a ? a.textContent : selText });
   const apply = () => {
     const u = normUrl(url.value);
-    if (!u) { toast('הכתובת לא נראית תקינה'); url.focus(); return false; }
+    if (!u) { toast(T('הכתובת לא נראית תקינה')); url.focus(); return false; }
     if (saved) setRange(saved);
     snapshot();
     if (a) { a.setAttribute('href', u); if (txt.value.trim() && txt.value !== a.textContent) a.textContent = txt.value; }
@@ -1530,26 +1604,26 @@ function openLinkDialog() {
     else document.execCommand('insertHTML', false, `<a href="${esc(u)}">${esc(txt.value.trim() || u)}</a>&nbsp;`);
     afterChange();
   };
-  const acts = [{ label: a ? 'עדכון' : 'הוספה', kind: 'primary', run: apply }];
-  if (a) acts.push({ label: 'הסרת הקישור', run: () => { snapshot(); a.replaceWith(...a.childNodes); afterChange(); } });
-  acts.push({ label: 'ביטול', value: false });
-  const m = modal({ title: a ? 'עריכת קישור' : 'הוספת קישור', actions: acts, body: h('div', {},
-    h('label', { class: 'fld' }, h('span', { text: 'כתובת' }), url),
-    h('label', { class: 'fld' }, h('span', { text: 'הטקסט שיופיע במסמך' }), txt),
-    h('p', { class: 'muted small', text: 'כדי לפתוח קישור מתוך המסמך: Ctrl ולחיצה עליו.' })) });
+  const acts = [{ label: a ? T('עדכון') : T('הוספה'), kind: 'primary', run: apply }];
+  if (a) acts.push({ label: T('הסרת הקישור'), run: () => { snapshot(); a.replaceWith(...a.childNodes); afterChange(); } });
+  acts.push({ label: T('ביטול'), value: false });
+  const m = modal({ title: a ? T('עריכת קישור') : T('הוספת קישור'), actions: acts, body: h('div', {},
+    h('label', { class: 'fld' }, h('span', { text: T('כתובת') }), url),
+    h('label', { class: 'fld' }, h('span', { text: T('הטקסט שיופיע במסמך') }), txt),
+    h('p', { class: 'muted small', text: T('כדי לפתוח קישור מתוך המסמך: Ctrl ולחיצה עליו.') })) });
   url.addEventListener('keydown', e => { if (e.key === 'Enter' && apply() !== false) m.close(true); });
 }
 /* symbols, emoji, dates, boxes */
 const SYMBOLS = [
-  ['מתמטיקה', '± × ÷ = ≠ ≈ < > ≤ ≥ √ ∛ π ∞ ° ² ³ ½ ¼ ¾ ⅓ % ‰ ∑ ∆ ∠ ⊥ ∥ ≅ ∈ ∉ ⊂ ∪ ∩ ∅ α β γ θ λ μ σ Ω'],
-  ['חצים', '→ ← ↑ ↓ ↔ ⇒ ⇐ ⇔ ↗ ↘ ↙ ↖'],
-  ['עברית ופיסוק', '₪ ״ ׳ ־ « » „ “ ” … • · — – § © ® ™ € $ £'],
-  ['סימנים', '✓ ✔ ✗ ✘ ★ ☆ ♥ ☐ ☑ ○ ● □ ■ △ ▲ ◇ ◆ ♪ ☺'],
+  [T('מתמטיקה'), '± × ÷ = ≠ ≈ < > ≤ ≥ √ ∛ π ∞ ° ² ³ ½ ¼ ¾ ⅓ % ‰ ∑ ∆ ∠ ⊥ ∥ ≅ ∈ ∉ ⊂ ∪ ∩ ∅ α β γ θ λ μ σ Ω'],
+  [T('חצים'), '→ ← ↑ ↓ ↔ ⇒ ⇐ ⇔ ↗ ↘ ↙ ↖'],
+  [T('עברית ופיסוק'), '₪ ״ ׳ ־ « » „ “ ” … • · — – § © ® ™ € $ £'],
+  [T('סימנים'), '✓ ✔ ✗ ✘ ★ ☆ ♥ ☐ ☑ ○ ● □ ■ △ ▲ ◇ ◆ ♪ ☺'],
 ];
 const EMOJI = '😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 😉 😍 🥰 😘 😋 😜 🤪 😎 🤩 🥳 😏 😴 🤔 🤨 😐 🙄 😬 😮 😱 😭 😢 😡 🤯 🥺 😳 🤗 🤫 🤭 👍 👎 👌 ✌️ 🤞 👏 🙌 🙏 💪 👀 👋 ❤️ 🧡 💛 💚 💙 💜 🖤 💔 ✨ ⭐ 🌟 🔥 💯 ✅ ❌ ⚠️ ❓ ❗ 💡 📌 📎 📚 📖 ✏️ 📝 🎓 🏫 🧮 📐 📏 🔬 🌍 🌈 ☀️ 🌙 ⚡ ❄️ 🌸 🌳 🐶 🐱 🦁 🐉 🦄 🍕 🍔 🍦 🍫 ⚽ 🏀 🎮 🎧 🎬 🎨 🎵 🎉 🎁 🏆 🚀 ✈️ 🏠 ⏰ 📅';
 const symGrid = chars => h('div', { class: 'sym-grid' }, chars.split(' ').filter(Boolean).map(ch => h('button', { class: 'sym', title: ch, 'aria-label': ch, onclick: () => insertText(ch) }, ch)));
 function openSymbols(anchor) { openPop(anchor, h('div', {}, SYMBOLS.map(([t, s], i) => [h('div', { class: i ? 'pop-sec' : 'pop-t', text: t }), symGrid(s)]))); }
-function openEmoji(anchor) { openPop(anchor, h('div', {}, h('div', { class: 'pop-t', text: 'אימוג׳י' }), symGrid(EMOJI))); }
+function openEmoji(anchor) { openPop(anchor, h('div', {}, h('div', { class: 'pop-t', text: T('אימוג׳י') }), symGrid(EMOJI))); }
 /* 11 -> י״א, 5787 -> תשפ״ז */
 function gematria(n) {
   const units = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'];
@@ -1560,21 +1634,28 @@ function gematria(n) {
   const s = hundreds[Math.floor(n / 100)] + (r === 15 ? 'טו' : r === 16 ? 'טז' : tens[Math.floor(r / 10)] + units[r % 10]);
   return s.length > 1 ? s.slice(0, -1) + '״' + s.slice(-1) : s + '׳';
 }
-function hebDate(d) {
+const zhDay = n => { const d = '一二三四五六七八九十'; return n <= 10 ? '初' + d[n - 1] : n < 20 ? '十' + d[n - 11] : n === 20 ? '二十' : n < 30 ? '廿' + d[n - 21] : '三十'; };
+/* the date in the calendar that goes with the language: Hebrew (with the numbers in letters), Islamic or Chinese */
+function calDate(d) {
+  const calendar = { he: 'hebrew', ar: 'islamic-umalqura', zh: 'chinese' }[LANG];
+  if (!calendar) return '';
   try {
-    const parts = new Intl.DateTimeFormat('he-IL-u-ca-hebrew', { day: 'numeric', month: 'long', year: 'numeric' }).formatToParts(d);
-    return parts.map(p => (p.type === 'day' || p.type === 'year') && /^\d+$/.test(p.value) ? gematria(parseInt(p.value, 10)) : p.value).join('');
+    const parts = new Intl.DateTimeFormat(LOCALE, { calendar, day: 'numeric', month: 'long', year: 'numeric' }).formatToParts(d);
+    const num = p => /^\d+$/.test(p.value) ? parseInt(p.value, 10) : 0;
+    // Chinese lunar days are written 初一 ... 十二 ... 廿一 ... 三十, after the year's name (丙午年八月十二)
+    if (LANG === 'zh') return parts.filter(p => p.type !== 'relatedYear').map(p => p.type === 'day' && num(p) ? zhDay(num(p)) : p.value).join('');
+    return parts.map(p => LANG === 'he' && (p.type === 'day' || p.type === 'year') && num(p) ? gematria(num(p)) : p.value).join('');
   } catch { return ''; }
 }
 function openDate(anchor) {
   const d = new Date();
-  const time = d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
-  const opts = [d.toLocaleDateString('he-IL'), d.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }), hebDate(d), time, d.toLocaleDateString('he-IL') + ', ' + time].filter(Boolean);
-  openPop(anchor, h('div', { class: 'menu' }, h('div', { class: 'pop-t', text: 'הוספת תאריך' }), opts.map(o => h('button', { class: 'mi', onclick: () => { closePopover(); insertText(o); } }, icon('event'), o))));
+  const time = d.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' });
+  const opts = [d.toLocaleDateString(LOCALE), d.toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }), calDate(d), time, d.toLocaleDateString(LOCALE) + ', ' + time].filter(Boolean);
+  openPop(anchor, h('div', { class: 'menu' }, h('div', { class: 'pop-t', text: T('הוספת תאריך') }), opts.map(o => h('button', { class: 'mi', onclick: () => { closePopover(); insertText(o); } }, icon('event'), o))));
 }
 function openCallouts(anchor) {
-  const types = [['note', 'info', 'הערה'], ['tip', 'lightbulb', 'טיפ'], ['warn', 'warning', 'אזהרה'], ['important', 'error', 'חשוב']];
-  openPop(anchor, h('div', { class: 'menu' }, h('div', { class: 'pop-t', text: 'תיבת הערה' }), types.map(([k, ic, l]) => h('button', { class: 'mi co-' + k, onclick: () => { closePopover(); insertCallout(k); } }, icon(ic), l))));
+  const types = [['note', 'info', T('הערה')], ['tip', 'lightbulb', T('טיפ')], ['warn', 'warning', T('אזהרה')], ['important', 'error', T('חשוב')]];
+  openPop(anchor, h('div', { class: 'menu' }, h('div', { class: 'pop-t', text: T('תיבת הערה') }), types.map(([k, ic, l]) => h('button', { class: 'mi co-' + k, onclick: () => { closePopover(); insertCallout(k); } }, icon(ic), l))));
 }
 function insertCallout(k) {
   restoreSel();
@@ -1588,22 +1669,23 @@ function insertCallout(k) {
 }
 function insertTOC() {
   const hs = $$('h1,h2,h3', ed).filter(x => x.textContent.trim() && !x.closest('.toc'));
-  if (!hs.length) { toast('אין עדיין כותרות. בוחרים סגנון "כותרת" בלשונית בית, ואז מוסיפים תוכן עניינים.', { ms: 6000, icon: 'toc' }); return; }
+  if (!hs.length) { toast(T('אין עדיין כותרות. בוחרים סגנון "כותרת" בלשונית בית, ואז מוסיפים תוכן עניינים.'), { ms: 6000, icon: 'toc' }); return; }
   updateGuides();
   const lines = hs.map(x => {
     const pg = S.per ? clamp(Math.floor(x.offsetTop / S.per) + 1, 1, S.pages) : 1;
     return `<p class="toc-l${x.tagName[1]}"><span>${esc(x.textContent.trim())}</span><span class="toc-dots"></span><span class="toc-pg">${pg}</span></p>`;
   }).join('');
-  const html = `<div class="toc"><p class="toc-title">תוכן עניינים</p>${lines}</div>`;
+  const html = `<div class="toc"><p class="toc-title">${T('תוכן עניינים')}</p>${lines}</div>`;
   const old = ed.querySelector('.toc');
-  if (old) { snapshot(); old.outerHTML = html; afterChange(); toast('תוכן העניינים עודכן', { icon: 'toc' }); }
+  if (old) { snapshot(); old.outerHTML = html; afterChange(); toast(T('תוכן העניינים עודכן'), { icon: 'toc' }); }
   else insertHTML(html + '<p><br></p>');
 }
 
 /* =========================================================
    page setup
    ========================================================= */
-const pageOf = () => ({ ...DEFAULT_PAGE, ...((S.cur && S.cur.meta.page) || {}) });
+/* documents from before there were other languages have no dir, and they are all Hebrew */
+const pageOf = () => ({ ...DEFAULT_PAGE, dir: 'rtl', ...((S.cur && S.cur.meta.page) || {}) });
 const mm2px = mm => mm * 96 / 25.4;
 function applyPage() {
   const p = pageOf();
@@ -1617,6 +1699,7 @@ function applyPage() {
   sheet.style.setProperty('--page-color', p.color);
   sheet.style.setProperty('--lp', (p.fontSize * 96 / 72 * p.lh).toFixed(2) + 'px');
   sheet.className = 'paper-' + p.paper;
+  ed.dir = p.dir;
   ed.style.setProperty('--doc-font', `"${p.font}"`);
   ed.style.setProperty('--doc-size', p.fontSize + 'pt');
   ed.style.setProperty('--doc-lh', String(p.lh));
@@ -1637,16 +1720,16 @@ function openDocFont() {
   const fSel = h('select', { class: 'field' }, FONTS.map(f => h('option', { value: f, text: f, selected: f === p.font, style: { fontFamily: `"${f}"` } })));
   const sSel = h('select', { class: 'field' }, SIZES.filter(s => s >= 9 && s <= 20).map(s => h('option', { value: s, text: s, selected: s === p.fontSize })));
   const lSel = h('select', { class: 'field' }, [['1', '1.0'], ['1.15', '1.15'], ['1.5', '1.5'], ['2', '2.0']].map(([v, t]) => h('option', { value: v, text: t, selected: +v === p.lh })));
-  const prev = h('div', { class: 'font-prev' }, 'כך ייראה הטקסט הרגיל במסמך. אבגד הוזח טיכל — The quick brown fox.');
+  const prev = h('div', { class: 'font-prev' }, T('כך ייראה הטקסט הרגיל במסמך. אבגד הוזח טיכל — The quick brown fox.'));
   const upd = () => { prev.style.fontFamily = `"${fSel.value}"`; prev.style.fontSize = sSel.value + 'pt'; prev.style.lineHeight = lSel.value; };
   for (const x of [fSel, sSel, lSel]) x.addEventListener('change', upd);
   upd();
-  modal({ title: 'גופן המסמך', body: h('div', {},
-    h('p', { class: 'muted', text: 'הגופן, הגודל והמרווח של כל הטקסט הרגיל במסמך הזה. טקסט שעוצב בנפרד נשאר כמו שהוא.' }),
-    h('label', { class: 'fld' }, h('span', { text: 'גופן' }), fSel),
-    h('div', { class: 'two' }, h('label', { class: 'fld' }, h('span', { text: 'גודל' }), sSel), h('label', { class: 'fld' }, h('span', { text: 'מרווח שורות' }), lSel)),
+  modal({ title: T('גופן המסמך'), body: h('div', {},
+    h('p', { class: 'muted', text: T('הגופן, הגודל והמרווח של כל הטקסט הרגיל במסמך הזה. טקסט שעוצב בנפרד נשאר כמו שהוא.') }),
+    h('label', { class: 'fld' }, h('span', { text: T('גופן') }), fSel),
+    h('div', { class: 'two' }, h('label', { class: 'fld' }, h('span', { text: T('גודל') }), sSel), h('label', { class: 'fld' }, h('span', { text: T('מרווח שורות') }), lSel)),
     prev),
-    actions: [{ label: 'שמירה', kind: 'primary', run: () => setPage({ font: fSel.value, fontSize: +sSel.value, lh: +lSel.value }) }, { label: 'ביטול', value: false }] });
+    actions: [{ label: T('שמירה'), kind: 'primary', run: () => setPage({ font: fSel.value, fontSize: +sSel.value, lh: +lSel.value }) }, { label: T('ביטול'), value: false }] });
 }
 /* page guides: where each printed page ends */
 const scheduleGuides = rafOnce(updateGuides);
@@ -1661,7 +1744,7 @@ function updateGuides() {
   sheet.style.minHeight = (pages * per + 2 * mt) + 'px';
   if (g.childElementCount !== pages - 1) {
     g.textContent = '';
-    for (let k = 1; k < pages; k++) g.append(h('div', { class: 'pg-line' }, h('span', { text: 'עמוד ' + (k + 1) })));
+    for (let k = 1; k < pages; k++) g.append(h('div', { class: 'pg-line' }, h('span', { text: T('עמוד {0}', fmt(k + 1)) })));
   }
   [...g.children].forEach((d, i) => { d.style.top = (mt + (i + 1) * per) + 'px'; });
   updatePageStat();
@@ -1675,7 +1758,7 @@ function updatePageStat() {
     const top = (rect.top - sheet.getBoundingClientRect().top) / (S.zoom || 1);
     cur = clamp(Math.floor((top - S.mt) / S.per) + 1, 1, S.pages);
   }
-  $('#stPage').textContent = `עמוד ${fmt(cur)} מתוך ${fmt(S.pages)}`;
+  $('#stPage').textContent = T(`עמוד {0} מתוך {1}`, fmt(cur), fmt(S.pages));
 }
 function setZoom(pct) {
   PREFS.zoom = clamp(Math.round(pct / 10) * 10, 50, 200); savePrefs();
@@ -1689,7 +1772,7 @@ function applyZoom() {
   if (Math.abs(z - S.zoom) > 0.001 || !sheet.style.zoom) { sheet.style.zoom = z; S.zoom = z; }
   $('#zoomRange').value = PREFS.zoom;
   $('#zoomPct').textContent = Math.round(z * 100) + '%';
-  $('#zoomPct').title = z < want ? 'הדף הוקטן כדי שייכנס ברוחב. לחיצה מחזירה ל-100%' : 'חזרה ל-100%';
+  $('#zoomPct').title = z < want ? T('הדף הוקטן כדי שייכנס ברוחב. לחיצה מחזירה ל-100%') : T('חזרה ל-100%');
   if (selectedImg) requestAnimationFrame(placeImgBar);
 }
 
@@ -1702,13 +1785,13 @@ function updateStats() {
   const t = ed.innerText;
   S.words = countWords(t);
   $('#stWords').textContent = wordsLabel(S.words);
-  $('#stChars').textContent = fmt(t.replace(/\n/g, '').length) + ' תווים';
+  $('#stChars').textContent = TN('{n} תווים', t.replace(/\n/g, '').length);
   ed.classList.toggle('empty', !t.trim() && !ed.querySelector('img,table,hr,ul,ol') && ed.children.length <= 1);
   updateGoal();
 }
 function updateSelStat() {
   const r = curRange(), el = $('#stSel');
-  if (r && !r.collapsed) { el.textContent = 'בסימון: ' + wordsLabel(countWords(r.toString())); el.hidden = false; }
+  if (r && !r.collapsed) { el.textContent = T('בסימון: {0}', wordsLabel(countWords(r.toString()))); el.hidden = false; }
   else el.hidden = true;
 }
 function updateGoal() {
@@ -1717,27 +1800,27 @@ function updateGoal() {
   b.hidden = false;
   b.querySelector('i').style.width = Math.min(100, Math.round(S.words / g * 100)) + '%';
   b.querySelector('.goal-t').textContent = `${fmt(S.words)} / ${fmt(g)}`;
-  b.title = `יעד: ${fmt(g)} מילים`;
+  b.title = T('יעד: {0}', wordsLabel(g));
   const done = S.words >= g;
   b.classList.toggle('done', done);
-  if (done && !S.goalHit && S.goalArmed) toast('הגעת ליעד המילים. כל הכבוד!', { icon: 'flag' });
+  if (done && !S.goalHit && S.goalArmed) toast(T('הגעת ליעד המילים. כל הכבוד!'), { icon: 'flag' });
   S.goalHit = done; S.goalArmed = true;
 }
 function openGoal() {
   if (!S.cur) return;
   const cur = S.cur.meta.goal || 0;
-  const inp = h('input', { class: 'field', type: 'number', min: 0, step: 50, value: cur || '', placeholder: 'למשל 500', autofocus: true });
-  modal({ title: 'יעד מילים', body: h('div', {},
-    h('p', { class: 'muted', text: 'כמה מילים צריך לכתוב במסמך הזה? ההתקדמות תופיע בשורת המצב למטה.' }),
-    h('label', { class: 'fld' }, h('span', { text: 'מספר מילים' }), inp),
+  const inp = h('input', { class: 'field', type: 'number', min: 0, step: 50, value: cur || '', placeholder: T('למשל 500'), autofocus: true });
+  modal({ title: T('יעד מילים'), body: h('div', {},
+    h('p', { class: 'muted', text: T('כמה מילים צריך לכתוב במסמך הזה? ההתקדמות תופיע בשורת המצב למטה.') }),
+    h('label', { class: 'fld' }, h('span', { text: T('מספר מילים') }), inp),
     h('div', { class: 'btn-row' }, [100, 250, 500, 1000].map(n => h('button', { class: 'btn small', onclick: () => { inp.value = n; } }, fmt(n))))),
     actions: [
-      { label: 'שמירה', kind: 'primary', run: () => { S.cur.meta.goal = Math.max(0, Math.round(+inp.value || 0)); S.goalArmed = false; markDirty(); updateStats(); } },
-      cur ? { label: 'בלי יעד', run: () => { S.cur.meta.goal = 0; markDirty(); updateStats(); } } : null,
-      { label: 'ביטול', value: false },
+      { label: T('שמירה'), kind: 'primary', run: () => { S.cur.meta.goal = Math.max(0, Math.round(+inp.value || 0)); S.goalArmed = false; markDirty(); updateStats(); } },
+      cur ? { label: T('בלי יעד'), run: () => { S.cur.meta.goal = 0; markDirty(); updateStats(); } } : null,
+      { label: T('ביטול'), value: false },
     ].filter(Boolean) });
 }
-const STOP = new Set('של את על עם זה זו זאת הוא היא הם הן גם כל לא כי אם או מה אני אתה את אנחנו יש אין רק עוד כמו אבל היה הייתה היו להיות אחרי לפני בין אשר שלא כך כן לו לה להם אותו אותה אז כבר מאוד the and for that with this are was you from have not but they his her its our'.split(' '));
+const STOP = new Set(('של את על עם זה זו זאת הוא היא הם הן גם כל לא כי אם או מה אני אתה את אנחנו יש אין רק עוד כמו אבל היה הייתה היו להיות אחרי לפני בין אשר שלא כך כן לו לה להם אותו אותה אז כבר מאוד the and for that with this are was you from have not but they his her its our ' + ((I18N && I18N.stopwords) || '')).split(' ').filter(Boolean));
 function showStats() {
   if (!S.cur) return;
   const t = ed.innerText;
@@ -1748,15 +1831,15 @@ function showStats() {
   for (const w of words) { const k = w.toLowerCase().replace(/["״׳'’]/g, ''); if (k.length < 3 || STOP.has(k)) continue; freq.set(k, (freq.get(k) || 0) + 1); }
   const top = [...freq].filter(x => x[1] > 1).sort((a, b) => b[1] - a[1]).slice(0, 8);
   const row = (k, v) => h('div', {}, h('dt', { text: k }), h('dd', { text: v }));
-  const mins = n => n < 1 ? 'פחות מדקה' : n === 1 ? 'דקה' : fmt(n) + ' דקות';
-  modal({ title: 'ספירת מילים', body: h('div', {},
+  const mins = n => n < 1 ? T('פחות מדקה') : TN('{n} דקות', n);
+  modal({ title: T('ספירת מילים'), body: h('div', {},
     h('dl', { class: 'stats' },
-      row('מילים', fmt(words.length)), row('עמודים', fmt(S.pages)),
-      row('תווים עם רווחים', fmt(t.replace(/\n/g, '').length)), row('תווים בלי רווחים', fmt(t.replace(/\s/g, '').length)),
-      row('פסקאות', fmt(paras)), row('משפטים', fmt(sentences)),
-      row('זמן קריאה', mins(Math.round(words.length / 200))), row('זמן הקראה בקול', mins(Math.round(words.length / 130)))),
-    top.length ? [h('div', { class: 'stats-h', text: 'המילים שחוזרות הכי הרבה' }), h('div', { class: 'word-chips' }, top.map(([w, c]) => h('span', { class: 'wchip' }, w, h('b', { text: c }))))] : null),
-    actions: [{ label: 'סגירה', kind: 'primary' }] });
+      row(T('מילים'), fmt(words.length)), row(T('עמודים'), fmt(S.pages)),
+      row(T('תווים עם רווחים'), fmt(t.replace(/\n/g, '').length)), row(T('תווים בלי רווחים'), fmt(t.replace(/\s/g, '').length)),
+      row(T('פסקאות'), fmt(paras)), row(T('משפטים'), fmt(sentences)),
+      row(T('זמן קריאה'), mins(Math.round(words.length / 200))), row(T('זמן הקראה בקול'), mins(Math.round(words.length / 130)))),
+    top.length ? [h('div', { class: 'stats-h', text: T('המילים שחוזרות הכי הרבה') }), h('div', { class: 'word-chips' }, top.map(([w, c]) => h('span', { class: 'wchip' }, w, h('b', { text: c }))))] : null),
+    actions: [{ label: T('סגירה'), kind: 'primary' }] });
 }
 /* text in a range, node by node */
 function textNodesInRange(r) {
@@ -1784,7 +1867,7 @@ function fixLayout() {
     const n = r.startContainer, end = r.startOffset;
     if (n.nodeType === 3) { let i = end; while (i > 0 && !/\s/.test(n.data[i - 1])) i--; r = document.createRange(); r.setStart(n, i); r.setEnd(n, end); }
   }
-  if (r.collapsed) { toast('מסמנים את הטקסט שהוקלד בשפה הלא נכונה', { icon: 'keyboard' }); return; }
+  if (r.collapsed) { toast(T('מסמנים את הטקסט שהוקלד בשפה הלא נכונה'), { icon: 'keyboard' }); return; }
   const text = r.toString();
   const lat = (text.match(/[a-z]/gi) || []).length, heb = (text.match(/[א-ת]/g) || []).length;
   if (!lat && !heb) return;
@@ -1795,16 +1878,16 @@ function fixLayout() {
   for (const [n, s, e] of segs) n.data = n.data.slice(0, s) + [...n.data.slice(s, e)].map(map).join('') + n.data.slice(e);
   if (segs.length) { const nr = document.createRange(); nr.setStart(segs[0][0], segs[0][1]); const z = segs[segs.length - 1]; nr.setEnd(z[0], z[2]); setRange(nr); }
   afterChange();
-  toast(toHe ? 'הומר לעברית' : 'הומר לאנגלית', { icon: 'keyboard' });
+  toast(toHe ? T('הומר לעברית') : T('הומר לאנגלית'), { icon: 'keyboard' });
 }
 function openCase(anchor) {
-  const opts = [['upper', 'ABC', 'הכל באותיות גדולות'], ['lower', 'abc', 'הכל באותיות קטנות'], ['title', 'Abc Def', 'אות גדולה בכל מילה'], ['sentence', 'Abc def.', 'אות גדולה בתחילת משפט']];
-  openPop(anchor, h('div', { class: 'menu' }, h('div', { class: 'pop-t', text: 'אותיות באנגלית בטקסט המסומן' }), opts.map(([k, ex, l]) => h('button', { class: 'mi', onclick: () => { closePopover(); changeCase(k); } }, h('b', { dir: 'ltr', text: ex }), l))));
+  const opts = [['upper', 'ABC', T('הכל באותיות גדולות')], ['lower', 'abc', T('הכל באותיות קטנות')], ['title', 'Abc Def', T('אות גדולה בכל מילה')], ['sentence', 'Abc def.', T('אות גדולה בתחילת משפט')]];
+  openPop(anchor, h('div', { class: 'menu' }, h('div', { class: 'pop-t', text: T('אותיות באנגלית בטקסט המסומן') }), opts.map(([k, ex, l]) => h('button', { class: 'mi', onclick: () => { closePopover(); changeCase(k); } }, h('b', { dir: 'ltr', text: ex }), l))));
 }
 function changeCase(kind) {
   restoreSel();
   const r = curRange();
-  if (!r || r.collapsed) { toast('קודם מסמנים טקסט באנגלית', { icon: 'match_case' }); return; }
+  if (!r || r.collapsed) { toast(T('קודם מסמנים טקסט באנגלית'), { icon: 'match_case' }); return; }
   snapshot();
   const segs = textNodesInRange(r);
   let lastEnd = 0, startOfSentence = true;
@@ -1833,7 +1916,7 @@ function fixSpaces() {
     if (next !== n.data) n.data = next;
   }
   afterChange();
-  toast(count ? `תוקנו ${fmt(count)} רווחים מיותרים` : 'לא נמצאו רווחים מיותרים', { icon: 'space_bar' });
+  toast(count ? TN('תוקנו {n} רווחים מיותרים', count) : T('לא נמצאו רווחים מיותרים'), { icon: 'space_bar' });
 }
 /* calculator for math homework: 12×7+3, (5+3):2, √16, 2^10, 50% */
 function evalMath(expr) {
@@ -1860,9 +1943,9 @@ function calcSelection() {
   restoreSel();
   const r = curRange();
   const expr = r && !r.collapsed ? r.toString().trim() : '';
-  if (!expr) { toast('מסמנים תרגיל, למשל 12×7+3 או (5+3):2', { icon: 'calculate' }); return; }
+  if (!expr) { toast(T('מסמנים תרגיל, למשל 12×7+3 או (5+3):2'), { icon: 'calculate' }); return; }
   let v;
-  try { v = evalMath(expr); } catch { toast('זה לא נראה כמו תרגיל שאפשר לחשב', { icon: 'calculate' }); return; }
+  try { v = evalMath(expr); } catch { toast(T('זה לא נראה כמו תרגיל שאפשר לחשב'), { icon: 'calculate' }); return; }
   const res = Number.isInteger(v) ? String(v) : String(parseFloat(v.toPrecision(10)));
   const clean = expr.replace(/\s*=\s*$/, '');
   document.execCommand('insertHTML', false, `<span dir="ltr">${esc(clean)} = ${esc(res)}</span>&nbsp;`);
@@ -1872,47 +1955,53 @@ function calcSelection() {
 const TTS = { rate: 1 };
 const voices = () => { try { return speechSynthesis.getVoices(); } catch { return []; } };
 function openSpeak(anchor) {
-  if (!('speechSynthesis' in window)) { toast('הדפדפן הזה לא יודע להקריא טקסט'); return; }
-  const vs = voices().filter(v => /^(he|iw|en)/i.test(v.lang));
-  const vSel = h('select', { class: 'field' }, h('option', { value: '', text: 'אוטומטי לפי השפה' }), vs.map(v => h('option', { value: v.voiceURI, text: `${v.name} (${v.lang})`, selected: v.voiceURI === PREFS.voice })));
+  if (!('speechSynthesis' in window)) { toast(T('הדפדפן הזה לא יודע להקריא טקסט')); return; }
+  const vs = voices().filter(v => /^(he|iw|en)/i.test(v.lang) || v.lang.toLowerCase().startsWith(LANG));
+  const vSel = h('select', { class: 'field' }, h('option', { value: '', text: T('אוטומטי לפי השפה') }), vs.map(v => h('option', { value: v.voiceURI, text: `${v.name} (${v.lang})`, selected: v.voiceURI === PREFS.voice })));
   const rSel = h('select', { class: 'field' }, [0.75, 1, 1.25, 1.5].map(x => h('option', { value: x, text: '×' + x, selected: x === TTS.rate })));
   vSel.addEventListener('change', () => { PREFS.voice = vSel.value; savePrefs(); });
   rSel.addEventListener('change', () => { TTS.rate = +rSel.value; });
   openPop(anchor, h('div', { class: 'speak' },
-    h('div', { class: 'pop-t', text: 'הקראה בקול' }),
+    h('div', { class: 'pop-t', text: T('הקראה בקול') }),
     h('div', { class: 'btn-row' },
-      h('button', { class: 'btn small primary', onclick: speakNow }, icon('play_arrow'), 'הקראה'),
-      h('button', { class: 'btn small', onclick: () => { if (speechSynthesis.paused) speechSynthesis.resume(); else speechSynthesis.pause(); } }, icon('pause'), 'השהיה'),
-      h('button', { class: 'btn small', onclick: () => speechSynthesis.cancel() }, icon('stop'), 'עצירה')),
-    h('label', { class: 'fld' }, h('span', { text: 'קול' }), vSel),
-    h('label', { class: 'fld' }, h('span', { text: 'מהירות' }), rSel),
-    h('p', { class: 'muted small', style: { margin: 0 }, text: 'מקריא את הטקסט המסומן. אם לא סומן כלום, מקריא את כל המסמך.' })));
+      h('button', { class: 'btn small primary', onclick: speakNow }, icon('play_arrow'), T('הקראה')),
+      h('button', { class: 'btn small', onclick: () => { if (speechSynthesis.paused) speechSynthesis.resume(); else speechSynthesis.pause(); } }, icon('pause'), T('השהיה')),
+      h('button', { class: 'btn small', onclick: () => speechSynthesis.cancel() }, icon('stop'), T('עצירה'))),
+    h('label', { class: 'fld' }, h('span', { text: T('קול') }), vSel),
+    h('label', { class: 'fld' }, h('span', { text: T('מהירות') }), rSel),
+    h('p', { class: 'muted small', style: { margin: 0 }, text: T('מקריא את הטקסט המסומן. אם לא סומן כלום, מקריא את כל המסמך.') })));
 }
 function speakNow() {
   const r = curRange();
   const text = (r && !r.collapsed ? r.toString() : ed.innerText).trim();
-  if (!text) { toast('אין טקסט להקראה'); return; }
+  if (!text) { toast(T('אין טקסט להקראה')); return; }
   speechSynthesis.cancel();
-  const all = voices();
-  const heb = (text.match(/[֐-׿]/g) || []).length >= (text.match(/[a-z]/gi) || []).length;
+  const all = voices(), lang = textLang(text);
   let v = all.find(x => x.voiceURI === PREFS.voice);
   if (!v) {
-    v = all.find(x => heb ? /^(he|iw)/i.test(x.lang) : /^en/i.test(x.lang));
-    if (heb && !v) { toast('לא נמצא במחשב קול שמדבר עברית. ב-Windows מוסיפים אותו בהגדרות ← זמן ושפה ← דיבור.', { ms: 9000, icon: 'record_voice_over' }); return; }
+    v = all.find(x => x.lang.toLowerCase().startsWith(lang) || (lang === 'he' && /^iw/i.test(x.lang)));
+    if (lang !== 'en' && !v) { toast(T('לא נמצא במחשב קול שמדבר {0}. ב-Windows מוסיפים אותו בהגדרות ← זמן ושפה ← דיבור.', langName(lang)), { ms: 9000, icon: 'record_voice_over' }); return; }
   }
-  for (const part of text.match(/[^.!?\n]+[.!?]*/g) || [text]) {
+  for (const part of text.match(/[^.!?\n。！？]+[.!?。！？]*/g) || [text]) {
     const t = part.trim(); if (!t) continue;
     const u = new SpeechSynthesisUtterance(t);
-    u.lang = v ? v.lang : (heb ? 'he-IL' : 'en-US');
+    u.lang = v ? v.lang : lang;
     if (v) u.voice = v;
     u.rate = TTS.rate;
     speechSynthesis.speak(u);
   }
 }
+/* which language a text is in, by counting its letters. Latin letters count as the interface language when it uses them */
+function textLang(text) {
+  const n = re => (text.match(re) || []).length;
+  const [best] = [['he', n(/[א-ת]/g)], ['ar', n(/[ء-ي]/g)], ['ru', n(/[а-яё]/gi)], ['zh', n(/[一-鿿]/g)], ['latin', n(/[a-zà-öø-ÿ]/gi)]].sort((a, b) => b[1] - a[1])[0];
+  return best === 'latin' ? (['es', 'fr', 'pt', 'de'].includes(LANG) ? LANG : 'en') : best;
+}
+const langName = code => { try { return new Intl.DisplayNames([LOCALE], { type: 'language' }).of(code) || code; } catch { return code; } };
 function applySpell() { ed.spellcheck = !!PREFS.spell; $('#btnSpell').classList.toggle('on', !!PREFS.spell); }
 function toggleSpell() {
   PREFS.spell = !PREFS.spell; savePrefs(); applySpell();
-  toast(PREFS.spell ? 'בדיקת האיות פעילה: קו אדום מתחת למילים שנראות שגויות' : 'בדיקת האיות של הדפדפן כבויה', { icon: 'spellcheck' });
+  toast(PREFS.spell ? T('בדיקת האיות פעילה: קו אדום מתחת למילים שנראות שגויות') : T('בדיקת האיות של הדפדפן כבויה'), { icon: 'spellcheck' });
 }
 function toggleFocus(on) {
   const app = $('#app');
@@ -1993,7 +2082,7 @@ function runFind(keep) {
   paintFind(false);
 }
 function paintFind(scroll) {
-  $('#findCount').textContent = F.matches.length ? `${fmt(F.idx + 1)} מתוך ${fmt(F.matches.length)}` : 'לא נמצא';
+  $('#findCount').textContent = F.matches.length ? T(`{0} מתוך {1}`, fmt(F.idx + 1), fmt(F.matches.length)) : T('לא נמצא');
   if (hasHL()) {
     CSS.highlights.set('find', new Highlight(...F.matches));
     if (F.idx >= 0) CSS.highlights.set('find-cur', new Highlight(F.matches[F.idx])); else CSS.highlights.delete('find-cur');
@@ -2016,39 +2105,39 @@ function replaceOne() {
 function replaceAll() {
   runFind();
   const n = F.matches.length;
-  if (!n) { toast('לא נמצא מה להחליף'); return; }
+  if (!n) { toast(T('לא נמצא מה להחליף')); return; }
   snapshot();
   const rep = $('#findR').value;
   for (let i = n - 1; i >= 0; i--) { const r = F.matches[i]; r.deleteContents(); r.insertNode(document.createTextNode(rep)); }
   ed.normalize(); afterChange(); runFind();
-  toast(`הוחלפו ${fmt(n)} מקומות`, { icon: 'find_replace' });
+  toast(TN('הוחלפו {n} מקומות', n), { icon: 'find_replace' });
 }
 const findSoon = debounce(() => runFind(true), 300);
 function renderOutline() {
   const list = $('#outlineList'); list.textContent = '';
   const hs = $$('h1,h2,h3', ed).filter(x => !x.closest('.toc'));
-  if (!hs.length) { list.append(h('p', { class: 'muted', style: { marginTop: 0 }, text: 'אין עדיין כותרות. כשבוחרים סגנון "כותרת" בלשונית בית, הכותרות מופיעות כאן ואפשר לקפוץ אליהן.' })); return; }
-  for (const x of hs) list.append(h('button', { class: 'ol-item l' + x.tagName[1], onclick: () => { x.scrollIntoView({ block: 'start', behavior: 'smooth' }); caretIn(x, true); } }, x.textContent.trim() || '(כותרת ריקה)'));
+  if (!hs.length) { list.append(h('p', { class: 'muted', style: { marginTop: 0 }, text: T('אין עדיין כותרות. כשבוחרים סגנון "כותרת" בלשונית בית, הכותרות מופיעות כאן ואפשר לקפוץ אליהן.') })); return; }
+  for (const x of hs) list.append(h('button', { class: 'ol-item l' + x.tagName[1], onclick: () => { x.scrollIntoView({ block: 'start', behavior: 'smooth' }); caretIn(x, true); } }, x.textContent.trim() || T('(כותרת ריקה)')));
 }
 const outlineSoon = debounce(renderOutline, 400);
 
 /* =========================================================
    documents: list, open, create, save
    ========================================================= */
-const today = () => new Date().toLocaleDateString('he-IL');
-const longDate = () => new Date().toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-const WELCOME = '<img src="floating-ink.webp" alt="Floating Ink" class="img-center" style="width: 62%"><h1>ברוכים הבאים ל-Floating Ink</h1><p>זה מסמך לדוגמה שמראה מה אפשר לעשות כאן. אפשר לערוך אותו, למחוק אותו, או ללחוץ על <b>מסמך חדש</b> ולהתחיל מדף ריק.</p><div class="callout callout-note"><p><b>פרטי לגמרי.</b> המסמכים נשמרים רק במכשיר שלך, ושום דבר לא נשלח לשום שרת. כדאי לגבות מדי פעם: <b>קובץ ← גיבוי הכל</b>.</p></div><h2>מה יש כאן</h2><ul><li><b>עיצוב כמו בוורד:</b> גופנים בעברית, צבעים, <span style="background-color: #ffe45c">מרקר</span>, כותרות, רשימות וטבלאות.</li><li><b>הוספה:</b> תמונות, ציור ביד, סמלים למתמטיקה, אימוג׳י, תאריך עברי ותוכן עניינים.</li><li><b>כלים:</b> חיפוש והחלפה, ספירת מילים, יעד מילים, הקראה בקול, מחשבון ותיקון שפת הקלדה.</li><li><b>קבצים:</b> שמירה כ-Word וכ-PDF, ייבוא מ-Word, גרסאות קודמות וסל מחזור.</li></ul><h2>משימות לדוגמה</h2><ul class="checklist"><li data-checked="true">לפתוח את Floating Ink</li><li>להתקין אותו במחשב או בטלפון</li><li>להוסיף טבלה או ציור</li></ul><h2>איך מתקינים</h2><ul><li><b>במחשב (כרום או Edge):</b> כפתור <b>התקנה</b> למעלה, או סמל ההתקנה בצד שורת הכתובת.</li><li><b>באנדרואיד:</b> תפריט ⋮ ← התקנת האפליקציה.</li><li><b>באייפון:</b> בספארי, כפתור השיתוף ← הוספה למסך הבית.</li></ul><p>אחרי ההתקנה Floating Ink נפתח כמו תוכנה רגילה, גם בלי אינטרנט.</p><h2>קיצורי מקלדת</h2><table><tbody><tr><th>קיצור</th><th>מה הוא עושה</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>מודגש / נטוי / קו תחתון</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>ביטול / חזרה</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>חיפוש / חיפוש והחלפה</td></tr><tr><td>Ctrl+K</td><td>הוספת קישור</td></tr><tr><td>Ctrl+Shift+X</td><td>תיקון שפת הקלדה</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>כותרת 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>שמירה (Floating Ink גם שומר לבד)</td></tr></tbody></table><div class="callout callout-tip"><p><b>טיפ:</b> הקלדת באנגלית בטעות, למשל akuo במקום שלום? מסמנים את המילים ולוחצים Ctrl+Shift+X.</p></div><p style="text-align: center"><small>Floating Ink הוא חלק מ-<a href="https://floatingrotations.com">Floating rotation</a></small></p>';
+const today = () => new Date().toLocaleDateString(LOCALE);
+const longDate = () => new Date().toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const WELCOME = (I18N && I18N.welcome) || '<img src="floating-ink.webp" alt="Floating Ink" class="img-center" style="width: 62%"><h1>ברוכים הבאים ל-Floating Ink</h1><p>זה מסמך לדוגמה שמראה מה אפשר לעשות כאן. אפשר לערוך אותו, למחוק אותו, או ללחוץ על <b>מסמך חדש</b> ולהתחיל מדף ריק.</p><div class="callout callout-note"><p><b>פרטי לגמרי.</b> המסמכים נשמרים רק במכשיר שלך, ושום דבר לא נשלח לשום שרת. כדאי לגבות מדי פעם: <b>קובץ ← גיבוי הכל</b>.</p></div><h2>מה יש כאן</h2><ul><li><b>עיצוב כמו בוורד:</b> גופנים בעברית, צבעים, <span style="background-color: #ffe45c">מרקר</span>, כותרות, רשימות וטבלאות.</li><li><b>הוספה:</b> תמונות, ציור ביד, סמלים למתמטיקה, אימוג׳י, תאריך עברי ותוכן עניינים.</li><li><b>כלים:</b> חיפוש והחלפה, ספירת מילים, יעד מילים, הקראה בקול, מחשבון ותיקון שפת הקלדה.</li><li><b>קבצים:</b> שמירה כ-Word וכ-PDF, ייבוא מ-Word, גרסאות קודמות וסל מחזור.</li></ul><h2>משימות לדוגמה</h2><ul class="checklist"><li data-checked="true">לפתוח את Floating Ink</li><li>להתקין אותו במחשב או בטלפון</li><li>להוסיף טבלה או ציור</li></ul><h2>איך מתקינים</h2><ul><li><b>במחשב (כרום או Edge):</b> כפתור <b>התקנה</b> למעלה, או סמל ההתקנה בצד שורת הכתובת.</li><li><b>באנדרואיד:</b> תפריט ⋮ ← התקנת האפליקציה.</li><li><b>באייפון:</b> בספארי, כפתור השיתוף ← הוספה למסך הבית.</li></ul><p>אחרי ההתקנה Floating Ink נפתח כמו תוכנה רגילה, גם בלי אינטרנט.</p><h2>קיצורי מקלדת</h2><table><tbody><tr><th>קיצור</th><th>מה הוא עושה</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>מודגש / נטוי / קו תחתון</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>ביטול / חזרה</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>חיפוש / חיפוש והחלפה</td></tr><tr><td>Ctrl+K</td><td>הוספת קישור</td></tr><tr><td>Ctrl+Shift+X</td><td>תיקון שפת הקלדה</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>כותרת 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>שמירה (Floating Ink גם שומר לבד)</td></tr></tbody></table><div class="callout callout-tip"><p><b>טיפ:</b> הקלדת באנגלית בטעות, למשל akuo במקום שלום? מסמנים את המילים ולוחצים Ctrl+Shift+X.</p></div><p style="text-align: center"><small>Floating Ink הוא חלק מ-<a href="https://floatingrotations.com">Floating rotation</a></small></p>';
 const TEMPLATES = [
-  { name: 'מסמך ריק', desc: 'דף חלק', icon: 'description', html: () => '<p><br></p>' },
-  { name: 'עבודה לבית הספר', desc: 'עמוד שער, מבוא, פרקים וסיכום', icon: 'school', html: () => `<h1 style="text-align: center">שם העבודה</h1><p style="text-align: center">עבודה בנושא: </p><p><br></p><table><tbody><tr><th>שם</th><td><br></td></tr><tr><th>כיתה</th><td><br></td></tr><tr><th>מורה</th><td><br></td></tr><tr><th>מקצוע</th><td><br></td></tr><tr><th>תאריך הגשה</th><td>${today()}</td></tr></tbody></table><hr class="page-break"><h2>מבוא</h2><p>על מה העבודה, ולמה בחרתי בנושא הזה.</p><h2>פרק ראשון</h2><p><br></p><h2>פרק שני</h2><p><br></p><h2>סיכום</h2><p>מה למדתי, ומה המסקנה שלי.</p><h2>מקורות</h2><ul><li><br></li></ul>` },
-  { name: 'סיפור', desc: 'שם, דמויות ופרקים', icon: 'auto_stories', html: () => '<h1>שם הסיפור</h1><p><i>מאת: </i></p><div class="callout callout-tip"><p><b>הדמויות:</b> מי הגיבור? מה הגיבור רוצה? מה עומד בדרך?</p></div><h2>פרק 1</h2><p>הסיפור מתחיל כאן…</p>' },
-  { name: 'סיכום שיעור', desc: 'נקודות חשובות, מושגים ושאלות', icon: 'summarize', html: () => `<h1>סיכום: </h1><p><b>מקצוע:</b>  · <b>תאריך:</b> ${today()}</p><h2>הנקודות החשובות</h2><ul><li><br></li><li><br></li><li><br></li></ul><h2>מושגים</h2><table><tbody><tr><th>מושג</th><th>הסבר</th></tr><tr><td><br></td><td><br></td></tr><tr><td><br></td><td><br></td></tr></tbody></table><h2>שאלות לחזרה</h2><ol><li><br></li><li><br></li></ol><div class="callout callout-important"><p><b>חשוב למבחן:</b> </p></div>` },
-  { name: 'מכתב', desc: 'תאריך, פנייה, נושא וחתימה', icon: 'mail', html: () => `<p style="text-align: left">${today()}</p><p>לכבוד</p><p><br></p><p><br></p><p style="text-align: center"><b><u>הנדון: </u></b></p><p>שלום רב,</p><p><br></p><p>בברכה,</p><p><br></p>` },
-  { name: 'רשימת משימות', desc: 'תיבות סימון לכל משימה', icon: 'checklist', html: () => '<h1>משימות</h1><ul class="checklist"><li>משימה ראשונה</li><li>משימה שנייה</li><li><br></li></ul><h2>בהמשך</h2><ul class="checklist"><li><br></li></ul>' },
-  { name: 'יומן', desc: 'מה קרה היום', icon: 'edit_calendar', html: () => `<h1>${longDate()}</h1><p><b>מצב רוח:</b> </p><h2>מה קרה היום</h2><p><br></p><h2>דבר טוב אחד</h2><p><br></p><h2>מחר אני רוצה</h2><ul class="checklist"><li><br></li></ul>` },
-  { name: 'תסריט לסרטון', desc: 'פתיחה, טבלת זמנים וסיום', icon: 'movie', html: () => '<h1>שם הסרטון</h1><p><b>נושא:</b>  · <b>אורך:</b>  דקות</p><h2>פתיחה</h2><p>המשפט הראשון שתופס את הצופים…</p><h2>התסריט</h2><table><tbody><tr><th>זמן</th><th>מה רואים</th><th>מה אומרים</th></tr><tr><td>0:00</td><td><br></td><td><br></td></tr><tr><td>0:15</td><td><br></td><td><br></td></tr><tr><td>0:30</td><td><br></td><td><br></td></tr></tbody></table><h2>סיום</h2><p>קריאה לפעולה: לייק, הרשמה ותגובה.</p>' },
+  { name: T('מסמך ריק'), desc: T('דף חלק'), icon: 'description', html: () => '<p><br></p>' },
+  { name: T('עבודה לבית הספר'), desc: T('עמוד שער, מבוא, פרקים וסיכום'), icon: 'school', html: () => T(`<h1 style="text-align: center">שם העבודה</h1><p style="text-align: center">עבודה בנושא: </p><p><br></p><table><tbody><tr><th>שם</th><td><br></td></tr><tr><th>כיתה</th><td><br></td></tr><tr><th>מורה</th><td><br></td></tr><tr><th>מקצוע</th><td><br></td></tr><tr><th>תאריך הגשה</th><td>{0}</td></tr></tbody></table><hr class="page-break"><h2>מבוא</h2><p>על מה העבודה, ולמה בחרתי בנושא הזה.</p><h2>פרק ראשון</h2><p><br></p><h2>פרק שני</h2><p><br></p><h2>סיכום</h2><p>מה למדתי, ומה המסקנה שלי.</p><h2>מקורות</h2><ul><li><br></li></ul>`, today()) },
+  { name: T('סיפור'), desc: T('שם, דמויות ופרקים'), icon: 'auto_stories', html: () => T('<h1>שם הסיפור</h1><p><i>מאת: </i></p><div class="callout callout-tip"><p><b>הדמויות:</b> מי הגיבור? מה הגיבור רוצה? מה עומד בדרך?</p></div><h2>פרק 1</h2><p>הסיפור מתחיל כאן…</p>') },
+  { name: T('סיכום שיעור'), desc: T('נקודות חשובות, מושגים ושאלות'), icon: 'summarize', html: () => T(`<h1>סיכום: </h1><p><b>מקצוע:</b>  · <b>תאריך:</b> {0}</p><h2>הנקודות החשובות</h2><ul><li><br></li><li><br></li><li><br></li></ul><h2>מושגים</h2><table><tbody><tr><th>מושג</th><th>הסבר</th></tr><tr><td><br></td><td><br></td></tr><tr><td><br></td><td><br></td></tr></tbody></table><h2>שאלות לחזרה</h2><ol><li><br></li><li><br></li></ol><div class="callout callout-important"><p><b>חשוב למבחן:</b> </p></div>`, today()) },
+  { name: T('מכתב'), desc: T('תאריך, פנייה, נושא וחתימה'), icon: 'mail', html: () => T(`<p style="text-align: left">{0}</p><p>לכבוד</p><p><br></p><p><br></p><p style="text-align: center"><b><u>הנדון: </u></b></p><p>שלום רב,</p><p><br></p><p>בברכה,</p><p><br></p>`, today()) },
+  { name: T('רשימת משימות'), desc: T('תיבות סימון לכל משימה'), icon: 'checklist', html: () => T('<h1>משימות</h1><ul class="checklist"><li>משימה ראשונה</li><li>משימה שנייה</li><li><br></li></ul><h2>בהמשך</h2><ul class="checklist"><li><br></li></ul>') },
+  { name: T('יומן'), desc: T('מה קרה היום'), icon: 'edit_calendar', html: () => T(`<h1>{0}</h1><p><b>מצב רוח:</b> </p><h2>מה קרה היום</h2><p><br></p><h2>דבר טוב אחד</h2><p><br></p><h2>מחר אני רוצה</h2><ul class="checklist"><li><br></li></ul>`, longDate()) },
+  { name: T('תסריט לסרטון'), desc: T('פתיחה, טבלת זמנים וסיום'), icon: 'movie', html: () => T('<h1>שם הסרטון</h1><p><b>נושא:</b>  · <b>אורך:</b>  דקות</p><h2>פתיחה</h2><p>המשפט הראשון שתופס את הצופים…</p><h2>התסריט</h2><table><tbody><tr><th>זמן</th><th>מה רואים</th><th>מה אומרים</th></tr><tr><td>0:00</td><td><br></td><td><br></td></tr><tr><td>0:15</td><td><br></td><td><br></td></tr><tr><td>0:30</td><td><br></td><td><br></td></tr></tbody></table><h2>סיום</h2><p>קריאה לפעולה: לייק, הרשמה ותגובה.</p>') },
 ];
-const displayTitle = m => (m && (String(m.title || '').trim() || m.auto)) || 'מסמך ללא שם';
+const displayTitle = m => (m && (String(m.title || '').trim() || m.auto)) || T('מסמך ללא שם');
 const firstLine = t => { const l = String(t).split('\n').map(x => x.trim()).find(Boolean) || ''; return l.length > 60 ? l.slice(0, 58) + '…' : l; };
 const snippetOf = t => String(t).replace(/\s+/g, ' ').trim().slice(0, 160);
 function allDocs() {
@@ -2075,15 +2164,15 @@ function renderDocs() {
   if (q) docs = docs.filter(d => (displayTitle(d) + ' ' + (d.snippet || '')).toLowerCase().includes(q));
   docs.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
   list.textContent = '';
-  if (S.filter === 'trash' && docs.length) list.append(h('div', { class: 'trash-bar' }, h('span', { class: 'muted grow', text: 'מסמכים בסל אפשר לשחזר או למחוק לתמיד.' }), h('button', { class: 'btn small danger', onclick: emptyTrash }, 'ריקון הסל')));
+  if (S.filter === 'trash' && docs.length) list.append(h('div', { class: 'trash-bar' }, h('span', { class: 'muted grow', text: T('מסמכים בסל אפשר לשחזר או למחוק לתמיד.') }), h('button', { class: 'btn small danger', onclick: emptyTrash }, T('ריקון הסל'))));
   if (!docs.length) {
-    list.append(h('div', { class: 'dr-empty', text: q ? 'לא נמצאו מסמכים מתאימים' : S.filter === 'star' ? 'אין עדיין מועדפים. לוחצים על הכוכב ליד מסמך.' : S.filter === 'trash' ? 'הסל ריק' : S.docsReady ? 'אין עדיין מסמכים' : 'טוען…' }));
+    list.append(h('div', { class: 'dr-empty', text: q ? T('לא נמצאו מסמכים מתאימים') : S.filter === 'star' ? T('אין עדיין מועדפים. לוחצים על הכוכב ליד מסמך.') : S.filter === 'trash' ? T('הסל ריק') : S.docsReady ? T('אין עדיין מסמכים') : T('טוען…') }));
     return;
   }
   for (const d of docs) {
     const cur = S.cur && !S.cur.isSample && d.id === S.cur.id;
-    const more = h('button', { class: 'icon-btn', title: 'פעולות', 'aria-label': 'פעולות על המסמך', onclick: e => { e.stopPropagation(); openDocMenu(more, d); } }, icon('more_horiz'));
-    const star = d.trashed ? null : h('button', { class: 'icon-btn star' + (d.starred ? ' on' : ''), title: d.starred ? 'הסרה מהמועדפים' : 'הוספה למועדפים', 'aria-label': 'מועדף', 'aria-pressed': String(!!d.starred), onclick: e => { e.stopPropagation(); toggleStar(d.id); } }, icon('star', d.starred ? 'fill' : ''));
+    const more = h('button', { class: 'icon-btn', title: T('פעולות'), 'aria-label': T('פעולות על המסמך'), onclick: e => { e.stopPropagation(); openDocMenu(more, d); } }, icon('more_horiz'));
+    const star = d.trashed ? null : h('button', { class: 'icon-btn star' + (d.starred ? ' on' : ''), title: d.starred ? T('הסרה מהמועדפים') : T('הוספה למועדפים'), 'aria-label': T('מועדף'), 'aria-pressed': String(!!d.starred), onclick: e => { e.stopPropagation(); toggleStar(d.id); } }, icon('star', d.starred ? 'fill' : ''));
     list.append(h('div', {
       class: 'di' + (cur ? ' cur' : '') + (d.trashed ? ' trashed' : ''), role: 'listitem', tabindex: d.trashed ? null : 0,
       onclick: () => { if (!d.trashed) openDoc(d.id); },
@@ -2095,8 +2184,8 @@ function renderDocs() {
 }
 function openDocMenu(anchor, d) {
   const items = d.trashed
-    ? [['restore_from_trash', 'שחזור', () => restoreDoc(d.id)], ['delete_forever', 'מחיקה לתמיד', () => deleteForever(d.id), true]]
-    : [['edit', 'שינוי שם', () => renameDoc(d.id)], ['content_copy', 'שכפול', () => duplicateDoc(d.id)], ['delete', 'העברה לסל המחזור', () => trashDoc(d.id), true]];
+    ? [['restore_from_trash', T('שחזור'), () => restoreDoc(d.id)], ['delete_forever', T('מחיקה לתמיד'), () => deleteForever(d.id), true]]
+    : [['edit', T('שינוי שם'), () => renameDoc(d.id)], ['content_copy', T('שכפול'), () => duplicateDoc(d.id)], ['delete', T('העברה לסל המחזור'), () => trashDoc(d.id), true]];
   openPop(anchor, h('div', { class: 'menu' }, items.map(([ic, label, fn, danger]) => h('button', { class: 'mi' + (danger ? ' danger' : ''), onclick: () => { closePopover(); fn(); } }, icon(ic), label))));
 }
 async function toggleStar(id) {
@@ -2106,7 +2195,7 @@ async function toggleStar(id) {
 }
 async function renameDoc(id) {
   const m = findMeta(id); if (!m) return;
-  const name = await promptBox('שינוי שם', 'השם החדש של המסמך', displayTitle(m));
+  const name = await promptBox(T('שינוי שם'), T('השם החדש של המסמך'), displayTitle(m));
   if (name == null) return;
   if (S.cur && S.cur.id === id) { S.cur.meta.title = name.trim(); $('#docTitle').value = S.cur.meta.title; markDirty(); renderDocs(); return; }
   try { await S.store.putMeta(id, { ...m, title: name.trim() }); } catch (e) { toast(storeErrMsg(e)); }
@@ -2117,7 +2206,7 @@ async function duplicateDoc(id) {
   let html;
   try { html = S.cur && S.cur.id === id ? cleanHTML() : await S.store.readBody(id, m.chunks || 1); }
   catch (e) { toast(storeErrMsg(e)); return; }
-  if (await createDoc({ title: displayTitle(m) + ' (עותק)', html, page: m.page })) toast('נוצר עותק של המסמך', { icon: 'content_copy' });
+  if (await createDoc({ title: T('{0} (עותק)', displayTitle(m)), html, page: { dir: 'rtl', ...(m.page || {}) } })) toast(T('נוצר עותק של המסמך'), { icon: 'content_copy' });
 }
 async function trashDoc(id) {
   const m = findMeta(id); if (!m) return;
@@ -2129,32 +2218,32 @@ async function trashDoc(id) {
   } else {
     try { await S.store.putMeta(id, { ...m, trashed: true, trashedAt: Date.now() }); } catch (e) { toast(storeErrMsg(e)); return; }
   }
-  toast('המסמך הועבר לסל המחזור', { icon: 'delete', action: { label: 'ביטול', run: () => restoreDoc(id) } });
+  toast(T('המסמך הועבר לסל המחזור'), { icon: 'delete', action: { label: T('ביטול@undo'), run: () => restoreDoc(id) } });
 }
 async function restoreDoc(id) {
   if (S.cur && S.cur.id === id) { S.cur.meta.trashed = false; delete S.cur.meta.trashedAt; markDirty(); renderDocs(); return; }
   const m = findMeta(id); if (!m) return;
   const meta = { ...m, trashed: false }; delete meta.trashedAt;
-  try { await S.store.putMeta(id, meta); toast('המסמך שוחזר', { icon: 'restore_from_trash' }); } catch (e) { toast(storeErrMsg(e)); }
+  try { await S.store.putMeta(id, meta); toast(T('המסמך שוחזר'), { icon: 'restore_from_trash' }); } catch (e) { toast(storeErrMsg(e)); }
 }
 async function deleteForever(id, quiet) {
   const m = findMeta(id); if (!m) return;
-  if (!quiet && !(await confirmBox('מחיקה לתמיד', `"${displayTitle(m)}" יימחק לגמרי, כולל כל הגרסאות שלו. אי אפשר לבטל את זה.`, 'מחיקה', true))) return;
+  if (!quiet && !(await confirmBox(T('מחיקה לתמיד'), T(`"{0}" יימחק לגמרי, כולל כל הגרסאות שלו. אי אפשר לבטל את זה.`, displayTitle(m)), T('מחיקה'), true))) return;
   try {
     for (const v of await S.store.listVersions(id)) { await S.store.delBody('v_' + v.id, v.chunks || 1); await S.store.delVersion(v.id); }
     await S.store.delBody(id, m.chunks || 1);
     await S.store.delMeta(id);
     lsDel('fink:bk:' + id);
     fileLinks.del(id).catch(() => {});
-    if (!quiet) toast('המסמך נמחק', { icon: 'delete_forever' });
+    if (!quiet) toast(T('המסמך נמחק'), { icon: 'delete_forever' });
   } catch (e) { toast(storeErrMsg(e)); }
 }
 async function emptyTrash() {
   const list = allDocs().filter(d => d.trashed);
   if (!list.length) return;
-  if (!(await confirmBox('ריקון סל המחזור', `${list.length === 1 ? 'מסמך אחד יימחק' : fmt(list.length) + ' מסמכים יימחקו'} לתמיד. אי אפשר לבטל את זה.`, 'ריקון הסל', true))) return;
+  if (!(await confirmBox(T('ריקון סל המחזור'), TN('{n} מסמכים יימחקו לתמיד. אי אפשר לבטל את זה.', list.length), T('ריקון הסל'), true))) return;
   for (const d of list) await deleteForever(d.id, true);
-  toast('הסל רוקן', { icon: 'delete_sweep' });
+  toast(T('הסל רוקן'), { icon: 'delete_sweep' });
 }
 function cleanHTML() {
   const c = ed.cloneNode(true);
@@ -2179,7 +2268,7 @@ function loadIntoEditor({ id, meta, html, isSample }) {
   S.editVer = S.savedVer = 0; S.goalArmed = false; S.goalHit = false; S.retries = 0; S.remotePrompted = false;
   lastRange = null;
   $('#docTitle').value = S.cur.meta.title || '';
-  $('#docTitle').placeholder = S.cur.meta.auto || 'מסמך ללא שם';
+  $('#docTitle').placeholder = S.cur.meta.auto || T('מסמך ללא שם');
   updateDocTitle();
   applyPage(); resetHistory(); updateStats(); renderDocs();
   const pg = pageOf();
@@ -2196,10 +2285,10 @@ async function openDoc(id) {
   if (S.cur && !S.cur.isSample && S.cur.id === id) { if (isNarrow()) setDrawer(false); return; }
   await flushSave();
   const meta = findMeta(id);
-  if (!meta) { toast('המסמך לא נמצא'); return; }
+  if (!meta) { toast(T('המסמך לא נמצא')); return; }
   let html;
   try { html = await S.store.readBody(id, meta.chunks || 1); }
-  catch (e) { toast('לא הצלחתי לפתוח את המסמך. כדאי לנסות שוב.'); return; }
+  catch (e) { toast(T('לא הצלחתי לפתוח את המסמך. כדאי לנסות שוב.')); return; }
   loadIntoEditor({ id, meta, html });
   lsSet('fink:last', id);
   if (isNarrow()) setDrawer(false);
@@ -2209,7 +2298,7 @@ async function createDoc({ title = '', html = '<p><br></p>', page } = {}) {
   if (!S.store) return null;
   await flushSave();
   const id = uid(), now = Date.now(), text = htmlText(html);
-  const meta = { title, auto: firstLine(text), createdAt: now, updatedAt: now, words: countWords(text), snippet: snippetOf(text), chunks: 1, starred: false, trashed: false, page: { ...DEFAULT_PAGE, ...(page || {}) }, goal: 0, session: SESSION };
+  const meta = { title, auto: firstLine(text), createdAt: now, updatedAt: now, words: countWords(text), snippet: snippetOf(text), chunks: 1, starred: false, trashed: false, page: { ...DEFAULT_PAGE, dir: UI_DIR, ...(page || {}) }, goal: 0, session: SESSION };
   try { meta.chunks = await S.store.writeBody(id, html, 1); await S.store.putMeta(id, meta); }
   catch (e) { toast(storeErrMsg(e), { ms: 6000 }); return null; }
   loadIntoEditor({ id, meta, html });
@@ -2221,8 +2310,8 @@ async function createDoc({ title = '', html = '<p><br></p>', page } = {}) {
   return id;
 }
 function loadSample() {
-  loadIntoEditor({ id: null, meta: { title: '', auto: 'ברוכים הבאים ל-Floating Ink', page: { ...DEFAULT_PAGE }, goal: 0 }, html: WELCOME, isSample: true });
-  showBanner('זה מסמך לדוגמה. אפשר לערוך אותו, או להתחיל מסמך חדש.', [{ label: 'מסמך חדש', primary: true, run: () => openNewDialog() }]);
+  loadIntoEditor({ id: null, meta: { title: '', auto: T('ברוכים הבאים ל-Floating Ink'), page: { ...DEFAULT_PAGE, dir: UI_DIR }, goal: 0 }, html: WELCOME, isSample: true });
+  showBanner(T('זה מסמך לדוגמה. אפשר לערוך אותו, או להתחיל מסמך חדש.'), [{ label: T('מסמך חדש'), primary: true, run: () => openNewDialog() }]);
 }
 function promoteSample() {
   const c = S.cur; if (!c || !c.isSample) return;
@@ -2255,9 +2344,9 @@ function onDocs(list, fromCache) {
     if (S.editVer === S.savedVer && !S.saving) reloadCurrent(m);
     else {
       S.remotePrompted = true;
-      showBanner('המסמך הזה השתנה עכשיו במכשיר אחר.', [
-        { label: 'לטעון את הגרסה החדשה', primary: true, run: () => { S.remotePrompted = false; reloadCurrent(m); } },
-        { label: 'להמשיך עם מה שכאן', run: () => { S.remotePrompted = false; c.meta.updatedAt = m.updatedAt; } }], 'sync');
+      showBanner(T('המסמך הזה השתנה עכשיו במכשיר אחר.'), [
+        { label: T('לטעון את הגרסה החדשה'), primary: true, run: () => { S.remotePrompted = false; reloadCurrent(m); } },
+        { label: T('להמשיך עם מה שכאן'), run: () => { S.remotePrompted = false; c.meta.updatedAt = m.updatedAt; } }], 'sync');
     }
   }
 }
@@ -2275,28 +2364,29 @@ async function reloadCurrent(m) {
     applyPage(); resetHistory(); updateStats(); renderDocs();
     desk.scrollTop = top;
     setSave('saved');
-    toast('המסמך עודכן מהמכשיר השני', { icon: 'sync' });
+    toast(T('המסמך עודכן מהמכשיר השני'), { icon: 'sync' });
   } catch {}
 }
 function checkLocalBackup(id) {
   const bk = lsGet('fink:bk:' + id, null);
   if (!bk || !bk.html) return;
   if ((bk.t || 0) > ((S.cur && S.cur.meta.updatedAt) || 0)) {
-    const when = relTime(bk.t);
-    showBanner(when === 'עכשיו' ? 'נמצאה טיוטה שלא הספיקה להישמר.' : `נמצאה טיוטה ${/^\d/.test(when) ? 'מ-' : 'מ'}${when} שלא הספיקה להישמר.`, [
-      { label: 'לשחזר אותה', primary: true, run: () => { snapshot(); ed.innerHTML = sanitize(bk.html); afterChange(); lsDel('fink:bk:' + id); } },
-      { label: 'להתעלם', run: () => lsDel('fink:bk:' + id) }], 'restore');
+    const when = relTime(bk.t), fresh = Date.now() - (bk.t || 0) < 45e3;
+    // in Hebrew "from" joins the time: מלפני שעה, מ-22.9.2026
+    showBanner(fresh ? T('נמצאה טיוטה שלא הספיקה להישמר.') : T('נמצאה טיוטה {0} שלא הספיקה להישמר.', LANG === 'he' ? (/^\d/.test(when) ? 'מ-' : 'מ') + when : when), [
+      { label: T('לשחזר אותה'), primary: true, run: () => { snapshot(); ed.innerHTML = sanitize(bk.html); afterChange(); lsDel('fink:bk:' + id); } },
+      { label: T('להתעלם'), run: () => lsDel('fink:bk:' + id) }], 'restore');
   } else lsDel('fink:bk:' + id);
 }
 function backupLocal() { const c = S.cur; if (c && !c.isSample) lsSet('fink:bk:' + c.id, { t: Date.now(), html: cleanHTML() }); }
 function setSave(state, msg) {
   S.saveState = state;
   const b = $('#saveState'), local = S.mode !== 'db';
-  const [ic, tx] = ({ saved: [local ? 'computer' : 'cloud_done', local ? 'נשמר במכשיר' : 'נשמר'], dirty: ['sync', 'שומר…'], saving: ['sync', 'שומר…'], error: ['cloud_off', 'לא נשמר'], sample: ['visibility', 'מסמך לדוגמה'] })[state];
+  const [ic, tx] = ({ saved: [local ? 'computer' : 'cloud_done', local ? T('נשמר במכשיר') : T('נשמר')], dirty: ['sync', T('שומר…')], saving: ['sync', T('שומר…')], error: ['cloud_off', T('לא נשמר')], sample: ['visibility', T('מסמך לדוגמה')] })[state];
   b.querySelector('.ms').textContent = ic;
   b.querySelector('.txt').textContent = tx;
   b.classList.toggle('error', state === 'error');
-  b.title = state === 'error' ? `${msg || ''} לחיצה תנסה לשמור שוב.` : state === 'sample' ? 'כשמתחילים לערוך, הדוגמה נשמרת כמסמך רגיל.' : '';
+  b.title = state === 'error' ? T(`{0} לחיצה תנסה לשמור שוב.`, (msg || '')) : state === 'sample' ? T('כשמתחילים לערוך, הדוגמה נשמרת כמסמך רגיל.') : '';
   renderFileChip();
 }
 function markDirty() {
@@ -2317,12 +2407,12 @@ async function saveNow(manual) {
   if (!c || c.isSample || !S.store) return;
   if (S.saving) { S.again = true; return; }
   saveSoon.cancel();
-  if (S.editVer === S.savedVer) { if (manual) toast(S.mode !== 'db' ? 'הכל שמור במכשיר' : 'הכל שמור', { icon: 'cloud_done' }); return; }
+  if (S.editVer === S.savedVer) { if (manual) toast(S.mode !== 'db' ? T('הכל שמור במכשיר') : T('הכל שמור'), { icon: 'cloud_done' }); return; }
   S.saving = true; setSave('saving');
   const ver = S.editVer, html = cleanHTML(), text = ed.innerText, meta = c.meta;
   Object.assign(meta, { updatedAt: Date.now(), words: countWords(text), snippet: snippetOf(text), auto: firstLine(text), session: SESSION });
   if (!meta.createdAt) meta.createdAt = meta.updatedAt;
-  $('#docTitle').placeholder = meta.auto || 'מסמך ללא שם';
+  $('#docTitle').placeholder = meta.auto || T('מסמך ללא שם');
   updateDocTitle();
   lsSet('fink:bk:' + c.id, { t: meta.updatedAt, html });
   try {
@@ -2331,7 +2421,7 @@ async function saveNow(manual) {
     S.retries = 0;
     requestPersist();
     if (S.cur === c) { S.savedVer = ver; setSave(S.editVer === S.savedVer ? 'saved' : 'dirty'); }
-    if (manual) toast('נשמר', { icon: 'cloud_done' });
+    if (manual) toast(T('נשמר'), { icon: 'cloud_done' });
     autoVersion(c, html).catch(() => {});
     renderDocsSoon();
   } catch (e) {
@@ -2357,7 +2447,7 @@ async function flushSave() {
 function openNewDialog() {
   if (!S.store) return;
   const grid = h('div', { class: 'tpl-grid' });
-  const m = modal({ title: 'מסמך חדש', wide: true, body: grid });
+  const m = modal({ title: T('מסמך חדש'), wide: true, body: grid });
   for (const t of TEMPLATES) grid.append(h('button', { class: 'tpl', onclick: async () => { m.close(); await createDoc({ html: t.html() }); } }, icon(t.icon), h('b', { text: t.name }), h('span', { text: t.desc })));
 }
 
@@ -2368,10 +2458,10 @@ async function autoVersion(c, html) {
   const now = Date.now(), last = c.meta.lastVersionAt || 0;
   if (!c.versioned) {
     c.versioned = true;
-    if (c.loadedHtml && c.loadedHtml.length > 20 && c.loadedHtml !== html && now - last > 20 * 60e3) await createVersion(c, c.loadedHtml, 'לפני העריכה');
+    if (c.loadedHtml && c.loadedHtml.length > 20 && c.loadedHtml !== html && now - last > 20 * 60e3) await createVersion(c, c.loadedHtml, N_('לפני העריכה'));
     return;
   }
-  if (now - last > 30 * 60e3) await createVersion(c, html, 'שמירה אוטומטית');
+  if (now - last > 30 * 60e3) await createVersion(c, html, N_('שמירה אוטומטית'));
 }
 async function createVersion(c, html, label) {
   const t = Date.now(), id = `${c.id}_${t}`;
@@ -2387,30 +2477,30 @@ async function pruneVersions(docId) {
 }
 async function manualVersion() {
   if (!S.cur) return;
-  if (S.cur.isSample) { toast('קודם כותבים משהו במסמך'); return; }
-  const label = await promptBox('שמירת גרסה', 'שם לגרסה (לא חובה)', '', 'שמירה');
+  if (S.cur.isSample) { toast(T('קודם כותבים משהו במסמך')); return; }
+  const label = await promptBox(T('שמירת גרסה'), T('שם לגרסה (לא חובה)'), '', T('שמירה'));
   if (label == null) return;
   await flushSave();
-  try { await createVersion(S.cur, cleanHTML(), label.trim() || 'גרסה ששמרת'); toast('הגרסה נשמרה', { icon: 'bookmark_add' }); }
+  try { await createVersion(S.cur, cleanHTML(), label.trim() || N_('גרסה ששמרת')); toast(T('הגרסה נשמרה'), { icon: 'bookmark_add' }); }
   catch (e) { toast(storeErrMsg(e)); }
 }
 async function renderVersions() {
   const box = $('#verList'), c = S.cur;
   box.textContent = '';
-  if (!c || c.isSample) { box.append(h('p', { class: 'muted', text: 'גרסאות נשמרות אחרי שמתחילים לערוך את המסמך.' })); return; }
-  box.append(h('p', { class: 'muted', text: 'טוען…' }));
+  if (!c || c.isSample) { box.append(h('p', { class: 'muted', text: T('גרסאות נשמרות אחרי שמתחילים לערוך את המסמך.') })); return; }
+  box.append(h('p', { class: 'muted', text: T('טוען…') }));
   let vs;
   try { vs = await S.store.listVersions(c.id); }
-  catch { box.textContent = ''; box.append(h('p', { class: 'muted', text: 'לא הצלחתי לטעון את הגרסאות.' })); return; }
+  catch { box.textContent = ''; box.append(h('p', { class: 'muted', text: T('לא הצלחתי לטעון את הגרסאות.') })); return; }
   if (S.cur !== c) return;
   box.textContent = '';
-  if (!vs.length) { box.append(h('p', { class: 'muted', text: 'עדיין אין גרסאות שמורות למסמך הזה.' })); return; }
+  if (!vs.length) { box.append(h('p', { class: 'muted', text: T('עדיין אין גרסאות שמורות למסמך הזה.') })); return; }
   for (const v of vs) box.append(h('div', { class: 'ver' },
     h('div', { class: 'ver-t', text: fmtDateTime(v.t) }),
-    h('div', { class: 'ver-m', text: `${v.label || ''} · ${wordsLabel(v.words || 0)}` }),
+    h('div', { class: 'ver-m', text: `${T(v.label || '')} · ${wordsLabel(v.words || 0)}` }),
     h('div', { class: 'btn-row' },
-      h('button', { class: 'btn small', onclick: () => previewVersion(v) }, icon('visibility'), 'תצוגה'),
-      h('button', { class: 'btn small', onclick: () => restoreVersion(v) }, icon('restore'), 'שחזור'))));
+      h('button', { class: 'btn small', onclick: () => previewVersion(v) }, icon('visibility'), T('תצוגה')),
+      h('button', { class: 'btn small', onclick: () => restoreVersion(v) }, icon('restore'), T('שחזור')))));
 }
 async function previewVersion(v) {
   let html;
@@ -2418,26 +2508,26 @@ async function previewVersion(v) {
   const pv = h('div', { class: 'doc ver-prev' });
   pv.innerHTML = sanitize(html);
   pv.style.cssText = ed.style.cssText;
-  modal({ title: 'גרסה מ-' + fmtDateTime(v.t), wide: true, body: pv, actions: [{ label: 'שחזור הגרסה הזאת', kind: 'primary', run: () => { restoreVersion(v, html); } }, { label: 'סגירה', value: false }] });
+  modal({ title: T('גרסה מ-{0}', fmtDateTime(v.t)), wide: true, body: pv, actions: [{ label: T('שחזור הגרסה הזאת'), kind: 'primary', run: () => { restoreVersion(v, html); } }, { label: T('סגירה'), value: false }] });
 }
 async function restoreVersion(v, html) {
-  if (!(await confirmBox('שחזור גרסה', `המסמך יחזור לגרסה מ-${fmtDateTime(v.t)}. המצב הנוכחי יישמר קודם ברשימת הגרסאות, כך שאפשר לחזור אליו.`, 'שחזור'))) return;
+  if (!(await confirmBox(T('שחזור גרסה'), T(`המסמך יחזור לגרסה מ-{0}. המצב הנוכחי יישמר קודם ברשימת הגרסאות, כך שאפשר לחזור אליו.`, fmtDateTime(v.t)), T('שחזור')))) return;
   try {
     if (html == null) html = await S.store.readBody('v_' + v.id, v.chunks || 1);
     await flushSave();
-    await createVersion(S.cur, cleanHTML(), 'לפני שחזור');
+    await createVersion(S.cur, cleanHTML(), N_('לפני שחזור'));
   } catch (e) { toast(storeErrMsg(e)); return; }
   snapshot();
   ed.innerHTML = sanitize(html) || '<p><br></p>';
   afterChange();
   await saveNow();
-  toast('הגרסה שוחזרה', { icon: 'restore' });
+  toast(T('הגרסה שוחזרה'), { icon: 'restore' });
 }
 
 /* =========================================================
    side panel
    ========================================================= */
-const PANEL_TITLES = { find: 'חיפוש והחלפה', outline: 'מבנה המסמך', versions: 'גרסאות קודמות', ai: 'עוזר חכם' };
+const PANEL_TITLES = { find: T('חיפוש והחלפה'), outline: T('מבנה המסמך'), versions: T('גרסאות קודמות'), ai: T('עוזר חכם') };
 function openPanel(view, opts = {}) {
   if (!S.cur) return;
   $('#side').hidden = false;
@@ -2677,15 +2767,15 @@ function applyAI(result, scope, how) {
 async function offerFile(filename, data) {
   const d = S.caps.downloads;
   if (d) {
-    try { await d.save({ filename, data }); toast('הקובץ נשמר', { icon: 'download' }); return true; }
+    try { await d.save({ filename, data }); toast(T('הקובץ נשמר'), { icon: 'download' }); return true; }
     catch (e) {
       const c = e && e.code;
       if (c === 'declined') return false;
-      toast(c === 'rate_limited' ? 'חלון שמירה כבר פתוח' : c === 'rejected_extension' || c === 'extension_not_enabled' ? 'הפורמט הזה לא זמין כאן' : c === 'too_large' ? 'הקובץ גדול מדי' : 'השמירה לא הצליחה');
+      toast(c === 'rate_limited' ? T('חלון שמירה כבר פתוח') : c === 'rejected_extension' || c === 'extension_not_enabled' ? T('הפורמט הזה לא זמין כאן') : c === 'too_large' ? T('הקובץ גדול מדי') : T('השמירה לא הצליחה'));
       return false;
     }
   }
-  if (S.inClaude) { toast('שמירת קבצים לא זמינה בחלון הזה'); return false; }
+  if (S.inClaude) { toast(T('שמירת קבצים לא זמינה בחלון הזה')); return false; }
   const blob = data instanceof Blob ? data : new Blob([data], { type: 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
   const a = h('a', { href: url, download: filename });
@@ -2696,7 +2786,7 @@ async function offerFile(filename, data) {
 async function exportAs(kind) {
   if (!S.cur) return;
   const name = safeName(displayTitle(S.cur.meta));
-  const busy = toast('מכין את הקובץ…', { icon: 'hourglass_top', ms: 120000 });
+  const busy = toast(T('מכין את הקובץ…'), { icon: 'hourglass_top', ms: 120000 });
   let data;
   try {
     if (kind === 'docx') data = await buildDocx();
@@ -2707,14 +2797,14 @@ async function exportAs(kind) {
     else return;
   } catch (e) {
     console.error(e);
-    toast(e && e.message === 'lib' ? 'לא הצלחתי לטעון את כלי השמירה. כדאי לבדוק את החיבור לאינטרנט.' : 'לא הצלחתי להכין את הקובץ. כדאי לנסות שוב.', { ms: 6000 });
+    toast(e && e.message === 'lib' ? T('לא הצלחתי לטעון את כלי השמירה. כדאי לבדוק את החיבור לאינטרנט.') : T('לא הצלחתי להכין את הקובץ. כדאי לנסות שוב.'), { ms: 6000 });
     return;
   } finally { busy.remove(); }
   await offerFile(`${name}.${kind}`, data);
 }
 function openExportMenu(anchor) {
-  const items = [['docx', 'description', 'Word', '.docx'], ['pdf', 'picture_as_pdf', 'PDF', '.pdf'], ['html', 'code', 'דף אינטרנט', '.html'], ['txt', 'notes', 'טקסט פשוט', '.txt'], ['md', 'tag', 'Markdown', '.md']];
-  openPop(anchor, h('div', { class: 'menu' }, h('div', { class: 'pop-t', text: 'שמירת עותק כקובץ' }), items.map(([k, ic, l, ext]) => h('button', { class: 'mi', onclick: () => { closePopover(); exportAs(k); } }, icon(ic), l, h('small', { text: ext })))));
+  const items = [['docx', 'description', 'Word', '.docx'], ['pdf', 'picture_as_pdf', 'PDF', '.pdf'], ['html', 'code', T('דף אינטרנט'), '.html'], ['txt', 'notes', T('טקסט פשוט'), '.txt'], ['md', 'tag', 'Markdown', '.md']];
+  openPop(anchor, h('div', { class: 'menu' }, h('div', { class: 'pop-t', text: T('שמירת עותק כקובץ') }), items.map(([k, ic, l, ext]) => h('button', { class: 'mi', onclick: () => { closePopover(); exportAs(k); } }, icon(ic), l, h('small', { text: ext })))));
 }
 /* --- Word (.docx) --- */
 const BLOCK_TAGS = new Set(['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'PRE', 'UL', 'OL', 'LI', 'TABLE', 'HR', 'FIGURE', 'SECTION', 'ARTICLE', 'TR', 'TD', 'TH', 'THEAD', 'TBODY']);
@@ -2887,7 +2977,7 @@ async function buildDocx() {
   const tw = mm => Math.round(mm * 1440 / 25.4);
   const ctx = { D, images: await collectImages(ed), cw: contentWidthPx(), defColor: '1b1f2a', inst: 0 };
   const children = blocksToDocx(ed, ctx, {});
-  if (!children.length || children[children.length - 1] instanceof D.Table) children.push(new D.Paragraph({ bidirectional: true }));
+  if (!children.length || children[children.length - 1] instanceof D.Table) children.push(new D.Paragraph({ bidirectional: p.dir === 'rtl' }));
   const heading = k => ({ run: { bold: true, color: '1B1F2A', font: p.font, size: Math.round(p.fontSize * 2 * k) }, paragraph: { spacing: { before: 240, after: 120 }, keepNext: true } });
   const lvl = (format, text, i) => ({ level: i, format, text, alignment: D.AlignmentType.START, style: { paragraph: { indent: { start: 540 + i * 440, hanging: 300 } } } });
   const doc = new D.Document({
@@ -2910,8 +3000,8 @@ async function buildPdf() {
   await loadScript(LIB.html2pdf);
   if (typeof window.html2pdf !== 'function') throw new Error('lib');
   const p = pageOf(), m = MARGINS[p.margin] || MARGINS.normal;
-  const host = h('div', { dir: 'rtl', style: { position: 'fixed', left: '-10000px', top: '0' } });
-  const inner = h('div', { class: 'doc pdf-doc', dir: 'rtl', lang: 'he' });
+  const host = h('div', { dir: p.dir, style: { position: 'fixed', left: '-10000px', top: '0' } });
+  const inner = h('div', { class: 'doc pdf-doc', dir: p.dir, lang: LANG });
   inner.innerHTML = cleanHTML();
   inner.style.cssText = ed.style.cssText;
   inner.style.width = contentWidthPx() + 'px';
@@ -2946,7 +3036,7 @@ async function buildHtmlFile() {
   }
   const title = esc(displayTitle(S.cur.meta));
   const fonts = $('#docFonts').href;
-  return `<!doctype html>\n<html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="${esc(fonts)}"><style>:root{--mono:"IBM Plex Mono",Consolas,monospace;--ui:"IBM Plex Sans Hebrew",Arial,sans-serif;--page-color:${p.color}}body{margin:0;background:#e9ecf1}.page{max-width:${Math.round(contentWidthPx())}px;margin:24px auto;background:${p.color};padding:${Math.round(mm2px(m))}px;box-shadow:0 2px 14px rgba(0,0,0,.12)}@media (max-width:900px){.page{margin:0;padding:24px 18px}}@media print{body{background:none}.page{box-shadow:none;margin:0;padding:0;max-width:none}.doc hr.page-break{break-after:page;border:0}.doc hr.page-break::after{display:none}}\n${docCss()}</style></head><body><article class="page"><div class="doc" style="--doc-font:&quot;${esc(p.font)}&quot;;--doc-size:${p.fontSize}pt;--doc-lh:${p.lh}">${c.innerHTML}</div></article></body></html>`;
+  return `<!doctype html>\n<html lang="${LANG}" dir="${p.dir}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="${esc(fonts)}"><style>:root{--mono:"IBM Plex Mono",Consolas,monospace;--ui:"IBM Plex Sans Hebrew",Arial,sans-serif;--page-color:${p.color};--t-break:${JSON.stringify(T('מעבר עמוד'))}}body{margin:0;background:#e9ecf1}.page{max-width:${Math.round(contentWidthPx())}px;margin:24px auto;background:${p.color};padding:${Math.round(mm2px(m))}px;box-shadow:0 2px 14px rgba(0,0,0,.12)}@media (max-width:900px){.page{margin:0;padding:24px 18px}}@media print{body{background:none}.page{box-shadow:none;margin:0;padding:0;max-width:none}.doc hr.page-break{break-after:page;border:0}.doc hr.page-break::after{display:none}}\n${docCss()}</style></head><body><article class="page"><div class="doc" style="--doc-font:&quot;${esc(p.font)}&quot;;--doc-size:${p.fontSize}pt;--doc-lh:${p.lh}">${c.innerHTML}</div></article></body></html>`;
 }
 function htmlToMd(root) {
   const lines = [];
@@ -2955,7 +3045,7 @@ function htmlToMd(root) {
     if (n.nodeType !== 1) return '';
     const t = n.tagName, inner = [...n.childNodes].map(inline).join('');
     if (t === 'BR') return '  \n';
-    if (t === 'IMG') return '[תמונה]';
+    if (t === 'IMG') return T('[תמונה]');
     if (!inner.trim()) return inner;
     if (t === 'B' || t === 'STRONG' || (t === 'SPAN' && /bold|[6-9]00/.test(n.style.fontWeight))) return `**${inner}**`;
     if (t === 'I' || t === 'EM' || (t === 'SPAN' && n.style.fontStyle === 'italic')) return `*${inner}*`;
@@ -2998,6 +3088,12 @@ function htmlToMd(root) {
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
 }
 /* --- import & backup --- */
+/* an imported document's direction, from its letters: right to left when Hebrew and Arabic letters are the majority */
+function guessDir(html) {
+  const t = htmlText(html), n = re => (t.match(re) || []).length;
+  const rtl = n(/[א-תء-ي]/g), ltr = n(/[a-zà-öø-ÿа-яё一-鿿]/gi);
+  return rtl || ltr ? (rtl >= ltr ? 'rtl' : 'ltr') : UI_DIR;
+}
 /* text the way Windows tools save Hebrew: UTF-8 with or without a BOM, UTF-16, or the old windows-1255 */
 async function readText(f) {
   const b = new Uint8Array(await f.arrayBuffer());
@@ -3036,39 +3132,40 @@ async function importFile(f) {
   if (!S.store) return;
   const ext = (f.name.split('.').pop() || '').toLowerCase();
   const title = f.name.replace(/\.[^.]+$/, '');
-  const busy = toast('מייבא את הקובץ…', { icon: 'upload_file', ms: 120000 });
+  const busy = toast(T('מייבא את הקובץ…'), { icon: 'upload_file', ms: 120000 });
   try {
     let html;
     if (/^(docx|txt|md|markdown|html?)$/.test(ext)) html = (await fileToHtml(f, ext)).html;
-    else if (ext === 'doc') { toast('קבצי ‎.doc‎ ישנים לא נתמכים. אפשר לשמור אותם ב-Word כ-‎.docx‎ ולייבא.', { ms: 7000 }); return; }
-    else { toast('אפשר לייבא קבצי Word ‏(docx), טקסט, Markdown או HTML', { ms: 6000 }); return; }
+    else if (ext === 'doc') { toast(T('קבצי ‎.doc‎ ישנים לא נתמכים. אפשר לשמור אותם ב-Word כ-‎.docx‎ ולייבא.'), { ms: 7000 }); return; }
+    else { toast(T('אפשר לייבא קבצי Word ‏(docx), טקסט, Markdown או HTML'), { ms: 6000 }); return; }
     const clean = sanitize(html);
-    if (!htmlText(clean).trim() && !/<img/i.test(clean)) { toast('לא נמצא טקסט בקובץ'); return; }
-    if (await createDoc({ title, html: clean })) toast('הקובץ יובא כמסמך חדש', { icon: 'upload_file' });
+    if (!htmlText(clean).trim() && !/<img/i.test(clean)) { toast(T('לא נמצא טקסט בקובץ')); return; }
+    if (await createDoc({ title, html: clean, page: { dir: guessDir(clean) } })) toast(T('הקובץ יובא כמסמך חדש'), { icon: 'upload_file' });
   } catch (e) {
     console.error(e);
-    toast(e && e.message === 'lib' ? 'לא הצלחתי לטעון את כלי הייבוא. כדאי לבדוק את החיבור לאינטרנט.' : 'לא הצלחתי לקרוא את הקובץ', { ms: 6000 });
+    toast(e && e.message === 'lib' ? T('לא הצלחתי לטעון את כלי הייבוא. כדאי לבדוק את החיבור לאינטרנט.') : T('לא הצלחתי לקרוא את הקובץ'), { ms: 6000 });
   } finally { busy.remove(); }
 }
 async function doBackup() {
   if (!S.store) return;
   await flushSave();
-  const busy = toast('מכין גיבוי…', { icon: 'backup', ms: 120000 });
+  const busy = toast(T('מכין גיבוי…'), { icon: 'backup', ms: 120000 });
   let data;
   try {
     const docs = [];
     for (const d of allDocs()) docs.push({ meta: d, html: S.cur && d.id === S.cur.id ? cleanHTML() : await S.store.readBody(d.id, d.chunks || 1) });
-    if (!docs.length) { toast('אין עדיין מסמכים לגבות'); return; }
+    if (!docs.length) { toast(T('אין עדיין מסמכים לגבות')); return; }
     data = JSON.stringify({ app: 'floating-ink', v: 1, at: new Date().toISOString(), docs });
   } catch (e) { toast(storeErrMsg(e)); return; }
   finally { busy.remove(); }
-  await offerFile(`גיבוי Floating Ink ${today().replace(/\./g, '-')}.json`, data);
+  // dates like 22.9.2026 or 9/22/2026 become 22-9-2026: slashes can't go in a file name
+  await offerFile(T(`גיבוי Floating Ink {0}.json`, today().replace(/\D+/g, '-')), data);
 }
 async function restoreBackup(f) {
   let j;
   try { j = JSON.parse(await f.text()); if (!j || !Array.isArray(j.docs)) throw 0; }
-  catch { toast('הקובץ הזה לא נראה כמו גיבוי של Floating Ink'); return; }
-  if (!(await confirmBox('שחזור מגיבוי', `בגיבוי יש ${j.docs.length === 1 ? 'מסמך אחד' : fmt(j.docs.length) + ' מסמכים'}. הם יתווספו למחברת כמסמכים חדשים, בלי למחוק שום דבר.`, 'שחזור'))) return;
+  catch { toast(T('הקובץ הזה לא נראה כמו גיבוי של Floating Ink')); return; }
+  if (!(await confirmBox(T('שחזור מגיבוי'), TN('בגיבוי יש {n} מסמכים. הם יתווספו למחברת כמסמכים חדשים, בלי למחוק שום דבר.', j.docs.length), T('שחזור')))) return;
   let n = 0;
   try {
     for (const d of j.docs) {
@@ -3079,7 +3176,7 @@ async function restoreBackup(f) {
       n++;
     }
   } catch (e) { toast(storeErrMsg(e)); }
-  if (n) toast(n === 1 ? 'שוחזר מסמך אחד' : `שוחזרו ${fmt(n)} מסמכים`, { icon: 'settings_backup_restore' });
+  if (n) toast(TN('שוחזרו {n} מסמכים', n), { icon: 'settings_backup_restore' });
 }
 function doPrint() {
   let fired = false;
@@ -3088,7 +3185,7 @@ function doPrint() {
   try { window.print(); } catch {}
   setTimeout(() => {
     removeEventListener('beforeprint', f);
-    if (!fired) toast('ההדפסה חסומה בחלון הזה. אפשר לשמור כ-PDF ולהדפיס ממנו.', { ms: 9000, icon: 'print', action: { label: 'שמירה כ-PDF', run: () => exportAs('pdf') } });
+    if (!fired) toast(T('ההדפסה חסומה בחלון הזה. אפשר לשמור כ-PDF ולהדפיס ממנו.'), { ms: 9000, icon: 'print', action: { label: T('שמירה כ-PDF'), run: () => exportAs('pdf') } });
   }, 700);
 }
 
@@ -3141,7 +3238,7 @@ function renderFileChip() {
   b.classList.toggle('dirty', dirty);
   b.querySelector('.ms').textContent = dirty ? 'save' : 'description';
   b.querySelector('.txt').textContent = L.name;
-  b.title = dirty ? `יש שינויים שעוד לא נשמרו לתוך "${L.name}" במחשב. לחיצה או Ctrl+S שומרים אותם.` : `המסמך פתוח מהקובץ "${L.name}" במחשב, והכל שמור בו.`;
+  b.title = dirty ? T(`יש שינויים שעוד לא נשמרו לתוך "{0}" במחשב. לחיצה או Ctrl+S שומרים אותם.`, L.name) : T(`המסמך פתוח מהקובץ "{0}" במחשב, והכל שמור בו.`, L.name);
 }
 /* the browser hands over the files the app was opened with. They wait until the documents list is
    ready and whatever opened at start has finished opening */
@@ -3162,8 +3259,8 @@ async function openLaunched(files) {
 }
 async function openFromDisk(hd) {
   const kind = diskKind(hd.name);
-  if (!kind) { toast(`אי אפשר לפתוח כאן את "${hd.name}". אפשר לפתוח קבצי Word, טקסט ו-Markdown.`, { ms: 7000 }); return; }
-  const busy = toast('פותח את הקובץ…', { icon: 'description', ms: 120000 });
+  if (!kind) { toast(T(`אי אפשר לפתוח כאן את "{0}". אפשר לפתוח קבצי Word, טקסט ו-Markdown.`, hd.name), { ms: 7000 }); return; }
+  const busy = toast(T('פותח את הקובץ…'), { icon: 'description', ms: 120000 });
   try {
     const f = await hd.getFile();
     let old = null;
@@ -3184,20 +3281,20 @@ async function openFromDisk(hd) {
       await openDoc(old.docId);
       const c = S.cur;
       if (!c || c.id !== old.docId) return;
-      await createVersion(c, cleanHTML(), 'לפני שהקובץ השתנה מבחוץ');
+      await createVersion(c, cleanHTML(), N_('לפני שהקובץ השתנה מבחוץ'));
       snapshot(); ed.innerHTML = html; afterChange();
       await flushSave();
       rec.synced = c.meta.updatedAt;
-      toast('הקובץ השתנה מאז שנפתח כאן בפעם הקודמת, אז הוא נטען מחדש. מה שהיה כאן לפני כן שמור ב"גרסאות".', { icon: 'history', ms: 8000 });
+      toast(T('הקובץ השתנה מאז שנפתח כאן בפעם הקודמת, אז הוא נטען מחדש. מה שהיה כאן לפני כן שמור ב"גרסאות".'), { icon: 'history', ms: 8000 });
     } else {
-      if (!(await createDoc({ title: f.name.replace(/\.[^.]+$/, ''), html }))) return;
+      if (!(await createDoc({ title: f.name.replace(/\.[^.]+$/, ''), html, page: { dir: guessDir(html) } }))) return;
       rec.docId = S.cur.id; rec.synced = S.cur.meta.updatedAt;
     }
     await fileLinks.put(rec);
     await loadLink(rec.docId);
   } catch (e) {
     console.error(e);
-    toast(e && e.message === 'lib' ? 'לא הצלחתי לטעון את הכלי שקורא קבצי Word. כדאי לבדוק את החיבור לאינטרנט.' : `לא הצלחתי לפתוח את "${hd.name}"`, { ms: 7000 });
+    toast(e && e.message === 'lib' ? T('לא הצלחתי לטעון את הכלי שקורא קבצי Word. כדאי לבדוק את החיבור לאינטרנט.') : T(`לא הצלחתי לפתוח את "{0}"`, hd.name), { ms: 7000 });
   } finally { busy.remove(); }
 }
 /* plain text, one line per paragraph. (innerText leaves a blank line after every paragraph,
@@ -3253,15 +3350,15 @@ async function saveToFile() {
   let busy = null;
   try {
     if (L.kind === 'docx' && !L.warned) {
-      if (!(await confirmBox('לשמור לתוך הקובץ?', `השינויים יישמרו לתוך "${L.name}" במחשב. אם הקובץ נוצר בוורד, ייתכן שחלק מהעיצובים המיוחדים שלו (כמו כותרת עליונה או הערות) לא יישמרו. השאלה הזאת לא תופיע שוב לקובץ הזה.`, 'לשמור'))) return;
+      if (!(await confirmBox(T('לשמור לתוך הקובץ?'), T(`השינויים יישמרו לתוך "{0}" במחשב. אם הקובץ נוצר בוורד, ייתכן שחלק מהעיצובים המיוחדים שלו (כמו כותרת עליונה או הערות) לא יישמרו. השאלה הזאת לא תופיע שוב לקובץ הזה.`, L.name), T('לשמור')))) return;
       L.warned = true;
     }
     // asking needs the key press or click that started this, so it comes before anything slow
     let p = await L.handle.queryPermission({ mode: 'readwrite' });
     if (p !== 'granted') p = await L.handle.requestPermission({ mode: 'readwrite' });
-    if (p !== 'granted') { toast('בלי אישור לשנות את הקובץ אי אפשר לשמור לתוכו. השינויים שמורים כאן באפליקציה.', { ms: 7000 }); return; }
+    if (p !== 'granted') { toast(T('בלי אישור לשנות את הקובץ אי אפשר לשמור לתוכו. השינויים שמורים כאן באפליקציה.'), { ms: 7000 }); return; }
     await flushSave();
-    busy = toast('שומר לקובץ…', { icon: 'save', ms: 120000 });
+    busy = toast(T('שומר לקובץ…'), { icon: 'save', ms: 120000 });
     const data = L.kind === 'docx' ? await buildDocx() : diskText(L);
     if (S.cur !== c) return;
     const w = await L.handle.createWritable();
@@ -3270,12 +3367,12 @@ async function saveToFile() {
     L.mod = (await L.handle.getFile()).lastModified;
     L.synced = c.meta.updatedAt || Date.now();
     await fileLinks.put(L);
-    toast(`נשמר לתוך ${L.name}`, { icon: 'check' });
+    toast(T(`נשמר לתוך {0}`, L.name), { icon: 'check' });
   } catch (e) {
     console.error(e);
-    toast(e && e.message === 'lib' ? 'לא הצלחתי לטעון את כלי השמירה. כדאי לבדוק את החיבור לאינטרנט.'
-      : e && e.name === 'NotFoundError' ? `הקובץ "${L.name}" לא נמצא. אולי הוא הועבר או נמחק. אפשר לשמור עותק מהתפריט "שמירת עותק כקובץ".`
-      : `השמירה לתוך "${L.name}" לא הצליחה. אם הוא פתוח בתוכנה אחרת (כמו וורד), כדאי לסגור אותה ולנסות שוב. השינויים שמורים כאן באפליקציה.`, { ms: 9000 });
+    toast(e && e.message === 'lib' ? T('לא הצלחתי לטעון את כלי השמירה. כדאי לבדוק את החיבור לאינטרנט.')
+      : e && e.name === 'NotFoundError' ? T(`הקובץ "{0}" לא נמצא. אולי הוא הועבר או נמחק. אפשר לשמור עותק מהתפריט "שמירת עותק כקובץ".`, L.name)
+      : T(`השמירה לתוך "{0}" לא הצליחה. אם הוא פתוח בתוכנה אחרת (כמו וורד), כדאי לסגור אותה ולנסות שוב. השינויים שמורים כאן באפליקציה.`, L.name), { ms: 9000 });
   } finally { S.fileSaving = false; if (busy) busy.remove(); renderFileChip(); }
 }
 
@@ -3312,18 +3409,18 @@ function openDraw() {
   cv.addEventListener('pointermove', e => { if (!st.cur) return; st.cur.pts.push(pos(e)); show(); });
   const end = () => { if (!st.cur) return; st.strokes.push(st.cur); paint(bx, st.cur); st.cur = null; show(); };
   cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
-  const toolBtns = [['pen', 'edit', 'עט'], ['marker', 'ink_highlighter', 'מרקר'], ['eraser', 'ink_eraser', 'מחק']].map(([t, ic, l]) => h('button', { class: 'rb', 'data-tool': t, title: l, 'aria-label': l, onclick: () => { st.tool = t; mark(); } }, icon(ic)));
-  const colorBtns = COLORS.map(c => h('button', { class: 'sw', style: { background: c }, 'aria-label': 'צבע', onclick: () => { st.color = c; if (st.tool === 'eraser') st.tool = 'pen'; mark(); } }));
+  const toolBtns = [['pen', 'edit', T('עט')], ['marker', 'ink_highlighter', T('מרקר')], ['eraser', 'ink_eraser', T('מחק')]].map(([t, ic, l]) => h('button', { class: 'rb', 'data-tool': t, title: l, 'aria-label': l, onclick: () => { st.tool = t; mark(); } }, icon(ic)));
+  const colorBtns = COLORS.map(c => h('button', { class: 'sw', style: { background: c }, 'aria-label': T('צבע'), onclick: () => { st.color = c; if (st.tool === 'eraser') st.tool = 'pen'; mark(); } }));
   const mark = () => { toolBtns.forEach(b => b.classList.toggle('on', b.dataset.tool === st.tool)); colorBtns.forEach((b, i) => b.classList.toggle('on', COLORS[i] === st.color)); };
-  const size = h('input', { type: 'range', min: 1, max: 24, value: 4, 'aria-label': 'עובי הקו', title: 'עובי הקו' });
+  const size = h('input', { type: 'range', min: 1, max: 24, value: 4, 'aria-label': T('עובי הקו'), title: T('עובי הקו') });
   size.addEventListener('input', () => { st.size = +size.value; });
   mark();
   const tools = h('div', { class: 'draw-tools' }, toolBtns, h('span', { class: 'sep' }), colorBtns, h('span', { class: 'sep' }), icon('line_weight'), size, h('span', { class: 'grow' }),
-    h('button', { class: 'rb', title: 'ביטול הקו האחרון', 'aria-label': 'ביטול', onclick: () => { st.strokes.pop(); rebuild(); } }, icon('undo', 'flip')),
-    h('button', { class: 'rb', title: 'ניקוי הדף', 'aria-label': 'ניקוי', onclick: () => { st.strokes = []; rebuild(); } }, icon('delete')));
+    h('button', { class: 'rb', title: T('ביטול הקו האחרון'), 'aria-label': T('ביטול@undo'), onclick: () => { st.strokes.pop(); rebuild(); } }, icon('undo', 'flip')),
+    h('button', { class: 'rb', title: T('ניקוי הדף'), 'aria-label': T('ניקוי'), onclick: () => { st.strokes = []; rebuild(); } }, icon('delete')));
   const insert = () => {
     const ink = st.strokes.filter(s => s.tool !== 'eraser');
-    if (!ink.length) { toast('הדף ריק. קודם מציירים משהו.'); return false; }
+    if (!ink.length) { toast(T('הדף ריק. קודם מציירים משהו.')); return false; }
     let x0 = W, y0 = H, x1 = 0, y1 = 0;
     for (const s of ink) for (const [x, y] of s.pts) { x0 = Math.min(x0, x - s.w); y0 = Math.min(y0, y - s.w); x1 = Math.max(x1, x + s.w); y1 = Math.max(y1, y + s.w); }
     x0 = Math.max(0, x0 - 12); y0 = Math.max(0, y0 - 12); x1 = Math.min(W, x1 + 12); y1 = Math.min(H, y1 + 12);
@@ -3332,7 +3429,7 @@ function openDraw() {
     out.getContext('2d').drawImage(base, x0 * dpr, y0 * dpr, out.width, out.height, 0, 0, out.width, out.height);
     out.toBlob(blob => { if (!blob) return; if (saved && inEditor(saved.startContainer)) lastRange = saved; insertImageBlob(blob, Math.round((x1 - x0) / W * 90)); }, 'image/png');
   };
-  modal({ title: 'ציור', wide: true, body: h('div', { class: 'draw-wrap' }, tools, cv), actions: [{ label: 'הוספה למסמך', kind: 'primary', icon: 'add_photo_alternate', run: insert }, { label: 'ביטול', value: false }] });
+  modal({ title: T('ציור'), wide: true, body: h('div', { class: 'draw-wrap' }, tools, cv), actions: [{ label: T('הוספה למסמך'), kind: 'primary', icon: 'add_photo_alternate', run: insert }, { label: T('ביטול'), value: false }] });
 }
 
 /* =========================================================
@@ -3490,7 +3587,7 @@ function onEditorClick(e) {
   if (a && ed.contains(a) && (e.ctrlKey || e.metaKey)) {
     e.preventDefault();
     const w = window.open(a.href, '_blank', 'noopener');
-    if (!w) toast('הדפדפן חסם את פתיחת הקישור');
+    if (!w) toast(T('הדפדפן חסם את פתיחת הקישור'));
   }
 }
 function wire() {
@@ -3506,8 +3603,8 @@ function wire() {
     if (!fn) return;
     e.preventDefault();
     if (!S.cur && !FREE_CMDS.has(name)) return;
-    try { const r = fn(b.dataset.arg, b); if (r && r.catch) r.catch(err => { console.error(err); toast('משהו השתבש. כדאי לנסות שוב.'); }); }
-    catch (err) { console.error(err); toast('משהו השתבש. כדאי לנסות שוב.'); }
+    try { const r = fn(b.dataset.arg, b); if (r && r.catch) r.catch(err => { console.error(err); toast(T('משהו השתבש. כדאי לנסות שוב.')); }); }
+    catch (err) { console.error(err); toast(T('משהו השתבש. כדאי לנסות שוב.')); }
   });
   fontSel.addEventListener('change', () => setFont(fontSel.value));
   sizeSel.addEventListener('change', () => setFontSize(+sizeSel.value));
@@ -3522,6 +3619,7 @@ function wire() {
   title.addEventListener('blur', () => { if (S.cur && S.cur.meta.title && S.cur.meta.title !== title.value.trim()) { S.cur.meta.title = title.value.trim(); markDirty(); } });
   $('#saveState').addEventListener('click', () => { if (S.saveState === 'error') saveNow(true); });
   $('#fileChip').addEventListener('click', () => saveToFile());
+  $('#btnLang').addEventListener('click', () => openLangMenu($('#btnLang')));
   ed.addEventListener('input', e => { if (!e.isComposing) ensureBlocks(); if (e.inputType === 'insertParagraph') fixNewLi(); if (selectedImg && !ed.contains(selectedImg)) deselectImg(); onEdited(); });
   ed.addEventListener('beforeinput', e => { if (e.inputType === 'historyUndo') { e.preventDefault(); undo(); } else if (e.inputType === 'historyRedo') { e.preventDefault(); redo(); } });
   ed.addEventListener('keydown', onEditorKey);
@@ -3572,6 +3670,36 @@ function wire() {
 function updateDocTitle() {
   document.title = S.cur && !S.cur.isSample ? displayTitle(S.cur.meta) + ' · Floating Ink' : 'Floating Ink';
 }
+/* the fixed interface text in the HTML above, translated once at start (text made in JS goes through T) */
+function translateDom() {
+  if (UI_DIR === 'ltr') for (const s of $$('.ms')) if (s.textContent.endsWith('_rtl')) s.textContent = s.textContent.slice(0, -4);
+  if (!I18N) return;
+  document.documentElement.style.setProperty('--t-start', JSON.stringify(T('מתחילים לכתוב כאן…')));
+  document.documentElement.style.setProperty('--t-break', JSON.stringify(T('מעבר עמוד')));
+  const tr = v => { const k = v.trim(); return k && I18N.strings[k] ? v.replace(k, () => I18N.strings[k]) : v; };
+  // data-t names the key when the Hebrew word alone would be ambiguous (ביטול: cancel or undo)
+  for (const el of $$('[data-t]')) el.textContent = T(el.dataset.t);
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentElement.closest('#editor,script,style') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+  for (let n; (n = w.nextNode());) { const v = tr(n.data); if (v !== n.data) n.data = v; }
+  for (const el of $$('[title],[aria-label],[placeholder],[alt]')) for (const a of ['title', 'aria-label', 'placeholder', 'alt']) {
+    const v = el.getAttribute(a), out = v && tr(v);
+    if (out && out !== v) el.setAttribute(a, out);
+  }
+}
+/* the same 9 languages as the site's settings, and the same saved choice (flrot:lang), so the site and the app match */
+const LANGS = [['he', 'עברית'], ['en', 'English'], ['ar', 'العربية'], ['zh', '中文'], ['es', 'Español'], ['fr', 'Français'], ['pt', 'Português'], ['ru', 'Русский'], ['de', 'Deutsch']];
+function openLangMenu(anchor) {
+  openPop(anchor, h('div', {},
+    h('div', { class: 'pop-t', text: T('שפה') }),
+    h('div', { class: 'lang-grid' }, LANGS.map(([code, name]) => h('button', { class: code === LANG ? 'on' : null, lang: code, dir: code === 'he' || code === 'ar' ? 'rtl' : 'ltr', onclick: () => setLang(code) }, name)))));
+}
+async function setLang(code) {
+  closePopover();
+  if (code === LANG) return;
+  try { localStorage.setItem('flrot:lang', code); } catch {}
+  await flushSave();
+  location.reload();
+}
 /* ask the browser not to clear the documents when space runs low (installed app only, so no prompt) */
 function requestPersist() {
   if (S.persistAsked || S.mode !== 'idb') return;
@@ -3590,7 +3718,7 @@ function setupInstall() {
     ev.prompt();
     let choice = null;
     try { choice = await ev.userChoice; } catch {}
-    if (choice && choice.outcome === 'accepted') toast('Floating Ink מותקן. אפשר לפתוח אותו כמו כל תוכנה.', { icon: 'install_desktop', ms: 6000 });
+    if (choice && choice.outcome === 'accepted') toast(T('Floating Ink מותקן. אפשר לפתוח אותו כמו כל תוכנה.'), { icon: 'install_desktop', ms: 6000 });
   });
   addEventListener('appinstalled', () => { btn.hidden = true; deferred = null; });
 }
@@ -3613,9 +3741,10 @@ async function initStore() {
 async function boot() {
   try { document.execCommand('defaultParagraphSeparator', false, 'p'); document.execCommand('styleWithCSS', false, true); } catch {}
   if (!S.inClaude) { document.documentElement.classList.add('no-ai'); if (PREFS.tab === 'ai') PREFS.tab = 'home'; }
+  translateDom();
   for (const f of FONTS) fontSel.append(h('option', { value: f, text: f, style: { fontFamily: `"${f}"` } }));
   for (const s of SIZES) sizeSel.append(h('option', { value: s, text: s }));
-  for (const [c, n] of PAGE_COLORS) $('#pageColors').append(h('button', { class: 'pc', style: { background: c }, title: n, 'aria-label': 'צבע דף: ' + n, 'data-cmd': 'pageColor', 'data-arg': c }));
+  for (const [c, n] of PAGE_COLORS) $('#pageColors').append(h('button', { class: 'pc', style: { background: c }, title: n, 'aria-label': T('צבע דף: {0}', n), 'data-cmd': 'pageColor', 'data-arg': c }));
   for (const [k, d] of Object.entries(AI)) $('#aiGrid').append(h('button', { class: 'ai-act', onclick: () => runAI(k) }, icon(d.i), d.t));
   wire();
   selectTab(PREFS.tab && PREFS.tab !== 'table' ? PREFS.tab : 'home');
@@ -3628,10 +3757,10 @@ async function boot() {
   S.store = store; S.mode = store.kind;
   const local = S.mode !== 'db';
   $('#stMode').hidden = S.mode !== 'local';
-  $('#drawerFoot').textContent = local ? 'נשמר רק במכשיר הזה. שום דבר לא נשלח לשרת.' : 'נשמר בחשבון שלך. רק לך יש גישה.';
-  $('#privateBadge').title = local ? 'המסמכים נשמרים רק במכשיר הזה, ושום דבר לא נשלח לשרת.' : 'המחברת פרטית: רק החשבון שלך יכול לפתוח אותה ולקרוא את המסמכים.';
+  $('#drawerFoot').textContent = local ? T('נשמר רק במכשיר הזה. שום דבר לא נשלח לשרת.') : T('נשמר בחשבון שלך. רק לך יש גישה.');
+  $('#privateBadge').title = local ? T('המסמכים נשמרים רק במכשיר הזה, ושום דבר לא נשלח לשרת.') : T('המחברת פרטית: רק החשבון שלך יכול לפתוח אותה ולקרוא את המסמכים.');
   setupInstall();
-  store.watchDocs(onDocs, () => toast('החיבור לרשימת המסמכים נקטע. כדאי לרענן את הדף.', { ms: 8000 }));
+  store.watchDocs(onDocs, () => toast(T('החיבור לרשימת המסמכים נקטע. כדאי לרענן את הדף.'), { ms: 8000 }));
 }
 boot();
 </script>

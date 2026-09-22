@@ -1,9 +1,10 @@
 // Floating Ink — service worker: lets the installed app open without internet.
 // The app's own files are fetched fresh when online (so updates arrive) and fall back
 // to the saved copy offline. Fonts and the Word/PDF libraries are kept after first use.
-const SHELL = 'ink-shell-v2';
+const SHELL = 'ink-shell-v3';
 const LIBS = 'ink-libs-v1';
-const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './floating-ink.webp', './icons/icon-192.png', './icons/icon-512.png', './icons/favicon-32.png', './icons/mark-64.png'];
+const LANGS = ['en', 'ar', 'zh', 'es', 'fr', 'pt', 'ru', 'de'];
+const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './floating-ink.webp', './icons/icon-192.png', './icons/icon-512.png', './icons/favicon-32.png', './icons/mark-64.png', ...LANGS.map(l => `./lang/${l}.js`)];
 const LIB_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net', 'cdnjs.cloudflare.com'];
 
 self.addEventListener('install', e => {
