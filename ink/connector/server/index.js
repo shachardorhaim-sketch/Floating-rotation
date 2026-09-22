@@ -13,8 +13,8 @@ const http = require('http');
 const readline = require('readline');
 const crypto = require('crypto');
 
-const PORT = 47821;
-const VERSION = '1.0.0';
+const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
+const VERSION = '1.1.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -26,7 +26,9 @@ const INSTRUCTIONS = 'Floating Ink is a word processor open in the user\'s brows
   '(# headings, **bold**, *italic*, lists, "- [ ]" checklists, | tables |, > quotes, [links](https://...)). ' +
   'Keep the language of the document unless the user asks otherwise; many documents are in Hebrew. ' +
   'The chat panel inside Floating Ink is shared: send_message leaves a note there, and read_messages shows ' +
-  'what the user or another connected assistant wrote.';
+  'what the user or another connected assistant wrote. The user often keeps writing to you from that panel instead of ' +
+  'switching back to this window, so when they may still be talking to you there, call wait_for_message: it comes back ' +
+  'the moment they send something.';
 
 const DOC_ID = { type: 'string', description: 'Document id from list_documents. Leave out to use the document open on screen.' };
 const TOOLS = [
@@ -48,7 +50,13 @@ const TOOLS = [
     inputSchema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] } },
   { name: 'read_messages', description: 'Read the recent messages in the chat panel inside Floating Ink (from the user and from assistants).',
     inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true } },
+  { name: 'wait_for_message', description: 'Stay listening to the chat panel inside Floating Ink and return the user\'s message the moment they send it, ' +
+      'instead of hearing about it only when they come back to this window. Call it whenever the user may keep talking to you from inside Floating Ink: ' +
+      'right after you write something there, after send_message, or when they ask you to stay available. It waits up to `seconds` (45 by default) and ' +
+      'returns nothing if no message arrived; call it again if the user is still expecting you there.',
+    inputSchema: { type: 'object', properties: { seconds: { type: 'number', description: 'How long to keep listening, 5 to 55. Default 45.' } } }, annotations: { readOnlyHint: true } },
 ];
+const NO_MSG = 'No message from the user in Floating Ink yet. If they are still working there and waiting for you, call wait_for_message again; otherwise finish your turn.';
 
 /* ---------- the hub: owns the port, holds the browser's connection ---------- */
 let isHub = false;
@@ -87,6 +95,50 @@ async function sendToApp(tool, args, client) {
     app.write('event: call\ndata: ' + JSON.stringify({ id, tool, args, client }) + '\n\n');
   });
 }
+/* ---------- the user's messages, and the assistants listening for them ----------
+   An assistant that calls wait_for_message stays here until the user writes in Floating Ink's chat panel,
+   so it answers straight away instead of hearing about the message only later. */
+const PROC = crypto.randomUUID();     // this copy of the program: each one is given every message once
+let msgSeq = 0;
+const msgs = [];                      // { seq, text, t } - what the user wrote, newest last
+const cursors = new Map();            // proc -> the last seq that copy was given
+const waiters = new Set();            // { proc, resolve, timer }
+const CANCELLED = Symbol('cancelled');
+const tellApp = () => { if (app) app.write('event: waiting\ndata: ' + JSON.stringify({ n: waiters.size }) + '\n\n'); };
+
+function freshFor(proc) {
+  const fresh = msgs.filter(m => m.seq > cursors.get(proc));
+  if (fresh.length) cursors.set(proc, fresh[fresh.length - 1].seq);
+  return fresh.map(m => ({ from: 'the user', text: m.text, time: new Date(m.t).toISOString() }));
+}
+function endWait(w, result) {
+  if (!waiters.delete(w)) return;
+  clearTimeout(w.timer);
+  tellApp();
+  w.resolve(result);
+}
+function newMessage(text) {
+  msgs.push({ seq: ++msgSeq, text, t: Date.now() });
+  if (msgs.length > 200) msgs.shift();
+  for (const w of [...waiters]) { const fresh = freshFor(w.proc); if (fresh.length) endWait(w, fresh); }
+}
+function hubWait(args, proc, hooks) {
+  const secs = Math.min(Math.max(Number(args && args.seconds) || 45, 5), 55);
+  if (!cursors.has(proc)) {                              // the first time: also what was written in the last two minutes
+    const seen = msgs.filter(m => Date.now() - m.t > 120000);
+    cursors.set(proc, seen.length ? seen[seen.length - 1].seq : 0);
+  }
+  const already = freshFor(proc);                        // a message that arrived while it was busy working
+  if (already.length) return Promise.resolve(already);
+  return new Promise(resolve => {
+    const w = { proc, resolve };
+    w.timer = setTimeout(() => endWait(w, []), secs * 1000);
+    waiters.add(w);
+    if (hooks) hooks.cancel = () => endWait(w, CANCELLED);
+    tellApp();
+  });
+}
+
 const server = http.createServer(async (req, res) => {
   if (!okHost(req.headers.host)) { res.writeHead(403).end(); return; }
   const origin = req.headers.origin;
@@ -105,6 +157,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
     res.write('event: hello\ndata: ' + JSON.stringify({ version: VERSION }) + '\n\n');
     app = res;
+    tellApp();                              // tells the page whether an assistant is listening right now
     const ping = setInterval(() => res.write(': ping\n\n'), 15000);
     req.on('close', () => {
       clearInterval(ping);
@@ -114,6 +167,16 @@ const server = http.createServer(async (req, res) => {
       }
     });
     log('Floating Ink connected');
+    return;
+  }
+  if (path === '/msg' && req.method === 'POST') {
+    if (!origin || !appOrigin(origin)) { res.writeHead(403).end(); return; }
+    try {
+      const m = await readBody(req);
+      const text = String((m && m.text) || '').trim().slice(0, 4000);
+      if (text) newMessage(text);
+      res.writeHead(204).end();
+    } catch { res.writeHead(400).end(); }
     return;
   }
   if (path === '/result' && req.method === 'POST') {
@@ -129,7 +192,13 @@ const server = http.createServer(async (req, res) => {
   if (path === '/call' && req.method === 'POST' && !origin) {
     try {
       const r = await readBody(req);
-      const result = await sendToApp(r.tool, r.args, r.client);
+      let result;
+      if (r.tool === 'wait_for_message') {
+        const hooks = {};                   // the other copy hung up: stop waiting, and leave the message for it
+        res.on('close', () => { if (!res.writableEnded && hooks.cancel) hooks.cancel(); });
+        result = await hubWait(r.args, r.proc || 'unknown', hooks);
+        if (result === CANCELLED) return;
+      } else result = await sendToApp(r.tool, r.args, r.client);
       res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ ok: true, result }));
     } catch (e) {
       res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ ok: false, error: e.message }));
@@ -152,35 +221,45 @@ function becomeHub() {
   });
 }
 /* a copy that isn't the hub passes the call on; if the hub is gone, it takes its place */
-function postToHub(tool, args, client) {
+function postToHub(tool, args, client, hooks) {
   return new Promise((resolve, reject) => {
-    const body = JSON.stringify({ tool, args, client });
+    const body = JSON.stringify({ tool, args, client, proc: PROC });
     const req = http.request({ host: '127.0.0.1', port: PORT, path: '/call', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, res => {
       let data = '';
       res.setEncoding('utf8');
       res.on('data', c => { data += c; });
       res.on('end', () => { try { const r = JSON.parse(data); r.ok ? resolve(r.result) : reject(new Error(r.error)); } catch (e) { reject(e); } });
     });
+    if (hooks) hooks.cancel = () => req.destroy();
     req.on('error', reject);
     req.end(body);
   });
 }
-async function callApp(tool, args, client) {
-  if (isHub) return sendToApp(tool, args, client);
-  try { return await postToHub(tool, args, client); }
+async function callApp(tool, args, client, hooks) {
+  const here = () => tool === 'wait_for_message' ? hubWait(args, PROC, hooks) : sendToApp(tool, args, client);
+  if (isHub) return here();
+  try { return await postToHub(tool, args, client, hooks); }
   catch (e) {
     if (e.code !== 'ECONNREFUSED' || !(await becomeHub())) throw e;
-    return sendToApp(tool, args, client);
+    return here();
   }
 }
 
 /* ---------- MCP over stdio ---------- */
 let clientName = 'Claude';
+const inflight = new Map();     // request id -> the hooks of a call that can still be cancelled
 const friendly = n => ({ 'claude-ai': 'Claude', 'claude-code': 'Claude Code' })[n] || (n ? String(n).replace(/[-_]/g, ' ').replace(/^\w/, c => c.toUpperCase()) : 'AI');
 const send = msg => process.stdout.write(JSON.stringify(msg) + '\n');
 const reply = (id, result) => send({ jsonrpc: '2.0', id, result });
 const fail = (id, code, message) => send({ jsonrpc: '2.0', id, error: { code, message } });
 
+/* a client that waits for a tool may give up on its own; a progress note tells it the wait is alive */
+function keepAlive(name, params) {
+  const token = params && params._meta && params._meta.progressToken;
+  if (name !== 'wait_for_message' || token == null) return null;
+  let n = 0;
+  return setInterval(() => send({ jsonrpc: '2.0', method: 'notifications/progress', params: { progressToken: token, progress: ++n, message: 'Listening in Floating Ink...' } }), 10000);
+}
 async function handle(msg) {
   const { id, method, params } = msg || {};
   if (method === 'initialize') {
@@ -193,18 +272,29 @@ async function handle(msg) {
       instructions: INSTRUCTIONS,
     });
   }
-  if (id === undefined || id === null) return;          // notifications (initialized, cancelled...)
+  if (method === 'notifications/cancelled') {           // gave up on the call: let go without eating the message
+    const h = inflight.get(params && params.requestId);
+    if (h) { h.cancelled = true; if (h.cancel) h.cancel(); }
+    return;
+  }
+  if (id === undefined || id === null) return;          // notifications (initialized, progress...)
   if (method === 'ping') return reply(id, {});
   if (method === 'tools/list') return reply(id, { tools: TOOLS });
   if (method === 'tools/call') {
     const name = params && params.name;
     if (!TOOLS.some(t => t.name === name)) return fail(id, -32602, 'Unknown tool: ' + name);
+    const hooks = {};
+    inflight.set(id, hooks);
+    const tick = keepAlive(name, params);
     try {
-      const result = await callApp(name, (params && params.arguments) || {}, clientName);
-      return reply(id, { content: [{ type: 'text', text: typeof result === 'string' ? result : JSON.stringify(result, null, 2) }] });
+      const result = await callApp(name, (params && params.arguments) || {}, clientName, hooks);
+      if (hooks.cancelled || result === CANCELLED) return;
+      const nothing = name === 'wait_for_message' && Array.isArray(result) && !result.length;
+      return reply(id, { content: [{ type: 'text', text: nothing ? NO_MSG : typeof result === 'string' ? result : JSON.stringify(result, null, 2) }] });
     } catch (e) {
+      if (hooks.cancelled) return;
       return reply(id, { content: [{ type: 'text', text: e.message }], isError: true });
-    }
+    } finally { clearInterval(tick); inflight.delete(id); }
   }
   return fail(id, -32601, 'Method not found: ' + method);
 }

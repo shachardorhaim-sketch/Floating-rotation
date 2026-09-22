@@ -360,6 +360,8 @@ select.field{padding:0 8px}
 .link-act{display:flex;gap:6px;align-items:flex-start;font-size:12px;color:var(--text-3)}
 .link-act .ms{font-size:15px}
 .link-ask{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.link-wait{margin:10px 0 0;font-size:12px;color:var(--text-3)}
+.link-wait.on{color:var(--green);font-weight:600}
 .link-help{margin-top:12px;font-size:13px}
 .link-help summary{cursor:pointer;font-weight:600}
 .link-help ol{padding-inline-start:20px;margin:8px 0;display:flex;flex-direction:column;gap:6px}
@@ -751,6 +753,7 @@ select.field{padding:0 8px}
           <label class="link-switch"><input type="checkbox" id="linkOn"><span>לאפשר ל-AI לעבוד ב-Floating Ink</span></label>
           <div class="link-state" id="linkState"></div>
           <div class="link-log" id="linkLog" aria-live="polite"></div>
+          <p class="link-wait" id="linkWait" hidden></p>
           <div class="link-ask">
             <textarea id="linkMsg" class="field" rows="2" placeholder="הודעה לקלוד…"></textarea>
             <button class="btn primary" id="linkSend"><span class="ms flip">send</span>שליחה</button>
@@ -3444,7 +3447,7 @@ async function saveToFile() {
    request on the documents in this browser, where the user watches it happen, and sends back the result
    ========================================================= */
 const LINK_URL = 'http://127.0.0.1:47821';
-const LINK = { es: null, state: 'off', timer: 0, wait: 2000, queue: Promise.resolve(), log: lsGet('fink:aichat', []) };
+const LINK = { es: null, state: 'off', timer: 0, wait: 2000, waiting: 0, queue: Promise.resolve(), log: lsGet('fink:aichat', []) };
 function linkStart() {
   linkStop();
   if (!PREFS.aiLink || S.inClaude) return;
@@ -3453,6 +3456,7 @@ function linkStart() {
   try { es = new EventSource(LINK_URL + '/events'); } catch { linkRetry(); return; }
   LINK.es = es;
   es.addEventListener('hello', () => { LINK.wait = 2000; setLinkState('ready'); });
+  es.addEventListener('waiting', e => { try { LINK.waiting = JSON.parse(e.data).n || 0; } catch {} if (S.panel === 'link') renderLinkWait(); });
   es.addEventListener('call', e => {
     let c = null;
     try { c = JSON.parse(e.data); } catch {}
@@ -3468,6 +3472,7 @@ function linkStop() {
 }
 function setLinkState(state) {
   LINK.state = state;
+  if (state !== 'ready') LINK.waiting = 0;
   $('#btnLink').classList.toggle('link-on', state === 'ready');
   if (S.panel === 'link') renderLinkState();
 }
@@ -3563,7 +3568,7 @@ const LINK_TOOLS = {
     const t = String(text || '').trim().slice(0, 4000);
     if (!t) throw new Error('The message is empty.');
     linkAdd({ from: who, kind: 'msg', text: t });
-    return 'Sent.';
+    return 'Sent. Call wait_for_message to catch the answer the moment the user writes it.';
   },
   async read_messages() {
     return LINK.log.filter(m => m.kind === 'msg').slice(-30).map(m => ({ from: m.from === 'user' ? 'the user' : m.from, text: m.text, time: new Date(m.t).toISOString() }));
@@ -3598,6 +3603,15 @@ function renderLinkState() {
   b.textContent = ready ? T('מחובר! אפשר לבקש מקלוד לעבוד ב-Floating Ink.')
     : LINK.state === 'waiting' ? T('מחכה למחבר של Floating Ink במחשב… אם עוד לא התקנת אותו, ההוראות למטה.')
     : T('כבוי. כדי שקלוד יוכל לעבוד כאן, מסמנים את התיבה למעלה.');
+  renderLinkWait();
+}
+/* is an assistant listening to the panel right this second (wait_for_message), or will it see the message later */
+function renderLinkWait() {
+  const p = $('#linkWait');
+  p.hidden = LINK.state !== 'ready';
+  p.classList.toggle('on', LINK.waiting > 0);
+  p.textContent = LINK.waiting > 0 ? T('קלוד מקשיב עכשיו — מה שכותבים כאן יגיע אליו מיד.')
+    : T('כדי שקלוד יראה מיד מה שכותבים כאן, אפשר לבקש ממנו: תישאר להקשיב ל-Floating Ink.');
 }
 function renderLinkLog() {
   const box = $('#linkLog');
@@ -3613,6 +3627,8 @@ function sendLinkMsg() {
   if (!t) return;
   $('#linkMsg').value = '';
   linkAdd({ from: 'user', kind: 'msg', text: t });
+  // and straight to the connector, so an assistant that is listening answers now instead of when the user goes back to it
+  if (LINK.state === 'ready') fetch(LINK_URL + '/msg', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ text: t }) }).catch(() => {});
 }
 
 /* =========================================================

@@ -28,7 +28,8 @@ python ink/tools/i18n_check.py
 
 - `connector/server/index.js` — המחבר: שרת MCP בלי תלויות, שקלוד מפעיל ומדבר איתו דרך stdin/stdout. הוא פותח את `http://127.0.0.1:47821`, והאפליקציה בדפדפן מתחברת אליו כשמסמנים "לאפשר ל-AI לעבוד": היא מקבלת כל בקשה כ-Server-Sent Event, מריצה אותה על המסמכים שבדפדפן ושולחת את התוצאה ב-POST. המסמכים לא יוצאים מהמחשב, חוץ ממה שקלוד קורא.
 - כמה חלונות של קלוד יכולים להיות מחוברים ביחד: העותק הראשון של המחבר מחזיק את הפורט, והאחרים מעבירים אליו את הבקשות (`/call`).
-- הכלים: `list_documents`, `read_document`, `create_document`, `write_in_document`, `replace_text`, `replace_document` (שומר קודם גרסה), `rename_document`, `send_message`, `read_messages`. התוכן עובר ב-Markdown (`mdToHtml` / `htmlToMd`).
+- הכלים: `list_documents`, `read_document`, `create_document`, `write_in_document`, `replace_text`, `replace_document` (שומר קודם גרסה), `rename_document`, `send_message`, `read_messages`, `wait_for_message`. התוכן עובר ב-Markdown (`mdToHtml` / `htmlToMd`).
+- `wait_for_message` הוא מה שגורם לקלוד לשים לב מיד: הוא נשאר ממתין (45 שניות כברירת מחדל) עד שכותבים משהו בחלונית, ומקבל את ההודעה באותו רגע — בלי שצריך לחזור לחלון של קלוד ולהגיד לו שנשלחה הודעה. האפליקציה שולחת כל הודעה של המשתמש גם ל-`/msg` שבמחבר, והמחבר מודיע לאפליקציה כמה עוזרים מקשיבים עכשיו (`event: waiting`) — זה מה שכתוב מתחת לתיבת ההודעה. הודעה שנכתבה כשאף אחד לא הקשיב לא נעלמת, היא מחכה לקריאה הבאה, וקריאה שהלקוח ויתר עליה (timeout) משחררת את ההמתנה בלי לבלוע את ההודעה.
 - שתי אריזות של אותו מחבר, כי לגרסאות שונות של אפליקציית Claude יש מסכים שונים:
   - `connector/floating-ink-plugin.zip` — תוסף (`.claude-plugin/plugin.json` עם `mcpServers`). מתקינים בהגדרות ← Plugins ← Add ← Upload plugin. זו הדרך שעבדה בגרסה של ספטמבר 2026, והקישור בחלונית מצביע עליה.
   - `connector/floating-ink.mcpb` — תוסף בפורמט הישן (`manifest.json` ו-`server/`), למסך Extensions. בגרסה החדשה אין מסך כזה, ומסך Connectors מקבל רק כתובות אינטרנט.
@@ -37,6 +38,8 @@ python ink/tools/i18n_check.py
 ```bash
 python ink/tools/build_connector.py
 ```
+
+קלוד קוד מריץ את הקובץ ישר מהתיקייה הזאת ומקבל כל שינוי לבד. אפליקציית Claude מחזיקה עותק משלה, אז אחרי שינוי במחבר צריך להעלות אליה שוב את `floating-ink-plugin.zip`.
 
 - לקלוד קוד: `claude mcp add floating-ink -- node <הנתיב אל connector/server/index.js>`.
 - צ'אט ג'יפיטי והאתר של קלוד מתחברים רק לשרת שיש לו כתובת באינטרנט, לא למחשב. בשביל זה צריך להעלות את אותו מחבר לשרת (למשל Cloudflare), ולצ'אט ג'יפיטי צריך גם מנוי בתשלום.

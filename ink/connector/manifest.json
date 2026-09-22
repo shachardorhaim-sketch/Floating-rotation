@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "floating-ink",
   "display_name": "Floating Ink",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Work with Claude inside Floating Ink, the word processor from floatingrotations.com: Claude reads, writes and edits your documents while you watch.",
   "long_description": "Open Floating Ink (https://floatingrotations.com/ink/), click the robot button at the top and turn on \"Connect AI\". Then ask Claude to write, fix or summarize your documents. Every change shows up live and can be undone with Ctrl+Z. The documents stay in your browser; Claude only sees what it reads through these tools.",
   "author": { "name": "Floating rotation", "url": "https://floatingrotations.com" },
@@ -22,7 +22,8 @@
     { "name": "replace_document", "description": "Rewrite a whole document (the old one is kept as a version)" },
     { "name": "rename_document", "description": "Change a document's title" },
     { "name": "send_message", "description": "Leave a message in the Floating Ink chat panel" },
-    { "name": "read_messages", "description": "Read the messages in the Floating Ink chat panel" }
+    { "name": "read_messages", "description": "Read the messages in the Floating Ink chat panel" },
+    { "name": "wait_for_message", "description": "Listen to the chat panel and answer the moment the user writes" }
   ],
   "compatibility": {
     "platforms": ["win32", "darwin", "linux"],
