@@ -748,7 +748,7 @@
   }
 
   function gameOver(){state='dead';mouse.down=false;$('game-over').classList.remove('hidden');$('death-stats').textContent=`${profile?.name ? profile.name+' · ' : ''}${t('kills')}: ${kills} · ${t('reachedSector')} ${region+1}`;$('mobile-controls').classList.remove('playing');$('mobile-weapon-bar').classList.remove('playing');$('weapon-inventory').classList.add('hidden');$('pause-btn').classList.add('hidden');}
-  function victory(){state='victory';$('victory-screen').classList.remove('hidden');$('victory-stats').textContent=`${profile?.name ? profile.name+' · ' : ''}${kills} ${t('kills')} · ${player.ownedWeapons.length} ${t('weaponsCollected')}.`;$('mobile-controls').classList.remove('playing');$('mobile-weapon-bar').classList.remove('playing');$('weapon-inventory').classList.add('hidden');$('pause-btn').classList.add('hidden');localStorage.removeItem(SAVE_KEY);$('continue-btn').classList.add('hidden');}
+  function victory(){state='victory';$('victory-screen').classList.remove('hidden');$('victory-stats').textContent=`${profile?.name ? profile.name+' · ' : ''}${kills} ${t('kills')} · ${player.ownedWeapons.length} ${t('weaponsCollected')}.`;$('mobile-controls').classList.remove('playing');$('mobile-weapon-bar').classList.remove('playing');$('weapon-inventory').classList.add('hidden');$('pause-btn').classList.add('hidden');try {localStorage.removeItem(SAVE_KEY);} catch {}$('continue-btn').classList.add('hidden');}
 
   function saveGame(){
     try {
@@ -829,7 +829,8 @@
   function deleteProfile(){
     const name=profile?.name||t('currentUser');
     if(!confirm(t('deleteConfirm').replace('{name}',name)))return;
-    localStorage.removeItem(PROFILE_KEY);localStorage.removeItem(SAVE_KEY);location.reload();
+    try {localStorage.removeItem(PROFILE_KEY);localStorage.removeItem(SAVE_KEY);} catch {}
+    location.reload();
   }
 
   function updateHud(){
@@ -1035,11 +1036,12 @@
       if(state==='playing')pauseGame();else if(state==='paused')resumeGame();else if(state==='settings')closeSettings();
       return;
     }
+    if(e.target instanceof HTMLInputElement)return;
     keys[e.code]=true;if(e.code==='KeyR')reload();if(e.code==='KeyF'){e.preventDefault();toggleFullscreen();}
     const match=e.code.match(/^Digit([0-9])$/);
     if(match&&state==='playing'){const number=Number(match[1]),index=number===0?9:number-1,id=player.ownedWeapons[index];if(id)equipWeapon(id);}
   });
-  addEventListener('keyup',e=>keys[e.code]=false);
+  addEventListener('keyup',e=>keys[e.code]=false);addEventListener('blur',()=>keys={});
   canvas.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;$('crosshair').style.transform=`translate(${mouse.x}px,${mouse.y}px)`;});
   canvas.addEventListener('mousedown',()=>mouse.down=true);addEventListener('mouseup',()=>mouse.down=false);
   canvas.addEventListener('contextmenu',e=>e.preventDefault());
@@ -1067,14 +1069,15 @@
   $('player-name-input').addEventListener('input',()=>$('profile-error').classList.add('hidden'));
   $('player-name-input').addEventListener('keydown',e=>{if(e.key==='Enter')createProfile();});
   $('delete-profile-btn').onclick=deleteProfile;
-  if(localStorage.getItem(SAVE_KEY))$('continue-btn').classList.remove('hidden');
+  try {if(localStorage.getItem(SAVE_KEY))$('continue-btn').classList.remove('hidden');} catch {}
   initProfile();
 
-  const joy=$('joystick'),knob=joy.querySelector('i');let joyId=null;
+  const joy=$('joystick'),knob=joy.querySelector('i');let joyId=null,fireId=null;
   joy.addEventListener('pointerdown',e=>{joyId=e.pointerId;joy.setPointerCapture(joyId);});
   joy.addEventListener('pointermove',e=>{if(e.pointerId!==joyId)return;const r=joy.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),m=Math.min(38,Math.hypot(dx,dy)),a=Math.atan2(dy,dx);mobileMove={x:Math.cos(a)*m/38,y:Math.sin(a)*m/38};knob.style.transform=`translate(${mobileMove.x*32}px,${mobileMove.y*32}px)`;});
   const endJoy=e=>{if(e.pointerId===joyId){joyId=null;mobileMove={x:0,y:0};knob.style.transform='';}};joy.addEventListener('pointerup',endJoy);joy.addEventListener('pointercancel',endJoy);
-  $('mobile-fire').addEventListener('pointerdown',e=>{e.preventDefault();mobileFiring=true;const nearest=enemies.reduce((best,z)=>!best||Math.hypot(z.x-player.x,z.y-player.y)<Math.hypot(best.x-player.x,best.y-player.y)?z:best,null);if(nearest){mouse.x=nearest.x;mouse.y=nearest.y;}});addEventListener('pointerup',()=>mobileFiring=false);
+  $('mobile-fire').addEventListener('pointerdown',e=>{e.preventDefault();fireId=e.pointerId;mobileFiring=true;const nearest=enemies.reduce((best,z)=>!best||Math.hypot(z.x-player.x,z.y-player.y)<Math.hypot(best.x-player.x,best.y-player.y)?z:best,null);if(nearest){mouse.x=nearest.x;mouse.y=nearest.y;}});
+  const endFire=e=>{if(e.pointerId===fireId){fireId=null;mobileFiring=false;}};addEventListener('pointerup',endFire);addEventListener('pointercancel',endFire);
   $('fullscreen-btn').onclick=toggleFullscreen;
   document.addEventListener('fullscreenchange',syncFullscreenButton);
   document.addEventListener('webkitfullscreenchange',syncFullscreenButton);

@@ -226,9 +226,9 @@ body.lang-en .weapon-stats,body.lang-en .mission-block,body.lang-en .weapon-meta
 .end-card .primary-btn { margin-top: 22px; }
 
 #mobile-controls { position: absolute; z-index: 10; inset: auto 0 20px; pointer-events: none; direction:ltr; }
-.joystick { position:absolute; left:24px; bottom:0; width:115px; height:115px; border:2px solid #ffffff2b; border-radius:50%; background:#0005; pointer-events:auto; }
+.joystick { position:absolute; left:24px; bottom:0; width:115px; height:115px; border:2px solid #ffffff2b; border-radius:50%; background:#0005; pointer-events:auto; touch-action:none; }
 .joystick i { position:absolute; width:48px; height:48px; border-radius:50%; background:#ffffff4d; left:32px; top:32px; }
-#mobile-fire { position:absolute; border-radius:50%; border:1px solid #ffffff36; background:#d75b2bcc; font-weight:900; pointer-events:auto; }
+#mobile-fire { position:absolute; border-radius:50%; border:1px solid #ffffff36; background:#d75b2bcc; font-weight:900; pointer-events:auto; touch-action:none; }
 #mobile-fire { width:82px;height:82px;right:26px;bottom:6px; }
 #mobile-weapon-bar { position:absolute; z-index:9; top:76px; left:10px; right:10px; display:flex; gap:6px; overflow-x:auto; padding:5px; direction:ltr; pointer-events:auto; scrollbar-width:none; }
 #mobile-weapon-bar::-webkit-scrollbar { display:none; }
