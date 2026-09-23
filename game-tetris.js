@@ -66,7 +66,7 @@
     overflow: hidden;
     border: 1px solid rgba(255,255,255,0.1);
     box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 4px rgba(255,255,255,0.03);
-    width: min(320px, 74vw);
+    width: min(320px, 74vw, calc((100dvh - 180px) / 2));   /* גם לפי הגובה, כדי שהלוח כולו ייכנס במסך נמוך */
     line-height: 0;
   }
   .tetris-board-wrap canvas { display: block; width: 100%; height: auto; }
@@ -134,6 +134,20 @@
   }
   .tetris-tbtn:active { background: rgba(168,85,247,0.4); transform: scale(0.94); }
   .tetris-tbtn.wide { grid-column: span 5; font-size: 15px; font-weight: 600; padding: 12px 0; }
+
+  /* ----- טלפון: הניקוד, הלוח והכפתורים נכנסים יחד במסך אחד ----- */
+  @media (max-width: 600px) {
+    .tetris-wrap { padding: 4px 0; }
+    .tetris-title, .tetris-sub, .tetris-help { display: none; }
+    .tetris-main { gap: 8px; }
+    .tetris-stats { flex-direction: row; width: 100%; min-width: 0; gap: 6px; }
+    .tetris-stats .tetris-card { flex: 1; padding: 6px 8px; }
+    .tetris-value { font-size: 17px; }
+    .tetris-side { min-width: 0; width: 64px; }
+    .tetris-next { padding: 6px; }
+    .tetris-board-wrap { width: min(320px, calc(100vw - 110px), calc((100dvh - 300px) / 2)); }
+    .tetris-touch { margin-top: 8px; }
+  }
   `;
 
   function ensureCSS() {
