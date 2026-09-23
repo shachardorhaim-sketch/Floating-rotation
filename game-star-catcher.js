@@ -341,15 +341,16 @@ function mountCatch(root){
   function drawHud(){
     roundRect(10,9,620,48,13,'#0a0b2ccc','#ffffff20');
     text(ST('gameName'),620,25,14,'#fff','right','900');
-    text(ST('points'),532,20,9,'#8f91b1');
-    text(String(score),532,39,18,'#fff');
-    text(ST('lives'),450,20,9,'#8f91b1');
-    text(String(Math.max(0,level*10-score)),450,39,18,'#fff');
-    text(ST('level'),370,20,9,'#8f91b1');
-    text(String(level),370,39,18,'#fff');
-    text(ST('best'),292,20,9,'#8f91b1');
-    text(String(highScore),292,39,18,'#fff');
-    text('♥ '.repeat(lives)+'♡ '.repeat(3-lives),205,34,16,'#ff577b');
+    // העמודות זזו שמאלה: שם המשחק (עד 100px בצרפתית) עלה על "ניקוד" בכל השפות
+    text(ST('points'),484,20,9,'#8f91b1');
+    text(String(score),484,39,18,'#fff');
+    text(ST('lives'),406,20,9,'#8f91b1');
+    text(String(Math.max(0,level*10-score)),406,39,18,'#fff');
+    text(ST('level'),328,20,9,'#8f91b1');
+    text(String(level),328,39,18,'#fff');
+    text(ST('best'),250,20,9,'#8f91b1');
+    text(String(highScore),250,39,18,'#fff');
+    text('♥ '.repeat(lives)+'♡ '.repeat(3-lives),170,34,16,'#ff577b');
     button('♪',18,17,36,32,'sound');
   }
 
