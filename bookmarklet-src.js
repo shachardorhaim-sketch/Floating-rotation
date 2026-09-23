@@ -43,7 +43,8 @@
   // הכיוון של האתר עצמו (למשל dir="rtl"), כדי ש"החזר מקור" יחזיר בדיוק אותו
   var pageDir = document.documentElement.getAttribute('dir');
 
-  function hasLetters(s) { return /[A-Za-zÀ-ÿͰ-ϿЀ-ӿ֐-׿؀-ۿ぀-ヿ一-鿿]/.test(s); }
+  // גם אותיות הודיות, תאילנדיות, קוריאניות, ארמניות וגאורגיות, אחרת באתרים כאלה "לא נמצא טקסט"
+  function hasLetters(s) { return /[A-Za-zÀ-ÿͰ-ϿЀ-ӿ֐-׿؀-ۿ぀-ヿ一-鿿\u0530-\u058F\u0900-\u0DFF\u0E00-\u0EFF\u10A0-\u10FF\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF]/.test(s); }
 
   function skippable(n) {
     var p = n.parentElement;
