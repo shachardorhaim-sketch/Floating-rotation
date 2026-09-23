@@ -3684,6 +3684,8 @@ function linkStart() {
   try { es = new EventSource(LINK_URL + '/events'); } catch { linkRetry(); return; }
   LINK.es = es;
   es.addEventListener('hello', () => { LINK.wait = 2000; setLinkState('ready'); });
+  // another Floating Ink window connected after this one: it keeps the link, and this one stops coming back for it
+  es.addEventListener('replaced', () => { es.close(); if (LINK.es === es) { LINK.es = null; clearTimeout(LINK.timer); setLinkState('elsewhere'); } });
   es.addEventListener('waiting', e => { try { LINK.waiting = JSON.parse(e.data).n || 0; } catch {} if (S.panel === 'link') renderLinkWait(); });
   es.addEventListener('call', e => {
     let c = null;
@@ -3869,9 +3871,10 @@ function renderLinkState() {
   b.classList.toggle('ready', ready);
   // once it's connected the how-to is done with: it goes away, and comes back open if the link drops
   const help = $('#linkHelp');
-  help.hidden = ready;
+  help.hidden = ready || LINK.state === 'elsewhere';
   help.open = true;
   b.textContent = ready ? T('מחובר! אפשר לבקש מקלוד לעבוד ב-Floating Ink.')
+    : LINK.state === 'elsewhere' ? T('קלוד מחובר עכשיו לחלון אחר של Floating Ink. כדי לעבוד מהחלון הזה, מכבים ומדליקים את התיבה למעלה.')
     : LINK.state === 'waiting' ? T('מחכה למחבר של Floating Ink במחשב… אם עוד לא התקנת אותו, ההוראות למטה.')
     : T('כבוי. כדי שקלוד יוכל לעבוד כאן, מסמנים את התיבה למעלה.');
   renderLinkWait();

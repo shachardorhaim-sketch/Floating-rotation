@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "floating-ink",
   "display_name": "Floating Ink",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Work with Claude inside Floating Ink, the word processor from floatingrotations.com: Claude reads, writes and edits your documents, and builds presentations, while you watch.",
   "long_description": "Open Floating Ink (https://floatingrotations.com/ink/), click the robot button at the top and turn on \"Connect AI\". Then ask Claude to write, fix or summarize your documents. Every change shows up live and can be undone with Ctrl+Z. The documents stay in your browser; Claude only sees what it reads through these tools.",
   "author": { "name": "Floating rotation", "url": "https://floatingrotations.com" },

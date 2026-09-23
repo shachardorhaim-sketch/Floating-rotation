@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.4.0';
+const VERSION = '1.4.1';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -179,7 +179,7 @@ const server = http.createServer(async (req, res) => {
   // the Floating Ink page
   if (path === '/events' && req.method === 'GET') {
     if (!origin || !appOrigin(origin)) { res.writeHead(403).end(); return; }
-    if (app) app.end();                     // the newest window takes over
+    if (app) { app.write('event: replaced\ndata: {}\n\n'); app.end(); }   // the newest window takes over, and the old one is told so it stops coming back
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
     res.write('event: hello\ndata: ' + JSON.stringify({ version: VERSION }) + '\n\n');
     app = res;

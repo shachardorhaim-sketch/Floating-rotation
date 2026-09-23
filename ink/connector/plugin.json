@@ -1,7 +1,7 @@
 {
   "name": "floating-ink",
   "displayName": "Floating Ink",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Work with Claude inside Floating Ink, the word processor from floatingrotations.com: Claude reads, writes and edits your documents, and builds presentations, while you watch. Open Floating Ink, click the robot button and turn on \"Connect AI\".",
   "author": { "name": "Floating rotation", "url": "https://floatingrotations.com" },
   "homepage": "https://floatingrotations.com/ink/",

@@ -588,7 +588,8 @@ window.INK_I18N = {
 "תמונה חשובה": "Important Picture",
 "פתיחה@slide": "Title Slide",
 "סיכום@slide": "Summary",
-"עיצוב@design": "Design"
+"עיצוב@design": "Design",
+"קלוד מחובר עכשיו לחלון אחר של Floating Ink. כדי לעבוד מהחלון הזה, מכבים ומדליקים את התיבה למעלה.": "Claude is connected to another Floating Ink window right now. To work from this window, turn the checkbox above off and on again."
 },
 "plurals": {
 "{n} מילים": {
