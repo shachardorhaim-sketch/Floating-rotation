@@ -93,7 +93,8 @@ GAMES.forEach(g => {
     const open = () => { if (g.url) openExternal(g); else openGame(g); };
     card.querySelector('.gplay').onclick = open;
     card.onclick = e => { if (e.target.tagName!=='BUTTON') open(); };
-    card.onkeydown = e => { if (e.key==='Enter') open(); };
+    // Enter על כפתור "שחק" כבר מפעיל את ה-onclick שלו — בלי הבדיקה המשחק נפתח פעמיים ומופע אחד לא נסגר
+    card.onkeydown = e => { if (e.key==='Enter' && e.target.tagName!=='BUTTON') open(); };
   }
   grid.appendChild(card);
 });
