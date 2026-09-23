@@ -597,6 +597,27 @@ body { min-height:100vh; background:#0f1620; color:#e8eef5; font-family:"Segoe U
   #ch-promotion-options button { width:56px; height:56px; font-size:34px; }
 }
 
+/* ---------- שפות משמאל לימין ----------
+   המשחק שם dir="ltr" על השורש, אבל direction:rtl של .chessRoot גבר עליו, ובאנגלית ובשאר 6 השפות
+   הטקסט יצא הפוך ("?play today"). כאן הכיוון מתחלף, ואיתו הכללים שהניחו ימין-לשמאל.
+   הלוח עצמו לא מתהפך: שורות ועמודות בשחמט הן פיזיות */
+.chessRoot[dir="ltr"] { direction:ltr; }
+.chessRoot[dir="ltr"] .ch-mode-card { text-align:left; }
+.chessRoot[dir="ltr"] .ch-mode-card:hover { transform:translateX(5px); }
+.chessRoot[dir="ltr"] .ch-mode-card b { transform:scaleX(-1); }
+.chessRoot[dir="ltr"] .ch-lobby-settings { left:auto; right:0; }
+.chessRoot[dir="ltr"] .ch-hero { border-left:0; border-right:1px solid #4b3025; }
+.chessRoot[dir="ltr"] .ch-turn-dot { margin-right:0; margin-left:auto; }
+.chessRoot[dir="ltr"] .ch-settings-card { text-align:left; }
+.chessRoot[dir="ltr"] .ch-modal-close { left:auto; right:18px; }
+@media (max-width:1050px) {
+  .chessRoot[dir="ltr"] .ch-hero { border:0; }
+  .chessRoot[dir="ltr"] .ch-hero-copy { margin-right:0; margin-left:auto; }
+}
+@media (max-width:600px) {
+  .chessRoot[dir="ltr"] .ch-controls { margin-right:0; margin-left:auto; }
+}
+
 
 /* ================================================
    אזור ההורדות
