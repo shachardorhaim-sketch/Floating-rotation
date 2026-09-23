@@ -238,9 +238,9 @@
   function reset(full=true,resumeWave=1,starterId='bat'){
     const starter=WEAPON_BY_ID[starterId]&&['bat','pistol','bow'].includes(starterId)?starterId:'bat';
     if(full){ region=0; scrap=0; kills=0; pickupProgress=0; Object.assign(player,{maxHp:100,hp:100,maxArmor:0,armor:0,speed:147,mag:1,ammo:1,reloadTime:0,fireRate:1.35,damage:20,pierce:0,pellets:1,poison:0,frost:0,explosive:0,healOnKill:0,knives:0,burnTime:0,burnTick:0,meleeSwing:0,currentWeapon:starter,ownedWeapons:[starter],weaponAmmo:{[starter]:WEAPON_BY_ID[starter].mag},upgrades:{}}); }
-    enemies=[];bullets=[];particles=[];pickups=[];enemyShots=[];floaters=[];boss=null;
+    enemies=[];bullets=[];particles=[];pickups=[];enemyShots=[];floaters=[];boss=null;$('boss-hud').classList.add('hidden');
     refreshWeaponStats(false);
-    player.x=W/2;player.y=H/2;player.hp=player.maxHp;player.armor=player.maxArmor;player.ammo=player.mag;player.weaponAmmo[player.currentWeapon]=player.ammo;player.reloading=0;player.burnTime=0;player.burnTick=0;
+    player.x=W/2;player.y=H/2;player.hp=player.maxHp;player.armor=player.maxArmor;player.ammo=player.mag;player.weaponAmmo[player.currentWeapon]=player.ammo;player.reloading=0;$('reload-indicator').classList.add('hidden');player.burnTime=0;player.burnTick=0;
     wave=Math.max(0,resumeWave-1); buildWave(); updateHud(); createDecor();
   }
 
@@ -330,7 +330,7 @@
   function update(dt){
     if(state!=='playing') return;
     dt=Math.min(dt,.033)*slowMo;
-    player.fireCooldown-=dt;player.invuln-=dt;player.flash-=dt;player.meleeSwing=Math.max(0,player.meleeSwing-dt);
+    player.fireCooldown=Math.max(player.fireCooldown-dt,-dt);player.invuln-=dt;player.flash-=dt;player.meleeSwing=Math.max(0,player.meleeSwing-dt);
     if(shake>0) shake=Math.max(0,shake-dt*22);
     if(announcementTimer>0) announcementTimer-=dt;
     if(mobileFiring) aimMobileAtNearest();
@@ -387,13 +387,13 @@
     if(w.melee){meleeAttack(w);return;}
     if(!w.infiniteAmmo&&player.ammo<=0)return;
     const shotRange=w.fullMap?Math.hypot(W,H)+120:w.range;
-    player.fireCooldown=1/player.fireRate;
+    player.fireCooldown+=1/player.fireRate;
     if(!w.infiniteAmmo){player.ammo--;player.weaponAmmo[player.currentWeapon]=player.ammo;}
     player.flash=.06;
     for(let i=0;i<player.pellets;i++){
       const spread=player.pellets>1?(i-(player.pellets-1)/2)*w.spread+(Math.random()-.5)*w.spread*.35:(Math.random()-.5)*w.spread;
       const a=player.angle+spread,color=w.flame?'#ff7b2d':w.id==='tesla'?'#63d8ff':w.id==='acid'?'#9bd342':'#f5ddae';
-      bullets.push({x:player.x+Math.cos(a)*22,y:player.y+Math.sin(a)*22,vx:Math.cos(a)*w.speed,vy:Math.sin(a)*w.speed,r:w.arrow?3:w.flame?7:5,life:shotRange/w.speed,damage:player.damage,left:player.pierce,poison:Math.max(player.poison,w.poison||0),frost:player.frost,explosive:player.explosive,splash:w.splash||0,chain:w.chain||0,color,flame:!!w.flame,arrow:!!w.arrow});
+      bullets.push({x:player.x+Math.cos(a)*22,y:player.y+Math.sin(a)*22,vx:Math.cos(a)*w.speed,vy:Math.sin(a)*w.speed,r:w.arrow?3:w.flame?7:5,life:shotRange/w.speed,damage:player.damage,left:player.pierce,hits:[],poison:Math.max(player.poison,w.poison||0),frost:player.frost,explosive:player.explosive,splash:w.splash||0,chain:w.chain||0,color,flame:!!w.flame,arrow:!!w.arrow});
     }
     const recoil=Math.min(5,1.2+w.damage/55);player.x-=Math.cos(player.angle)*recoil;player.y-=Math.sin(player.angle)*recoil;shake=Math.max(shake,w.splash?5:2.1);
     for(let i=0;i<4;i++)particle(player.x+Math.cos(player.angle)*24,player.y+Math.sin(player.angle)*24,'#ffbd62',2,130,player.angle);
@@ -401,7 +401,7 @@
   }
 
   function meleeAttack(w){
-    player.fireCooldown=1/player.fireRate;player.meleeSwing=.22;player.flash=.05;
+    player.fireCooldown+=1/player.fireRate;player.meleeSwing=.22;player.flash=.05;
     const hitRange=w.range||72,halfArc=(w.arc||1.3)/2;
     for(const e of [...enemies]){
       if(e.dead)continue;
@@ -444,9 +444,9 @@
       let remove=b.life<=0||b.x<-20||b.x>W+20||b.y<-20||b.y>H+20;
       for(const e of [...enemies]){
         if(remove)break;
-        if(e.dead)continue;
+        if(e.dead||b.hits.includes(e))continue;
         if(Math.hypot(b.x-e.x,b.y-e.y)<b.r+e.r+3){
-          e.hp-=b.damage;e.hit=.09;floaters.push({x:e.x,y:e.y-e.r,text:Math.round(b.damage),life:.55,color:'#f1e6cf',big:false});
+          b.hits.push(e);e.hp-=b.damage;e.hit=.09;floaters.push({x:e.x,y:e.y-e.r,text:Math.round(b.damage),life:.55,color:'#f1e6cf',big:false});
           if(b.poison){e.poisonTime=2.8;e.poisonDps=Math.max(e.poisonDps||0,player.damage*(.1+b.poison*.05));e.dotTick=0;}
           if(b.frost){e.frostTime=1.8;e.frostSlow=Math.min(.55,b.frost*.14);}
           if(b.flame){e.burnTime=5;e.burnDps=5;e.burnTick=0;}
