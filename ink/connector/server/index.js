@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -28,7 +28,10 @@ const INSTRUCTIONS = 'Floating Ink is a word processor open in the user\'s brows
   'The chat panel inside Floating Ink is shared: send_message leaves a note there, and read_messages shows ' +
   'what the user or another connected assistant wrote. The user often keeps writing to you from that panel instead of ' +
   'switching back to this window, so when they may still be talking to you there, call wait_for_message: it comes back ' +
-  'the moment they send something.';
+  'the moment they send something. When the user asks you to connect to Floating Ink, or to stay with them there, keep a ' +
+  'loop going: wait_for_message, answer what they wrote with send_message (and do in the documents whatever they asked for), ' +
+  'then wait_for_message again, until they say to stop. One wait lasts ten minutes and costs nothing while it waits, so stay ' +
+  'in the wait instead of ending your turn.';
 
 const DOC_ID = { type: 'string', description: 'Document id from list_documents. Leave out to use the document open on screen.' };
 const TOOLS = [
@@ -52,9 +55,10 @@ const TOOLS = [
     inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true } },
   { name: 'wait_for_message', description: 'Stay listening to the chat panel inside Floating Ink and return the user\'s message the moment they send it, ' +
       'instead of hearing about it only when they come back to this window. Call it whenever the user may keep talking to you from inside Floating Ink: ' +
-      'right after you write something there, after send_message, or when they ask you to stay available. It waits up to `seconds` (45 by default) and ' +
-      'returns nothing if no message arrived; call it again if the user is still expecting you there.',
-    inputSchema: { type: 'object', properties: { seconds: { type: 'number', description: 'How long to keep listening, 5 to 55. Default 45.' } } }, annotations: { readOnlyHint: true } },
+      'right after you write something there, after send_message, or when they ask you to stay available. Waiting here is free - nothing is spent while it waits - ' +
+      'so one long call is far cheaper than asking again and again, and you should leave `seconds` alone unless the user asked for something else. ' +
+      'It returns nothing if the whole wait went by in silence; call it again if the user is still expecting you there.',
+    inputSchema: { type: 'object', properties: { seconds: { type: 'number', description: 'How long to keep listening, 5 to 1800 seconds. Default 600 (ten minutes), which is what you normally want.' } } }, annotations: { readOnlyHint: true } },
 ];
 const NEW_MSG = 'While you were working, the user wrote this to you in the Floating Ink chat panel. Answer it (send_message puts your answer in that panel), and call wait_for_message to stay with them:';
 const NO_MSG = 'No message from the user in Floating Ink yet. If they are still working there and waiting for you, call wait_for_message again; otherwise finish your turn.';
@@ -131,7 +135,7 @@ function newMessage(text) {
   for (const w of [...waiters]) { const fresh = freshFor(w.proc); if (fresh.length) endWait(w, fresh); }
 }
 function hubWait(args, proc, hooks) {
-  const secs = Math.min(Math.max(Number(args && args.seconds) || 45, 5), 55);
+  const secs = Math.min(Math.max(Number(args && args.seconds) || 600, 5), 1800);   // long on purpose: waiting should cost almost nothing
   const already = freshFor(proc);                        // a message that arrived while it was busy working
   if (already.length) return Promise.resolve(already);
   return new Promise(resolve => {

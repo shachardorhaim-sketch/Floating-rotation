@@ -470,7 +470,6 @@ window.INK_I18N = {
 "חיבור ל-AI: קלוד עובד איתך בתוך Floating Ink": "Connecter une IA : Claude travaille avec toi dans Floating Ink",
 "כאן יופיעו ההודעות של קלוד ומה שהוא עושה במסמכים.": "Les messages de Claude et ce qu’il fait dans tes documents apparaîtront ici.",
 "כבוי. כדי שקלוד יוכל לעבוד כאן, מסמנים את התיבה למעלה.": "Désactivé. Pour que Claude puisse travailler ici, coche la case ci-dessus.",
-"כותבים לקלוד, למשל: תכתוב לי ב-Floating Ink סיכום על מערכת השמש.": "Écris à Claude, par exemple : Écris-moi dans Floating Ink un résumé sur le système solaire.",
 "כשהחיבור פתוח, קלוד יכול לקרוא ולשנות את המסמכים כאן, ומה שהוא קורא נשלח אליו כמו כל הודעה שכותבים לו. כל שינוי אפשר לבטל עם Ctrl+Z.": "Tant que la connexion est active, Claude peut lire et modifier les documents ici, et ce qu’il lit lui est envoyé comme n’importe quel message que tu lui écris. Tu peux annuler chaque modification avec Ctrl+Z.",
 "לאפשר ל-AI לעבוד ב-Floating Ink": "Autoriser l’IA à travailler dans Floating Ink",
 "לפני שכתוב של עוזר": "Avant la réécriture par l’assistant",
@@ -481,7 +480,8 @@ window.INK_I18N = {
 "פתיחה": "Ouvrir",
 "באפליקציית Claude שבמחשב: הגדרות ← Plugins (תוספים) ← Add ← Upload plugin, ובוחרים את הקובץ שירד.": "Dans l’application Claude de l’ordinateur : Réglages → Plugins → Add → Upload plugin, puis choisis le fichier téléchargé.",
 "קלוד מקשיב עכשיו — מה שכותבים כאן יגיע אליו מיד.": "Claude écoute en ce moment — ce que tu écris ici lui parvient tout de suite.",
-"כדי שקלוד יראה מיד מה שכותבים כאן, אפשר לבקש ממנו: תישאר להקשיב ל-Floating Ink.": "Pour que Claude voie tout de suite ce que tu écris ici, demande-lui : reste à l’écoute de Floating Ink."
+"כדי שקלוד יענה כאן, כותבים לו בשיחה איתו: תתחבר ל-Floating Ink.": "Pour que Claude réponde ici, dis-lui dans ta conversation avec lui : connecte-toi à Floating Ink.",
+"פותחים שיחה עם קלוד וכותבים לו: תתחבר ל-Floating Ink. מכאן הוא עונה בחלונית הזאת.": "Ouvre une conversation avec Claude et dis-lui : connecte-toi à Floating Ink. À partir de là, il répond dans ce panneau."
 },
 "plurals": {
 "{n} מילים": {

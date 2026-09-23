@@ -470,7 +470,6 @@ window.INK_I18N = {
 "חיבור ל-AI: קלוד עובד איתך בתוך Floating Ink": "Conectar IA: o Claude trabalha com você dentro do Floating Ink",
 "כאן יופיעו ההודעות של קלוד ומה שהוא עושה במסמכים.": "Aqui vão aparecer as mensagens do Claude e o que ele faz nos seus documentos.",
 "כבוי. כדי שקלוד יוכל לעבוד כאן, מסמנים את התיבה למעלה.": "Desligado. Para o Claude poder trabalhar aqui, marque a caixa acima.",
-"כותבים לקלוד, למשל: תכתוב לי ב-Floating Ink סיכום על מערכת השמש.": "Escreva para o Claude, por exemplo: Escreva no Floating Ink um resumo sobre o sistema solar.",
 "כשהחיבור פתוח, קלוד יכול לקרוא ולשנות את המסמכים כאן, ומה שהוא קורא נשלח אליו כמו כל הודעה שכותבים לו. כל שינוי אפשר לבטל עם Ctrl+Z.": "Enquanto a conexão estiver ligada, o Claude pode ler e mudar os documentos daqui, e o que ele lê é enviado a ele como qualquer mensagem que você escreve. Dá para desfazer cada mudança com Ctrl+Z.",
 "לאפשר ל-AI לעבוד ב-Floating Ink": "Permitir que a IA trabalhe no Floating Ink",
 "לפני שכתוב של עוזר": "Antes da reescrita do assistente",
@@ -481,7 +480,8 @@ window.INK_I18N = {
 "פתיחה": "Abrir",
 "באפליקציית Claude שבמחשב: הגדרות ← Plugins (תוספים) ← Add ← Upload plugin, ובוחרים את הקובץ שירד.": "No app do Claude no computador: Configurações → Plugins → Add → Upload plugin, e escolha o arquivo que você baixou.",
 "קלוד מקשיב עכשיו — מה שכותבים כאן יגיע אליו מיד.": "O Claude está ouvindo agora — o que você escrever aqui chega até ele na hora.",
-"כדי שקלוד יראה מיד מה שכותבים כאן, אפשר לבקש ממנו: תישאר להקשיב ל-Floating Ink.": "Para o Claude ver na hora o que você escreve aqui, peça a ele: fique ouvindo o Floating Ink."
+"כדי שקלוד יענה כאן, כותבים לו בשיחה איתו: תתחבר ל-Floating Ink.": "Para o Claude responder aqui, diga a ele na conversa: conecte-se ao Floating Ink.",
+"פותחים שיחה עם קלוד וכותבים לו: תתחבר ל-Floating Ink. מכאן הוא עונה בחלונית הזאת.": "Abra uma conversa com o Claude e diga: conecte-se ao Floating Ink. A partir daí ele responde neste painel."
 },
 "plurals": {
 "{n} מילים": {

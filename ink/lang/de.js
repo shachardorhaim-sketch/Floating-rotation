@@ -470,7 +470,6 @@ window.INK_I18N = {
 "חיבור ל-AI: קלוד עובד איתך בתוך Floating Ink": "KI verbinden: Claude arbeitet mit dir direkt in Floating Ink",
 "כאן יופיעו ההודעות של קלוד ומה שהוא עושה במסמכים.": "Hier erscheinen die Nachrichten von Claude und was er in deinen Dokumenten macht.",
 "כבוי. כדי שקלוד יוכל לעבוד כאן, מסמנים את התיבה למעלה.": "Aus. Damit Claude hier arbeiten kann, setze oben das Häkchen.",
-"כותבים לקלוד, למשל: תכתוב לי ב-Floating Ink סיכום על מערכת השמש.": "Schreib Claude, zum Beispiel: Schreib mir in Floating Ink eine Zusammenfassung über das Sonnensystem.",
 "כשהחיבור פתוח, קלוד יכול לקרוא ולשנות את המסמכים כאן, ומה שהוא קורא נשלח אליו כמו כל הודעה שכותבים לו. כל שינוי אפשר לבטל עם Ctrl+Z.": "Solange die Verbindung an ist, kann Claude die Dokumente hier lesen und ändern, und was er liest, wird ihm wie jede Nachricht geschickt, die du ihm schreibst. Jede Änderung kannst du mit Ctrl+Z rückgängig machen.",
 "לאפשר ל-AI לעבוד ב-Floating Ink": "KI in Floating Ink arbeiten lassen",
 "לפני שכתוב של עוזר": "Vor dem Umschreiben durch den Assistenten",
@@ -481,7 +480,8 @@ window.INK_I18N = {
 "פתיחה": "Öffnen",
 "באפליקציית Claude שבמחשב: הגדרות ← Plugins (תוספים) ← Add ← Upload plugin, ובוחרים את הקובץ שירד.": "In der Claude-App auf dem Computer: Einstellungen → Plugins → Add → Upload plugin, und wähle die heruntergeladene Datei.",
 "קלוד מקשיב עכשיו — מה שכותבים כאן יגיע אליו מיד.": "Claude hört gerade zu — was du hier schreibst, kommt sofort bei ihm an.",
-"כדי שקלוד יראה מיד מה שכותבים כאן, אפשר לבקש ממנו: תישאר להקשיב ל-Floating Ink.": "Damit Claude sofort sieht, was du hier schreibst, bitte ihn: bleib bei Floating Ink zuhören."
+"כדי שקלוד יענה כאן, כותבים לו בשיחה איתו: תתחבר ל-Floating Ink.": "Damit Claude hier antwortet, sag ihm in eurem Chat: verbinde dich mit Floating Ink.",
+"פותחים שיחה עם קלוד וכותבים לו: תתחבר ל-Floating Ink. מכאן הוא עונה בחלונית הזאת.": "Öffne einen Chat mit Claude und sag ihm: verbinde dich mit Floating Ink. Ab dann antwortet er in diesem Fenster."
 },
 "plurals": {
 "{n} מילים": {

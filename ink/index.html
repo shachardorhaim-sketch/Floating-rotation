@@ -764,7 +764,7 @@ select.field{padding:0 8px}
               <li>מורידים את המחבר של Floating Ink: <a href="connector/floating-ink-plugin.zip" download>הורדת המחבר</a></li>
               <li>באפליקציית Claude שבמחשב: הגדרות ← Plugins (תוספים) ← Add ← Upload plugin, ובוחרים את הקובץ שירד.</li>
               <li>מסמנים כאן למעלה את התיבה. אם הדפדפן שואל אם לאפשר גישה לאפליקציות במחשב, מאשרים.</li>
-              <li>כותבים לקלוד, למשל: תכתוב לי ב-Floating Ink סיכום על מערכת השמש.</li>
+              <li>פותחים שיחה עם קלוד וכותבים לו: תתחבר ל-Floating Ink. מכאן הוא עונה בחלונית הזאת.</li>
             </ol>
           </details>
           <p class="muted small">כשהחיבור פתוח, קלוד יכול לקרוא ולשנות את המסמכים כאן, ומה שהוא קורא נשלח אליו כמו כל הודעה שכותבים לו. כל שינוי אפשר לבטל עם Ctrl+Z.</p>
@@ -3611,7 +3611,7 @@ function renderLinkWait() {
   p.hidden = LINK.state !== 'ready';
   p.classList.toggle('on', LINK.waiting > 0);
   p.textContent = LINK.waiting > 0 ? T('קלוד מקשיב עכשיו — מה שכותבים כאן יגיע אליו מיד.')
-    : T('כדי שקלוד יראה מיד מה שכותבים כאן, אפשר לבקש ממנו: תישאר להקשיב ל-Floating Ink.');
+    : T('כדי שקלוד יענה כאן, כותבים לו בשיחה איתו: תתחבר ל-Floating Ink.');
 }
 function renderLinkLog() {
   const box = $('#linkLog');
