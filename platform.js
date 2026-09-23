@@ -32,11 +32,14 @@ function backToStore() {
 document.getElementById('backBtn').onclick = backToStore;
 
 // משחק שחי בריפו נפרד ומוטמע בתוך הפלטפורמה.
-// אותו מקור (github.io), ולכן אפשר גם למקד את המקלדת אליו.
+// מאז floatingrotations.com הוא על מקור אחר: למקד את המקלדת אליו עדיין אפשר,
+// אבל את השפה שלנו מ-localStorage הוא לא רואה, אז היא עוברת אליו ב-?lang=
 function mountIframe(url) {
   return function (host) {
     const f = document.createElement('iframe');
-    f.src = url;
+    let lang = 'he';
+    try { lang = localStorage.getItem('flrot:lang') || 'he'; } catch (e) {}
+    f.src = url + (url.includes('?') ? '&' : '?') + 'lang=' + encodeURIComponent(lang);
     f.title = 'game';
     f.allow = 'autoplay; fullscreen; gamepad';
     f.style.cssText = 'width:100%;height:100%;border:0;display:block;background:#0d1620';
