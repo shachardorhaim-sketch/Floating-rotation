@@ -114,7 +114,8 @@ function mountDino(root) {
   for (let i = 0; i < 6; i++) clouds.push({ x: Math.random()*W, y: 30+Math.random()*90, s: .3+Math.random()*.5, w: 40+Math.random()*40 });
   for (let i = 0; i < 45; i++) stars.push({ x: Math.random()*W, y: Math.random()*(GROUND-40), r: Math.random()*1.5 });
 
-  const BIRD_HIGH = GROUND-78, BIRD_MID = GROUND-44, BIRD_LOW = GROUND-16;
+  // ציפור אמצע: הדינו העומד נפגע בה, אבל מתחתיה אפשר להתכופף (תיבת ההתכופפות מתחילה ב-GROUND-26)
+  const BIRD_HIGH = GROUND-78, BIRD_MID = GROUND-50, BIRD_LOW = GROUND-16;
 
   function spawnObstacle(){
     const minGap = 240 + speed*16;
