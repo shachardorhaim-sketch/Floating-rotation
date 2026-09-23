@@ -23,7 +23,7 @@ function mountChess(root) {
       <div id="ch-computer-panel" class="ch-setup-panel ch-hidden"><button class="ch-back" style="background:#e0975a;color:#1a1a1a;padding:9px 18px;border-radius:8px;font-weight:800;font-size:14px;">↩ לתפריט</button><h3>בחרו רמת קושי</h3><div class="ch-levels" style="grid-template-columns:repeat(2,1fr);"><button data-level="easy">קל</button><button data-level="medium">בינוני</button><button data-level="hard">קשה</button><button data-level="master">בלתי אפשרי</button></div></div>
       <div id="ch-learn-panel" class="ch-setup-panel ch-tutorial-panel ch-hidden"><div class="ch-lesson-chapter" id="ch-lesson-chapter"></div><div class="ch-lesson-count" id="ch-lesson-count"></div><div class="ch-lesson-progress"><span id="ch-lesson-bar"></span></div><h3 id="ch-lesson-title"></h3><p id="ch-lesson-text"></p><div id="ch-tutorial-board" class="ch-tutorial-board"></div><div class="ch-lesson-controls"><button id="ch-lesson-menu" class="ch-secondary" style="background:#e0975a;color:#1a1a1a;font-weight:800;">↩ לתפריט</button><button id="ch-lesson-prev" class="ch-secondary">הקודם</button><button id="ch-lesson-next" class="ch-primary">הבא</button></div></div>
       <div id="ch-two-panel" class="ch-setup-panel ch-hidden"><button class="ch-back" style="background:#e0975a;color:#1a1a1a;padding:9px 18px;border-radius:8px;font-weight:800;font-size:14px;">↩ לתפריט</button><h3>שני שחקנים</h3><div style="display:grid;grid-template-columns:1fr;gap:10px;"><button id="ch-two-local" class="ch-net-btn" style="background:#30342f;color:#fff;padding:18px 10px;border:1px solid transparent;border-radius:6px;font-size:16px;cursor:pointer;">👥 על מכשיר אחד</button><button id="ch-two-remote" class="ch-net-btn" style="background:#30342f;color:#fff;padding:18px 10px;border:1px solid transparent;border-radius:6px;font-size:16px;cursor:pointer;">🌐 מרחוק (עם קוד)</button></div></div>
-      <div id="ch-remote-panel" class="ch-setup-panel ch-hidden"><button class="ch-back" style="background:#e0975a;color:#1a1a1a;padding:9px 18px;border-radius:8px;font-weight:800;font-size:14px;">↩ לתפריט</button><h3>משחק מרחוק</h3><div style="display:grid;grid-template-columns:1fr;gap:10px;"><button id="ch-create-room" class="ch-net-btn" style="background:#30342f;color:#fff;padding:18px 10px;border:1px solid transparent;border-radius:6px;font-size:16px;cursor:pointer;">➕ צור חדר חדש</button><div style="display:flex;gap:8px;"><input id="ch-join-code" placeholder="הקלד קוד" maxlength="8" style="flex:1;padding:14px;background:#30342f;border:1px solid #444;color:#fff;border-radius:6px;text-transform:uppercase;font-size:18px;text-align:center;letter-spacing:3px;"><button id="ch-join-room" class="ch-net-btn" style="white-space:nowrap;background:#30342f;color:#fff;padding:14px;border:1px solid transparent;border-radius:6px;font-size:16px;cursor:pointer;">הצטרף ←</button></div></div><div id="ch-remote-code" style="margin-top:14px;font-size:30px;font-weight:800;letter-spacing:6px;color:#fff;text-align:center;"></div><div id="ch-remote-status" style="margin-top:10px;color:#e0975a;font-size:15px;min-height:22px;text-align:center;line-height:1.5;"></div></div>
+      <div id="ch-remote-panel" class="ch-setup-panel ch-hidden"><button class="ch-back" style="background:#e0975a;color:#1a1a1a;padding:9px 18px;border-radius:8px;font-weight:800;font-size:14px;">↩ לתפריט</button><h3>משחק מרחוק</h3><div style="display:grid;grid-template-columns:1fr;gap:10px;"><button id="ch-create-room" class="ch-net-btn" style="background:#30342f;color:#fff;padding:18px 10px;border:1px solid transparent;border-radius:6px;font-size:16px;cursor:pointer;">➕ צור חדר חדש</button><div style="display:flex;gap:8px;"><input id="ch-join-code" placeholder="הקלד קוד" maxlength="8" style="flex:1;width:0;padding:14px;background:#30342f;border:1px solid #444;color:#fff;border-radius:6px;text-transform:uppercase;font-size:18px;text-align:center;letter-spacing:3px;"><button id="ch-join-room" class="ch-net-btn" style="white-space:nowrap;background:#30342f;color:#fff;padding:14px;border:1px solid transparent;border-radius:6px;font-size:16px;cursor:pointer;">הצטרף ←</button></div></div><div id="ch-remote-code" style="margin-top:14px;font-size:30px;font-weight:800;letter-spacing:6px;color:#fff;text-align:center;"></div><div id="ch-remote-status" style="margin-top:10px;color:#e0975a;font-size:15px;min-height:22px;text-align:center;line-height:1.5;"></div></div>
     </div>
   </section>
 
@@ -298,9 +298,10 @@ function mountChess(root) {
 
   function commit(from,move,promo,isRemote){
     const squares=$('#ch-board').children,fromEl=squares[from.r*8+from.c],toEl=squares[move.r*8+move.c];
-    const piece=state.board[from.r][from.c],capture=!!state.board[move.r][move.c]||move.special==='ep';
+    const piece=state.board[from.r][from.c],capture=!!state.board[move.r][move.c]||move.special==='ep',before=state;
     const finish=()=>{
       if(!alive)return;
+      if(state!==before){thinking=false;return;} // המצב הוחלף בזמן האנימציה (ביטול מהלך / יציאה לתפריט) — לא מחילים מהלך שחושב על מצב אחר
       history.push(clone(state));
       state=applyMove(state,from,move,promo);
       selected=null;legal=[];thinking=false;
@@ -323,6 +324,7 @@ function mountChess(root) {
 
   function showPromotion(color){
     const box=$('#ch-promotion-options');box.innerHTML='';
+    $('#ch-promotion .ch-modal-card p').textContent=chT('choosePromo'); // כותרת החלון בשפה הנוכחית
     for(const t of['q','r','b','n']){
       const b=document.createElement('button');
       b.textContent=GLYPHS[color][t];
@@ -643,7 +645,8 @@ function mountChess(root) {
       }
       else if(msg.type==='restart'){ newGame(); }
     });
-    conn.on('close', ()=>{ if(mode==='remote') rStatus('היריב התנתק. 😕'); });
+    conn.on('close', ()=>{ if(mode==='remote'){ rStatus('היריב התנתק. 😕');
+      if(!state.over){ state.over=true; state.result='היריב התנתק. 😕'; render(); } } }); // הלובי מוסתר בזמן המשחק — מציגים גם בשורת המצב ונועלים את הלוח
   }
   function startRemoteGame(color){
     mode='remote'; myColor=color; LS.del('saved'); newGame();
@@ -721,16 +724,19 @@ function mountChess(root) {
     startGame('computer',tr('vs')+' · '+names[level]);
   });
   $('#ch-new-game').onclick=()=>{
-    if(mode!=='remote'&&history.length&&!confirm(tr('sure')))return;
+    if(mode!=='remote'&&!state.over&&history.length&&!confirm(tr('sure')))return; // משחק שנגמר — אין "עדיין בעיצומו"
     closeNet();
     mode='local';
+    newGame(); // המשחק כבר שמור — מאפסים אותו בזיכרון, כדי ששמירה מאוחרת (יציאה לחנות / רענון / מהלך מחשב בדרך) לא תשמור אותו מחדש כמשחק מקומי
     shell.querySelector('.ch-app').classList.add('ch-hidden');
     $('#ch-lobby').classList.remove('ch-hidden');
     shell.querySelector('.ch-mode-cards').classList.remove('ch-hidden');
     $$('.ch-setup-panel').forEach(x=>x.classList.add('ch-hidden'));
     updateContinue();
   };
-  $('#ch-undo').onclick=()=>{if(mode==='remote')return;if(history.length){state=history.pop();selected=null;legal=[];render();saveGame();}};
+  $('#ch-undo').onclick=()=>{if(mode==='remote')return;if(history.length){state=history.pop();
+    if(mode==='computer')while(state.turn==='b'&&history.length)state=history.pop(); // נגד המחשב: מבטלים גם את תשובת המחשב — אחרת התור נשאר אצלו והמשחק נתקע
+    selected=null;legal=[];render();if(history.length)saveGame();else LS.del('saved');}}; // ביטול עד ההתחלה — לא משאירים משחק ישן ב"המשך משחק"
 
   const onUnload=()=>saveGame();
   window.addEventListener('beforeunload',onUnload);
