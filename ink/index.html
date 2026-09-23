@@ -395,6 +395,37 @@ select.field{padding:0 8px}
 .zoom-pct:hover{background:var(--surface-3)}
 .mode-chip{font-size:11.5px;padding:2px 9px;border-radius:999px;background:var(--amber-soft);color:var(--amber)}
 
+/* ---------- backup ---------- */
+.bk-chip{display:inline-flex;align-items:center;gap:5px;border:0;background:none;color:inherit;font-size:12px;padding:2px 9px;border-radius:999px}
+.bk-chip:hover{background:var(--surface-3)}
+.bk-chip .ms{font-size:16px}
+.bk-chip.ok .ms{color:var(--green)}
+.bk-chip.warn{background:var(--amber-soft);color:var(--amber)}
+.bk-chip.error{background:var(--red-soft);color:var(--red)}
+.bk-chip.busy .ms{animation:spin 1.2s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.bk-state{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;background:var(--surface-2);margin-bottom:12px}
+.bk-state>.ms{font-size:24px;color:var(--text-2)}
+.bk-state b{display:block;font-size:14px;margin-bottom:2px}
+.bk-state span{font-size:12.5px;color:var(--text-2)}
+.bk-state.ok{background:var(--green-soft)}.bk-state.ok>.ms{color:var(--green)}
+.bk-state.warn{background:var(--amber-soft)}.bk-state.warn>.ms{color:var(--amber)}
+.bk-state.error{background:var(--red-soft)}.bk-state.error>.ms{color:var(--red)}
+.bk-where{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-2);margin:0 0 12px}
+.bk-where .ms{font-size:18px}
+.bk-h{font-size:12.5px;font-weight:600;color:var(--text-2);margin:18px 0 6px}
+.bk-list{border:1px solid var(--line);border-radius:10px;max-height:min(44vh,360px);overflow:auto}
+.bk-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:13px}
+.bk-row:last-child{border-bottom:0}
+label.bk-row{cursor:pointer}
+label.bk-row:hover{background:var(--surface-2)}
+.bk-row>.ms{font-size:19px;color:var(--text-3)}
+.bk input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px;flex:none;margin:0}
+.bk-tag{font-size:11px;padding:1px 8px;border-radius:999px;background:var(--surface-3);color:var(--text-2);white-space:nowrap;flex:none}
+.bk-sum{font-size:13.5px;font-weight:600;margin:0 0 4px}
+.bk-all{display:flex;align-items:center;gap:10px;font-size:13px;margin:12px 0 6px;padding:0 12px;cursor:pointer}
+.bk .btn-row{margin-top:12px}
+
 /* ---------- overlays ---------- */
 .mback{position:fixed;inset:0;background:rgba(9,13,26,.5);display:grid;place-items:center;padding:16px;z-index:100;animation:fade .15s}
 .modal{width:min(520px,100%);max-height:calc(100% - 32px);display:flex;flex-direction:column;background:var(--surface);color:var(--text);border-radius:14px;box-shadow:var(--pop);overflow:hidden}
@@ -640,7 +671,7 @@ select.field{padding:0 8px}
       <div class="grp"><div class="gb">
         <button class="rb big" data-cmd="versions"><span class="ms">history</span>גרסאות קודמות</button>
         <button class="rb big" data-cmd="saveVersion"><span class="ms">bookmark_add</span>שמירת גרסה</button>
-        <button class="rb big" data-cmd="backup"><span class="ms">backup</span>גיבוי הכל</button>
+        <button class="rb big" data-cmd="backup"><span class="ms">backup</span>גיבוי</button>
         <button class="rb big" data-cmd="restoreBackup"><span class="ms">settings_backup_restore</span>שחזור מגיבוי</button>
         <button class="rb big" data-cmd="trash"><span class="ms">delete</span>סל מחזור</button>
       </div><div class="gn">גרסאות וגיבוי</div></div>
@@ -977,6 +1008,7 @@ select.field{padding:0 8px}
     <span id="stSel" class="doc-only" hidden></span>
     <button id="stGoal" class="goal" data-cmd="goal" hidden><span class="goal-bar"><i></i></span><span class="goal-t"></span></button>
     <span class="grow"></span>
+    <button id="stBackup" class="bk-chip" type="button" hidden><span class="ms">backup</span><span class="txt"></span></button>
     <span id="stMode" class="mode-chip" hidden>נשמר רק בדפדפן הזה</span>
     <div class="zoom doc-only"><button class="rb" data-cmd="zoomOut" aria-label="הקטנת התצוגה"><span class="ms">remove</span></button><input id="zoomRange" type="range" min="50" max="200" step="10" value="100" aria-label="זום"><button class="rb" data-cmd="zoomIn" aria-label="הגדלת התצוגה"><span class="ms">add</span></button><button class="zoom-pct" id="zoomPct" data-cmd="zoomReset" title="חזרה ל-100%">100%</button></div>
   </footer>
@@ -1058,7 +1090,8 @@ const HE_ONE = {
   'תוקנו {n} רווחים מיותרים': 'תוקן רווח מיותר אחד', 'הוחלפו {n} מקומות': 'הוחלף מקום אחד', 'שוחזרו {n} מסמכים': 'שוחזר מסמך אחד',
   '{0} החליף {n} מקומות ב-"{1}"': '{0} החליף מקום אחד ב-"{1}"', '{n} שקופיות': 'שקופית אחת',
   '{n} מסמכים יימחקו לתמיד. אי אפשר לבטל את זה.': 'מסמך אחד יימחק לתמיד. אי אפשר לבטל את זה.',
-  'בגיבוי יש {n} מסמכים. הם יתווספו למחברת כמסמכים חדשים, בלי למחוק שום דבר.': 'בגיבוי יש מסמך אחד. הוא יתווסף למחברת כמסמך חדש, בלי למחוק שום דבר.',
+  '{n} מסמכים': 'מסמך אחד', '{n} מצגות': 'מצגת אחת', '{n} תמונות': 'תמונה אחת', 'שחזור {n} מסמכים': 'שחזור מסמך אחד',
+  'בתיקייה הזאת יש גיבוי מ-{0} עם {n} מסמכים שלא נמצאים כאן. לשחזר אותם?': 'בתיקייה הזאת יש גיבוי מ-{0} עם מסמך אחד שלא נמצא כאן. לשחזר אותו?',
 };
 const pluralRules = new Intl.PluralRules(LOCALE);
 function TN(he, n, ...args) {
@@ -2352,7 +2385,7 @@ const outlineSoon = debounce(renderOutline, 400);
    ========================================================= */
 const today = () => new Date().toLocaleDateString(LOCALE);
 const longDate = () => new Date().toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-const WELCOME = (I18N && I18N.welcome) || '<img src="floating-ink.webp" alt="Floating Ink" class="img-center" style="width: 62%"><h1>ברוכים הבאים ל-Floating Ink</h1><p>זה מסמך לדוגמה שמראה מה אפשר לעשות כאן. אפשר לערוך אותו, למחוק אותו, או ללחוץ על <b>מסמך חדש</b> ולהתחיל מדף ריק.</p><div class="callout callout-note"><p><b>פרטי לגמרי.</b> המסמכים נשמרים רק במכשיר שלך, ושום דבר לא נשלח לשום שרת. כדאי לגבות מדי פעם: <b>קובץ ← גיבוי הכל</b>.</p></div><h2>מה יש כאן</h2><ul><li><b>עיצוב כמו בוורד:</b> גופנים בעברית, צבעים, <span style="background-color: #ffe45c">מרקר</span>, כותרות, רשימות וטבלאות.</li><li><b>הוספה:</b> תמונות, ציור ביד, סמלים למתמטיקה, אימוג׳י, תאריך עברי ותוכן עניינים.</li><li><b>כלים:</b> חיפוש והחלפה, ספירת מילים, יעד מילים, הקראה בקול, מחשבון ותיקון שפת הקלדה.</li><li><b>קבצים:</b> שמירה כ-Word וכ-PDF, ייבוא מ-Word, גרסאות קודמות וסל מחזור.</li></ul><h2>משימות לדוגמה</h2><ul class="checklist"><li data-checked="true">לפתוח את Floating Ink</li><li>להתקין אותו במחשב או בטלפון</li><li>להוסיף טבלה או ציור</li></ul><h2>איך מתקינים</h2><ul><li><b>במחשב (כרום או Edge):</b> כפתור <b>התקנה</b> למעלה, או סמל ההתקנה בצד שורת הכתובת.</li><li><b>באנדרואיד:</b> תפריט ⋮ ← התקנת האפליקציה.</li><li><b>באייפון:</b> בספארי, כפתור השיתוף ← הוספה למסך הבית.</li></ul><p>אחרי ההתקנה Floating Ink נפתח כמו תוכנה רגילה, גם בלי אינטרנט.</p><h2>קיצורי מקלדת</h2><table><tbody><tr><th>קיצור</th><th>מה הוא עושה</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>מודגש / נטוי / קו תחתון</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>ביטול / חזרה</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>חיפוש / חיפוש והחלפה</td></tr><tr><td>Ctrl+K</td><td>הוספת קישור</td></tr><tr><td>Ctrl+Shift+X</td><td>תיקון שפת הקלדה</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>כותרת 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>שמירה (Floating Ink גם שומר לבד)</td></tr></tbody></table><div class="callout callout-tip"><p><b>טיפ:</b> הקלדת באנגלית בטעות, למשל akuo במקום שלום? מסמנים את המילים ולוחצים Ctrl+Shift+X.</p></div><p style="text-align: center"><small>Floating Ink הוא חלק מ-<a href="https://floatingrotations.com">Floating rotation</a></small></p>';
+const WELCOME = (I18N && I18N.welcome) || '<img src="floating-ink.webp" alt="Floating Ink" class="img-center" style="width: 62%"><h1>ברוכים הבאים ל-Floating Ink</h1><p>זה מסמך לדוגמה שמראה מה אפשר לעשות כאן. אפשר לערוך אותו, למחוק אותו, או ללחוץ על <b>מסמך חדש</b> ולהתחיל מדף ריק.</p><div class="callout callout-note"><p><b>פרטי לגמרי.</b> המסמכים נשמרים רק במכשיר שלך, ושום דבר לא נשלח לשום שרת. כדי שלא יאבדו, כדאי להפעיל גיבוי אוטומטי: <b>קובץ ← גיבוי</b>.</p></div><h2>מה יש כאן</h2><ul><li><b>עיצוב כמו בוורד:</b> גופנים בעברית, צבעים, <span style="background-color: #ffe45c">מרקר</span>, כותרות, רשימות וטבלאות.</li><li><b>הוספה:</b> תמונות, ציור ביד, סמלים למתמטיקה, אימוג׳י, תאריך עברי ותוכן עניינים.</li><li><b>כלים:</b> חיפוש והחלפה, ספירת מילים, יעד מילים, הקראה בקול, מחשבון ותיקון שפת הקלדה.</li><li><b>קבצים:</b> שמירה כ-Word וכ-PDF, ייבוא מ-Word, גרסאות קודמות וסל מחזור.</li></ul><h2>משימות לדוגמה</h2><ul class="checklist"><li data-checked="true">לפתוח את Floating Ink</li><li>להתקין אותו במחשב או בטלפון</li><li>להוסיף טבלה או ציור</li></ul><h2>איך מתקינים</h2><ul><li><b>במחשב (כרום או Edge):</b> כפתור <b>התקנה</b> למעלה, או סמל ההתקנה בצד שורת הכתובת.</li><li><b>באנדרואיד:</b> תפריט ⋮ ← התקנת האפליקציה.</li><li><b>באייפון:</b> בספארי, כפתור השיתוף ← הוספה למסך הבית.</li></ul><p>אחרי ההתקנה Floating Ink נפתח כמו תוכנה רגילה, גם בלי אינטרנט.</p><h2>קיצורי מקלדת</h2><table><tbody><tr><th>קיצור</th><th>מה הוא עושה</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>מודגש / נטוי / קו תחתון</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>ביטול / חזרה</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>חיפוש / חיפוש והחלפה</td></tr><tr><td>Ctrl+K</td><td>הוספת קישור</td></tr><tr><td>Ctrl+Shift+X</td><td>תיקון שפת הקלדה</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>כותרת 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>שמירה (Floating Ink גם שומר לבד)</td></tr></tbody></table><div class="callout callout-tip"><p><b>טיפ:</b> הקלדת באנגלית בטעות, למשל akuo במקום שלום? מסמנים את המילים ולוחצים Ctrl+Shift+X.</p></div><p style="text-align: center"><small>Floating Ink הוא חלק מ-<a href="https://floatingrotations.com">Floating rotation</a></small></p>';
 const TEMPLATES = [
   { name: T('מסמך ריק'), desc: T('דף חלק'), icon: 'description', html: () => '<p><br></p>' },
   { name: T('עבודה לבית הספר'), desc: T('עמוד שער, מבוא, פרקים וסיכום'), icon: 'school', html: () => T(`<h1 style="text-align: center">שם העבודה</h1><p style="text-align: center">עבודה בנושא: </p><p><br></p><table><tbody><tr><th>שם</th><td><br></td></tr><tr><th>כיתה</th><td><br></td></tr><tr><th>מורה</th><td><br></td></tr><tr><th>מקצוע</th><td><br></td></tr><tr><th>תאריך הגשה</th><td>{0}</td></tr></tbody></table><hr class="page-break"><h2>מבוא</h2><p>על מה העבודה, ולמה בחרתי בנושא הזה.</p><h2>פרק ראשון</h2><p><br></p><h2>פרק שני</h2><p><br></p><h2>סיכום</h2><p>מה למדתי, ומה המסקנה שלי.</p><h2>מקורות</h2><ul><li><br></li></ul>`, today()) },
@@ -2548,7 +2581,8 @@ async function createDoc({ title = '', html = '<p><br></p>', page, kind } = {}) 
 }
 function loadSample() {
   loadIntoEditor({ id: null, meta: { title: '', auto: T('ברוכים הבאים ל-Floating Ink'), page: { ...DEFAULT_PAGE, dir: UI_DIR }, goal: 0 }, html: WELCOME, isSample: true });
-  showBanner(T('זה מסמך לדוגמה. אפשר לערוך אותו, או להתחיל מסמך חדש.'), [{ label: T('מסמך חדש'), primary: true, run: () => openNewDialog() }]);
+  // an empty list may be a new computer or cleared browser data, so restoring a backup is offered right here
+  showBanner(T('זה מסמך לדוגמה. אפשר לערוך אותו, או להתחיל מסמך חדש.'), [{ label: T('מסמך חדש'), primary: true, run: () => openNewDialog() }, { label: T('שחזור מגיבוי'), run: () => $('#fileBackup').click() }]);
 }
 function promoteSample() {
   const c = S.cur; if (!c || !c.isSample) return;
@@ -2565,6 +2599,7 @@ function openInitial() {
 }
 function onDocs(list, fromCache) {
   S.docs = list;
+  backupCheckSoon();
   if (!S.docsReady) {
     if (fromCache && !list.length) {
       if (!S.initTimer) S.initTimer = setTimeout(() => { if (!S.docsReady) { S.docsReady = true; openInitial(); renderDocs(); } }, 2500);
@@ -3048,7 +3083,7 @@ function applyAI(result, scope, how) {
 }
 
 /* =========================================================
-   files: Word / PDF / HTML / text export, import, backup, print
+   files: Word / PDF / HTML / text export, import, print
    ========================================================= */
 async function offerFile(filename, data) {
   const d = S.caps.downloads;
@@ -3374,7 +3409,7 @@ function htmlToMd(root) {
   block(root);
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
 }
-/* --- import & backup --- */
+/* --- import --- */
 /* an imported document's direction, from its letters: right to left when Hebrew and Arabic letters are the majority */
 function guessDir(html) {
   const t = htmlText(html), n = re => (t.match(re) || []).length;
@@ -3432,39 +3467,6 @@ async function importFile(f) {
     console.error(e);
     toast(e && e.message === 'lib' ? T('לא הצלחתי לטעון את כלי הייבוא. כדאי לבדוק את החיבור לאינטרנט.') : T('לא הצלחתי לקרוא את הקובץ'), { ms: 6000 });
   } finally { busy.remove(); }
-}
-async function doBackup() {
-  if (!S.store) return;
-  await flushSave();
-  const busy = toast(T('מכין גיבוי…'), { icon: 'backup', ms: 120000 });
-  let data;
-  try {
-    const docs = [];
-    for (const d of allDocs()) docs.push({ meta: d, html: S.cur && d.id === S.cur.id ? curBody() : await S.store.readBody(d.id, d.chunks || 1) });
-    if (!docs.length) { toast(T('אין עדיין מסמכים לגבות')); return; }
-    data = JSON.stringify({ app: 'floating-ink', v: 1, at: new Date().toISOString(), docs });
-  } catch (e) { toast(storeErrMsg(e)); return; }
-  finally { busy.remove(); }
-  // dates like 22.9.2026 or 9/22/2026 become 22-9-2026: slashes can't go in a file name
-  await offerFile(T(`גיבוי Floating Ink {0}.json`, today().replace(/\D+/g, '-')), data);
-}
-async function restoreBackup(f) {
-  let j;
-  try { j = JSON.parse(await f.text()); if (!j || !Array.isArray(j.docs)) throw 0; }
-  catch { toast(T('הקובץ הזה לא נראה כמו גיבוי של Floating Ink')); return; }
-  if (!(await confirmBox(T('שחזור מגיבוי'), TN('בגיבוי יש {n} מסמכים. הם יתווספו למחברת כמסמכים חדשים, בלי למחוק שום דבר.', j.docs.length), T('שחזור')))) return;
-  let n = 0;
-  try {
-    for (const d of j.docs) {
-      const m = d.meta || {}, id = uid(), deck = isDeck(m), html = deck ? JSON.stringify(parseDeck(String(d.html || ''))) : sanitize(String(d.html || ''));
-      const meta = { title: String(m.title || ''), auto: String(m.auto || ''), createdAt: +m.createdAt || Date.now(), updatedAt: +m.updatedAt || Date.now(), words: +m.words || 0, snippet: String(m.snippet || ''), starred: !!m.starred, trashed: !!m.trashed, page: { ...DEFAULT_PAGE, ...(m.page && typeof m.page === 'object' ? m.page : {}) }, goal: +m.goal || 0, session: SESSION };
-      if (deck) Object.assign(meta, { kind: 'deck', slides: JSON.parse(html).slides.length });
-      meta.chunks = await S.store.writeBody(id, html, 1);
-      await S.store.putMeta(id, meta);
-      n++;
-    }
-  } catch (e) { toast(storeErrMsg(e)); }
-  if (n) toast(TN('שוחזרו {n} מסמכים', n), { icon: 'settings_backup_restore' });
 }
 async function doPrint() {
   let fired = false;
@@ -3666,6 +3668,411 @@ async function saveToFile() {
       : e && e.name === 'NotFoundError' ? T(`הקובץ "{0}" לא נמצא. אולי הוא הועבר או נמחק. אפשר לשמור עותק מהתפריט "שמירת עותק כקובץ".`, L.name)
       : T(`השמירה לתוך "{0}" לא הצליחה. אם הוא פתוח בתוכנה אחרת (כמו וורד), כדאי לסגור אותה ולנסות שוב. השינויים שמורים כאן באפליקציה.`, L.name), { ms: 9000 });
   } finally { S.fileSaving = false; if (busy) busy.remove(); renderFileChip(); }
+}
+
+/* =========================================================
+   backup: a copy of every document and presentation, with their pictures (which live inside them),
+   written by itself into a folder picked once. A folder inside OneDrive or Google Drive makes it a
+   cloud copy too, with no account. Each backup is a new file, and the folder keeps the newest few plus
+   the last one of each of the last 14 days. A browser that can't write to folders downloads a file
+   instead, with a gentle reminder after a week without one. Restoring only ever adds documents
+   ========================================================= */
+const BK_NAME = /^Floating Ink (\d{4})-(\d\d)-(\d\d) (\d\d)-(\d\d)-(\d\d)\.json$/;
+const BK_KEEP = 5, BK_DAYS = 14, BK_WEEK = 7 * 864e5, BK_MAX = 10 * 60e3;
+/* tests on localhost: fink:bkTest names a private (OPFS) folder that stands in for the one the picker
+   gives, or is 'nodir' for a browser that can't write to folders */
+const BK_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? String(lsGet('fink:bkTest', '') || '') : '';
+const BK_DIR_OK = !S.inClaude && !!window.indexedDB && BK_TEST !== 'nodir' && (!!BK_TEST || typeof window.showDirectoryPicker === 'function');
+const BK_QUIET = BK_TEST ? 3e3 : 90e3;   // a backup waits for this much quiet after the last change
+const BK = { rec: null, perm: null, err: null, busy: false, again: false, timer: 0, first: 0, dlg: null };
+/* the last backup, shared by every open window: at, fp and n for the folder, fileAt for a downloaded file */
+const bkInfo = () => lsGet('fink:backup', {});
+const bkLast = () => { const i = bkInfo(); return Math.max(i.at || 0, i.fileAt || 0); };
+const pad2 = n => String(n).padStart(2, '0');
+/* a backup's name holds its date and time, seconds too, so two backups never write over each other */
+const bkStamp = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}-${pad2(d.getMinutes())}-${pad2(d.getSeconds())}`;
+const bkTime = name => { const m = BK_NAME.exec(name); return m ? new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime() : 0; };
+const fmtSize = b => new Intl.NumberFormat(LOCALE, { style: 'unit', unit: b < 1e6 ? 'kilobyte' : 'megabyte', maximumFractionDigits: b < 1e6 ? 0 : 1 }).format(b < 1e6 ? Math.max(1, b / 1e3) : b / 1e6);
+/* the picked folder, in a small database of its own: a folder handle can't go in localStorage, and the
+   documents' database would need a version upgrade, which an older open window blocks */
+const bkStore = {
+  dbp: null,
+  db() {
+    return this.dbp || (this.dbp = new Promise(res => {
+      try {
+        const rq = indexedDB.open('floating-ink-backup', 1);
+        rq.onupgradeneeded = () => rq.result.createObjectStore('kv');
+        rq.onsuccess = () => res(rq.result);
+        rq.onerror = rq.onblocked = () => res(null);
+      } catch { res(null); }
+    }));
+  },
+  async get(k) {
+    const db = await this.db();
+    return db && new Promise(res => { try { const r = db.transaction('kv').objectStore('kv').get(k); r.onsuccess = () => res(r.result || null); r.onerror = () => res(null); } catch { res(null); } });
+  },
+  async set(k, v) {
+    const db = await this.db();
+    if (!db) throw new Error('no db');
+    await new Promise((res, rej) => {
+      const t = db.transaction('kv', 'readwrite');
+      if (v == null) t.objectStore('kv').delete(k); else t.objectStore('kv').put(v, k);
+      t.oncomplete = () => res(); t.onerror = t.onabort = () => rej(t.error || new Error('aborted'));
+    });
+  },
+};
+/* a short code for the whole list: any save, rename, star, trash or delete changes it */
+function docsPrint() {
+  const s = allDocs().map(d => `${d.id}:${d.updatedAt || 0}:${d.trashed ? 1 : 0}:${d.starred ? 1 : 0}:${d.title || ''}`).sort().join('|');
+  let x = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 16777619); }
+  return (x >>> 0).toString(36) + s.length.toString(36);
+}
+/* everything as one JSON file: the folder's copies, the downloaded file and restore all use it. fp is
+   taken before the reading, so a change made meanwhile makes the next check back up again */
+async function backupData() {
+  await flushSave();
+  const fp = docsPrint(), docs = [];
+  for (const d of allDocs()) docs.push({ meta: d, html: S.cur && !S.cur.isSample && d.id === S.cur.id ? curBody() : await S.store.readBody(d.id, d.chunks || 1) });
+  return docs.length ? { fp, n: docs.length, json: JSON.stringify({ app: 'floating-ink', v: 1, at: new Date().toISOString(), docs }) } : null;
+}
+/* the backups in a folder, newest first. Only files named exactly like ours count, so nothing else there is ever touched */
+async function listBackups(dir) {
+  const out = [];
+  try { for await (const [name, hd] of dir.entries()) { const t = bkTime(name); if (t && hd.kind === 'file') out.push({ name, t, hd }); } } catch {}
+  return out.sort((a, b) => b.t - a.t);
+}
+async function pruneBackups(dir) {
+  const files = await listBackups(dir), keep = new Set(files.slice(0, BK_KEEP).map(f => f.name)), days = new Set();
+  for (const f of files) { const d = new Date(f.t).toDateString(); if (days.size < BK_DAYS && !days.has(d)) { days.add(d); keep.add(f.name); } }
+  for (const f of files) if (!keep.has(f.name)) try { await dir.removeEntry(f.name); } catch {}
+}
+const bkDir = (r, create) => r.sub ? r.root.getDirectoryHandle(r.sub, { create }) : r.root;
+const bkLock = fn => navigator.locks && navigator.locks.request ? navigator.locks.request('fink-backup', fn) : fn();
+/* one backup into the folder: true when it's written (or nothing changed since the last one), 'empty' with
+   no documents yet, false when it didn't happen. One window writes at a time */
+async function runBackup(force) {
+  clearTimeout(BK.timer); BK.first = 0;
+  if (!BK.rec || !S.store || !S.docsReady) return false;
+  if (BK.busy) { BK.again = true; return false; }
+  BK.busy = true; renderBackupChip();
+  let res = false;
+  try {
+    res = await bkLock(async () => {
+      if (!force && docsPrint() === bkInfo().fp) return true;   // nothing new, or another window just saved it
+      BK.perm = await BK.rec.root.queryPermission({ mode: 'readwrite' });
+      if (BK.perm !== 'granted') return false;
+      const dir = await bkDir(BK.rec, true), data = await backupData();
+      if (!data) return 'empty';
+      // written aside and swapped in when complete, so a window closed halfway can't leave half a file
+      const w = await (await dir.getFileHandle(`Floating Ink ${bkStamp(new Date())}.json`, { create: true })).createWritable();
+      try { await w.write(data.json); await w.close(); }
+      catch (e) { try { await w.abort(); } catch {} throw e; }
+      lsSet('fink:backup', { ...bkInfo(), at: Date.now(), fp: data.fp, n: data.n });
+      BK.err = null;
+      await pruneBackups(dir);
+      return true;
+    });
+  } catch (e) {
+    console.warn('backup failed', e);
+    const n = e && e.name;
+    if (n === 'NotAllowedError' || n === 'SecurityError') BK.perm = 'prompt';
+    else if (n === 'NotFoundError') BK.err = 'lost';   // the folder was moved or deleted: waits for the person
+    else { BK.err = 'failed'; BK.timer = setTimeout(() => runBackup(), 5 * 60e3); }
+  } finally {
+    BK.busy = false; bkChanged();
+    if (BK.again) { BK.again = false; backupCheck(); }
+  }
+  return res;
+}
+/* after any change: a backup once things are quiet for a moment, and at the latest ten minutes after
+   the first change that isn't backed up yet */
+async function backupCheck() {
+  if (!BK.rec || !S.docsReady || BK.busy || BK.err) return;
+  if (BK.perm !== 'granted') {
+    try { BK.perm = await BK.rec.root.queryPermission({ mode: 'readwrite' }); } catch {}
+    if (BK.perm !== 'granted') { renderBackupChip(); return; }
+    bkChanged();   // allowed meanwhile, in another window
+  }
+  if (docsPrint() === bkInfo().fp) { clearTimeout(BK.timer); BK.first = 0; return; }
+  const now = Date.now();
+  if (!BK.first) BK.first = now;
+  clearTimeout(BK.timer);
+  BK.timer = setTimeout(() => runBackup(), clamp(BK.first + BK_MAX - now, 0, BK_QUIET));
+}
+const backupCheckSoon = debounce(() => backupCheck(), 400);
+async function loadBackup() {
+  Object.assign(BK, { rec: null, perm: null, err: null });
+  if (BK_DIR_OK && S.mode !== 'db') {
+    const r = await bkStore.get('dir');
+    if (r && r.root && typeof r.root.queryPermission === 'function') {
+      BK.rec = r;
+      try { BK.perm = await r.root.queryPermission({ mode: 'readwrite' }); } catch { BK.perm = 'prompt'; }
+    }
+  }
+  bkChanged();
+  backupCheck();
+}
+/* a week with documents and no backup of any kind */
+function bkStale() {
+  const docs = aliveDocs();
+  return !!docs.length && Date.now() - (bkLast() || Math.min(...docs.map(d => d.createdAt || Date.now()))) > BK_WEEK;
+}
+const bkWhere = r => [r.root.name, r.sub].filter(Boolean).join(UI_DIR === 'rtl' ? ' ← ' : ' → ');
+/* the line at the bottom: when the last backup was, or what the backup needs */
+function renderBackupChip() {
+  const b = $('#stBackup');
+  b.hidden = !S.store || S.mode === 'db';
+  if (b.hidden) return;
+  const R = BK.rec, at = bkInfo().at, last = bkLast(), stale = !R && bkStale();
+  const [ic, tx, cls, tip] =
+    R && BK.busy ? ['sync', T('מגבה…'), 'busy', '']
+    : R && BK.err === 'lost' ? ['cloud_off', T('תיקיית הגיבוי לא נמצאה'), 'error', T('אולי היא הועברה או נמחקה. לחיצה כאן כדי לבחור אותה שוב.')]
+    : R && BK.perm !== 'granted' ? ['backup', T('הגיבוי מחכה לאישור'), 'warn', T('לחיצה כאן ממשיכה את הגיבוי. בחלון של הדפדפן כדאי לבחור לאשר בכל ביקור, ואז זה לא יישאל שוב.')]
+    : R && BK.err ? ['cloud_off', T('הגיבוי לא הצליח'), 'error', T('Floating Ink ינסה שוב בעוד כמה דקות.')]
+    : R ? ['cloud_done', at ? T('גיבוי אחרון: {0}', relTime(at)) : T('הגיבוי האוטומטי פועל'), 'ok', (at ? T('גיבוי אחרון: {0}', fmtDateTime(at)) + '\n' : '') + T('התיקייה: {0}', bkWhere(R))]
+    : [last && !stale ? 'cloud_done' : 'backup', last ? T('גיבוי אחרון: {0}', relTime(last)) : BK_DIR_OK ? T('הגדרת גיבוי') : T('עדיין אין גיבוי'), stale ? 'warn' : '', T('גיבוי ושחזור של כל המסמכים')];
+  b.className = 'bk-chip' + (cls ? ' ' + cls : '');
+  b.querySelector('.ms').textContent = ic;
+  b.querySelector('.txt').textContent = tx;
+  b.title = tip;
+}
+function bkChanged() { renderBackupChip(); renderBackupDlg(); }
+/* the backup window: the state, the folder, its copies, a file to download, and restoring */
+function openBackup() {
+  if (S.mode === 'db') { downloadBackup(); return; }   // the documents are kept in the account already; a file is still handy
+  if (BK.dlg) return;
+  const body = h('div', { class: 'bk' });
+  BK.dlg = { body, tok: 0 };
+  BK.dlg.m = modal({ title: T('גיבוי'), body, onClose: () => { BK.dlg = null; } });
+  renderBackupDlg();
+}
+async function renderBackupDlg() {
+  const D = BK.dlg;
+  if (!D) return;
+  const tok = ++D.tok, R = BK.rec, i = bkInfo(), live = !!R && BK.perm === 'granted' && BK.err !== 'lost';
+  const btn = (label, ic, run, primary) => h('button', { class: 'btn' + (primary ? ' primary' : ''), onclick: run }, ic ? icon(ic) : null, label);
+  let st, acts;
+  if (!BK_DIR_OK) {
+    st = [i.fileAt && Date.now() - i.fileAt < BK_WEEK ? 'ok' : 'warn', i.fileAt ? 'cloud_done' : 'backup', i.fileAt ? T('גיבוי אחרון: {0}', fmtDateTime(i.fileAt)) : T('עדיין לא הורדת גיבוי'),
+      T('הדפדפן הזה לא יכול לגבות לבד לתיקייה. כדאי להוריד קובץ גיבוי פעם בשבוע ולשמור אותו במקום בטוח, כמו OneDrive או Google Drive. אם יעבור שבוע בלי גיבוי, Floating Ink יזכיר לך.')];
+    acts = [btn(T('הורדת קובץ גיבוי'), 'download', downloadBackup, true)];
+  } else if (!R) {
+    st = ['warn', 'backup', T('הגיבוי האוטומטי עוד לא פועל'), T('בוחרים פעם אחת תיקייה במחשב, ומאז Floating Ink שומר בה לבד עותק של כל המסמכים, המצגות והתמונות, כמה דקות אחרי כל שינוי.')];
+    acts = [btn(T('בחירת תיקייה'), 'folder_open', pickBackupFolder, true)];
+  } else if (BK.err === 'lost') {
+    st = ['error', 'cloud_off', T('תיקיית הגיבוי לא נמצאה'), T('אולי היא הועברה או נמחקה. אפשר לבחור אותה שוב, או תיקייה אחרת.')];
+    acts = [btn(T('בחירת תיקייה'), 'folder_open', pickBackupFolder, true), btn(T('לנסות שוב'), 'refresh', backupNow)];
+  } else if (BK.perm !== 'granted') {
+    st = ['warn', 'backup', T('הגיבוי מחכה לאישור'), T('הדפדפן צריך אישור כדי להמשיך לשמור בתיקייה. בחלון שלו כדאי לבחור לאשר בכל ביקור, ואז זה לא יישאל שוב.')];
+    acts = [btn(T('המשך הגיבוי'), 'backup', resumeBackup, true)];
+  } else {
+    st = BK.err ? ['error', 'cloud_off', T('הגיבוי האחרון לא הצליח'), T('Floating Ink ינסה שוב בעוד כמה דקות. אפשר גם לנסות עכשיו.')]
+      : ['ok', 'cloud_done', T('הגיבוי האוטומטי פועל'), i.at ? T('גיבוי אחרון: {0}', fmtDateTime(i.at)) + ' · ' + TN('{n} מסמכים', i.n || 0) : T('הגיבוי הראשון יישמר בעוד רגע.')];
+    acts = [btn(T('גיבוי עכשיו'), 'backup', backupNow, true), btn(T('החלפת תיקייה'), 'folder_open', pickBackupFolder)];
+  }
+  const out = [h('div', { class: 'bk-state ' + st[0] }, icon(st[1]), h('div', {}, h('b', { text: st[2] }), h('span', { text: st[3] })))];
+  if (R) {
+    const [pre, post] = T('התיקייה: {0}').split('{0}');   // the names go in as they are, each kept whole in any direction
+    out.push(h('p', { class: 'bk-where' }, icon('folder_open'), h('span', {}, pre, h('bdi', { text: R.root.name }), R.sub ? [UI_DIR === 'rtl' ? ' ← ' : ' → ', h('bdi', { text: R.sub })] : null, post)));
+  }
+  if (live && !BK.err) out.push(h('p', { class: 'muted small', text: T('עותק חדש נשמר כמה דקות אחרי כל שינוי. בתיקייה נשארים העותקים האחרונים, ועוד עותק אחד לכל יום בשבועיים האחרונים.') }));
+  if (BK_DIR_OK && !R) out.push(h('p', { class: 'muted small', text: T('טיפ: תיקייה בתוך OneDrive או Google Drive מעלה את הגיבוי גם לענן, בלי להירשם לשום דבר.') }));
+  out.push(h('div', { class: 'btn-row' }, acts));
+  const list = live ? h('div', { class: 'bk-list' }) : null;
+  if (list) out.push(h('div', { class: 'bk-h', text: T('הגיבויים בתיקייה') }), list);
+  out.push(h('div', { class: 'bk-h', text: T('עוד אפשרויות') }), h('div', { class: 'btn-row' },
+    BK_DIR_OK ? btn(T('הורדת קובץ גיבוי'), 'download', downloadBackup) : null,
+    btn(T('שחזור מגיבוי'), 'settings_backup_restore', () => $('#fileBackup').click()),
+    R ? btn(T('הפסקת הגיבוי האוטומטי'), null, stopBackup) : null));
+  D.body.textContent = ''; D.body.append(...out);
+  if (!list) return;
+  let files = [];
+  try { files = await listBackups(await bkDir(R, false)); } catch {}
+  if (D.tok !== tok) return;
+  if (!files.length) { list.append(h('div', { class: 'bk-row muted', text: T('עדיין אין כאן גיבויים.') })); return; }
+  for (const f of files) {
+    let size = 0;
+    try { size = (await f.hd.getFile()).size; } catch {}
+    if (D.tok !== tok) return;
+    list.append(h('div', { class: 'bk-row' }, icon('history'),
+      h('div', { class: 'di-main' }, h('div', { class: 'di-t', text: fmtDateTime(f.t) }), h('div', { class: 'di-m', text: fmtSize(size) })),
+      h('button', { class: 'btn small', onclick: async () => {
+        let file;
+        try { file = await f.hd.getFile(); } catch { toast(T('לא הצלחתי לקרוא את קובץ הגיבוי')); return; }
+        if (BK.dlg) BK.dlg.m.close();
+        restoreFromFile(file);
+      } }, icon('settings_backup_restore'), T('שחזור'))));
+  }
+}
+/* "choose a folder": the copies get a folder of their own inside it, unless it already is theirs. On a
+   new computer, or after the browser's data was cleared, the folder may already hold a backup with
+   documents that aren't here, and those are offered back */
+async function pickBackupFolder() {
+  let root;
+  try {
+    root = BK_TEST ? await (await navigator.storage.getDirectory()).getDirectoryHandle(BK_TEST, { create: true })
+      : await window.showDirectoryPicker({ id: 'fink-backup', mode: 'readwrite', startIn: 'documents' });
+  } catch (e) {
+    if (!e || e.name !== 'AbortError') toast(T('אי אפשר לגבות לתיקייה הזאת. כדאי לבחור תיקייה אחרת, למשל בתוך "מסמכים" או OneDrive.'), { ms: 8000 });
+    return;
+  }
+  let sub = '', found = await listBackups(root);
+  if (!found.length && !/floating ink/i.test(root.name)) {
+    try {
+      for await (const [name, hd] of root.entries()) {
+        if (hd.kind !== 'directory' || !/floating ink/i.test(name)) continue;
+        const f = await listBackups(hd);
+        if (f.length) { sub = name; found = f; break; }
+      }
+    } catch {}
+    sub = sub || T('גיבויים של Floating Ink');
+  }
+  const rec = { root, sub, at: Date.now() };
+  try { await bkStore.set('dir', rec); }
+  catch { toast(T('לא הצלחתי לשמור את הבחירה. כדאי לנסות שוב.')); return; }
+  clearTimeout(BK.timer);
+  Object.assign(BK, { rec, perm: 'granted', err: null, first: 0 });
+  lsSet('fink:bkDir', Date.now());   // the other open windows load it too
+  bkChanged();
+  if (found.length && await offerFolderRestore(found[0])) { backupCheck(); return; }
+  const r = await runBackup(true);
+  if (r === true) toast(T('הגיבוי האוטומטי פועל. עותק ראשון נשמר בתיקייה.'), { icon: 'cloud_done', ms: 6000 });
+  else if (r === 'empty') toast(T('הגיבוי האוטומטי פועל. הגיבוי הראשון יישמר כשיהיו מסמכים.'), { icon: 'cloud_done', ms: 6000 });
+}
+async function offerFolderRestore(f) {
+  let j = null;
+  try { j = parseBackup(await (await f.hd.getFile()).text()); } catch {}
+  const n = j ? j.docs.filter(d => !d.meta.trashed && !findMeta(d.meta.id)).length : 0;
+  if (!n || !(await confirmBox(T('נמצא גיבוי בתיקייה'), TN('בתיקייה הזאת יש גיבוי מ-{0} עם {n} מסמכים שלא נמצאים כאן. לשחזר אותם?', n, fmtDateTime(f.t)), T('לראות ולשחזר')))) return false;
+  if (BK.dlg) BK.dlg.m.close();
+  await restorePreview(j);
+  return true;
+}
+/* the browser forgets the permission when a regular tab is closed (an installed app keeps it), so it's asked again on a click */
+async function resumeBackup() {
+  if (!BK.rec) return;
+  try { BK.perm = await BK.rec.root.requestPermission({ mode: 'readwrite' }); } catch { BK.perm = 'denied'; }
+  bkChanged();
+  if (BK.perm !== 'granted') { toast(T('בלי אישור אי אפשר לשמור בתיקייה. אפשר לבחור תיקייה אחרת, או להוריד קובץ גיבוי.'), { ms: 7000 }); return; }
+  toast(T('הגיבוי ממשיך'), { icon: 'cloud_done' });
+  runBackup();
+}
+async function backupNow() {
+  BK.err = null;
+  for (let i = 0; BK.busy && i < 600; i++) await sleep(50);
+  const r = await runBackup(true);
+  toast(r === 'empty' ? T('אין עדיין מסמכים לגבות') : r ? T('הגיבוי נשמר') : BK.perm !== 'granted' ? T('הגיבוי מחכה לאישור') : T('הגיבוי לא הצליח'), { icon: r ? 'cloud_done' : 'cloud_off' });
+}
+async function stopBackup() {
+  if (!(await confirmBox(T('הפסקת הגיבוי האוטומטי'), T('Floating Ink יפסיק לשמור עותקים בתיקייה. הגיבויים שכבר נשמרו בה יישארו שם.'), T('הפסקה')))) return;
+  try { await bkStore.set('dir', null); } catch {}
+  clearTimeout(BK.timer);
+  Object.assign(BK, { rec: null, perm: null, err: null, first: 0 });
+  lsSet('fink:bkDir', Date.now());
+  bkChanged();
+  toast(T('הגיבוי האוטומטי הופסק'), { icon: 'backup' });
+}
+/* a backup file to keep anywhere: how backing up works where folders can't be written, and a spare copy elsewhere */
+async function downloadBackup() {
+  if (!S.store) return;
+  const busy = toast(T('מכין גיבוי…'), { icon: 'backup', ms: 120000 });
+  let data;
+  try { data = await backupData(); }
+  catch (e) { toast(storeErrMsg(e)); return; }
+  finally { busy.remove(); }
+  if (!data) { toast(T('אין עדיין מסמכים לגבות')); return; }
+  if (!(await offerFile(T('גיבוי Floating Ink {0}.json', bkStamp(new Date())), data.json))) return;
+  lsSet('fink:backup', { ...bkInfo(), fileAt: Date.now() });
+  bkChanged();
+  if (!S.caps.downloads) toast(T('קובץ הגיבוי ירד. כדאי לשמור אותו במקום בטוח, כמו OneDrive או Google Drive.'), { icon: 'download', ms: 7000 });
+}
+/* once a day at most, a gentle note when a week goes by without a backup */
+function backupReminder() {
+  if (!S.store || S.mode === 'db' || !S.docsReady || (BK.rec && BK.perm === 'granted' && !BK.err) || !bkStale()) return;
+  if (Date.now() - lsGet('fink:bkRemind', 0) < 864e5) return;
+  lsSet('fink:bkRemind', Date.now());
+  const act = !BK_DIR_OK ? { label: T('הורדת גיבוי'), run: downloadBackup }
+    : BK.rec && BK.perm !== 'granted' ? { label: T('המשך הגיבוי'), run: resumeBackup }
+    : { label: BK.rec ? T('פרטים') : T('הגדרת גיבוי'), run: openBackup };
+  toast(bkLast() ? T('עבר שבוע מאז הגיבוי האחרון.') : T('המסמכים עוד לא גובו אף פעם.'), { icon: 'backup', ms: 15000, action: act });
+}
+/* --- restore: see what's in a backup, then add what's chosen. Nothing already here is changed --- */
+function parseBackup(text) {
+  let j = null;
+  try { j = JSON.parse(text); } catch {}
+  if (!j || !Array.isArray(j.docs)) return null;
+  return { at: Date.parse(j.at) || 0, docs: j.docs.filter(d => d && typeof d === 'object').map(d => ({ meta: d.meta && typeof d.meta === 'object' ? d.meta : {}, html: String(d.html || '') })) };
+}
+async function restoreFromFile(f) {
+  let j = null;
+  try { j = parseBackup(await f.text()); } catch {}
+  if (!j) { toast(T('הקובץ הזה לא נראה כמו גיבוי של Floating Ink')); return; }
+  if (!j.docs.length) { toast(T('אין מסמכים בקובץ הגיבוי הזה')); return; }
+  await restorePreview(j);
+}
+/* every document in the backup with its date, size and pictures. What isn't here yet starts checked;
+   what is here already, or was in the backup's recycle bin, starts unchecked */
+function restorePreview(j) {
+  const rows = j.docs.map(d => {
+    const m = d.meta, deck = isDeck(m), here = typeof m.id === 'string' ? findMeta(m.id) : null, newer = !!here && (+m.updatedAt || 0) > (here.updatedAt || 0);
+    const tag = here ? (here.trashed ? T('נמצא כאן בסל המחזור') : newer ? T('בגיבוי יש גרסה חדשה יותר') : T('כבר נמצא כאן')) : m.trashed ? T('היה בסל המחזור') : '';
+    return { d, m, deck, tag, on: here ? newer && !here.trashed : !m.trashed, pics: (d.html.match(deck ? /"src":"[^"]/g : /<img\b/gi) || []).length };
+  }).sort((a, b) => (a.m.trashed ? 1 : 0) - (b.m.trashed ? 1 : 0) || (+b.m.updatedAt || 0) - (+a.m.updatedAt || 0));
+  const nk = rows.filter(r => r.deck).length, np = rows.reduce((s, r) => s + r.pics, 0);
+  const sum = [j.at ? T('גיבוי מ-{0}', fmtDateTime(j.at)) : '', rows.length > nk ? TN('{n} מסמכים', rows.length - nk) : '', nk ? TN('{n} מצגות', nk) : '', np ? TN('{n} תמונות', np) : ''].filter(Boolean).join(' · ');
+  const all = h('input', { type: 'checkbox' }), label = h('span'), list = h('div', { class: 'bk-list' });
+  const go = h('button', { class: 'btn primary' }, icon('settings_backup_restore'), label);
+  const upd = () => {
+    const n = rows.filter(r => r.box.checked).length;
+    go.disabled = !n; label.textContent = n ? TN('שחזור {n} מסמכים', n) : T('שחזור');
+    all.checked = n === rows.length; all.indeterminate = n > 0 && n < rows.length;
+  };
+  for (const r of rows) {
+    r.box = h('input', { type: 'checkbox', onchange: upd });
+    r.box.checked = r.on;
+    const info = [+r.m.updatedAt ? relTime(+r.m.updatedAt) : '', r.deck ? TN('{n} שקופיות', +r.m.slides || 1) : wordsLabel(+r.m.words || 0), r.pics ? TN('{n} תמונות', r.pics) : ''].filter(Boolean).join(' · ');
+    list.append(h('label', { class: 'bk-row' }, r.box, icon(r.deck ? 'slideshow' : 'description'),
+      h('div', { class: 'di-main' }, h('div', { class: 'di-t', text: displayTitle(r.m) }), h('div', { class: 'di-m', text: info })),
+      r.tag ? h('span', { class: 'bk-tag', text: r.tag }) : null));
+  }
+  all.addEventListener('change', () => { for (const r of rows) r.box.checked = all.checked; upd(); });
+  upd();
+  return new Promise(res => {
+    const m = modal({ title: T('שחזור מגיבוי'), onClose: () => res(), body: h('div', { class: 'bk' },
+      h('p', { class: 'bk-sum', text: sum }),
+      h('p', { class: 'muted small', text: T('מה שמסומן יתווסף לרשימה. שום דבר שכבר נמצא כאן לא יימחק ולא ישתנה.') }),
+      h('label', { class: 'bk-all' }, all, T('בחירת הכל')), list,
+      h('div', { class: 'btn-row' }, go, h('button', { class: 'btn', onclick: () => m.close(null) }, T('ביטול')))) });
+    go.addEventListener('click', async () => {
+      go.disabled = true;
+      const n = await restoreDocs(rows.filter(r => r.box.checked));
+      m.close(true);
+      if (!n) return;
+      setFilter('all'); setDrawer(true);
+      toast(TN('שוחזרו {n} מסמכים', n), { icon: 'settings_backup_restore', ms: 7000, action: BK_DIR_OK && !BK.rec ? { label: T('הפעלת גיבוי אוטומטי'), run: openBackup } : null });
+    });
+  });
+}
+/* each restored document keeps its id when that's free here, so the same backup opened again shows it
+   as already here. A copy of one that is here gets a new id, and "(from backup)" after its name */
+async function restoreDocs(rows) {
+  let n = 0;
+  const used = new Set();
+  try {
+    for (const { d, m, deck } of rows) {
+      const own = typeof m.id === 'string' && /^[\w-]{4,64}$/.test(m.id) ? m.id : '', here = !!own && !!findMeta(own);
+      const id = own && !here && !used.has(own) ? own : uid();
+      used.add(id);
+      const body = deck ? parseDeck(d.html) : null, html = deck ? JSON.stringify(body) : sanitize(d.html) || '<p><br></p>', text = deck ? deckText(body) : htmlText(html);
+      const meta = { title: here ? T('{0} (מגיבוי)', displayTitle(m)) : String(m.title || ''), auto: firstLine(text), createdAt: +m.createdAt || Date.now(), updatedAt: +m.updatedAt || Date.now(), words: countWords(text), snippet: snippetOf(text), chunks: 1, starred: !!m.starred, trashed: false, page: { ...DEFAULT_PAGE, ...(m.page && typeof m.page === 'object' ? m.page : {}) }, goal: +m.goal || 0, session: SESSION };
+      if (deck) Object.assign(meta, { kind: 'deck', slides: body.slides.length });
+      meta.chunks = await S.store.writeBody(id, html, 1);
+      await S.store.putMeta(id, meta);
+      n++;
+    }
+  } catch (e) { toast(storeErrMsg(e), { ms: 7000 }); }
+  return n;
 }
 
 /* =========================================================
@@ -5183,7 +5590,7 @@ const CMD = {
   newDoc: () => openNewDialog(), duplicate: () => { if (S.cur && !S.cur.isSample) return duplicateDoc(S.cur.id); },
   openDrawer: () => setDrawer(true), closeDrawer: () => setDrawer(false),
   importFile: () => $('#fileImport').click(), exportAs: a => exportAs(a), exportMenu: (a, b) => openExportMenu(b), print: () => doPrint(),
-  versions: () => openPanel('versions'), saveVersion: () => manualVersion(), backup: () => doBackup(), restoreBackup: () => $('#fileBackup').click(),
+  versions: () => openPanel('versions'), saveVersion: () => manualVersion(), backup: () => openBackup(), restoreBackup: () => $('#fileBackup').click(),
   trash: () => { setDrawer(true); setFilter('trash'); },
   ai: a => runAI(a), aiPanel: () => openPanel('ai'), closePanel: () => closePanel(),
   tbl: a => tableOp(a), cellColor: (a, b) => openCellColors(b),
@@ -5427,11 +5834,20 @@ function wire() {
   $('#aiStop').addEventListener('click', () => { if (aiCtl) aiCtl.abort(); });
   $('#fileImage').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (f) await (deckOpen() ? deckImageFile(f) : insertImageFile(f)); });
   $('#fileImport').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) importFile(f); });
-  $('#fileBackup').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) restoreBackup(f); });
+  $('#fileBackup').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) restoreFromFile(f); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && S.cur && !S.cur.isSample && S.editVer !== S.savedVer) { backupLocal(); saveNow(); } });
   addEventListener('pagehide', () => { if (S.cur && !S.cur.isSample && S.editVer !== S.savedVer) backupLocal(); });
   addEventListener('online', () => { if (S.saveState === 'error') saveNow(); });
-  setInterval(() => { if (!$('#drawer').hidden) renderDocs(); }, 60000);
+  setInterval(() => { if (!$('#drawer').hidden) renderDocs(); renderBackupChip(); }, 60000);
+  // backup: the line at the bottom, other windows' backups and folder changes, and leaving the window
+  $('#stBackup').addEventListener('click', () => { if (BK.rec && BK.perm !== 'granted' && BK.err !== 'lost') resumeBackup(); else openBackup(); });
+  addEventListener('storage', e => { if (e.key === 'fink:backup') bkChanged(); else if (e.key === 'fink:bkDir') loadBackup(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'hidden') { backupCheck(); return; }
+    // a change still waiting for its backup is written now, unless a backup was written minutes ago
+    if (BK.rec && BK.perm === 'granted' && !BK.err && Date.now() - (bkInfo().at || 0) > 3 * 60e3 && docsPrint() !== bkInfo().fp) runBackup();
+  });
+  setInterval(backupReminder, 3600e3);
 }
 
 /* =========================================================
@@ -5535,6 +5951,8 @@ async function boot() {
   setupInstall();
   if (S.inClaude) $('#btnLink').hidden = true; else if (PREFS.aiLink) linkStart();   // inside Claude the page can't reach this computer
   store.watchDocs(onDocs, () => toast(T('החיבור לרשימת המסמכים נקטע. כדאי לרענן את הדף.'), { ms: 8000 }));
+  loadBackup();
+  setTimeout(backupReminder, 20000);
 }
 boot();
 </script>

@@ -311,7 +311,6 @@ window.INK_I18N = {
 "עוד פורמטים": "More Formats",
 "הדפסה": "Print",
 "ייבוא וייצוא": "Import and Export",
-"גיבוי הכל": "Back Up Everything",
 "סל מחזור": "Recycle Bin",
 "גרסאות וגיבוי": "Versions and Backup",
 "ביטול (Ctrl+Z)": "Undo (Ctrl+Z)",
@@ -589,7 +588,71 @@ window.INK_I18N = {
 "פתיחה@slide": "Title Slide",
 "סיכום@slide": "Summary",
 "עיצוב@design": "Design",
-"קלוד מחובר עכשיו לחלון אחר של Floating Ink. כדי לעבוד מהחלון הזה, מכבים ומדליקים את התיבה למעלה.": "Claude is connected to another Floating Ink window right now. To work from this window, turn the checkbox above off and on again."
+"קלוד מחובר עכשיו לחלון אחר של Floating Ink. כדי לעבוד מהחלון הזה, מכבים ומדליקים את התיבה למעלה.": "Claude is connected to another Floating Ink window right now. To work from this window, turn the checkbox above off and on again.",
+"Floating Ink ינסה שוב בעוד כמה דקות.": "Floating Ink will try again in a few minutes.",
+"Floating Ink ינסה שוב בעוד כמה דקות. אפשר גם לנסות עכשיו.": "Floating Ink will try again in a few minutes. You can also try now.",
+"Floating Ink יפסיק לשמור עותקים בתיקייה. הגיבויים שכבר נשמרו בה יישארו שם.": "Floating Ink will stop saving copies to the folder. The backups already in it will stay there.",
+"{0} (מגיבוי)": "{0} (from backup)",
+"אולי היא הועברה או נמחקה. אפשר לבחור אותה שוב, או תיקייה אחרת.": "It may have been moved or deleted. You can choose it again, or a different folder.",
+"אולי היא הועברה או נמחקה. לחיצה כאן כדי לבחור אותה שוב.": "It may have been moved or deleted. Click here to choose it again.",
+"אי אפשר לגבות לתיקייה הזאת. כדאי לבחור תיקייה אחרת, למשל בתוך \"מסמכים\" או OneDrive.": "This folder can't be used for backups. Choose a different one, for example inside \"Documents\" or OneDrive.",
+"אין מסמכים בקובץ הגיבוי הזה": "There are no documents in this backup file",
+"בגיבוי יש גרסה חדשה יותר": "Newer in the backup",
+"בוחרים פעם אחת תיקייה במחשב, ומאז Floating Ink שומר בה לבד עותק של כל המסמכים, המצגות והתמונות, כמה דקות אחרי כל שינוי.": "Choose a folder on your computer once, and from then on Floating Ink saves a copy of all your documents, presentations and pictures there by itself, a few minutes after every change.",
+"בחירת הכל": "Select All",
+"בחירת תיקייה": "Choose Folder",
+"בלי אישור אי אפשר לשמור בתיקייה. אפשר לבחור תיקייה אחרת, או להוריד קובץ גיבוי.": "Without permission, nothing can be saved to the folder. You can choose a different folder, or download a backup file.",
+"גיבוי": "Backup",
+"גיבוי אחרון: {0}": "Last backup: {0}",
+"גיבוי ושחזור של כל המסמכים": "Back up and restore all your documents",
+"גיבוי מ-{0}": "Backup from {0}",
+"גיבוי עכשיו": "Back Up Now",
+"גיבויים של Floating Ink": "Floating Ink backups",
+"הגדרת גיבוי": "Set Up Backup",
+"הגיבוי האוטומטי הופסק": "Automatic backup is off",
+"הגיבוי האוטומטי עוד לא פועל": "Automatic backup isn't on yet",
+"הגיבוי האוטומטי פועל": "Automatic backup is on",
+"הגיבוי האוטומטי פועל. הגיבוי הראשון יישמר כשיהיו מסמכים.": "Automatic backup is on. The first backup will be saved once there are documents.",
+"הגיבוי האוטומטי פועל. עותק ראשון נשמר בתיקייה.": "Automatic backup is on. A first copy was saved to the folder.",
+"הגיבוי האחרון לא הצליח": "The last backup didn't work",
+"הגיבוי הראשון יישמר בעוד רגע.": "The first backup will be saved in a moment.",
+"הגיבוי לא הצליח": "Backup didn't work",
+"הגיבוי מחכה לאישור": "Backup needs your OK",
+"הגיבוי ממשיך": "Backup is back on",
+"הגיבוי נשמר": "Backup saved",
+"הגיבויים בתיקייה": "Backups in the folder",
+"הדפדפן הזה לא יכול לגבות לבד לתיקייה. כדאי להוריד קובץ גיבוי פעם בשבוע ולשמור אותו במקום בטוח, כמו OneDrive או Google Drive. אם יעבור שבוע בלי גיבוי, Floating Ink יזכיר לך.": "This browser can't back up to a folder by itself. It's a good idea to download a backup file once a week and keep it somewhere safe, like OneDrive or Google Drive. If a week goes by without a backup, Floating Ink will remind you.",
+"הדפדפן צריך אישור כדי להמשיך לשמור בתיקייה. בחלון שלו כדאי לבחור לאשר בכל ביקור, ואז זה לא יישאל שוב.": "The browser needs your permission to keep saving to the folder. In its window, choose to allow it on every visit, and it won't ask again.",
+"הורדת גיבוי": "Download Backup",
+"הורדת קובץ גיבוי": "Download a Backup File",
+"החלפת תיקייה": "Change Folder",
+"היה בסל המחזור": "Was in the Recycle Bin",
+"המסמכים עוד לא גובו אף פעם.": "Your documents have never been backed up.",
+"המשך הגיבוי": "Resume Backup",
+"הפסקה": "Stop",
+"הפסקת הגיבוי האוטומטי": "Turn Off Automatic Backup",
+"הפעלת גיבוי אוטומטי": "Turn On Automatic Backup",
+"התיקייה: {0}": "Folder: {0}",
+"טיפ: תיקייה בתוך OneDrive או Google Drive מעלה את הגיבוי גם לענן, בלי להירשם לשום דבר.": "Tip: a folder inside OneDrive or Google Drive puts the backup in the cloud too, without signing up for anything.",
+"כבר נמצא כאן": "Already here",
+"לא הצלחתי לקרוא את קובץ הגיבוי": "Couldn't read the backup file",
+"לא הצלחתי לשמור את הבחירה. כדאי לנסות שוב.": "Couldn't save your choice. Please try again.",
+"לחיצה כאן ממשיכה את הגיבוי. בחלון של הדפדפן כדאי לבחור לאשר בכל ביקור, ואז זה לא יישאל שוב.": "Click here to resume the backup. In the browser's window, choose to allow it on every visit, and it won't ask again.",
+"לנסות שוב": "Try Again",
+"לראות ולשחזר": "See and Restore",
+"מגבה…": "Backing up…",
+"מה שמסומן יתווסף לרשימה. שום דבר שכבר נמצא כאן לא יימחק ולא ישתנה.": "What's checked will be added to your list. Nothing that's already here will be deleted or changed.",
+"נמצא גיבוי בתיקייה": "Backup found in the folder",
+"נמצא כאן בסל המחזור": "In the Recycle Bin here",
+"עבר שבוע מאז הגיבוי האחרון.": "It's been a week since your last backup.",
+"עדיין אין גיבוי": "No backup yet",
+"עדיין אין כאן גיבויים.": "No backups here yet.",
+"עדיין לא הורדת גיבוי": "You haven't downloaded a backup yet",
+"עוד אפשרויות": "More Options",
+"עותק חדש נשמר כמה דקות אחרי כל שינוי. בתיקייה נשארים העותקים האחרונים, ועוד עותק אחד לכל יום בשבועיים האחרונים.": "A new copy is saved a few minutes after every change. The folder keeps the latest copies, plus one copy for each day of the last two weeks.",
+"פרטים": "Details",
+"קובץ הגיבוי ירד. כדאי לשמור אותו במקום בטוח, כמו OneDrive או Google Drive.": "The backup file was downloaded. Keep it somewhere safe, like OneDrive or Google Drive.",
+"תיקיית הגיבוי לא נמצאה": "Backup folder not found"
 },
 "plurals": {
 "{n} מילים": {
@@ -624,10 +687,6 @@ window.INK_I18N = {
 "one": "{n} document will be deleted forever. This can't be undone.",
 "other": "{n} documents will be deleted forever. This can't be undone."
 },
-"בגיבוי יש {n} מסמכים. הם יתווספו למחברת כמסמכים חדשים, בלי למחוק שום דבר.": {
-"one": "The backup has {n} document. It will be added to the notebook as a new document, without deleting anything.",
-"other": "The backup has {n} documents. They will be added to the notebook as new documents, without deleting anything."
-},
 "שוחזרו {n} מסמכים": {
 "one": "{n} document restored",
 "other": "{n} documents restored"
@@ -639,8 +698,28 @@ window.INK_I18N = {
 "{n} שקופיות": {
 "one": "{n} slide",
 "other": "{n} slides"
+},
+"{n} מסמכים": {
+"one": "{n} document",
+"other": "{n} documents"
+},
+"{n} מצגות": {
+"one": "{n} presentation",
+"other": "{n} presentations"
+},
+"{n} תמונות": {
+"one": "{n} picture",
+"other": "{n} pictures"
+},
+"בתיקייה הזאת יש גיבוי מ-{0} עם {n} מסמכים שלא נמצאים כאן. לשחזר אותם?": {
+"one": "This folder has a backup from {0} with {n} document that isn't here. Restore it?",
+"other": "This folder has a backup from {0} with {n} documents that aren't here. Restore them?"
+},
+"שחזור {n} מסמכים": {
+"one": "Restore {n} Document",
+"other": "Restore {n} Documents"
 }
 },
-"welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Welcome to Floating Ink</h1><p>This is a sample document that shows what you can do here. You can edit it, delete it, or click <b>New Document</b> to start from a blank page.</p><div class=\"callout callout-note\"><p><b>Completely private.</b> Your documents are saved only on your device, and nothing is sent to any server. You should back up every so often: <b>File → Back Up Everything</b>.</p></div><h2>What's here</h2><ul><li><b>Word-like formatting:</b> fonts, colors, <span style=\"background-color: #ffe45c\">highlighter</span>, headings, lists, and tables.</li><li><b>Insert:</b> images, freehand drawing, math symbols, emoji, the date, and a table of contents.</li><li><b>Tools:</b> find and replace, word count, word goal, read aloud, calculator, and Hebrew/English keyboard fix.</li><li><b>Files:</b> save as Word and PDF, import from Word, previous versions, and Recycle Bin.</li></ul><h2>Sample tasks</h2><ul class=\"checklist\"><li data-checked=\"true\">Open Floating Ink</li><li>Install it on your computer or phone</li><li>Add a table or a drawing</li></ul><h2>How to install</h2><ul><li><b>On a computer (Chrome or Edge):</b> the <b>Install</b> button at the top, or the install icon next to the address bar.</li><li><b>On Android:</b> Menu ⋮ → Install App.</li><li><b>On iPhone:</b> In Safari, Share button → Add to Home Screen.</li></ul><p>After installing, Floating Ink opens like a regular program, even without internet.</p><h2>Keyboard shortcuts</h2><table><tbody><tr><th>Shortcut</th><th>What it does</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Bold / Italic / Underline</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Undo / Redo</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Find / Find and Replace</td></tr><tr><td>Ctrl+K</td><td>Insert Link</td></tr><tr><td>Ctrl+Shift+X</td><td>Hebrew/English Keyboard Fix</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Heading 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Save (Floating Ink also saves by itself)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Tip:</b> You can set a word-count goal in the Tools tab to track your progress as you write.</p></div><p style=\"text-align: center\"><small>Floating Ink is part of <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",
+"welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Welcome to Floating Ink</h1><p>This is a sample document that shows what you can do here. You can edit it, delete it, or click <b>New Document</b> to start from a blank page.</p><div class=\"callout callout-note\"><p><b>Completely private.</b> Your documents are saved only on your device, and nothing is sent to any server. So they're never lost, turn on automatic backup: <b>File → Backup</b>.</p></div><h2>What's here</h2><ul><li><b>Word-like formatting:</b> fonts, colors, <span style=\"background-color: #ffe45c\">highlighter</span>, headings, lists, and tables.</li><li><b>Insert:</b> images, freehand drawing, math symbols, emoji, the date, and a table of contents.</li><li><b>Tools:</b> find and replace, word count, word goal, read aloud, calculator, and Hebrew/English keyboard fix.</li><li><b>Files:</b> save as Word and PDF, import from Word, previous versions, and Recycle Bin.</li></ul><h2>Sample tasks</h2><ul class=\"checklist\"><li data-checked=\"true\">Open Floating Ink</li><li>Install it on your computer or phone</li><li>Add a table or a drawing</li></ul><h2>How to install</h2><ul><li><b>On a computer (Chrome or Edge):</b> the <b>Install</b> button at the top, or the install icon next to the address bar.</li><li><b>On Android:</b> Menu ⋮ → Install App.</li><li><b>On iPhone:</b> In Safari, Share button → Add to Home Screen.</li></ul><p>After installing, Floating Ink opens like a regular program, even without internet.</p><h2>Keyboard shortcuts</h2><table><tbody><tr><th>Shortcut</th><th>What it does</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Bold / Italic / Underline</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Undo / Redo</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Find / Find and Replace</td></tr><tr><td>Ctrl+K</td><td>Insert Link</td></tr><tr><td>Ctrl+Shift+X</td><td>Hebrew/English Keyboard Fix</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Heading 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Save (Floating Ink also saves by itself)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Tip:</b> You can set a word-count goal in the Tools tab to track your progress as you write.</p></div><p style=\"text-align: center\"><small>Floating Ink is part of <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",
 "stopwords": "a an the and or but of to in on at for with by from as is are was were be been being this that these those it its i you he she we they them his her our your their not do does did have has had will would can could should"
 };

@@ -311,7 +311,6 @@ window.INK_I18N = {
 "עוד פורמטים": "Autres formats",
 "הדפסה": "Imprimer",
 "ייבוא וייצוא": "Importer et exporter",
-"גיבוי הכל": "Tout sauvegarder",
 "סל מחזור": "Corbeille",
 "גרסאות וגיבוי": "Versions et sauvegarde",
 "ביטול (Ctrl+Z)": "Annuler (Ctrl+Z)",
@@ -589,7 +588,71 @@ window.INK_I18N = {
 "פתיחה@slide": "Diapositive de titre",
 "סיכום@slide": "Résumé",
 "עיצוב@design": "Création",
-"קלוד מחובר עכשיו לחלון אחר של Floating Ink. כדי לעבוד מהחלון הזה, מכבים ומדליקים את התיבה למעלה.": "Claude est connecté à une autre fenêtre de Floating Ink en ce moment. Pour travailler depuis cette fenêtre, décoche puis recoche la case ci-dessus."
+"קלוד מחובר עכשיו לחלון אחר של Floating Ink. כדי לעבוד מהחלון הזה, מכבים ומדליקים את התיבה למעלה.": "Claude est connecté à une autre fenêtre de Floating Ink en ce moment. Pour travailler depuis cette fenêtre, décoche puis recoche la case ci-dessus.",
+"Floating Ink ינסה שוב בעוד כמה דקות.": "Floating Ink réessaiera dans quelques minutes.",
+"Floating Ink ינסה שוב בעוד כמה דקות. אפשר גם לנסות עכשיו.": "Floating Ink réessaiera dans quelques minutes. Tu peux aussi réessayer maintenant.",
+"Floating Ink יפסיק לשמור עותקים בתיקייה. הגיבויים שכבר נשמרו בה יישארו שם.": "Floating Ink arrêtera d'enregistrer des copies dans le dossier. Les sauvegardes qui s'y trouvent déjà y resteront.",
+"{0} (מגיבוי)": "{0} (de la sauvegarde)",
+"אולי היא הועברה או נמחקה. אפשר לבחור אותה שוב, או תיקייה אחרת.": "Il a peut-être été déplacé ou supprimé. Tu peux le choisir à nouveau, ou choisir un autre dossier.",
+"אולי היא הועברה או נמחקה. לחיצה כאן כדי לבחור אותה שוב.": "Il a peut-être été déplacé ou supprimé. Clique ici pour le choisir à nouveau.",
+"אי אפשר לגבות לתיקייה הזאת. כדאי לבחור תיקייה אחרת, למשל בתוך \"מסמכים\" או OneDrive.": "Impossible de sauvegarder dans ce dossier. Choisis-en un autre, par exemple dans « Documents » ou OneDrive.",
+"אין מסמכים בקובץ הגיבוי הזה": "Ce fichier de sauvegarde ne contient aucun document",
+"בגיבוי יש גרסה חדשה יותר": "Plus récent dans la sauvegarde",
+"בוחרים פעם אחת תיקייה במחשב, ומאז Floating Ink שומר בה לבד עותק של כל המסמכים, המצגות והתמונות, כמה דקות אחרי כל שינוי.": "Choisis une fois un dossier sur ton ordinateur : ensuite, Floating Ink y enregistre tout seul une copie de tous tes documents, présentations et images, quelques minutes après chaque modification.",
+"בחירת הכל": "Tout sélectionner",
+"בחירת תיקייה": "Choisir un dossier",
+"בלי אישור אי אפשר לשמור בתיקייה. אפשר לבחור תיקייה אחרת, או להוריד קובץ גיבוי.": "Sans autorisation, impossible d'enregistrer dans le dossier. Tu peux choisir un autre dossier, ou télécharger un fichier de sauvegarde.",
+"גיבוי": "Sauvegarde",
+"גיבוי אחרון: {0}": "Dernière sauvegarde : {0}",
+"גיבוי ושחזור של כל המסמכים": "Sauvegarder et restaurer tous tes documents",
+"גיבוי מ-{0}": "Sauvegarde du {0}",
+"גיבוי עכשיו": "Sauvegarder maintenant",
+"גיבויים של Floating Ink": "Sauvegardes Floating Ink",
+"הגדרת גיבוי": "Configurer la sauvegarde",
+"הגיבוי האוטומטי הופסק": "La sauvegarde automatique est arrêtée",
+"הגיבוי האוטומטי עוד לא פועל": "La sauvegarde automatique n'est pas encore activée",
+"הגיבוי האוטומטי פועל": "La sauvegarde automatique est activée",
+"הגיבוי האוטומטי פועל. הגיבוי הראשון יישמר כשיהיו מסמכים.": "La sauvegarde automatique est activée. La première sauvegarde sera enregistrée dès qu'il y aura des documents.",
+"הגיבוי האוטומטי פועל. עותק ראשון נשמר בתיקייה.": "La sauvegarde automatique est activée. Une première copie a été enregistrée dans le dossier.",
+"הגיבוי האחרון לא הצליח": "La dernière sauvegarde a échoué",
+"הגיבוי הראשון יישמר בעוד רגע.": "La première sauvegarde sera enregistrée dans un instant.",
+"הגיבוי לא הצליח": "La sauvegarde a échoué",
+"הגיבוי מחכה לאישור": "La sauvegarde attend ton accord",
+"הגיבוי ממשיך": "La sauvegarde reprend",
+"הגיבוי נשמר": "Sauvegarde enregistrée",
+"הגיבויים בתיקייה": "Sauvegardes dans le dossier",
+"הדפדפן הזה לא יכול לגבות לבד לתיקייה. כדאי להוריד קובץ גיבוי פעם בשבוע ולשמור אותו במקום בטוח, כמו OneDrive או Google Drive. אם יעבור שבוע בלי גיבוי, Floating Ink יזכיר לך.": "Ce navigateur ne peut pas sauvegarder tout seul dans un dossier. Pense à télécharger un fichier de sauvegarde une fois par semaine et à le garder en lieu sûr, comme OneDrive ou Google Drive. Si une semaine passe sans sauvegarde, Floating Ink te le rappellera.",
+"הדפדפן צריך אישור כדי להמשיך לשמור בתיקייה. בחלון שלו כדאי לבחור לאשר בכל ביקור, ואז זה לא יישאל שוב.": "Le navigateur a besoin de ton accord pour continuer à enregistrer dans le dossier. Dans sa fenêtre, choisis d'autoriser à chaque visite, et il ne le demandera plus.",
+"הורדת גיבוי": "Télécharger la sauvegarde",
+"הורדת קובץ גיבוי": "Télécharger un fichier de sauvegarde",
+"החלפת תיקייה": "Changer de dossier",
+"היה בסל המחזור": "Était dans la corbeille",
+"המסמכים עוד לא גובו אף פעם.": "Tes documents n'ont encore jamais été sauvegardés.",
+"המשך הגיבוי": "Reprendre la sauvegarde",
+"הפסקה": "Arrêter",
+"הפסקת הגיבוי האוטומטי": "Arrêter la sauvegarde automatique",
+"הפעלת גיבוי אוטומטי": "Activer la sauvegarde automatique",
+"התיקייה: {0}": "Dossier : {0}",
+"טיפ: תיקייה בתוך OneDrive או Google Drive מעלה את הגיבוי גם לענן, בלי להירשם לשום דבר.": "Astuce : un dossier dans OneDrive ou Google Drive envoie aussi la sauvegarde dans le cloud, sans t'inscrire nulle part.",
+"כבר נמצא כאן": "Déjà ici",
+"לא הצלחתי לקרוא את קובץ הגיבוי": "Impossible de lire le fichier de sauvegarde",
+"לא הצלחתי לשמור את הבחירה. כדאי לנסות שוב.": "Impossible d'enregistrer ton choix. Réessaie.",
+"לחיצה כאן ממשיכה את הגיבוי. בחלון של הדפדפן כדאי לבחור לאשר בכל ביקור, ואז זה לא יישאל שוב.": "Clique ici pour reprendre la sauvegarde. Dans la fenêtre du navigateur, choisis d'autoriser à chaque visite, et il ne le demandera plus.",
+"לנסות שוב": "Réessayer",
+"לראות ולשחזר": "Voir et restaurer",
+"מגבה…": "Sauvegarde en cours…",
+"מה שמסומן יתווסף לרשימה. שום דבר שכבר נמצא כאן לא יימחק ולא ישתנה.": "Ce qui est coché sera ajouté à la liste. Rien de ce qui est déjà ici ne sera supprimé ni modifié.",
+"נמצא גיבוי בתיקייה": "Sauvegarde trouvée dans le dossier",
+"נמצא כאן בסל המחזור": "Dans la corbeille ici",
+"עבר שבוע מאז הגיבוי האחרון.": "Ta dernière sauvegarde date d'il y a une semaine.",
+"עדיין אין גיבוי": "Pas encore de sauvegarde",
+"עדיין אין כאן גיבויים.": "Pas encore de sauvegardes ici.",
+"עדיין לא הורדת גיבוי": "Tu n'as pas encore téléchargé de sauvegarde",
+"עוד אפשרויות": "Plus d'options",
+"עותק חדש נשמר כמה דקות אחרי כל שינוי. בתיקייה נשארים העותקים האחרונים, ועוד עותק אחד לכל יום בשבועיים האחרונים.": "Une nouvelle copie est enregistrée quelques minutes après chaque modification. Le dossier garde les dernières copies, plus une copie par jour pour les deux dernières semaines.",
+"פרטים": "Détails",
+"קובץ הגיבוי ירד. כדאי לשמור אותו במקום בטוח, כמו OneDrive או Google Drive.": "Le fichier de sauvegarde a été téléchargé. Garde-le en lieu sûr, comme OneDrive ou Google Drive.",
+"תיקיית הגיבוי לא נמצאה": "Dossier de sauvegarde introuvable"
 },
 "plurals": {
 "{n} מילים": {
@@ -624,10 +687,6 @@ window.INK_I18N = {
 "one": "{n} document sera supprimé définitivement. Cette action est irréversible.",
 "other": "{n} documents seront supprimés définitivement. Cette action est irréversible."
 },
-"בגיבוי יש {n} מסמכים. הם יתווספו למחברת כמסמכים חדשים, בלי למחוק שום דבר.": {
-"one": "La sauvegarde contient {n} document. Il sera ajouté au carnet comme nouveau document, sans rien supprimer.",
-"other": "La sauvegarde contient {n} documents. Ils seront ajoutés au carnet comme nouveaux documents, sans rien supprimer."
-},
 "שוחזרו {n} מסמכים": {
 "one": "{n} document restauré",
 "other": "{n} documents restaurés"
@@ -639,8 +698,28 @@ window.INK_I18N = {
 "{n} שקופיות": {
 "one": "{n} diapositive",
 "other": "{n} diapositives"
+},
+"{n} מסמכים": {
+"one": "{n} document",
+"other": "{n} documents"
+},
+"{n} מצגות": {
+"one": "{n} présentation",
+"other": "{n} présentations"
+},
+"{n} תמונות": {
+"one": "{n} image",
+"other": "{n} images"
+},
+"בתיקייה הזאת יש גיבוי מ-{0} עם {n} מסמכים שלא נמצאים כאן. לשחזר אותם?": {
+"one": "Ce dossier contient une sauvegarde du {0} avec {n} document qui n'est pas ici. Le restaurer ?",
+"other": "Ce dossier contient une sauvegarde du {0} avec {n} documents qui ne sont pas ici. Les restaurer ?"
+},
+"שחזור {n} מסמכים": {
+"one": "Restaurer {n} document",
+"other": "Restaurer {n} documents"
 }
 },
-"welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Bienvenue dans Floating Ink</h1><p>C'est un document d'exemple qui montre ce qu'on peut faire ici. Tu peux le modifier, le supprimer, ou cliquer sur <b>Nouveau document</b> pour commencer sur une page vierge.</p><div class=\"callout callout-note\"><p><b>Totalement privé.</b> Les documents sont enregistrés uniquement sur ton appareil, rien n'est envoyé à un serveur. Pense à faire une sauvegarde de temps en temps : <b>Fichier → Tout sauvegarder</b>.</p></div><h2>Ce qu'on trouve ici</h2><ul><li><b>Mise en forme comme dans Word :</b> polices, couleurs, <span style=\"background-color: #ffe45c\">surligneur</span>, titres, listes et tableaux.</li><li><b>Insertion :</b> images, dessin à main levée, symboles mathématiques, emoji, date et table des matières.</li><li><b>Outils :</b> rechercher et remplacer, nombre de mots, objectif de mots, lecture à voix haute, calculatrice et correction du clavier hébreu-anglais.</li><li><b>Fichiers :</b> enregistrement au format Word et PDF, importation depuis Word, versions précédentes et corbeille.</li></ul><h2>Tâches d'exemple</h2><ul class=\"checklist\"><li data-checked=\"true\">Ouvrir Floating Ink</li><li>L'installer sur l'ordinateur ou le téléphone</li><li>Ajouter un tableau ou un dessin</li></ul><h2>Comment installer</h2><ul><li><b>Sur ordinateur (Chrome ou Edge) :</b> bouton <b>Installer</b> en haut, ou l'icône d'installation à côté de la barre d'adresse.</li><li><b>Sur Android :</b> menu ⋮ → Installer l'application.</li><li><b>Sur iPhone :</b> dans Safari, bouton de partage → Sur l'écran d'accueil.</li></ul><p>Une fois installé, Floating Ink s'ouvre comme un logiciel classique, même sans internet.</p><h2>Raccourcis clavier</h2><table><tbody><tr><th>Raccourci</th><th>Ce qu'il fait</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Gras / Italique / Souligné</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Annuler / Rétablir</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Rechercher / Rechercher et remplacer</td></tr><tr><td>Ctrl+K</td><td>Insérer un lien</td></tr><tr><td>Ctrl+Shift+X</td><td>Correction clavier hébreu-anglais</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Titre 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Enregistrer (Floating Ink enregistre aussi tout seul)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Astuce :</b> Floating Ink enregistre tout seul au fur et à mesure, tu n'as rien à faire.</p></div><p style=\"text-align: center\"><small>Floating Ink fait partie de <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",
+"welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Bienvenue dans Floating Ink</h1><p>C'est un document d'exemple qui montre ce qu'on peut faire ici. Tu peux le modifier, le supprimer, ou cliquer sur <b>Nouveau document</b> pour commencer sur une page vierge.</p><div class=\"callout callout-note\"><p><b>Totalement privé.</b> Les documents sont enregistrés uniquement sur ton appareil, rien n'est envoyé à un serveur. Pour ne jamais les perdre, active la sauvegarde automatique : <b>Fichier → Sauvegarde</b>.</p></div><h2>Ce qu'on trouve ici</h2><ul><li><b>Mise en forme comme dans Word :</b> polices, couleurs, <span style=\"background-color: #ffe45c\">surligneur</span>, titres, listes et tableaux.</li><li><b>Insertion :</b> images, dessin à main levée, symboles mathématiques, emoji, date et table des matières.</li><li><b>Outils :</b> rechercher et remplacer, nombre de mots, objectif de mots, lecture à voix haute, calculatrice et correction du clavier hébreu-anglais.</li><li><b>Fichiers :</b> enregistrement au format Word et PDF, importation depuis Word, versions précédentes et corbeille.</li></ul><h2>Tâches d'exemple</h2><ul class=\"checklist\"><li data-checked=\"true\">Ouvrir Floating Ink</li><li>L'installer sur l'ordinateur ou le téléphone</li><li>Ajouter un tableau ou un dessin</li></ul><h2>Comment installer</h2><ul><li><b>Sur ordinateur (Chrome ou Edge) :</b> bouton <b>Installer</b> en haut, ou l'icône d'installation à côté de la barre d'adresse.</li><li><b>Sur Android :</b> menu ⋮ → Installer l'application.</li><li><b>Sur iPhone :</b> dans Safari, bouton de partage → Sur l'écran d'accueil.</li></ul><p>Une fois installé, Floating Ink s'ouvre comme un logiciel classique, même sans internet.</p><h2>Raccourcis clavier</h2><table><tbody><tr><th>Raccourci</th><th>Ce qu'il fait</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Gras / Italique / Souligné</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Annuler / Rétablir</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Rechercher / Rechercher et remplacer</td></tr><tr><td>Ctrl+K</td><td>Insérer un lien</td></tr><tr><td>Ctrl+Shift+X</td><td>Correction clavier hébreu-anglais</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Titre 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Enregistrer (Floating Ink enregistre aussi tout seul)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Astuce :</b> Floating Ink enregistre tout seul au fur et à mesure, tu n'as rien à faire.</p></div><p style=\"text-align: center\"><small>Floating Ink fait partie de <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",
 "stopwords": "le la les un une des de du et à en est sont être avoir ai as a avons avez ont je tu il elle on nous vous ils elles ce cette ces mon ma mes ton ta tes son sa ses notre nos votre vos leur leurs que qui dont où pour par avec sans sur dans ne pas"
 };
