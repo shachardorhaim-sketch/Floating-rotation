@@ -104,6 +104,7 @@ class StaticText(HTMLParser):
         self.skip += tag in ('script', 'style')
         for k, v in attrs:
             if k in ('title', 'aria-label', 'placeholder', 'alt') and v and HEB.search(v): self.found.add(v.strip())
+            if k == 'data-t' and v: self.found.add(v.strip())   # a key with its context, e.g. ביטול@undo
     def handle_endtag(self, tag):
         self.skip -= tag in ('script', 'style')
     def handle_data(self, d):

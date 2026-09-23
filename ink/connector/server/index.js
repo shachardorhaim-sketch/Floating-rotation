@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.3.1';
+const VERSION = '1.4.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -25,6 +25,9 @@ const INSTRUCTIONS = 'Floating Ink is a word processor open in the user\'s brows
   'the user sees every change as it happens, and can undo it with Ctrl+Z. Write document content in Markdown ' +
   '(# headings, **bold**, *italic*, lists, "- [ ]" checklists, | tables |, > quotes, [links](https://...)). ' +
   'Keep the language of the document unless the user asks otherwise; many documents are in Hebrew. ' +
+  'It also makes presentations (slides, like PowerPoint): create_presentation builds one while the user watches, for example ' +
+  'from a script or a document they wrote (read_document it first), and edit_presentation changes one. Keep slides short: ' +
+  'a title and three to six brief points. read_document reads a presentation slide by slide. ' +
   'The chat panel inside Floating Ink is shared: send_message leaves a note there, and read_messages shows ' +
   'what the user or another connected assistant wrote. The user often keeps writing to you from that panel instead of ' +
   'switching back to this window, so when they may still be talking to you there, call wait_for_message: it comes back ' +
@@ -34,11 +37,33 @@ const INSTRUCTIONS = 'Floating Ink is a word processor open in the user\'s brows
   'in the wait instead of ending your turn.';
 
 const DOC_ID = { type: 'string', description: 'Document id from list_documents. Leave out to use the document open on screen.' };
+const THEME = { type: 'string', enum: ['ink', 'night', 'sand', 'forest', 'sunset', 'chalk', 'plain'],
+  description: 'Color theme: ink (blue on white, the default), night (dark blue), sand (warm orange), forest (green), sunset (pink and purple), chalk (a green chalkboard), plain (black on white).' };
+const SLIDE = {
+  layout: { type: 'string', enum: ['title', 'content', 'two_columns', 'big_image', 'section', 'blank'],
+    description: 'title: the opening slide (title and subtitle). content: a title and text. two_columns: a title and two columns. big_image: a title, a big picture the user adds, and a caption. section: a chapter title. blank: nothing.' },
+  title: { type: 'string' },
+  subtitle: { type: 'string', description: 'Under the title, on "title" and "section" slides.' },
+  text: { type: 'string', description: 'Markdown for a "content" slide: a few short bullet points ("- ..."), a numbered list or short paragraphs; **bold** works.' },
+  column1: { type: 'string', description: 'Markdown for the first column of a "two_columns" slide (the right one in Hebrew).' },
+  column2: { type: 'string', description: 'Markdown for the second column.' },
+  caption: { type: 'string', description: 'The line under the picture of a "big_image" slide.' },
+};
 const TOOLS = [
-  { name: 'list_documents', description: 'List the documents in Floating Ink: id, title, word count, last change, and which one is open on screen.',
+  { name: 'list_documents', description: 'List the documents and presentations in Floating Ink: id, title, kind, word count, last change, and which one is open on screen.',
     inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true } },
-  { name: 'read_document', description: 'Read a document as Markdown. Without an id, reads the document open on screen, and also returns the text the user has selected in it.',
+  { name: 'read_document', description: 'Read a document as Markdown, or a presentation slide by slide. Without an id, reads the one open on screen; for a document, also returns the text the user has selected in it.',
     inputSchema: { type: 'object', properties: { id: DOC_ID } }, annotations: { readOnlyHint: true } },
+  { name: 'create_presentation', description: 'Create a new presentation and open it on the user\'s screen, where they watch the slides come in one by one. ' +
+      'Start with a "title" slide; keep each slide to a title and a few short points. The user adds the pictures themselves. Returns its id.',
+    inputSchema: { type: 'object', properties: { title: { type: 'string' }, theme: THEME, slides: { type: 'array', items: { type: 'object', properties: SLIDE } } }, required: ['title', 'slides'] } },
+  { name: 'edit_presentation', description: 'Change a presentation: add, update, delete or move slides, or change its color theme. read_document shows its slides and their numbers. ' +
+      'The changes run in order, and each slide number means the slide at that step. update replaces only the fields it gives (and a new layout keeps the slide\'s text). The user can undo with Ctrl+Z.',
+    inputSchema: { type: 'object', properties: { id: DOC_ID, theme: THEME, changes: { type: 'array', items: { type: 'object', properties: {
+      action: { type: 'string', enum: ['add', 'update', 'delete', 'move'] },
+      slide: { type: 'number', description: 'update, delete, move: the slide\'s number (1 is the first).' },
+      at: { type: 'number', description: 'add: the number the new slide gets (default: the end). move: the number it moves to.' },
+      ...SLIDE }, required: ['action'] } } } } },
   { name: 'create_document', description: 'Create a new document from Markdown and open it on the user\'s screen. Returns its id.',
     inputSchema: { type: 'object', properties: { title: { type: 'string' }, content: { type: 'string', description: 'Markdown' } }, required: ['title', 'content'] } },
   { name: 'write_in_document', description: 'Add Markdown content to a document (it opens on screen). where: "end" (default), "start", "after_selection" or "replace_selection" (the text the user selected).',

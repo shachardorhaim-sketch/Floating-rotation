@@ -51,7 +51,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link id="docFonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&family=Amatic+SC:wght@400;700&family=Assistant:wght@400;700&family=Bellefair&family=David+Libre:wght@400;700&family=Frank+Ruhl+Libre:wght@400;700;900&family=Fredoka:wght@400;700&family=Heebo:wght@400;700&family=IBM+Plex+Mono&family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&family=Karantina:wght@400;700&family=Miriam+Libre:wght@400;700&family=Noto+Sans+Hebrew:wght@400;700&family=Noto+Serif+Hebrew:wght@400;700&family=Rubik:wght@400;700&family=Secular+One&family=Solitreo&family=Suez+One&family=Varela+Round&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&amp;icon_names=abc,add,add_column_left,add_column_right,add_photo_alternate,add_reaction,add_row_above,add_row_below,arrow_back,arrow_drop_down,article,auto_awesome,auto_stories,backup,bar_chart,block,bookmark_add,calculate,calendar_today,chat,check,check_circle,checklist,checklist_rtl,chips,class,close,cloud_done,cloud_off,code,compress,computer,content_copy,crop_landscape,crop_portrait,css,delete,delete_forever,delete_sweep,description,desk,docs,done,done_all,download,draw,edit,edit_calendar,edit_note,emoji_symbols,error,event,expand,expand_less,expand_more,face,find_replace,flag,flip,folder_open,font_download,format_align_center,format_align_justify,format_align_left,format_align_right,format_bold,format_clear,format_color_fill,format_color_text,format_indent_decrease,format_indent_increase,format_italic,format_line_spacing,format_list_bulleted,format_list_numbered,format_list_numbered_rtl,format_paint,format_textdirection_l_to_r,format_textdirection_r_to_l,format_underlined,fullscreen,fullscreen_exit,function,gif,group,history,home,horizontal_rule,hourglass_top,html,image,info,ink_eraser,ink_highlighter,input,insert_page_break,install_desktop,keyboard,label,landscape,language,light,lightbulb,line_weight,link,list,lock,mail,margin,markdown,match_case,menu,more_horiz,movie,note,note_add,notes,pause,picture_as_pdf,play_arrow,playlist_add,portrait,print,record_voice_over,redo,refresh,remove,resize,restore,restore_from_trash,save,school,script,search,segment,select,select_all,send,settings_backup_restore,smart_toy,space_bar,spellcheck,star,start,sticky_note_2,stop,storage,strikethrough_s,style,subscript,summarize,superscript,swap_horiz,sync,tab,table,table_rows,tabs,tag,text_decrease,text_fields,text_increase,title,toast,toc,toolbar,translate,undo,upload_file,view_column,visibility,warning,west,width,work&amp;display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&amp;icon_names=abc,add,add_box,add_column_left,add_column_right,add_photo_alternate,add_reaction,add_row_above,add_row_below,arrow_back,arrow_downward,arrow_drop_down,arrow_forward,arrow_upward,article,auto_awesome,auto_stories,backup,bar_chart,block,bookmark_add,border_color,calculate,calendar_today,chat,check,check_circle,checklist,checklist_rtl,chips,class,close,cloud_done,cloud_off,code,compress,computer,content_copy,crop_landscape,crop_portrait,css,dashboard,delete,delete_forever,delete_sweep,description,desk,docs,done,done_all,download,draw,edit,edit_calendar,edit_note,emoji_symbols,error,event,expand,expand_less,expand_more,face,find_replace,flag,flip,flip_to_back,flip_to_front,folder_open,font_download,format_align_center,format_align_justify,format_align_left,format_align_right,format_bold,format_clear,format_color_fill,format_color_text,format_indent_decrease,format_indent_increase,format_italic,format_line_spacing,format_list_bulleted,format_list_numbered,format_list_numbered_rtl,format_paint,format_textdirection_l_to_r,format_textdirection_r_to_l,format_underlined,fullscreen,fullscreen_exit,function,gif,group,history,home,horizontal_rule,hourglass_top,html,image,info,ink_eraser,ink_highlighter,input,insert_page_break,install_desktop,keyboard,label,landscape,language,light,lightbulb,line_weight,link,list,lock,mail,margin,markdown,match_case,menu,more_horiz,movie,note,note_add,notes,pause,picture_as_pdf,play_arrow,playlist_add,portrait,print,record_voice_over,redo,refresh,remove,resize,restore,restore_from_trash,save,school,script,search,segment,select,select_all,send,settings_backup_restore,shapes,slideshow,smart_toy,space_bar,spellcheck,star,start,sticky_note_2,stop,storage,strikethrough_s,style,subscript,summarize,superscript,swap_horiz,sync,tab,table,table_rows,tabs,tag,text_decrease,text_fields,text_increase,title,toast,toc,toolbar,translate,undo,upload_file,view_column,visibility,warning,west,width,work&amp;display=block">
 <style id="appcss">
 :root{
   --desk:#e3e8ef;--surface:#f9fafc;--surface-2:#f1f4f8;--surface-3:#e6ebf2;
@@ -466,13 +466,110 @@ select.field{padding:0 8px}
 .wchip{display:inline-flex;gap:6px;align-items:center;padding:3px 10px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);font-size:13px}
 .wchip b{color:var(--accent);font-variant-numeric:tabular-nums}
 
+/* ---------- presentations ---------- */
+#app.deck .doc-only,#app:not(.deck) .deck-only{display:none!important}
+.di-ic{font-size:18px;color:var(--text-3);margin-top:1px;margin-inline-end:6px}
+.di.deck .di-ic{color:#d9701a}
+#deckView{flex:1;min-width:0;display:flex;min-height:0}
+#strip{flex:none;width:204px;overflow:auto;padding:14px 10px 24px 8px;display:flex;flex-direction:column;gap:10px;background:var(--surface);border-inline-end:1px solid var(--line);scrollbar-width:thin}
+.thumb{display:flex;align-items:flex-start;gap:6px;flex:none;cursor:pointer;outline:none;touch-action:pan-y}
+.thumb .tn{width:18px;flex:none;text-align:center;font-size:11.5px;color:var(--text-3);font-variant-numeric:tabular-nums;padding-top:3px}
+.thumb .tb{position:relative;flex:1;min-width:0;aspect-ratio:16/9;overflow:hidden;border-radius:5px;box-shadow:0 0 0 1px var(--line);background:#fff}
+.thumb:hover .tb{box-shadow:0 0 0 2px var(--text-3)}
+.thumb.cur .tb{box-shadow:0 0 0 2.5px var(--accent)}
+.thumb.cur .tn{color:var(--accent);font-weight:700}
+.thumb:focus-visible .tb{outline:2px solid var(--accent);outline-offset:3px}
+.thumb.drag{opacity:.35}
+.thumb.new .tb{animation:pop .3s ease-out}
+@keyframes pop{from{transform:scale(.85);opacity:0}}
+.tb .slide{transform:scale(var(--tk,.166))}
+.drop-line{flex:none;height:3px;border-radius:2px;background:var(--accent);margin:-6.5px 0 -6.5px 24px}
+.strip-add{display:flex;margin-inline-start:24px}
+.strip-add .btn{flex:1}
+#stage{flex:1;min-width:0;min-height:0;position:relative;overflow:hidden;display:grid;place-items:center;background:var(--desk);touch-action:none}
+#stageBox{position:relative;box-shadow:var(--shadow);background:#fff}
+#stage>#banner{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:5;margin:0;width:max-content;max-width:calc(100% - 24px)}
+#selLayer{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2}
+.slide{position:absolute;left:0;top:0;width:960px;height:540px;overflow:hidden;transform-origin:0 0;direction:ltr;background:#fff;user-select:none;-webkit-user-select:none;text-align:start}
+.slide .deco,.el{position:absolute}
+.slide .deco{pointer-events:none}
+.slide svg{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible}
+.el-text{display:flex;flex-direction:column;padding:4.8px 9.6px;line-height:1.2;overflow-wrap:break-word}
+.el-text .tx{outline:none;min-height:1.2em}
+.slide.edit .el{cursor:move}
+.el-text.editing,.el-text.editing .tx{cursor:text;user-select:text;-webkit-user-select:text}
+.tx p,.tx li{margin:0 0 .3em}
+/* bullets and numbers drawn by hand, where PowerPoint puts them: at the start edge, the text 36px (0.375in) in.
+   The PDF tool also draws the browser's own list markers on the left even in Hebrew */
+.tx ul,.tx ol{margin:0;padding:0;list-style:none}
+.tx ol{counter-reset:li}
+.tx li{position:relative;padding-inline-start:36px}
+.tx ol>li{counter-increment:li}
+.tx li::before{position:absolute;top:0;inset-inline-start:0}
+.tx ul>li::before{content:"•"}
+.tx ol>li::before{content:counter(li) "."}
+.tx li>ul,.tx li>ol{margin-top:.3em}
+.tx li:has(>ul,>ol){margin-bottom:0}
+.tx .hint{opacity:.45}
+.slide.edit .el.empty,.slide.layout .el.empty{outline:1.5px dashed rgba(128,138,160,.75);outline-offset:-1.5px}
+.el-img img{position:absolute;left:0;top:0;width:100%;height:100%;display:block;pointer-events:none}
+.el-img.empty{display:grid;place-items:center;background:rgba(128,138,160,.13)}
+.ph-img{display:flex;flex-direction:column;align-items:center;gap:8px;border:0;background:none;color:inherit;font:500 20px var(--ui);opacity:.75;cursor:pointer;padding:12px}
+.ph-img .ms{font-size:56px}
+.slide.layout .ph-img span{display:none}
+.sel-frame{position:absolute;outline:1.5px solid var(--accent);box-shadow:0 0 0 2.5px rgba(255,255,255,.75)}
+.sel-frame.editing{outline-style:dashed}
+.hd{position:absolute;width:11px;height:11px;margin:-6px 0 0 -6px;background:#fff;border:1.5px solid var(--accent);border-radius:50%;pointer-events:auto;touch-action:none}
+.hd-nw{left:0;top:0;cursor:nwse-resize}.hd-n{left:50%;top:0;cursor:ns-resize}.hd-ne{left:100%;top:0;cursor:nesw-resize}.hd-e{left:100%;top:50%;cursor:ew-resize}
+.hd-se{left:100%;top:100%;cursor:nwse-resize}.hd-s{left:50%;top:100%;cursor:ns-resize}.hd-sw{left:0;top:100%;cursor:nesw-resize}.hd-w{left:0;top:50%;cursor:ew-resize}
+.guide{position:absolute;background:#e2467a}
+.guide.v{width:1px;top:0;height:100%}
+.guide.h{height:1px;left:0;width:100%}
+:root[dir=ltr] .row>[data-cmd=dAlign][data-arg=l]{order:1}
+:root[dir=ltr] .row>[data-cmd=dAlign][data-arg=c]{order:2}
+:root[dir=ltr] .row>[data-cmd=dAlign][data-arg=r]{order:3}
+.theme-gal{gap:4px}
+.theme-opt{display:flex;flex-direction:column;align-items:center;gap:3px;border:1px solid transparent;background:none;border-radius:8px;padding:3px 3px 2px;font-size:11px;color:var(--text)}
+.theme-opt:hover{background:var(--surface-3)}
+.theme-opt.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.mini{position:relative;overflow:hidden;border-radius:4px;box-shadow:0 0 0 1px rgba(0,0,0,.14);flex:none;background:#fff}
+.lay-grid{display:grid;grid-template-columns:repeat(3,auto);gap:8px}
+.lay-opt,.shape-opt{border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text)}
+.lay-opt{display:flex;flex-direction:column;align-items:center;gap:5px;padding:6px 6px 4px;font-size:12px}
+.lay-opt:hover,.shape-opt:hover{border-color:var(--accent);color:var(--accent)}
+.shape-grid{display:grid;grid-template-columns:repeat(6,38px);gap:5px}
+.shape-opt{position:relative;width:38px;height:38px;padding:0;background:var(--surface-2);color:var(--text-2)}
+.shape-opt svg{position:absolute;left:7px;top:9px;width:24px;height:20px;overflow:visible}
+.seg{display:inline-flex;gap:2px;padding:3px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);margin-bottom:16px}
+.seg button{display:inline-flex;align-items:center;gap:6px;border:0;background:none;border-radius:8px;padding:6px 16px;font-weight:600;font-size:13.5px;color:var(--text-2)}
+.seg button[aria-selected="true"]{background:var(--surface);color:var(--accent);box-shadow:var(--shadow)}
+.new-themes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.dtpl-grid{grid-template-columns:repeat(auto-fill,minmax(212px,1fr))}
+.dtpl .mini{margin-bottom:6px}
+.ver-slides{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;max-height:62vh;overflow:auto;padding:2px}
+#show{position:fixed;inset:0;z-index:300;background:#000;display:grid;place-items:center;outline:none;cursor:none;user-select:none;-webkit-user-select:none}
+#show.awake{cursor:default}
+.show-box{position:relative;overflow:hidden}
+.show-end{color:#c9cbd2;font:500 20px var(--ui);text-align:center;padding:20px}
+.show-bar{position:fixed;bottom:18px;inset-inline-start:18px;display:flex;align-items:center;gap:2px;padding:4px;border-radius:999px;background:rgba(20,24,36,.78);color:#fff;opacity:0;transition:opacity .25s}
+#show.awake .show-bar{opacity:1}
+.show-bar button{width:38px;height:38px;border:0;border-radius:50%;background:none;color:#fff;display:grid;place-items:center;padding:0}
+.show-bar button:hover{background:rgba(255,255,255,.16)}
+.show-bar .cnt{font:500 13px var(--ui);padding:0 8px;font-variant-numeric:tabular-nums;direction:ltr}
+#deckPrint{display:none}
+
 /* ---------- smaller screens ---------- */
 @media (max-width:1180px){#side{position:absolute;inset-block:0;inset-inline-end:0;z-index:40;box-shadow:var(--pop)}}
 @media (max-width:960px){#drawer{position:absolute;inset-block:0;inset-inline-start:0;z-index:41;box-shadow:var(--pop)}.only-overlay{display:inline-grid}}
 @media (max-width:900px){#sheet{width:100%!important;min-height:60vh!important;zoom:1!important;padding:28px 20px!important;background-position:0 0,0 28px!important}#guides{display:none}#editor{min-height:50vh}.hide-md{display:none}#sheet.paper-lines{background-image:repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--lp) - 1px),var(--rule) calc(var(--lp) - 1px),var(--rule) var(--lp))!important;background-position:0 28px!important}}
 @media (max-width:640px){.install-btn span:not(.ms){display:none}.install-btn{padding:0 8px}.wordmark,.private span:not(.ms),.ai-btn span:not(.ms),.hide-sm{display:none}.ai-btn{padding:0 10px}#appbar{gap:6px;padding:8px 12px}#desk{padding:12px 16px 60px}#side,#drawer{width:min(94vw,360px)}.doc-title{font-size:14px;padding:6px}.zoom input{display:none}.stats{grid-template-columns:1fr}}
+@media (max-width:700px){#deckView{flex-direction:column}#strip{order:2;width:auto;height:98px;flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:10px 12px;border-inline-end:0;border-top:1px solid var(--line)}.thumb{width:128px;touch-action:pan-x}.thumb .tn{display:none}.drop-line{width:3px;height:auto;margin:0 -6.5px}.strip-add{margin:0}.strip-add .btn{height:100%;flex-direction:column;padding:0 10px}#stage{padding:8px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media print{
+  html.deck-print #app{display:none!important}
+  html.deck-print #deckPrint{display:block}
+  .print-slide{position:relative;width:960px;height:540px;overflow:hidden;break-after:page;page-break-after:always;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .print-slide:last-child{break-after:auto;page-break-after:auto}
   html,body{height:auto;overflow:visible;background:#fff}
   #app{display:block;height:auto}
   #appbar,#tabs,#ribbon,#status,#drawer,#side,#banner,#guides,#loading,#toasts,#pop,#modals,#imgBar,#focusExit,#lock{display:none!important}
@@ -505,33 +602,39 @@ select.field{padding:0 8px}
       <button class="icon-btn" id="btnLink" title="חיבור ל-AI: קלוד עובד איתך בתוך Floating Ink" aria-label="חיבור ל-AI"><span class="ms">smart_toy</span></button>
       <button class="icon-btn" id="btnLang" title="שפה" aria-label="שפה"><span class="ms">language</span></button>
       <button class="icon-btn hide-sm" data-cmd="focus" title="מצב ריכוז: רק הדף (Esc ליציאה)" aria-label="מצב ריכוז"><span class="ms">fullscreen</span></button>
+      <button class="icon-btn deck-only hide-sm" data-cmd="showStart" title="הצגה במסך מלא (F5)" aria-label="הצגה במסך מלא"><span class="ms">slideshow</span></button>
       <button class="install-btn" id="btnInstall" hidden title="התקנה במחשב או בטלפון, כמו תוכנה רגילה"><span class="ms">install_desktop</span><span>התקנה</span></button>
-      <button class="ai-btn ai-only" data-cmd="aiPanel" title="עוזר כתיבה חכם"><span class="ms">auto_awesome</span><span>עוזר חכם</span></button>
+      <button class="ai-btn ai-only doc-only" data-cmd="aiPanel" title="עוזר כתיבה חכם"><span class="ms">auto_awesome</span><span>עוזר חכם</span></button>
     </div>
   </header>
 
   <nav id="tabs" role="tablist" aria-label="לשוניות כלים">
     <button class="tab file" role="tab" data-tab="file" aria-selected="false">קובץ</button>
-    <button class="tab" role="tab" data-tab="home" aria-selected="true">בית</button>
-    <button class="tab" role="tab" data-tab="insert" aria-selected="false">הוספה</button>
-    <button class="tab" role="tab" data-tab="page" aria-selected="false">עמוד</button>
-    <button class="tab" role="tab" data-tab="tools" aria-selected="false">כלים</button>
-    <button class="tab ai-only" role="tab" data-tab="ai" aria-selected="false">עוזר חכם</button>
-    <button class="tab ctx" role="tab" data-tab="table" id="tabTable" aria-selected="false" hidden>טבלה</button>
+    <button class="tab doc-only" role="tab" data-tab="home" aria-selected="true">בית</button>
+    <button class="tab doc-only" role="tab" data-tab="insert" aria-selected="false">הוספה</button>
+    <button class="tab doc-only" role="tab" data-tab="page" aria-selected="false">עמוד</button>
+    <button class="tab doc-only" role="tab" data-tab="tools" aria-selected="false">כלים</button>
+    <button class="tab ai-only doc-only" role="tab" data-tab="ai" aria-selected="false">עוזר חכם</button>
+    <button class="tab ctx doc-only" role="tab" data-tab="table" id="tabTable" aria-selected="false" hidden>טבלה</button>
+    <button class="tab deck-only" role="tab" data-tab="dhome" aria-selected="false">בית</button>
+    <button class="tab deck-only" role="tab" data-tab="dinsert" aria-selected="false">הוספה</button>
+    <button class="tab deck-only" role="tab" data-tab="design" data-t="עיצוב@design" aria-selected="false">עיצוב</button>
+    <button class="tab deck-only" role="tab" data-tab="show" aria-selected="false">הצגה</button>
   </nav>
 
   <div id="ribbon">
     <div class="panel" data-panel="file" hidden>
       <div class="grp"><div class="gb">
-        <button class="rb big" data-cmd="newDoc"><span class="ms">note_add</span>מסמך חדש</button>
+        <button class="rb big" data-cmd="newDoc"><span class="ms">note_add</span>חדש</button>
         <button class="rb big" data-cmd="duplicate"><span class="ms">content_copy</span>שכפול</button>
         <button class="rb big" data-cmd="openDrawer"><span class="ms">folder_open</span>המסמכים שלי</button>
       </div><div class="gn">מסמך</div></div>
       <div class="grp"><div class="gb">
         <button class="rb big" data-cmd="importFile"><span class="ms">upload_file</span>ייבוא קובץ</button>
-        <button class="rb big" data-cmd="exportAs" data-arg="docx"><span class="ms">description</span>שמירה כ-Word</button>
+        <button class="rb big doc-only" data-cmd="exportAs" data-arg="docx"><span class="ms">description</span>שמירה כ-Word</button>
+        <button class="rb big deck-only" data-cmd="exportAs" data-arg="pptx"><span class="ms">slideshow</span>שמירה כפאוורפוינט</button>
         <button class="rb big" data-cmd="exportAs" data-arg="pdf"><span class="ms">picture_as_pdf</span>שמירה כ-PDF</button>
-        <button class="rb big" data-cmd="exportMenu"><span class="ms">download</span>עוד פורמטים</button>
+        <button class="rb big doc-only" data-cmd="exportMenu"><span class="ms">download</span>עוד פורמטים</button>
         <button class="rb big" data-cmd="print"><span class="ms">print</span>הדפסה</button>
       </div><div class="gn">ייבוא וייצוא</div></div>
       <div class="grp"><div class="gb">
@@ -704,6 +807,77 @@ select.field{padding:0 8px}
         <button class="rb big" data-cmd="cellColor"><span class="ms">format_color_fill</span>צבע תא</button>
       </div><div class="gn">עיצוב</div></div>
     </div>
+
+    <div class="panel deck-only" data-panel="dhome" hidden>
+      <div class="grp"><div class="gb col">
+        <button class="rb" data-cmd="dUndo" title="ביטול (Ctrl+Z)" aria-label="ביטול פעולה"><span class="ms flip">undo</span></button>
+        <button class="rb" data-cmd="dRedo" title="חזרה (Ctrl+Y)" aria-label="חזרה"><span class="ms flip">redo</span></button>
+      </div><div class="gn" data-t="ביטול@undo">ביטול</div></div>
+      <div class="grp"><div class="gb">
+        <button class="rb big" data-cmd="newSlidePick" title="שקופית חדשה (Ctrl+M)"><span class="ms">add_box</span>שקופית חדשה</button>
+        <button class="rb big" data-cmd="layout" title="איך השקופית מסודרת: כותרת, טקסט, טורים או תמונה"><span class="ms">dashboard</span>פריסה</button>
+        <button class="rb big" data-cmd="dupSlide"><span class="ms">content_copy</span>שכפול שקופית</button>
+        <button class="rb big" data-cmd="delSlide"><span class="ms">delete</span>מחיקת שקופית</button>
+      </div><div class="gn">שקופיות</div></div>
+      <div class="grp"><div class="gb col">
+        <div class="row">
+          <select id="dFont" class="sel font-sel" title="גופן" aria-label="גופן" data-need="text"></select>
+          <select id="dSize" class="sel size-sel" title="גודל גופן" aria-label="גודל גופן" data-need="text"></select>
+          <button class="rb" data-cmd="dGrow" data-need="text" title="הגדלת גופן" aria-label="הגדלת גופן"><span class="ms">text_increase</span></button>
+          <button class="rb" data-cmd="dShrink" data-need="text" title="הקטנת גופן" aria-label="הקטנת גופן"><span class="ms">text_decrease</span></button>
+        </div>
+        <div class="row">
+          <button class="rb" data-cmd="dBold" data-need="text" data-on="b" title="מודגש (Ctrl+B)" aria-label="מודגש"><span class="ms">format_bold</span></button>
+          <button class="rb" data-cmd="dItalic" data-need="text" data-on="i" title="נטוי (Ctrl+I)" aria-label="נטוי"><span class="ms">format_italic</span></button>
+          <button class="rb" data-cmd="dUnderline" data-need="text" data-on="u" title="קו תחתון (Ctrl+U)" aria-label="קו תחתון"><span class="ms">format_underlined</span></button>
+          <span class="sep"></span>
+          <button class="rb" data-cmd="dColor" data-need="text" title="צבע טקסט" aria-label="צבע טקסט"><span class="ms">format_color_text</span></button>
+        </div>
+      </div><div class="gn">גופן</div></div>
+      <div class="grp"><div class="gb col">
+        <div class="row">
+          <button class="rb" data-cmd="dList" data-arg="ul" data-need="text" title="תבליטים" aria-label="תבליטים"><span class="ms flip">format_list_bulleted</span></button>
+          <button class="rb" data-cmd="dList" data-arg="ol" data-need="text" title="מספור" aria-label="מספור"><span class="ms">format_list_numbered_rtl</span></button>
+        </div>
+        <div class="row">
+          <button class="rb" data-cmd="dAlign" data-arg="r" data-need="text" title="יישור לימין" aria-label="יישור לימין"><span class="ms">format_align_right</span></button>
+          <button class="rb" data-cmd="dAlign" data-arg="c" data-need="text" title="מרכוז" aria-label="מרכוז"><span class="ms">format_align_center</span></button>
+          <button class="rb" data-cmd="dAlign" data-arg="l" data-need="text" title="יישור לשמאל" aria-label="יישור לשמאל"><span class="ms">format_align_left</span></button>
+        </div>
+      </div><div class="gn">פסקה</div></div>
+      <div class="grp"><div class="gb">
+        <button class="rb big" data-cmd="dFill" data-need="fill" title="צבע המילוי של צורה או של תיבת טקסט"><span class="ms">format_color_fill</span>מילוי</button>
+        <button class="rb big" data-cmd="dLine" data-need="line" title="צבע הקו מסביב לצורה"><span class="ms">border_color</span>קו מתאר</button>
+        <button class="rb big" data-cmd="dFront" data-need="el"><span class="ms">flip_to_front</span>הבאה לחזית</button>
+        <button class="rb big" data-cmd="dBack" data-need="el"><span class="ms">flip_to_back</span>שליחה לרקע</button>
+        <button class="rb big" data-cmd="dDel" data-need="el" title="מחיקת מה שמסומן בשקופית (Delete)"><span class="ms">delete</span>מחיקה</button>
+      </div><div class="gn">סידור</div></div>
+    </div>
+
+    <div class="panel deck-only" data-panel="dinsert" hidden>
+      <div class="grp"><div class="gb">
+        <button class="rb big" data-cmd="newSlidePick" title="שקופית חדשה (Ctrl+M)"><span class="ms">add_box</span>שקופית חדשה</button>
+      </div><div class="gn">שקופיות</div></div>
+      <div class="grp"><div class="gb">
+        <button class="rb big" data-cmd="addTextBox"><span class="ms">text_fields</span>תיבת טקסט</button>
+        <button class="rb big" data-cmd="addPicture"><span class="ms">image</span>תמונה</button>
+        <button class="rb big" data-cmd="shapes"><span class="ms">shapes</span>צורות</button>
+      </div><div class="gn">תוכן</div></div>
+    </div>
+
+    <div class="panel deck-only" data-panel="design" hidden>
+      <div class="grp"><div class="gb theme-gal" id="themeGal"></div><div class="gn">ערכות צבעים</div></div>
+      <div class="grp"><div class="gb">
+        <button class="rb big" data-cmd="slideBg" title="צבע הרקע של השקופית הזאת"><span class="ms">format_color_fill</span>צבע רקע</button>
+      </div><div class="gn">רקע</div></div>
+    </div>
+
+    <div class="panel deck-only" data-panel="show" hidden>
+      <div class="grp"><div class="gb">
+        <button class="rb big" data-cmd="showStart" title="F5"><span class="ms">slideshow</span>מההתחלה</button>
+        <button class="rb big" data-cmd="showHere" title="Shift+F5"><span class="ms">play_arrow</span>מהשקופית הנוכחית</button>
+      </div><div class="gn">הצגה במסך מלא</div></div>
+    </div>
   </div>
 
   <main id="work">
@@ -723,13 +897,18 @@ select.field{padding:0 8px}
       <div class="dr-foot"><span class="ms">lock</span><span id="drawerFoot">נשמר בחשבון שלך. רק לך יש גישה.</span></div>
     </aside>
 
-    <section id="desk">
+    <section id="desk" class="doc-only">
       <div id="banner" hidden></div>
       <div id="sheet" class="paper-plain">
         <div id="guides" aria-hidden="true"></div>
         <div id="editor" class="doc" contenteditable="false" spellcheck="true" dir="rtl" role="textbox" aria-multiline="true" aria-label="גוף המסמך"></div>
       </div>
       <div id="loading"><span class="dots">טוען</span></div>
+    </section>
+
+    <section id="deckView" class="deck-only" aria-label="מצגת">
+      <div id="strip" role="listbox" aria-label="שקופיות"></div>
+      <div id="stage"><div id="stageBox"><div id="selLayer"></div></div></div>
     </section>
 
     <aside id="side" hidden>
@@ -794,12 +973,12 @@ select.field{padding:0 8px}
   <footer id="status">
     <span id="stPage" class="hide-md">עמוד 1 מתוך 1</span>
     <span id="stWords">0 מילים</span>
-    <span id="stChars" class="hide-sm">0 תווים</span>
-    <span id="stSel" hidden></span>
+    <span id="stChars" class="hide-sm doc-only">0 תווים</span>
+    <span id="stSel" class="doc-only" hidden></span>
     <button id="stGoal" class="goal" data-cmd="goal" hidden><span class="goal-bar"><i></i></span><span class="goal-t"></span></button>
     <span class="grow"></span>
     <span id="stMode" class="mode-chip" hidden>נשמר רק בדפדפן הזה</span>
-    <div class="zoom"><button class="rb" data-cmd="zoomOut" aria-label="הקטנת התצוגה"><span class="ms">remove</span></button><input id="zoomRange" type="range" min="50" max="200" step="10" value="100" aria-label="זום"><button class="rb" data-cmd="zoomIn" aria-label="הגדלת התצוגה"><span class="ms">add</span></button><button class="zoom-pct" id="zoomPct" data-cmd="zoomReset" title="חזרה ל-100%">100%</button></div>
+    <div class="zoom doc-only"><button class="rb" data-cmd="zoomOut" aria-label="הקטנת התצוגה"><span class="ms">remove</span></button><input id="zoomRange" type="range" min="50" max="200" step="10" value="100" aria-label="זום"><button class="rb" data-cmd="zoomIn" aria-label="הגדלת התצוגה"><span class="ms">add</span></button><button class="zoom-pct" id="zoomPct" data-cmd="zoomReset" title="חזרה ל-100%">100%</button></div>
   </footer>
 </div>
 
@@ -817,6 +996,7 @@ select.field{padding:0 8px}
   <button class="rb" data-cmd="imgDelete" title="מחיקת התמונה" aria-label="מחיקת התמונה"><span class="ms">delete</span></button>
 </div>
 <button id="focusExit" class="btn" data-cmd="focus" hidden><span class="ms">fullscreen_exit</span>יציאה ממצב ריכוז</button>
+<div id="deckPrint" aria-hidden="true"></div>
 <div id="pop" hidden></div>
 <div id="modals"></div>
 <div id="toasts" aria-live="polite"></div>
@@ -876,7 +1056,7 @@ const N_ = he => he;
 const HE_ONE = {
   '{n} מילים': 'מילה אחת', '{n} תווים': 'תו אחד', '{n} דקות': 'דקה', '{n} עמודות': 'עמודה אחת', '{n} שורות': 'שורה אחת',
   'תוקנו {n} רווחים מיותרים': 'תוקן רווח מיותר אחד', 'הוחלפו {n} מקומות': 'הוחלף מקום אחד', 'שוחזרו {n} מסמכים': 'שוחזר מסמך אחד',
-  '{0} החליף {n} מקומות ב-"{1}"': '{0} החליף מקום אחד ב-"{1}"',
+  '{0} החליף {n} מקומות ב-"{1}"': '{0} החליף מקום אחד ב-"{1}"', '{n} שקופיות': 'שקופית אחת',
   '{n} מסמכים יימחקו לתמיד. אי אפשר לבטל את זה.': 'מסמך אחד יימחק לתמיד. אי אפשר לבטל את זה.',
   'בגיבוי יש {n} מסמכים. הם יתווספו למחברת כמסמכים חדשים, בלי למחוק שום דבר.': 'בגיבוי יש מסמך אחד. הוא יתווסף למחברת כמסמך חדש, בלי למחוק שום דבר.',
 };
@@ -936,6 +1116,10 @@ const LIB = {
   docx: 'https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.iife.js',
   mammoth: 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.12.3/mammoth.browser.min.js',
   html2pdf: 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.14.0/html2pdf.bundle.min.js',
+  // presentations: PowerPoint files, and PDF made of slide pictures
+  pptx: 'https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js',
+  jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js',
+  html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
 };
 /* Arabic, Russian and Chinese get two fonts that have their letters first (loaded in <head>) */
 const LANG_FONTS = { ar: ['Cairo', 'Amiri'], ru: ['Noto Sans', 'Noto Serif'], zh: ['Noto Sans SC', 'Noto Serif SC'] }[LANG] || [];
@@ -1790,6 +1974,7 @@ function updateGuides() {
   updatePageStat();
 }
 function updatePageStat() {
+  if (deckOpen()) { deckStat(); return; }
   let cur = 1;
   const r = curRange();
   if (r && S.per) {
@@ -1822,6 +2007,7 @@ function applyZoom() {
 const scheduleStats = debounce(updateStats, 250);
 function updateStats() {
   if (!S.cur) return;
+  if (deckOpen()) { S.words = DK.deck ? countWords(deckText(DK.deck)) : 0; $('#stWords').textContent = wordsLabel(S.words); updateGoal(); return; }
   const t = ed.innerText;
   S.words = countWords(t);
   $('#stWords').textContent = wordsLabel(S.words);
@@ -2049,7 +2235,7 @@ function toggleFocus(on) {
   app.classList.toggle('focus', on);
   $('#focusExit').hidden = !on;
   closePopover();
-  if (on) restoreSel();
+  if (on && !deckOpen()) restoreSel();
   applyZoom();
   scheduleGuides();
 }
@@ -2057,10 +2243,10 @@ function toggleFocus(on) {
 /* =========================================================
    find & replace, outline
    ========================================================= */
-function buildIndex() {
+function buildIndex(root = ed) {
   const segs = [], map = new Map();
   let text = '', lastBlock = null;
-  const w = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT);
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   let n;
   while ((n = w.nextNode())) {
     const b = n.parentElement.closest('p,h1,h2,h3,h4,li,pre,blockquote,td,th,div');
@@ -2177,7 +2363,8 @@ const TEMPLATES = [
   { name: T('יומן'), desc: T('מה קרה היום'), icon: 'edit_calendar', html: () => T(`<h1>{0}</h1><p><b>מצב רוח:</b> </p><h2>מה קרה היום</h2><p><br></p><h2>דבר טוב אחד</h2><p><br></p><h2>מחר אני רוצה</h2><ul class="checklist"><li><br></li></ul>`, longDate()) },
   { name: T('תסריט לסרטון'), desc: T('פתיחה, טבלת זמנים וסיום'), icon: 'movie', html: () => T('<h1>שם הסרטון</h1><p><b>נושא:</b>  · <b>אורך:</b>  דקות</p><h2>פתיחה</h2><p>המשפט הראשון שתופס את הצופים…</p><h2>התסריט</h2><table><tbody><tr><th>זמן</th><th>מה רואים</th><th>מה אומרים</th></tr><tr><td>0:00</td><td><br></td><td><br></td></tr><tr><td>0:15</td><td><br></td><td><br></td></tr><tr><td>0:30</td><td><br></td><td><br></td></tr></tbody></table><h2>סיום</h2><p>קריאה לפעולה: לייק, הרשמה ותגובה.</p>') },
 ];
-const displayTitle = m => (m && (String(m.title || '').trim() || m.auto)) || T('מסמך ללא שם');
+const untitled = m => isDeck(m) ? T('מצגת ללא שם') : T('מסמך ללא שם');
+const displayTitle = m => (m && (String(m.title || '').trim() || m.auto)) || untitled(m);
 const firstLine = t => { const l = String(t).split('\n').map(x => x.trim()).find(Boolean) || ''; return l.length > 60 ? l.slice(0, 58) + '…' : l; };
 const snippetOf = t => String(t).replace(/\s+/g, ' ').trim().slice(0, 160);
 function allDocs() {
@@ -2213,12 +2400,14 @@ function renderDocs() {
     const cur = S.cur && !S.cur.isSample && d.id === S.cur.id;
     const more = h('button', { class: 'icon-btn', title: T('פעולות'), 'aria-label': T('פעולות על המסמך'), onclick: e => { e.stopPropagation(); openDocMenu(more, d); } }, icon('more_horiz'));
     const star = d.trashed ? null : h('button', { class: 'icon-btn star' + (d.starred ? ' on' : ''), title: d.starred ? T('הסרה מהמועדפים') : T('הוספה למועדפים'), 'aria-label': T('מועדף'), 'aria-pressed': String(!!d.starred), onclick: e => { e.stopPropagation(); toggleStar(d.id); } }, icon('star', d.starred ? 'fill' : ''));
+    const deck = isDeck(d);
     list.append(h('div', {
-      class: 'di' + (cur ? ' cur' : '') + (d.trashed ? ' trashed' : ''), role: 'listitem', tabindex: d.trashed ? null : 0,
+      class: 'di' + (cur ? ' cur' : '') + (d.trashed ? ' trashed' : '') + (deck ? ' deck' : ''), role: 'listitem', tabindex: d.trashed ? null : 0,
       onclick: () => { if (!d.trashed) openDoc(d.id); },
       onkeydown: e => { if (e.key === 'Enter' && !d.trashed && e.target === e.currentTarget) openDoc(d.id); },
     },
-    h('div', { class: 'di-main' }, h('div', { class: 'di-t', text: displayTitle(d) }), h('div', { class: 'di-m', text: `${relTime(d.updatedAt || Date.now())} · ${wordsLabel(d.words || 0)}` }), d.snippet ? h('div', { class: 'di-s', text: d.snippet }) : null),
+    icon(deck ? 'slideshow' : 'description', 'di-ic'),
+    h('div', { class: 'di-main' }, h('div', { class: 'di-t', text: displayTitle(d) }), h('div', { class: 'di-m', text: `${relTime(d.updatedAt || Date.now())} · ${deck ? TN('{n} שקופיות', d.slides || 1) : wordsLabel(d.words || 0)}` }), d.snippet ? h('div', { class: 'di-s', text: d.snippet }) : null),
     star, more));
   }
 }
@@ -2244,9 +2433,9 @@ async function duplicateDoc(id) {
   const m = findMeta(id); if (!m) return;
   await flushSave();
   let html;
-  try { html = S.cur && S.cur.id === id ? cleanHTML() : await S.store.readBody(id, m.chunks || 1); }
+  try { html = S.cur && S.cur.id === id ? curBody() : await S.store.readBody(id, m.chunks || 1); }
   catch (e) { toast(storeErrMsg(e)); return; }
-  if (await createDoc({ title: T('{0} (עותק)', displayTitle(m)), html, page: { dir: 'rtl', ...(m.page || {}) } })) toast(T('נוצר עותק של המסמך'), { icon: 'content_copy' });
+  if (await createDoc({ title: T('{0} (עותק)', displayTitle(m)), html, page: { dir: 'rtl', ...(m.page || {}) }, kind: m.kind })) toast(isDeck(m) ? T('נוצר עותק של המצגת') : T('נוצר עותק של המסמך'), { icon: 'content_copy' });
 }
 async function trashDoc(id) {
   const m = findMeta(id); if (!m) return;
@@ -2301,16 +2490,19 @@ function loadIntoEditor({ id, meta, html, isSample }) {
   painter = null; $('#btnPainter').classList.remove('on');
   S.cur = { id, meta: { ...meta }, loadedHtml: html, isSample: !!isSample, versioned: false };
   delete S.cur.meta.id;
-  ed.innerHTML = sanitize(html) || '<p><br></p>';
-  ensureBlocks();
-  ed.contentEditable = 'true';
+  const deck = isDeck(meta);
+  setDeckMode(deck);
+  if (deck) { ed.innerHTML = ''; ed.contentEditable = 'false'; }
+  else { ed.innerHTML = sanitize(html) || '<p><br></p>'; ensureBlocks(); ed.contentEditable = 'true'; }
   $('#loading').hidden = true;
   S.editVer = S.savedVer = 0; S.goalArmed = false; S.goalHit = false; S.retries = 0; S.remotePrompted = false;
   lastRange = null;
   $('#docTitle').value = S.cur.meta.title || '';
-  $('#docTitle').placeholder = S.cur.meta.auto || T('מסמך ללא שם');
+  $('#docTitle').placeholder = S.cur.meta.auto || untitled(meta);
   updateDocTitle();
-  applyPage(); resetHistory(); updateStats(); renderDocs();
+  applyPage(); resetHistory();
+  if (deck) deckLoad(html);
+  updateStats(); renderDocs();
   const pg = pageOf();
   fontSel.value = pg.font; sizeSel.value = String(pg.fontSize); lhSel.value = String(pg.lh);
   desk.scrollTop = 0;
@@ -2334,16 +2526,21 @@ async function openDoc(id) {
   if (isNarrow()) setDrawer(false);
   checkLocalBackup(id);
 }
-async function createDoc({ title = '', html = '<p><br></p>', page } = {}) {
+/* kind 'deck' makes a presentation; its html is then the deck's JSON */
+async function createDoc({ title = '', html = '<p><br></p>', page, kind } = {}) {
   if (!S.store) return null;
   await flushSave();
-  const id = uid(), now = Date.now(), text = htmlText(html);
+  const deck = kind === 'deck';
+  if (deck) html = JSON.stringify(parseDeck(html));
+  const id = uid(), now = Date.now(), text = deck ? deckText(parseDeck(html)) : htmlText(html);
   const meta = { title, auto: firstLine(text), createdAt: now, updatedAt: now, words: countWords(text), snippet: snippetOf(text), chunks: 1, starred: false, trashed: false, page: { ...DEFAULT_PAGE, dir: UI_DIR, ...(page || {}) }, goal: 0, session: SESSION };
+  if (deck) Object.assign(meta, { kind: 'deck', slides: parseDeck(html).slides.length });
   try { meta.chunks = await S.store.writeBody(id, html, 1); await S.store.putMeta(id, meta); }
   catch (e) { toast(storeErrMsg(e), { ms: 6000 }); return null; }
   loadIntoEditor({ id, meta, html });
   lsSet('fink:last', id);
   if (isNarrow()) setDrawer(false);
+  if (deck) return id;
   const first = ed.firstElementChild;
   if (first && /^H\d$/.test(first.tagName)) { const r = document.createRange(); r.selectNodeContents(first); setRange(r); }
   else if (first) caretIn(first, true);
@@ -2395,14 +2592,14 @@ async function reloadCurrent(m) {
   try {
     const html = await S.store.readBody(m.id, m.chunks || 1);
     if (S.cur !== c) return;
-    const top = desk.scrollTop;
+    const top = desk.scrollTop, at = DK.idx;
     c.meta = { ...m }; delete c.meta.id;
     c.loadedHtml = html;
-    ed.innerHTML = sanitize(html) || '<p><br></p>';
     S.editVer = S.savedVer = 0;
     $('#docTitle').value = c.meta.title || '';
-    applyPage(); resetHistory(); updateStats(); renderDocs();
-    desk.scrollTop = top;
+    if (isDeck(m)) { deckLoad(html); DK.idx = clamp(at, 0, DK.deck.slides.length - 1); deckRender(); }
+    else { ed.innerHTML = sanitize(html) || '<p><br></p>'; applyPage(); resetHistory(); updateStats(); desk.scrollTop = top; }
+    renderDocs();
     setSave('saved');
     toast(T('המסמך עודכן מהמכשיר השני'), { icon: 'sync' });
   } catch {}
@@ -2414,11 +2611,15 @@ function checkLocalBackup(id) {
     const when = relTime(bk.t), fresh = Date.now() - (bk.t || 0) < 45e3;
     // in Hebrew "from" joins the time: מלפני שעה, מ-22.9.2026
     showBanner(fresh ? T('נמצאה טיוטה שלא הספיקה להישמר.') : T('נמצאה טיוטה {0} שלא הספיקה להישמר.', LANG === 'he' ? (/^\d/.test(when) ? 'מ-' : 'מ') + when : when), [
-      { label: T('לשחזר אותה'), primary: true, run: () => { snapshot(); ed.innerHTML = sanitize(bk.html); afterChange(); lsDel('fink:bk:' + id); } },
+      { label: T('לשחזר אותה'), primary: true, run: () => {
+        if (deckOpen()) { exitEdit(); dEdit(() => { DK.deck = parseDeck(bk.html); DK.idx = 0; }); deckRender(); }
+        else { snapshot(); ed.innerHTML = sanitize(bk.html); afterChange(); }
+        lsDel('fink:bk:' + id);
+      } },
       { label: T('להתעלם'), run: () => lsDel('fink:bk:' + id) }], 'restore');
   } else lsDel('fink:bk:' + id);
 }
-function backupLocal() { const c = S.cur; if (c && !c.isSample) lsSet('fink:bk:' + c.id, { t: Date.now(), html: cleanHTML() }); }
+function backupLocal() { const c = S.cur; if (c && !c.isSample) lsSet('fink:bk:' + c.id, { t: Date.now(), html: curBody() }); }
 function setSave(state, msg) {
   S.saveState = state;
   const b = $('#saveState'), local = S.mode !== 'db';
@@ -2449,10 +2650,11 @@ async function saveNow(manual) {
   saveSoon.cancel();
   if (S.editVer === S.savedVer) { if (manual) toast(S.mode !== 'db' ? T('הכל שמור במכשיר') : T('הכל שמור'), { icon: 'cloud_done' }); return; }
   S.saving = true; setSave('saving');
-  const ver = S.editVer, html = cleanHTML(), text = ed.innerText, meta = c.meta;
+  const ver = S.editVer, html = curBody(), text = curText(), meta = c.meta;
   Object.assign(meta, { updatedAt: Date.now(), words: countWords(text), snippet: snippetOf(text), auto: firstLine(text), session: SESSION });
+  if (isDeck(meta) && DK.deck) meta.slides = DK.deck.slides.length;
   if (!meta.createdAt) meta.createdAt = meta.updatedAt;
-  $('#docTitle').placeholder = meta.auto || T('מסמך ללא שם');
+  $('#docTitle').placeholder = meta.auto || untitled(meta);
   updateDocTitle();
   lsSet('fink:bk:' + c.id, { t: meta.updatedAt, html });
   try {
@@ -2484,11 +2686,31 @@ async function flushSave() {
   if (S.cur && !S.cur.isSample && S.editVer !== S.savedVer) await saveNow();
   for (let i = 0; S.saving && i < 300; i++) await sleep(50);
 }
+/* "New": a document or a presentation, both kept in the same list. It opens on the kind chosen last time */
 function openNewDialog() {
   if (!S.store) return;
-  const grid = h('div', { class: 'tpl-grid' });
-  const m = modal({ title: T('מסמך חדש'), wide: true, body: grid });
-  for (const t of TEMPLATES) grid.append(h('button', { class: 'tpl', onclick: async () => { m.close(); await createDoc({ html: t.html() }); } }, icon(t.icon), h('b', { text: t.name }), h('span', { text: t.desc })));
+  let kind = PREFS.newKind === 'deck' ? 'deck' : 'doc', theme = THEMES[PREFS.newTheme] ? PREFS.newTheme : 'ink';
+  const seg = h('div', { class: 'seg', role: 'tablist' }), body = h('div');
+  const m = modal({ title: T('חדש'), wide: true, body: h('div', {}, seg, body) });
+  const draw = () => {
+    seg.textContent = ''; body.textContent = '';
+    for (const [k, ic, label] of [['doc', 'description', T('מסמך')], ['deck', 'slideshow', T('מצגת')]]) seg.append(h('button', { type: 'button', role: 'tab', 'aria-selected': String(kind === k), onclick: () => { kind = k; PREFS.newKind = k; savePrefs(); draw(); } }, icon(ic), label));
+    if (kind === 'doc') {
+      const grid = h('div', { class: 'tpl-grid' });
+      for (const t of TEMPLATES) grid.append(h('button', { class: 'tpl', onclick: async () => { m.close(); await createDoc({ html: t.html() }); } }, icon(t.icon), h('b', { text: t.name }), h('span', { text: t.desc })));
+      body.append(grid);
+      return;
+    }
+    const themes = h('div', { class: 'new-themes', role: 'radiogroup', 'aria-label': T('ערכת צבעים') });
+    for (const [k, t] of Object.entries(THEMES)) themes.append(h('button', { class: 'theme-opt' + (k === theme ? ' on' : ''), role: 'radio', 'aria-checked': String(k === theme), title: T(t.n), onclick: () => { theme = k; PREFS.newTheme = k; savePrefs(); draw(); } }, themeMini(k, 92), h('span', { text: T(t.n) })));
+    const grid = h('div', { class: 'tpl-grid dtpl-grid' });
+    for (const t of DECK_TPLS) {
+      const deck = deckFromTpl(t, theme, UI_DIR);
+      grid.append(h('button', { class: 'tpl dtpl', onclick: async () => { m.close(); await createDoc({ html: JSON.stringify(deck), kind: 'deck', page: { dir: deck.dir } }); } }, miniSlide(deck.slides[0], deck, 184), h('b', { text: t.name }), h('span', { text: t.desc })));
+    }
+    body.append(h('div', { class: 'pop-t', text: T('ערכת צבעים') }), themes, h('div', { class: 'pop-t', text: T('תבנית') }), grid);
+  };
+  draw();
 }
 
 /* =========================================================
@@ -2506,7 +2728,7 @@ async function autoVersion(c, html) {
 async function createVersion(c, html, label) {
   const t = Date.now(), id = `${c.id}_${t}`;
   const n = await S.store.writeBody('v_' + id, html, 1);
-  await S.store.putVersion({ id, docId: c.id, t, label, words: countWords(htmlText(html)), chunks: n });
+  await S.store.putVersion({ id, docId: c.id, t, label, words: countWords(bodyText(html, c.meta)), chunks: n });
   c.meta.lastVersionAt = t;
   pruneVersions(c.id).catch(() => {});
   if (S.panel === 'versions' && S.cur === c) renderVersions();
@@ -2521,7 +2743,7 @@ async function manualVersion() {
   const label = await promptBox(T('שמירת גרסה'), T('שם לגרסה (לא חובה)'), '', T('שמירה'));
   if (label == null) return;
   await flushSave();
-  try { await createVersion(S.cur, cleanHTML(), label.trim() || N_('גרסה ששמרת')); toast(T('הגרסה נשמרה'), { icon: 'bookmark_add' }); }
+  try { await createVersion(S.cur, curBody(), label.trim() || N_('גרסה ששמרת')); toast(T('הגרסה נשמרה'), { icon: 'bookmark_add' }); }
   catch (e) { toast(storeErrMsg(e)); }
 }
 async function renderVersions() {
@@ -2545,21 +2767,20 @@ async function renderVersions() {
 async function previewVersion(v) {
   let html;
   try { html = await S.store.readBody('v_' + v.id, v.chunks || 1); } catch (e) { toast(storeErrMsg(e)); return; }
-  const pv = h('div', { class: 'doc ver-prev' });
-  pv.innerHTML = sanitize(html);
-  pv.style.cssText = ed.style.cssText;
+  let pv;
+  if (deckOpen()) { const d = parseDeck(html); pv = h('div', { class: 'ver-slides' }, d.slides.map(s => miniSlide(s, d, 200))); }
+  else { pv = h('div', { class: 'doc ver-prev' }); pv.innerHTML = sanitize(html); pv.style.cssText = ed.style.cssText; }
   modal({ title: T('גרסה מ-{0}', fmtDateTime(v.t)), wide: true, body: pv, actions: [{ label: T('שחזור הגרסה הזאת'), kind: 'primary', run: () => { restoreVersion(v, html); } }, { label: T('סגירה'), value: false }] });
 }
 async function restoreVersion(v, html) {
-  if (!(await confirmBox(T('שחזור גרסה'), T(`המסמך יחזור לגרסה מ-{0}. המצב הנוכחי יישמר קודם ברשימת הגרסאות, כך שאפשר לחזור אליו.`, fmtDateTime(v.t)), T('שחזור')))) return;
+  if (!(await confirmBox(T('שחזור גרסה'), deckOpen() ? T(`המצגת תחזור לגרסה מ-{0}. המצב הנוכחי יישמר קודם ברשימת הגרסאות, כך שאפשר לחזור אליו.`, fmtDateTime(v.t)) : T(`המסמך יחזור לגרסה מ-{0}. המצב הנוכחי יישמר קודם ברשימת הגרסאות, כך שאפשר לחזור אליו.`, fmtDateTime(v.t)), T('שחזור')))) return;
   try {
     if (html == null) html = await S.store.readBody('v_' + v.id, v.chunks || 1);
     await flushSave();
-    await createVersion(S.cur, cleanHTML(), N_('לפני שחזור'));
+    await createVersion(S.cur, curBody(), N_('לפני שחזור'));
   } catch (e) { toast(storeErrMsg(e)); return; }
-  snapshot();
-  ed.innerHTML = sanitize(html) || '<p><br></p>';
-  afterChange();
+  if (deckOpen()) { exitEdit(); dEdit(() => { DK.deck = parseDeck(html); DK.idx = 0; }); DK.sel = null; deckRender(); }
+  else { snapshot(); ed.innerHTML = sanitize(html) || '<p><br></p>'; afterChange(); }
   await saveNow();
   toast(T('הגרסה שוחזרה'), { icon: 'restore' });
 }
@@ -2854,7 +3075,8 @@ async function exportAs(kind) {
   const busy = toast(T('מכין את הקובץ…'), { icon: 'hourglass_top', ms: 120000 });
   let data;
   try {
-    if (kind === 'docx') data = await buildDocx();
+    if (deckOpen()) { exitEdit(); if (kind === 'pptx') data = await buildPptx(); else if (kind === 'pdf') data = await buildDeckPdf(); else return; }
+    else if (kind === 'docx') data = await buildDocx();
     else if (kind === 'pdf') data = await buildPdf();
     else if (kind === 'html') data = await buildHtmlFile();
     else if (kind === 'txt') data = ed.innerText.replace(/\n{3,}/g, '\n\n');
@@ -3218,7 +3440,7 @@ async function doBackup() {
   let data;
   try {
     const docs = [];
-    for (const d of allDocs()) docs.push({ meta: d, html: S.cur && d.id === S.cur.id ? cleanHTML() : await S.store.readBody(d.id, d.chunks || 1) });
+    for (const d of allDocs()) docs.push({ meta: d, html: S.cur && d.id === S.cur.id ? curBody() : await S.store.readBody(d.id, d.chunks || 1) });
     if (!docs.length) { toast(T('אין עדיין מסמכים לגבות')); return; }
     data = JSON.stringify({ app: 'floating-ink', v: 1, at: new Date().toISOString(), docs });
   } catch (e) { toast(storeErrMsg(e)); return; }
@@ -3234,8 +3456,9 @@ async function restoreBackup(f) {
   let n = 0;
   try {
     for (const d of j.docs) {
-      const m = d.meta || {}, id = uid(), html = sanitize(String(d.html || ''));
+      const m = d.meta || {}, id = uid(), deck = isDeck(m), html = deck ? JSON.stringify(parseDeck(String(d.html || ''))) : sanitize(String(d.html || ''));
       const meta = { title: String(m.title || ''), auto: String(m.auto || ''), createdAt: +m.createdAt || Date.now(), updatedAt: +m.updatedAt || Date.now(), words: +m.words || 0, snippet: String(m.snippet || ''), starred: !!m.starred, trashed: !!m.trashed, page: { ...DEFAULT_PAGE, ...(m.page && typeof m.page === 'object' ? m.page : {}) }, goal: +m.goal || 0, session: SESSION };
+      if (deck) Object.assign(meta, { kind: 'deck', slides: JSON.parse(html).slides.length });
       meta.chunks = await S.store.writeBody(id, html, 1);
       await S.store.putMeta(id, meta);
       n++;
@@ -3243,14 +3466,18 @@ async function restoreBackup(f) {
   } catch (e) { toast(storeErrMsg(e)); }
   if (n) toast(TN('שוחזרו {n} מסמכים', n), { icon: 'settings_backup_restore' });
 }
-function doPrint() {
+async function doPrint() {
   let fired = false;
   const f = () => { fired = true; };
+  const done = deckOpen() ? (exitEdit(), await printDeck()) : null;   // a presentation prints its slides, one to a page
+  if (done) addEventListener('afterprint', done, { once: true });
   addEventListener('beforeprint', f, { once: true });
   try { window.print(); } catch {}
   setTimeout(() => {
     removeEventListener('beforeprint', f);
-    if (!fired) toast(T('ההדפסה חסומה בחלון הזה. אפשר לשמור כ-PDF ולהדפיס ממנו.'), { ms: 9000, icon: 'print', action: { label: T('שמירה כ-PDF'), run: () => exportAs('pdf') } });
+    if (fired) return;
+    if (done) { removeEventListener('afterprint', done); done(); }
+    toast(T('ההדפסה חסומה בחלון הזה. אפשר לשמור כ-PDF ולהדפיס ממנו.'), { ms: 9000, icon: 'print', action: { label: T('שמירה כ-PDF'), run: () => exportAs('pdf') } });
   }, 700);
 }
 
@@ -3446,7 +3673,8 @@ async function saveToFile() {
    this computer as a Claude extension. While "Connect AI" is on, this page listens to it, runs each
    request on the documents in this browser, where the user watches it happen, and sends back the result
    ========================================================= */
-const LINK_URL = 'http://127.0.0.1:47821';
+/* a copy served from localhost can be pointed at a test connector (fink:linkPort), so a test never reaches the real one */
+const LINK_URL = 'http://127.0.0.1:' + ((location.hostname === 'localhost' && +lsGet('fink:linkPort', 0)) || 47821);
 const LINK = { es: null, state: 'off', timer: 0, wait: 2000, waiting: 0, queue: Promise.resolve(), log: lsGet('fink:aichat', []) };
 function linkStart() {
   linkStop();
@@ -3497,16 +3725,57 @@ async function linkDoc(id) {
 }
 const linkTitle = () => displayTitle(S.cur.meta);
 const userSel = () => { const r = lastRange; return r && !r.collapsed && inEditor(r.startContainer) ? r.cloneRange() : null; };
+const notDoc = () => new Error(`"${linkTitle()}" is a presentation, not a document. Read it with read_document and change it with edit_presentation.`);
+const THEME_LIST = () => Object.keys(THEMES).join(', ');
 const LINK_TOOLS = {
   async list_documents(a, who) {
     linkAct(who, N_('{0} ראה את רשימת המסמכים'));
-    return aliveDocs().map(d => ({ id: d.id, title: displayTitle(d), words: d.words || 0, updated: new Date(d.updatedAt || 0).toISOString(), open: !!(S.cur && !S.cur.isSample && S.cur.id === d.id) }));
+    return aliveDocs().map(d => ({ id: d.id, title: displayTitle(d), kind: isDeck(d) ? 'presentation' : 'document', ...(isDeck(d) ? { slides: d.slides || 1 } : {}), words: d.words || 0, updated: new Date(d.updatedAt || 0).toISOString(), open: !!(S.cur && !S.cur.isSample && S.cur.id === d.id) }));
   },
   async read_document({ id }, who) {
     const sel = !id || (S.cur && S.cur.id === id) ? userSel() : null;
     await linkDoc(id);
     linkAct(who, N_('{0} קרא את "{1}"'), linkTitle());
+    if (deckOpen()) return { id: S.cur.id, title: linkTitle(), kind: 'presentation', theme: DK.deck.theme, slides: deckForAI() };
     return { id: S.cur.id, title: linkTitle(), markdown: htmlToMd(ed), ...(sel ? { selected_text: sel.toString() } : {}) };
+  },
+  async create_presentation({ title, theme, slides }, who) {
+    const list = Array.isArray(slides) ? slides.filter(s => s && typeof s === 'object') : [];
+    if (!list.length) throw new Error('A presentation needs at least one slide.');
+    if (theme != null && !THEMES[theme]) throw new Error(`Unknown theme "${theme}". Use one of: ${THEME_LIST()}.`);
+    const words = list.map(s => Object.values(s).filter(v => typeof v === 'string').join('\n')).join('\n');
+    const deck = { v: 1, theme: theme || 'ink', dir: guessDir(esc(words)), slides: [] };
+    deck.slides = list.map(s => slideFromSpec(s, deck));
+    const id = await createDoc({ title: String(title || '').trim().slice(0, 200), html: JSON.stringify(deck), kind: 'deck', page: { dir: deck.dir } });
+    if (!id) throw new Error('Could not create the presentation.');
+    await revealDeck(id);
+    linkAct(who, N_('{0} יצר את המצגת "{1}"'), linkTitle());
+    return { id, title: linkTitle(), slides: deck.slides.length };
+  },
+  async edit_presentation({ id, theme, changes }, who) {
+    await linkDoc(id);
+    if (!deckOpen()) throw new Error(`"${linkTitle()}" is a document, not a presentation. To make one from it, read it and call create_presentation.`);
+    if (theme != null && !THEMES[theme]) throw new Error(`Unknown theme "${theme}". Use one of: ${THEME_LIST()}.`);
+    exitEdit();
+    // the changes are tried on a copy first, so a wrong slide number changes nothing
+    const next = clone(DK.deck);
+    if (theme != null) next.theme = theme;
+    let focus = null;
+    (Array.isArray(changes) ? changes : []).forEach((c, i) => {
+      c = c && typeof c === 'object' ? c : {};
+      const n = next.slides.length;
+      const at = (v, max) => { const x = Math.round(+v); if (!(x >= 1 && x <= max)) throw new Error(`changes[${i}]: there is no slide ${v}; at that step the presentation has ${n} slides.`); return x - 1; };
+      if (c.action === 'add') { const j = c.at == null ? n : at(c.at, n + 1); next.slides.splice(j, 0, slideFromSpec(c, next)); focus = j; }
+      else if (c.action === 'update') { const j = at(c.slide, n), s = next.slides[j], lay = layoutOf(c.layout); if (lay && lay !== s.layout) relayout(s, lay, next); fillSlide(s, c, next); focus = j; }
+      else if (c.action === 'delete') { const j = at(c.slide, n); next.slides.splice(j, 1); focus = Math.max(0, Math.min(j, next.slides.length - 1)); }
+      else if (c.action === 'move') { const j = at(c.slide, n), to = at(c.at, n), [s] = next.slides.splice(j, 1); next.slides.splice(to, 0, s); focus = to; }
+      else throw new Error(`changes[${i}]: "action" must be add, update, delete or move.`);
+    });
+    if (!next.slides.length) next.slides.push(makeSlide('title', next));
+    dEdit(() => { DK.deck = next; if (focus != null) DK.idx = clamp(focus, 0, next.slides.length - 1); });
+    DK.sel = null; deckRender(); scrollThumb();
+    linkAct(who, N_('{0} ערך את המצגת "{1}"'), linkTitle());
+    return { slides: next.slides.length };
   },
   async create_document({ title, content }, who) {
     const html = sanitize(mdToHtml(String(content || ''))) || '<p><br></p>';
@@ -3521,6 +3790,7 @@ const LINK_TOOLS = {
     if (!md) throw new Error('Nothing to write.');
     const r = (where === 'after_selection' || where === 'replace_selection') && (!id || (S.cur && S.cur.id === id)) ? userSel() : null;
     await linkDoc(id);
+    if (deckOpen()) throw notDoc();
     const html = sanitize(mdToHtml(md));
     // one line with no Markdown blocks stays inside the paragraph instead of starting a new one
     const inline = !md.includes('\n') && !/^([-*•]\s|\d+[.)]\s|#|>|\||```)/.test(md);
@@ -3543,12 +3813,13 @@ const LINK_TOOLS = {
   },
   async replace_text({ id, find, replace }, who) {
     await linkDoc(id);
-    const n = find ? replaceInScope(String(find), String(replace ?? ''), null) : 0;
+    const n = !find ? 0 : deckOpen() ? deckReplace(String(find), String(replace ?? '')) : replaceInScope(String(find), String(replace ?? ''), null);
     linkAct(who, N_('{0} החליף {n} מקומות ב-"{1}"'), linkTitle(), { n });
     return { replaced: n };
   },
   async replace_document({ id, content }, who) {
     await linkDoc(id);
+    if (deckOpen()) throw notDoc();
     const html = sanitize(mdToHtml(String(content || ''))) || '<p><br></p>';
     if (!S.cur.isSample) { await flushSave(); await createVersion(S.cur, cleanHTML(), N_('לפני שכתוב של עוזר')); }
     snapshot(); ed.innerHTML = html; afterChange();
@@ -3688,6 +3959,1201 @@ function openDraw() {
 }
 
 /* =========================================================
+   presentations: slides like PowerPoint, in the same list, store, versions and trash as the
+   documents. A presentation is a document whose meta.kind is 'deck' and whose body is JSON, not HTML:
+   { v: 1, theme, dir, slides: [{ id, layout, bg?, els: [...] }] }. A slide is 960 × 540 CSS pixels,
+   PowerPoint's 16:9 (10 × 5.625 inches), so every size carries over to .pptx as it is
+   ========================================================= */
+const SW = 960, SH = 540;
+const isDeck = m => !!m && m.kind === 'deck';
+const deckOpen = () => !!(S.cur && isDeck(S.cur.meta));
+/* sel: the selected box on the slide; edit: the text box being written in; k: the stage's zoom;
+   reveal: how many slides the strip shows while Claude's new presentation comes in */
+const DK = { deck: null, idx: 0, sel: null, edit: null, typing: false, k: 1, ver: 0, reveal: 0, imgFor: null, newBox: null, nudgeT: 0 };
+/* undo history: copies of the deck. The copies share their strings, so pictures take no extra memory */
+const DH = { stack: [], idx: -1 };
+let DVER = 0;
+const DECK_TABS = ['dhome', 'dinsert', 'design', 'show'];
+const DSIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 54, 60, 66, 72, 80, 96];
+/* each theme's colors and fonts (title, body). hero is the look of opening and section slides.
+   Arabic, Russian and Chinese use the fonts that have their letters (LANG_FONTS) */
+const THEMES = {
+  ink: { n: N_('דיו'), bg: '#ffffff', title: '#16203a', text: '#39425a', accent: '#2743d8', font: ['Rubik', 'Assistant'], hero: { bg: '#2743d8', title: '#ffffff', text: '#dfe5ff' } },
+  night: { n: N_('לילה'), bg: '#111830', title: '#ffffff', text: '#c7cfe4', accent: '#8a9dff', font: ['Heebo', 'Heebo'], hero: { bg: '#0b1022', title: '#ffffff', text: '#aab8ff' } },
+  sand: { n: N_('חול'), bg: '#fbf6ec', title: '#5b3a1c', text: '#4a3b2c', accent: '#d9701a', font: ['Frank Ruhl Libre', 'Assistant'], serif: true, hero: { bg: '#c9621a', title: '#ffffff', text: '#fff1e0' } },
+  forest: { n: N_('יער'), bg: '#f2f8f3', title: '#185232', text: '#2d3b31', accent: '#1d8249', font: ['Varela Round', 'Assistant'], hero: { bg: '#185232', title: '#ffffff', text: '#d5eedd' } },
+  sunset: { n: N_('שקיעה'), bg: '#fff6f3', title: '#7a1f5c', text: '#46304a', accent: '#e2467a', font: ['Fredoka', 'Rubik'], hero: { bg: '#7a3fc9', title: '#ffffff', text: '#f1e6ff' } },
+  chalk: { n: N_('גיר'), bg: '#20392d', title: '#ffe27a', text: '#eef3ea', accent: '#ffd24c', font: ['Amatic SC', 'Varela Round'], hero: null },
+  plain: { n: N_('פשוט'), bg: '#ffffff', title: '#111111', text: '#333333', accent: '#2743d8', font: ['Assistant', 'Assistant'], hero: null },
+};
+/* each theme's own shapes behind the slide's content, drawn for left to right and mirrored for right to left.
+   c: a color or 'accent'; a: how opaque; lw: an outline this wide instead of a fill */
+const DECO = {
+  ink: { normal: [{ s: 'rect', x: 0, y: 0, w: 14, h: 540, c: 'accent' }], hero: [{ s: 'ellipse', x: 690, y: 290, w: 420, h: 420, c: '#ffffff', a: 0.1 }, { s: 'ellipse', x: -110, y: -130, w: 320, h: 320, c: '#ffffff', a: 0.07 }] },
+  night: { normal: [{ s: 'rect', x: 70, y: 124, w: 80, h: 6, c: 'accent' }], hero: [{ s: 'ellipse', x: 650, y: -170, w: 480, h: 480, c: 'accent', a: 0.2 }, { s: 'rect', x: 440, y: 402, w: 80, h: 6, c: 'accent' }] },
+  sand: { normal: [{ s: 'rect', x: 0, y: 520, w: 960, h: 20, c: 'accent' }], hero: [{ s: 'rect', x: 0, y: 496, w: 960, h: 44, c: '#9c4a10' }] },
+  forest: { normal: [{ s: 'rect', x: 0, y: 0, w: 960, h: 12, c: 'accent' }, { s: 'ellipse', x: 850, y: 430, w: 220, h: 220, c: 'accent', a: 0.1 }], hero: [{ s: 'ellipse', x: -130, y: 310, w: 400, h: 400, c: '#ffffff', a: 0.08 }, { s: 'ellipse', x: 760, y: -110, w: 320, h: 320, c: '#ffffff', a: 0.06 }] },
+  sunset: { normal: [{ s: 'ellipse', x: 850, y: -110, w: 220, h: 220, c: 'accent', a: 0.16 }, { s: 'ellipse', x: 905, y: 95, w: 80, h: 80, c: '#f59e0b', a: 0.25 }], hero: [{ s: 'ellipse', x: 630, y: 230, w: 460, h: 460, c: '#e2467a', a: 0.45 }, { s: 'ellipse', x: -110, y: -150, w: 330, h: 330, c: '#f59e0b', a: 0.35 }] },
+  chalk: { normal: [{ s: 'rect', x: 18, y: 18, w: 924, h: 504, c: 'accent', lw: 2.5 }] },
+};
+/* the ready layouts, drawn for left to right (mirrored for right to left). ph is a placeholder's role:
+   it keeps its role, and its content, when the slide changes layout. al 's' is the reading-start side */
+const TITLE_BAR = { t: 'text', ph: 'title', x: 60, y: 24, w: 840, h: 96, size: 36, va: 'b', al: 's' };
+const LAYOUTS = {
+  title: { n: N_('פתיחה@slide'), hero: true, els: [{ t: 'text', ph: 'title', x: 80, y: 130, w: 800, h: 160, size: 44, va: 'b', al: 'c' }, { t: 'text', ph: 'sub', x: 80, y: 300, w: 800, h: 90, size: 24, va: 't', al: 'c' }] },
+  content: { n: N_('כותרת וטקסט'), els: [TITLE_BAR, { t: 'text', ph: 'body', x: 60, y: 136, w: 840, h: 372, size: 24, va: 't', al: 's', list: true }] },
+  two: { n: N_('שני טורים'), els: [TITLE_BAR, { t: 'text', ph: 'body', x: 60, y: 136, w: 408, h: 372, size: 20, va: 't', al: 's', list: true }, { t: 'text', ph: 'body2', x: 492, y: 136, w: 408, h: 372, size: 20, va: 't', al: 's', list: true }] },
+  image: { n: N_('תמונה גדולה'), els: [{ ...TITLE_BAR, y: 16, h: 78, size: 32 }, { t: 'img', ph: 'img', x: 60, y: 106, w: 840, h: 370, fit: 'cover' }, { t: 'text', ph: 'cap', x: 60, y: 484, w: 840, h: 44, size: 16, va: 't', al: 'c' }] },
+  section: { n: N_('כותרת של פרק'), hero: true, els: [{ t: 'text', ph: 'title', x: 80, y: 170, w: 800, h: 130, size: 40, va: 'b', al: 'c' }, { t: 'text', ph: 'sub', x: 80, y: 310, w: 800, h: 70, size: 20, va: 't', al: 'c' }] },
+  blank: { n: N_('ריקה'), els: [] },
+};
+const HINTS = { title: N_('לחצו כדי להוסיף כותרת'), sub: N_('לחצו כדי להוסיף כותרת משנה'), body: N_('לחצו כדי להוסיף טקסט'), body2: N_('לחצו כדי להוסיף טקסט'), cap: N_('לחצו כדי להוסיף כיתוב'), img: N_('לחצו כדי להוסיף תמונה') };
+const PH_ROLES = new Set(Object.keys(HINTS));
+/* shapes, with the name PowerPoint gives each one */
+const SHAPES = {
+  rect: { n: N_('מלבן'), ppt: 'rect', size: [240, 150] }, roundRect: { n: N_('מלבן מעוגל'), ppt: 'roundRect', size: [240, 150] },
+  ellipse: { n: N_('עיגול'), ppt: 'ellipse' }, triangle: { n: N_('משולש'), ppt: 'triangle' },
+  rightArrow: { n: N_('חץ ימינה'), ppt: 'rightArrow', size: [240, 120] }, leftArrow: { n: N_('חץ שמאלה'), ppt: 'leftArrow', size: [240, 120] },
+  star5: { n: N_('כוכב'), ppt: 'star5' }, heart: { n: N_('לב'), ppt: 'heart' }, diamond: { n: N_('מעוין'), ppt: 'diamond' },
+  hexagon: { n: N_('משושה'), ppt: 'hexagon', size: [200, 174] }, bubble: { n: N_('בועת דיבור'), ppt: 'wedgeRoundRectCallout', size: [260, 150] },
+};
+/* each shape's outline in its own box, following PowerPoint's own geometry so the file looks the same */
+function shapePath(s, w, h) {
+  const ss = Math.min(w, h), f = v => +v.toFixed(2), P = pts => 'M' + pts.map(p => f(p[0]) + ' ' + f(p[1])).join('L') + 'Z';
+  switch (s) {
+    case 'ellipse': return `M0 ${f(h / 2)}A${f(w / 2)} ${f(h / 2)} 0 1 0 ${f(w)} ${f(h / 2)}A${f(w / 2)} ${f(h / 2)} 0 1 0 0 ${f(h / 2)}Z`;
+    case 'roundRect': { const r = f(ss / 6); return `M${r} 0H${f(w - r)}A${r} ${r} 0 0 1 ${f(w)} ${r}V${f(h - r)}A${r} ${r} 0 0 1 ${f(w - r)} ${f(h)}H${r}A${r} ${r} 0 0 1 0 ${f(h - r)}V${r}A${r} ${r} 0 0 1 ${r} 0Z`; }
+    case 'triangle': return P([[w / 2, 0], [w, h], [0, h]]);
+    case 'diamond': return P([[w / 2, 0], [w, h / 2], [w / 2, h], [0, h / 2]]);
+    case 'hexagon': { const x = ss / 4; return P([[0, h / 2], [x, 0], [w - x, 0], [w, h / 2], [w - x, h], [x, h]]); }
+    case 'rightArrow': { const x = w - ss / 2; return P([[0, h / 4], [x, h / 4], [x, 0], [w, h / 2], [x, h], [x, h * 3 / 4], [0, h * 3 / 4]]); }
+    case 'leftArrow': { const x = ss / 2; return P([[w, h / 4], [x, h / 4], [x, 0], [0, h / 2], [x, h], [x, h * 3 / 4], [w, h * 3 / 4]]); }
+    case 'star5': {
+      const pts = [], cx = w / 2, cy = h * 0.552786, rx = w / 2 * 1.05146, ry = h / 2 * 1.10557;
+      for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, k = i % 2 ? 0.381966 : 1; pts.push([cx + rx * k * Math.cos(a), cy + ry * k * Math.sin(a)]); }
+      return P(pts);
+    }
+    case 'heart': return `M${f(w / 2)} ${f(h / 4)}C${f(w / 2 + w * 10 / 48)} ${f(-h / 3)} ${f(w / 2 + w * 49 / 48)} ${f(h / 4)} ${f(w / 2)} ${f(h)}C${f(w / 2 - w * 49 / 48)} ${f(h / 4)} ${f(w / 2 - w * 10 / 48)} ${f(-h / 3)} ${f(w / 2)} ${f(h / 4)}Z`;
+    case 'bubble': { const r = f(ss / 6), tx = f(w * 0.29167), ty = f(h * 1.125); return `M${r} 0H${f(w - r)}A${r} ${r} 0 0 1 ${f(w)} ${r}V${f(h - r)}A${r} ${r} 0 0 1 ${f(w - r)} ${f(h)}H${f(w * 5 / 12)}L${tx} ${ty}L${f(w * 2 / 12)} ${f(h)}H${r}A${r} ${r} 0 0 1 0 ${f(h - r)}V${r}A${r} ${r} 0 0 1 ${r} 0Z`; }
+    default: return `M0 0H${f(w)}V${f(h)}H0Z`;
+  }
+}
+
+/* --- the model --- */
+const clone = v => Array.isArray(v) ? v.map(clone) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, clone(x)])) : v;
+const hexOr = v => /^#[0-9a-f]{6}$/i.test(String(v || '')) ? String(v).toLowerCase() : null;
+const colorTok = v => v === 'accent' ? 'accent' : hexOr(v);
+const paint = (v, look) => v === 'accent' ? look.accent : hexOr(v);   // a stored color; 'accent' follows the theme
+const htmlEmpty = html => !htmlText(html).trim();
+const curSlide = () => DK.deck && DK.deck.slides[DK.idx];
+const elOf = id => { const s = curSlide(); return (s && id && s.els.find(e => e.id === id)) || null; };
+const curEl = () => elOf(DK.sel);
+const stageEl = id => $(`#stageBox .slide [data-id="${id}"]`);
+const okId = v => /^[a-z0-9]{4,24}$/.test(String(v || ''));
+const numIn = (v, d, lo, hi) => { v = +v; return Number.isFinite(v) ? clamp(Math.round(v * 10) / 10, lo, hi) : d; };
+function makeSlide(layout, deck) {
+  const L = LAYOUTS[layout] || LAYOUTS.blank, rtl = deck.dir === 'rtl';
+  return { id: uid(), layout: LAYOUTS[layout] ? layout : 'blank', els: L.els.map(p => {
+    const e = { ...p, id: uid() };
+    if (rtl) e.x = SW - p.x - p.w;
+    if (e.t === 'text') { e.al = p.al === 'c' ? 'c' : rtl ? 'r' : 'l'; e.html = ''; if (p.ph === 'title') e.b = true; if (!p.list) delete e.list; }
+    return e;
+  }) };
+}
+/* the formatting a text box keeps: paragraphs, lists, bold, italic, underline, strike, color, size and font.
+   Headings, quotes and code become paragraphs, tables become one line per row, pictures and links go */
+const SLIDE_BLOCKS = /^(P|UL|OL|LI)$/;
+function slideHtml(html) {
+  const box = document.createElement('div');
+  box.innerHTML = sanitize(html);
+  box.querySelectorAll('img,hr,caption').forEach(x => x.remove());
+  box.querySelectorAll('table').forEach(t => t.replaceWith(...[...t.rows].map(r => h('p', {}, [...r.cells].map(c => c.textContent.trim()).filter(Boolean).join(' · ')))));
+  for (const x of [...box.querySelectorAll('h1,h2,h3,h4,h5,h6,blockquote,pre,div,a,code')].reverse()) {
+    if (x.tagName === 'A' || x.tagName === 'CODE' || x.querySelector('p,ul,ol,li,div,h1,h2,h3,h4,h5,h6,blockquote,pre')) { x.replaceWith(...x.childNodes); continue; }
+    const p = document.createElement('p');
+    if (/^H\d$/.test(x.tagName)) p.append(h('b', {}, ...x.childNodes)); else p.append(...x.childNodes);
+    x.replaceWith(p);
+  }
+  box.querySelectorAll('[class],[data-checked],[dir],[start]').forEach(x => { for (const a of ['class', 'data-checked', 'dir', 'start']) x.removeAttribute(a); });
+  box.querySelectorAll('[style]').forEach(x => {
+    for (const p of ['text-align', 'direction', 'line-height', 'margin-inline-start', 'width', 'vertical-align']) x.style.removeProperty(p);
+    if (!x.getAttribute('style')) x.removeAttribute('style');
+  });
+  // loose words at the top level go into paragraphs, as in the document editor
+  let p = null;
+  for (const n of [...box.childNodes]) {
+    const inline = n.nodeType === 3 || (n.nodeType === 1 && !SLIDE_BLOCKS.test(n.tagName));
+    if (!inline) { p = null; continue; }
+    if (!p) { if (n.nodeType === 3 && !n.data.trim()) { n.remove(); continue; } p = document.createElement('p'); n.before(p); }
+    p.append(n);
+  }
+  return box.innerHTML;
+}
+/* a deck from storage, a backup, a version or an assistant: every field checked, so nothing unexpected reaches the page */
+function normDeck(j) {
+  const o = j && typeof j === 'object' ? j : {};
+  const deck = { v: 1, theme: THEMES[o.theme] ? o.theme : 'ink', dir: o.dir === 'ltr' || o.dir === 'rtl' ? o.dir : UI_DIR, slides: [] };
+  for (const s of Array.isArray(o.slides) ? o.slides : []) deck.slides.push(normSlide(s, deck.dir));
+  if (!deck.slides.length) deck.slides.push(makeSlide('title', deck));
+  return deck;
+}
+function normSlide(s, dir) {
+  s = s && typeof s === 'object' ? s : {};
+  const out = { id: okId(s.id) ? s.id : uid(), layout: LAYOUTS[s.layout] ? s.layout : 'blank', els: [] };
+  if (hexOr(s.bg)) out.bg = hexOr(s.bg);
+  for (const e of Array.isArray(s.els) ? s.els : []) { const n = normEl(e, dir); if (n) out.els.push(n); }
+  return out;
+}
+function normEl(e, dir) {
+  if (!e || typeof e !== 'object') return null;
+  const b = { id: okId(e.id) ? e.id : uid(), t: e.t, x: numIn(e.x, 0, -SW, SW * 2), y: numIn(e.y, 0, -SH, SH * 2), w: numIn(e.w, 200, 8, SW * 3), h: numIn(e.h, 100, 8, SH * 3) };
+  if (PH_ROLES.has(e.ph)) b.ph = e.ph;
+  if (e.t === 'text') {
+    Object.assign(b, { html: slideHtml(String(e.html || '')), size: numIn(e.size, 20, 6, 200), al: ['l', 'c', 'r', 'j'].includes(e.al) ? e.al : dir === 'rtl' ? 'r' : 'l', va: ['t', 'm', 'b'].includes(e.va) ? e.va : 't' });
+    if (FONT_NAMES.has(e.font)) b.font = e.font;
+    if (hexOr(e.color)) b.color = hexOr(e.color);
+    if (colorTok(e.fill)) b.fill = colorTok(e.fill);
+    for (const k of ['b', 'i', 'u', 'list']) if (e[k] === true) b[k] = true;
+    // an empty text box of its own (not a placeholder) is nothing: it was left behind
+    if (!b.ph && !b.fill && htmlEmpty(b.html)) return null;
+    return b;
+  }
+  if (e.t === 'img') {
+    const src = String(e.src || '').trim();
+    if (SAFE_SRC.test(src)) b.src = src; else if (!b.ph) return null;
+    b.fit = e.fit === 'contain' ? 'contain' : 'cover';
+    return b;
+  }
+  if (e.t === 'shape') {
+    b.shape = SHAPES[e.shape] ? e.shape : 'rect';
+    if (colorTok(e.fill)) b.fill = colorTok(e.fill);
+    if (colorTok(e.line)) b.line = colorTok(e.line);
+    if (e.flip === true) b.flip = true;
+    return b;
+  }
+  return null;
+}
+function parseDeck(body) { let j = null; try { j = JSON.parse(body); } catch {} return normDeck(j); }
+function deckText(deck) {
+  return deck.slides.map(s => s.els.filter(e => e.t === 'text').map(e => htmlText(e.html).trim()).filter(Boolean).join('\n')).filter(Boolean).join('\n\n');
+}
+const bodyText = (body, meta) => isDeck(meta) ? deckText(parseDeck(body)) : htmlText(body);
+/* what the save, the backup and the versions store for the open document or presentation */
+const curBody = () => deckOpen() ? JSON.stringify(DK.deck) : cleanHTML();
+const curText = () => deckOpen() ? deckText(DK.deck) : ed.innerText;
+
+/* --- drawing a slide --- */
+const AL = { l: 'left', c: 'center', r: 'right', j: 'justify' }, VA = { t: 'flex-start', m: 'center', b: 'flex-end' };
+const themeFonts = th => LANG_FONTS.length ? [LANG_FONTS[th.serif ? 1 : 0] || LANG_FONTS[0], LANG_FONTS[0]] : th.font;
+function slideLook(deck, slide) {
+  const th = THEMES[deck.theme] || THEMES.ink, L = LAYOUTS[slide.layout], hero = !!(L && L.hero && th.hero), c = hero ? th.hero : th, fonts = themeFonts(th);
+  return { bg: slide.bg || c.bg, title: c.title, text: c.text, accent: th.accent, fTitle: fonts[0], fBody: fonts[1], deco: (DECO[deck.theme] || {})[hero ? 'hero' : 'normal'] || [] };
+}
+const elColor = (el, look) => el.color || (el.ph === 'title' ? look.title : look.text);
+const elFont = (el, look) => el.font || (el.ph === 'title' ? look.fTitle : look.fBody);
+function placeEl(n, el) { Object.assign(n.style, { left: el.x + 'px', top: el.y + 'px', width: el.w + 'px', height: el.h + 'px' }); }
+function styleText(n, el, look) {
+  Object.assign(n.style, {
+    fontFamily: `"${elFont(el, look)}", Arial, sans-serif`, fontSize: el.size + 'pt', color: elColor(el, look),
+    fontWeight: el.b ? '700' : '400', fontStyle: el.i ? 'italic' : 'normal', textDecorationLine: el.u ? 'underline' : 'none',
+    textAlign: AL[el.al] || 'start', justifyContent: VA[el.va] || 'flex-start', backgroundColor: paint(el.fill, look) || 'transparent',
+  });
+}
+function drawShape(n, el, look) {
+  const fill = paint(el.fill, look), line = paint(el.line, look);
+  n.innerHTML = `<svg viewBox="0 0 ${el.w} ${el.h}" preserveAspectRatio="none"${el.flip ? ' style="transform:scaleX(-1)"' : ''}><path d="${shapePath(el.shape, el.w, el.h)}" fill="${fill || 'none'}"${line ? ` stroke="${line}" stroke-width="3" stroke-linejoin="round"` : ''}/></svg>`;
+}
+/* mode: edit (the stage: hints on empty placeholders), layout (a layout's picture), thumb, show, export.
+   fitted: for export, each picture already cropped to its box */
+function renderSlide(slide, deck, mode, fitted) {
+  const look = slideLook(deck, slide);
+  const node = h('div', { class: 'slide' + (mode === 'edit' || mode === 'layout' ? ' ' + mode : ''), style: { background: look.bg, color: look.text } });
+  for (const d of look.deco) {
+    const c = d.c === 'accent' ? look.accent : d.c, dn = h('div', { class: 'deco' });
+    placeEl(dn, { ...d, x: deck.dir === 'rtl' ? SW - d.x - d.w : d.x });
+    dn.innerHTML = `<svg viewBox="0 0 ${d.w} ${d.h}" preserveAspectRatio="none"><path d="${shapePath(d.s, d.w, d.h)}" ${d.lw ? `fill="none" stroke="${c}" stroke-width="${d.lw}"` : `fill="${c}"`}${d.a ? ` fill-opacity="${d.a}"` : ''}/></svg>`;
+    node.append(dn);
+  }
+  for (const el of slide.els) { const n = elNode(el, look, deck.dir, mode, fitted); if (n) node.append(n); }
+  return node;
+}
+function elNode(el, look, dir, mode, fitted) {
+  const hints = mode === 'edit' || mode === 'layout';
+  const n = h('div', { class: 'el el-' + el.t, 'data-id': el.id });
+  placeEl(n, el);
+  if (el.t === 'text') {
+    const empty = htmlEmpty(el.html);
+    if (empty && !hints && !paint(el.fill, look)) return null;
+    styleText(n, el, look);
+    const tx = h('div', { class: 'tx', dir });
+    if (empty && hints) { n.classList.add('empty'); if (el.ph) tx.append(h('p', { class: 'hint', text: T(HINTS[el.ph]) })); }
+    else tx.innerHTML = el.html;
+    n.append(tx);
+  } else if (el.t === 'img') {
+    if (!el.src) {
+      if (!hints) return null;
+      n.classList.add('empty');
+      n.append(h('button', { class: 'ph-img', type: 'button', tabindex: '-1', dir: UI_DIR }, icon('add_photo_alternate'), h('span', { text: T(HINTS.img) })));
+    } else {
+      const f = fitted && fitted[el.id], img = h('img', { src: f ? f.data : el.src, alt: '', draggable: 'false' });
+      if (f) Object.assign(img.style, { left: f.x - el.x + 'px', top: f.y - el.y + 'px', width: f.w + 'px', height: f.h + 'px' });
+      else img.style.objectFit = el.fit === 'contain' ? 'contain' : 'cover';
+      n.append(img);
+    }
+  } else if (el.t === 'shape') drawShape(n, el, look);
+  else return null;
+  return n;
+}
+function miniSlide(slide, deck, w, mode = 'thumb') {
+  const sl = renderSlide(slide, deck, mode);
+  sl.style.transform = `scale(${w / SW})`;
+  return h('div', { class: 'mini', style: { width: w + 'px', height: Math.round(w * SH / SW) + 'px' } }, sl);
+}
+/* a theme's opening slide with "Aa" on it, for the theme pickers */
+function themeMini(key, w) {
+  const deck = { v: 1, theme: key, dir: UI_DIR, slides: [] }, s = makeSlide('title', deck);
+  s.els = [{ ...s.els[0], y: 120, h: 300, va: 'm', size: 150, html: '<p>Aa</p>' }];
+  return miniSlide(s, deck, w);
+}
+
+/* --- the editor: the stage with the current slide, and the strip of all of them --- */
+function setDeckMode(on) {
+  const app = $('#app'), was = app.classList.contains('deck');
+  if (!on && SHOW.on) endShow();
+  app.classList.toggle('deck', on);
+  (on ? $('#stage') : $('#desk')).prepend($('#banner'));
+  if (on) {
+    if (S.panel && S.panel !== 'versions' && S.panel !== 'link') closePanel();
+    if (!was) selectTab(S.tab === 'file' ? 'file' : DECK_TABS.includes(PREFS.dtab) ? PREFS.dtab : 'dhome');
+  } else {
+    DK.deck = null; DK.sel = DK.edit = null; DK.typing = false;
+    const old = $('#stageBox .slide'); if (old) old.remove();
+    $('#selLayer').textContent = ''; $('#strip').textContent = '';
+    if (was) selectTab(S.tab === 'file' ? 'file' : PREFS.tab && !DECK_TABS.includes(PREFS.tab) ? PREFS.tab : 'home');
+  }
+}
+function deckLoad(body) {
+  DK.deck = parseDeck(body);
+  Object.assign(DK, { idx: 0, sel: null, edit: null, typing: false, reveal: 0, imgFor: null, newBox: null });
+  DH.stack = []; DH.idx = -1; DK.ver = ++DVER; dSnap();
+  $('#pageRule').textContent = '@page{size:10in 5.625in;margin:0}';
+  fitStage(); deckRender();
+}
+function deckRender() { renderStage(); renderStrip(); updateDeckUI(); updateStats(); }
+function fitStage() {
+  const st = $('#stage'), box = $('#stageBox');
+  if (!DK.deck || !st.clientWidth) return;
+  const pad = st.clientWidth < 520 ? 16 : 48;
+  DK.k = Math.max(0.05, Math.min((st.clientWidth - pad) / SW, (st.clientHeight - pad) / SH));
+  box.style.width = SW * DK.k + 'px'; box.style.height = SH * DK.k + 'px';
+  const sl = box.querySelector('.slide'); if (sl) sl.style.transform = `scale(${DK.k})`;
+  drawSel();
+}
+function renderStage() {
+  const box = $('#stageBox');
+  if (!DK.deck) return;
+  DK.idx = clamp(DK.idx, 0, DK.deck.slides.length - 1);
+  if (DK.sel && !elOf(DK.sel)) DK.sel = null;
+  DK.edit = null; DK.typing = false;   // a new drawing ends any writing; the words are already in the model
+  const node = renderSlide(curSlide(), DK.deck, 'edit');
+  node.style.transform = `scale(${DK.k})`;
+  const old = box.querySelector('.slide');
+  if (old) old.replaceWith(node); else box.prepend(node);
+  drawSel(); deckStat();
+}
+function drawSel() {
+  const layer = $('#selLayer'); layer.textContent = '';
+  const el = curEl(); if (!el) return;
+  const k = DK.k, f = h('div', { class: 'sel-frame' + (DK.edit === el.id ? ' editing' : ''), style: { left: el.x * k + 'px', top: el.y * k + 'px', width: el.w * k + 'px', height: el.h * k + 'px' } });
+  for (const d of ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']) f.append(h('i', { class: 'hd hd-' + d, 'data-h': d }));
+  layer.append(f);
+}
+function deckStat() { if (DK.deck) $('#stPage').textContent = T('שקופית {0} מתוך {1}', fmt(DK.idx + 1), fmt(DK.deck.slides.length)); }
+function select(id) { DK.sel = id || null; drawSel(); updateDeckUI(); }
+function renderStrip() {
+  const strip = $('#strip');
+  strip.textContent = '';
+  if (!DK.deck) return;
+  const n = DK.reveal || DK.deck.slides.length;
+  DK.deck.slides.slice(0, n).forEach((s, i) => strip.append(thumbNode(s, i)));
+  if (!DK.reveal) strip.append(h('div', { class: 'strip-add' }, h('button', { class: 'btn small', 'data-cmd': 'newSlide', title: T('שקופית חדשה (Ctrl+M)') }, icon('add'), T('שקופית חדשה'))));
+  thumbScale();
+}
+function thumbNode(s, i) {
+  const tb = h('div', { class: 'tb' }, renderSlide(s, DK.deck, 'thumb')), cur = i === DK.idx;
+  return h('div', { class: 'thumb' + (cur ? ' cur' : ''), 'data-i': i, role: 'option', 'aria-selected': String(cur), tabindex: cur ? 0 : -1, 'aria-label': T('שקופית {0}', fmt(i + 1)) }, h('span', { class: 'tn', text: fmt(i + 1) }), tb);
+}
+function thumbScale() { const tb = $('#strip .tb'); if (tb && tb.clientWidth) $('#strip').style.setProperty('--tk', tb.clientWidth / SW); }
+function updateThumb(i) {
+  const t = $(`#strip .thumb[data-i="${i}"]`), s = DK.deck && DK.deck.slides[i];
+  if (!t || !s) return;
+  const tb = t.querySelector('.tb'); tb.textContent = ''; tb.append(renderSlide(s, DK.deck, 'thumb'));
+}
+const updateThumbSoon = debounce(() => updateThumb(DK.idx), 300);
+function markCurThumb() {
+  for (const t of $$('#strip .thumb')) { const on = +t.dataset.i === DK.idx; t.classList.toggle('cur', on); t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; }
+}
+function scrollThumb() { const t = $(`#strip .thumb[data-i="${DK.idx}"]`); if (t) t.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+function goSlide(i) {
+  if (!DK.deck) return;
+  i = clamp(i, 0, DK.deck.slides.length - 1);
+  exitEdit();
+  if (i !== DK.idx) { DK.idx = i; DK.sel = null; renderStage(); }
+  markCurThumb(); scrollThumb(); updateDeckUI();
+}
+/* the ribbon follows what's selected: text tools for a text box, fill for shapes and boxes, outline for shapes */
+function updateDeckUI() {
+  if (!DK.deck) return;
+  const el = curEl(), text = !!el && el.t === 'text', look = slideLook(DK.deck, curSlide());
+  const need = { el: !!el, text, fill: !!el && el.t !== 'img', line: !!el && el.t === 'shape' };
+  for (const b of $$('[data-need]')) b.disabled = !need[b.dataset.need];
+  const typing = text && DK.edit === el.id;
+  for (const b of $$('[data-on]')) {
+    let on = false;
+    if (typing) { try { on = document.queryCommandState({ b: 'bold', i: 'italic', u: 'underline' }[b.dataset.on]); } catch {} }
+    else on = text && !!el[b.dataset.on];
+    b.classList.toggle('on', !!on);
+  }
+  for (const b of $$('[data-cmd=dAlign]')) b.classList.toggle('on', text && el.al === b.dataset.arg);
+  const fs = $('#dFont'), zs = $('#dSize');
+  if (document.activeElement !== fs) fs.value = text ? elFont(el, look) : '';
+  if (document.activeElement !== zs) zs.value = text ? String(nearest(DSIZES, el.size)) : '';
+  for (const b of $$('#themeGal .theme-opt')) b.classList.toggle('on', b.dataset.arg === DK.deck.theme);
+}
+
+/* --- changes: every one is recorded for undo, then saved --- */
+function dSnap() {
+  const top = DH.stack[DH.idx];
+  if (top && top.ver === DK.ver) { top.idx = DK.idx; return; }
+  DH.stack = DH.stack.slice(0, DH.idx + 1);
+  DH.stack.push({ deck: clone(DK.deck), idx: DK.idx, ver: DK.ver });
+  if (DH.stack.length > 100) DH.stack.shift();
+  DH.idx = DH.stack.length - 1;
+}
+function dEdit(fn) { dSnap(); fn(); DK.ver = ++DVER; if (S.cur) S.cur.meta.slides = DK.deck.slides.length; markDirty(); }
+function dApply(st) {
+  Object.assign(DK, { deck: clone(st.deck), idx: st.idx, ver: st.ver, sel: null, edit: null, typing: false, newBox: null });
+  markDirty(); deckRender();
+}
+function dUndo() {
+  if (!DK.deck) return;
+  if (DK.edit && exitEdit()) return;   // the text box just added, still empty, was the last change
+  dSnap();
+  if (DH.idx <= 0) { toast(T('אין מה לבטל'), { icon: 'undo' }); return; }
+  DH.idx--; dApply(DH.stack[DH.idx]);
+}
+function dRedo() {
+  if (!DK.deck || DH.idx >= DH.stack.length - 1) return;
+  exitEdit(); DH.idx++; dApply(DH.stack[DH.idx]);
+}
+
+/* --- writing in a text box --- */
+const typingDone = debounce(() => { DK.typing = false; }, 900);
+function startEdit(id, cx, cy) {
+  const el = elOf(id);
+  if (!el || el.t !== 'text' || DK.edit === id) return;
+  exitEdit();
+  const n = stageEl(id), tx = n && n.querySelector('.tx');
+  if (!tx) return;
+  DK.sel = DK.edit = id; DK.typing = false;
+  n.classList.remove('empty'); n.classList.add('editing');
+  tx.innerHTML = htmlEmpty(el.html) ? (el.list ? '<ul><li><br></li></ul>' : '<p><br></p>') : el.html;
+  tx.contentEditable = 'true';
+  tx.focus({ preventScroll: true });
+  let r = cx != null && document.caretRangeFromPoint ? document.caretRangeFromPoint(cx, cy) : null;
+  if (!r || !tx.contains(r.startContainer)) { r = document.createRange(); r.selectNodeContents([...tx.querySelectorAll('p,li')].pop() || tx); r.collapse(false); }
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  drawSel(); updateDeckUI();
+}
+function onTxInput(tx) {
+  const el = elOf(DK.edit);
+  if (!el || !tx.closest('.el') || tx.closest('.el').dataset.id !== el.id) return;
+  if (!DK.typing) { dSnap(); DK.typing = true; }   // one undo step for each burst of typing
+  typingDone();
+  el.html = slideHtml(tx.innerHTML);
+  if (!el.ph) {   // a text box of its own grows with its text, as in PowerPoint
+    const n = tx.closest('.el'), need = Math.ceil(n.scrollHeight);
+    if (need > el.h + 1) { el.h = need; n.style.height = need + 'px'; drawSel(); }
+  }
+  DK.ver = ++DVER; markDirty(); updateThumbSoon(); scheduleStats(); updateDeckUI();
+}
+/* stops writing. A text box of its own left empty goes away, as in PowerPoint; true when it was one
+   just added and never written in, which takes the slide back to exactly where it was */
+function exitEdit() {
+  const id = DK.edit;
+  if (!id) return false;
+  DK.edit = null; DK.typing = false; typingDone.cancel();
+  const el = elOf(id), s = curSlide(), n = stageEl(id);
+  if (n) { n.classList.remove('editing'); const tx = n.querySelector('.tx'); if (tx) tx.contentEditable = 'false'; }
+  let back = false;
+  if (el && !el.ph && !el.fill && htmlEmpty(el.html)) {
+    if (DK.newBox && DK.newBox.id === id && DK.newBox.ver === DK.ver && DH.stack[DH.idx]) {
+      s.els = s.els.filter(e => e !== el); DK.ver = DH.stack[DH.idx].ver; markDirty(); back = true;
+    } else dEdit(() => { s.els = s.els.filter(e => e !== el); });
+    if (DK.sel === id) DK.sel = null;
+  }
+  DK.newBox = null;
+  const sel = DK.sel;
+  renderStage(); DK.sel = sel; drawSel(); updateThumb(DK.idx); updateDeckUI();
+  return back;
+}
+
+/* --- slides --- */
+const defaultLayout = () => { const s = curSlide(); return s && ['content', 'two', 'image'].includes(s.layout) ? s.layout : 'content'; };
+function addSlide(layout = defaultLayout(), at = DK.idx + 1) {
+  if (!DK.deck) return;
+  exitEdit();
+  const s = makeSlide(layout, DK.deck);
+  dEdit(() => { DK.deck.slides.splice(at, 0, s); DK.idx = at; });
+  DK.sel = null; deckRender(); scrollThumb();
+}
+function dupSlide(i) {
+  const src = DK.deck && DK.deck.slides[i];
+  if (!src) return;
+  exitEdit();
+  const copy = { ...clone(src), id: uid(), els: src.els.map(e => ({ ...clone(e), id: uid() })) };
+  dEdit(() => { DK.deck.slides.splice(i + 1, 0, copy); DK.idx = i + 1; });
+  DK.sel = null; deckRender(); scrollThumb();
+}
+function delSlide(i) {
+  if (!DK.deck || !DK.deck.slides[i]) return;
+  exitEdit();
+  dEdit(() => {
+    DK.deck.slides.splice(i, 1);
+    if (!DK.deck.slides.length) DK.deck.slides.push(makeSlide('title', DK.deck));
+    DK.idx = Math.min(i, DK.deck.slides.length - 1);
+  });
+  DK.sel = null; deckRender();
+  toast(T('השקופית נמחקה'), { icon: 'delete', action: { label: T('ביטול@undo'), run: () => dUndo() } });
+}
+function moveSlide(from, to) {
+  const n = DK.deck ? DK.deck.slides.length : 0;
+  to = clamp(to, 0, n - 1);
+  if (from === to || from < 0 || from >= n) return;
+  exitEdit();
+  dEdit(() => { const [s] = DK.deck.slides.splice(from, 1); DK.deck.slides.splice(to, 0, s); DK.idx = to; });
+  deckRender(); scrollThumb();
+}
+function setTheme(key) {
+  if (!THEMES[key] || !DK.deck || DK.deck.theme === key) return;
+  exitEdit(); dEdit(() => { DK.deck.theme = key; }); deckRender();
+}
+function setLayout(key) {
+  const s = curSlide();
+  if (!s || !LAYOUTS[key]) return;
+  exitEdit(); dEdit(() => relayout(s, key, DK.deck)); DK.sel = null; deckRender();
+}
+/* a new layout keeps the slide's words and pictures: each placeholder hands its content to the new one with the
+   same role (or a close one), and whatever finds no place stays on the slide as its own box */
+function relayout(s, key, deck) {
+  const fresh = makeSlide(key, deck), left = [...s.els];
+  const near = { title: ['title'], sub: ['sub', 'body', 'cap'], body: ['body', 'sub', 'cap'], body2: ['body2'], cap: ['cap', 'sub', 'body'], img: ['img'] };
+  for (const e of fresh.els) for (const r of near[e.ph] || []) {
+    const i = left.findIndex(o => o.ph === r && o.t === e.t);
+    if (i < 0) continue;
+    const [o] = left.splice(i, 1);
+    if (e.t === 'text') { e.html = o.html; for (const k of ['color', 'font', 'i', 'u', 'fill']) if (o[k] != null) e[k] = o[k]; }
+    else e.src = o.src;
+    break;
+  }
+  const keep = left.filter(e => !e.ph || (e.t === 'text' ? !htmlEmpty(e.html) : !!e.src)).map(e => { const c = { ...e }; delete c.ph; return c; });
+  s.layout = fresh.layout; s.els = [...fresh.els, ...keep];
+}
+function setSlideBg(c) {
+  const s = curSlide(); if (!s) return;
+  exitEdit();
+  dEdit(() => { if (c) s.bg = c; else delete s.bg; });
+  renderStage(); updateThumb(DK.idx);
+}
+
+/* --- what's on a slide --- */
+function refreshEl(el) {   // draws one box again after a change, keeping the text being written in it
+  const n = stageEl(el.id); if (!n) return;
+  const look = slideLook(DK.deck, curSlide());
+  placeEl(n, el);
+  if (el.t === 'text') styleText(n, el, look);
+  else if (el.t === 'shape') drawShape(n, el, look);
+  drawSel();
+}
+function setElProp(k, v) {
+  const el = curEl(); if (!el) return;
+  if (el[k] === v || (v == null && el[k] == null)) return;
+  dEdit(() => { if (v == null || v === false) delete el[k]; else el[k] = v; });
+  refreshEl(el); updateThumbSoon(); updateDeckUI();
+  if (DK.edit === el.id) { const tx = stageEl(el.id).querySelector('.tx'); if (tx && document.activeElement !== tx) tx.focus({ preventScroll: true }); }
+}
+function stepDeckFont(d) {
+  const el = curEl(); if (!el || el.t !== 'text') return;
+  const next = d > 0 ? DSIZES.find(s => s > el.size + 0.1) : [...DSIZES].reverse().find(s => s < el.size - 0.1);
+  if (next) setElProp('size', next);
+}
+function deckStyle(k) {
+  const el = curEl(); if (!el || el.t !== 'text') return;
+  if (DK.edit === el.id) { document.execCommand({ b: 'bold', i: 'italic', u: 'underline' }[k]); updateDeckUI(); return; }
+  setElProp(k, !el[k]);
+}
+function deckList(kind) {
+  const el = curEl(); if (!el || el.t !== 'text') return;
+  if (DK.edit === el.id) { document.execCommand(kind === 'ol' ? 'insertOrderedList' : 'insertUnorderedList'); return; }
+  const box = document.createElement('div'); box.innerHTML = el.html || '';
+  const tag = kind.toUpperCase(), blocks = [...box.children];
+  if (!blocks.length) { setElProp('list', !el.list); return; }
+  if (blocks.every(b => b.tagName === tag)) {   // already that list: back to paragraphs
+    for (const l of blocks) l.replaceWith(...[...l.children].map(li => { const p = document.createElement('p'); p.append(...li.childNodes); return p; }));
+  } else {
+    const list = document.createElement(kind);
+    for (const b of blocks) { if (b.tagName === 'UL' || b.tagName === 'OL') list.append(...b.children); else { const li = document.createElement('li'); li.append(...b.childNodes); list.append(li); } }
+    box.textContent = ''; box.append(list);
+  }
+  dEdit(() => { el.html = slideHtml(box.innerHTML); });
+  renderStage(); DK.sel = el.id; drawSel(); updateThumb(DK.idx); updateDeckUI();
+}
+function addBox(el, edit) {
+  const s = curSlide(); if (!s) return;
+  exitEdit();
+  dEdit(() => s.els.push(el));
+  renderStage(); select(el.id); updateThumb(DK.idx);
+  if (edit) { DK.newBox = { id: el.id, ver: DK.ver }; startEdit(el.id); }
+}
+function addTextBox(text) {
+  if (!DK.deck) return;
+  const rtl = DK.deck.dir === 'rtl', lines = text ? String(text).replace(/\r/g, '').split('\n').map(l => l.trim()) : [];
+  const html = lines.length ? lines.map(l => `<p>${esc(l) || '<br>'}</p>`).join('') : '';
+  addBox({ id: uid(), t: 'text', x: 220, y: 220, w: 520, h: Math.max(60, Math.min(420, 40 * Math.max(1, lines.length) + 20)), html, size: 24, al: rtl ? 'r' : 'l', va: 't' }, !text);
+}
+function addShape(kind) {
+  if (!DK.deck || !SHAPES[kind]) return;
+  const [w, hh] = SHAPES[kind].size || [180, 180];
+  addBox({ id: uid(), t: 'shape', shape: kind, x: (SW - w) / 2, y: (SH - hh) / 2, w, h: hh, fill: 'accent' });
+}
+function pickSlideImage(target) { DK.imgFor = target || null; $('#fileImage').click(); }
+async function deckImageFile(file, pt) {
+  if (!DK.deck) return;
+  if (!/^image\//.test(file.type)) { toast(T('זה לא קובץ תמונה')); return; }
+  const busy = toast(T('מוסיף את התמונה…'), { icon: 'image', ms: 30000 });
+  const target = DK.imgFor; DK.imgFor = null;
+  try {
+    let blob = file;
+    if (/svg/.test(file.type)) {   // PowerPoint and the PDF want pixels: a drawing in SVG becomes a PNG
+      const im = await loadImg(await blobToDataURL(file)), k = Math.min(3, 1600 / Math.max(im.naturalWidth || 800, im.naturalHeight || 600));
+      const c = h('canvas', { width: Math.round((im.naturalWidth || 800) * k), height: Math.round((im.naturalHeight || 600) * k) });
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      blob = await new Promise(r => c.toBlob(r, 'image/png'));
+    } else if (!/gif/.test(file.type)) blob = await shrinkImage(file, 1920);
+    const src = await storeImage(blob);
+    const im = await loadImg(src.startsWith('data:') ? src : await blobToDataURL(blob));
+    const ar = (im.naturalWidth || 4) / (im.naturalHeight || 3), s = curSlide();
+    exitEdit();
+    let el = (target && s.els.find(e => e.id === target && e.t === 'img')) || (!pt && s.els.find(e => e.t === 'img' && e.ph && !e.src));
+    dEdit(() => {
+      if (el) { el.src = src; return; }   // fills the picture placeholder, or replaces the picture
+      let w = Math.min(SW * 0.7, im.naturalWidth || SW * 0.5), hh = w / ar;
+      if (hh > SH * 0.7) { hh = SH * 0.7; w = hh * ar; }
+      const c = pt || { x: SW / 2, y: SH / 2 };
+      el = { id: uid(), t: 'img', x: Math.round(clamp(c.x - w / 2, 0, SW - w)), y: Math.round(clamp(c.y - hh / 2, 0, SH - hh)), w: Math.round(w), h: Math.round(hh), src, fit: 'cover' };
+      s.els.push(el);
+    });
+    renderStage(); select(el.id); updateThumb(DK.idx);
+  } catch (e) {
+    toast(e && e.message === 'too_big' ? T('התמונה גדולה מדי לשמירה בדפדפן הזה') : T('לא הצלחתי להוסיף את התמונה'));
+  } finally { busy.remove(); }
+}
+function delEl() {
+  const id = DK.sel; if (!id) return;
+  exitEdit();
+  const s = curSlide(), el = elOf(id); if (!el) return;
+  dEdit(() => { s.els = s.els.filter(e => e !== el); });
+  DK.sel = null; renderStage(); updateThumb(DK.idx); updateDeckUI();
+}
+function pasteEl(src) {
+  const s = curSlide(); if (!s || !src) return;
+  const el = { ...clone(src), id: uid() };
+  delete el.ph;
+  while (s.els.some(e => e.x === el.x && e.y === el.y)) { el.x += 20; el.y += 20; }
+  addBox(el);
+}
+function dupEl() { const el = curEl(); if (el) pasteEl(el); }
+function zOrder(d) {
+  const el = curEl(), s = curSlide(); if (!el) return;
+  exitEdit();
+  dEdit(() => { s.els = s.els.filter(e => e !== el); if (d > 0) s.els.push(el); else s.els.unshift(el); });
+  renderStage(); select(el.id); updateThumb(DK.idx);
+}
+function nudge(key, step) {
+  const el = curEl(); if (!el) return;
+  const now = Date.now();
+  if (now - DK.nudgeT > 800) dSnap();   // a run of arrow presses is one undo step
+  DK.nudgeT = now;
+  if (key === 'ArrowLeft') el.x -= step; else if (key === 'ArrowRight') el.x += step; else if (key === 'ArrowUp') el.y -= step; else el.y += step;
+  DK.ver = ++DVER; markDirty(); refreshEl(el); updateThumbSoon();
+}
+
+/* --- the mouse and touch on the stage: select, move, resize, and snap to the middle and to other boxes --- */
+function stagePoint(e) { const r = $('#stageBox').getBoundingClientRect(); return { x: (e.clientX - r.left) / DK.k, y: (e.clientY - r.top) / DK.k }; }
+function snapTo(mine, targets, thr) {
+  let best = null;
+  for (const m of mine) for (const t of targets) { const d = t - m; if (Math.abs(d) <= thr && (!best || Math.abs(d) < Math.abs(best.d))) best = { d, at: t }; }
+  return best;
+}
+function showGuides(g) {
+  const L = $('#selLayer');
+  L.querySelectorAll('.guide').forEach(x => x.remove());
+  for (const [o, at] of g) L.append(h('div', { class: 'guide ' + o, style: o === 'v' ? { left: at * DK.k + 'px' } : { top: at * DK.k + 'px' } }));
+}
+function startDrag(e, el, hd, onClick) {
+  const k = DK.k, x0 = e.clientX, y0 = e.clientY, st = { x: el.x, y: el.y, w: el.w, h: el.h };
+  const others = curSlide().els.filter(o => o !== el);
+  const xs = [0, SW / 2, SW, ...others.flatMap(o => [o.x, o.x + o.w / 2, o.x + o.w])], ys = [0, SH / 2, SH, ...others.flatMap(o => [o.y, o.y + o.h / 2, o.y + o.h])];
+  let moved = false;
+  const move = ev => {
+    if (!moved) { if (Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) < 4) return; moved = true; dSnap(); }
+    const dx = (ev.clientX - x0) / k, dy = (ev.clientY - y0) / k, g = [];
+    if (!hd) {
+      let x = st.x + dx, y = st.y + dy;
+      if (!ev.altKey) {   // Alt moves freely
+        const sx = snapTo([x, x + st.w / 2, x + st.w], xs, 6 / k), sy = snapTo([y, y + st.h / 2, y + st.h], ys, 6 / k);
+        if (sx) { x += sx.d; g.push(['v', sx.at]); }
+        if (sy) { y += sy.d; g.push(['h', sy.at]); }
+      }
+      el.x = Math.round(x); el.y = Math.round(y);
+    } else {
+      let { x, y, w, h: hh } = st;
+      if (hd.includes('e')) w = st.w + dx;
+      if (hd.includes('w')) { w = st.w - dx; x = st.x + dx; }
+      if (hd.includes('s')) hh = st.h + dy;
+      if (hd.includes('n')) { hh = st.h - dy; y = st.y + dy; }
+      if (w < 12) { if (hd.includes('w')) x -= 12 - w; w = 12; }
+      if (hh < 12) { if (hd.includes('n')) y -= 12 - hh; hh = 12; }
+      // pictures keep their shape when pulled by a corner; Shift does the opposite
+      if (hd.length === 2 && (el.t === 'img') !== ev.shiftKey) {
+        const r = st.w / st.h;
+        if (w / hh > r) { const nw = hh * r; if (hd.includes('w')) x += w - nw; w = nw; } else { const nh = w / r; if (hd.includes('n')) y += hh - nh; hh = nh; }
+      }
+      Object.assign(el, { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(hh) });
+    }
+    refreshEl(el); showGuides(g);
+  };
+  const up = ev => {
+    removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+    showGuides([]);
+    if (moved) { DK.ver = ++DVER; markDirty(); updateThumb(DK.idx); }
+    else if (onClick && ev.type === 'pointerup') onClick(ev);
+  };
+  addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+}
+function onStageDown(e) {
+  if (!DK.deck || e.button > 0) return;
+  if (document.activeElement && document.activeElement.closest && document.activeElement.closest('#strip')) document.activeElement.blur();
+  const hd = e.target.closest('.hd');
+  if (hd) { const el = curEl(); if (el) { e.preventDefault(); startDrag(e, el, hd.dataset.h); } return; }
+  const n = e.target.closest('.el');
+  if (!n || !n.dataset.id) { if (DK.edit || DK.sel) { exitEdit(); select(null); } return; }
+  const id = n.dataset.id;
+  if (DK.edit === id) return;   // inside the text being written: the browser places the caret
+  e.preventDefault();
+  const was = DK.sel === id, onPh = !!e.target.closest('.ph-img');
+  exitEdit(); select(id);
+  const el = elOf(id);
+  if (!el) return;
+  startDrag(e, el, null, ev => {   // a click without dragging
+    if (onPh) { pickSlideImage(id); return; }
+    if (el.t === 'text' && (was || (el.ph && htmlEmpty(el.html)))) startEdit(id, ev.clientX, ev.clientY);
+  });
+}
+function onStageDbl(e) {
+  const n = e.target.closest('.el');
+  if (!n || !n.dataset.id || DK.edit === n.dataset.id) return;
+  const el = elOf(n.dataset.id);
+  if (el && el.t === 'text') startEdit(el.id, e.clientX, e.clientY);
+  else if (el && el.t === 'img') pickSlideImage(el.id);
+}
+function popAtPoint(x, y, content) {
+  let a = $('#popPt');
+  if (!a) { a = h('div', { id: 'popPt', style: { position: 'fixed', width: '1px', height: '1px', pointerEvents: 'none' } }); document.body.append(a); }
+  Object.assign(a.style, { left: x + 'px', top: y + 'px' });
+  closePopover(); openPop(a, content);
+}
+const menuOf = items => h('div', { class: 'menu' }, items.filter(Boolean).map(([ic, label, fn, danger]) => h('button', { class: 'mi' + (danger ? ' danger' : ''), onclick: () => { closePopover(); fn(); } }, icon(ic), label)));
+function onStageMenu(e) {
+  const n = e.target.closest('.el');
+  if (!n || !n.dataset.id || DK.edit === n.dataset.id) return;   // while writing, the browser's own menu (spelling, copy)
+  e.preventDefault();
+  exitEdit(); select(n.dataset.id);
+  const el = curEl(); if (!el) return;
+  popAtPoint(e.clientX, e.clientY, menuOf([
+    el.t === 'img' ? ['image', T('החלפת תמונה'), () => pickSlideImage(el.id)] : null,
+    ['content_copy', T('שכפול'), dupEl], ['flip_to_front', T('הבאה לחזית'), () => zOrder(1)], ['flip_to_back', T('שליחה לרקע'), () => zOrder(-1)],
+    ['delete', T('מחיקה'), delEl, true]]));
+}
+
+/* --- the strip: a click opens a slide, dragging one moves it --- */
+function onStripDown(e) {
+  const t = e.target.closest('.thumb');
+  if (!t || e.button > 0) return;
+  e.preventDefault();
+  const strip = $('#strip'), i = +t.dataset.i, x0 = e.clientX, y0 = e.clientY;
+  const row = getComputedStyle(strip).flexDirection === 'row', rtl = getComputedStyle(strip).direction === 'rtl';
+  let drag = false, to = i, line = null;
+  const move = ev => {
+    if (!drag) { if (Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) < 6) return; drag = true; t.classList.add('drag'); line = h('div', { class: 'drop-line' }); }
+    const thumbs = $$('#strip .thumb');
+    to = thumbs.length;
+    for (const [j, th] of thumbs.entries()) {
+      const r = th.getBoundingClientRect();
+      const before = row ? (rtl ? ev.clientX > r.left + r.width / 2 : ev.clientX < r.left + r.width / 2) : ev.clientY < r.top + r.height / 2;
+      if (before) { to = j; break; }
+    }
+    (thumbs[to] || strip.querySelector('.strip-add') || strip).before(line);
+    if (!thumbs[to] && !strip.querySelector('.strip-add')) strip.append(line);
+    const r = strip.getBoundingClientRect();   // near the edge the strip scrolls by itself
+    if (row) strip.scrollLeft += ev.clientX < r.left + 30 ? -12 : ev.clientX > r.right - 30 ? 12 : 0;
+    else strip.scrollTop += ev.clientY < r.top + 30 ? -12 : ev.clientY > r.bottom - 30 ? 12 : 0;
+  };
+  const up = () => {
+    removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+    if (line) line.remove();
+    t.classList.remove('drag');
+    if (drag) { const dest = to > i ? to - 1 : to; if (dest !== i) moveSlide(i, dest); }
+    else { goSlide(i); const cur = $(`#strip .thumb[data-i="${i}"]`); if (cur) cur.focus({ preventScroll: true }); }
+  };
+  addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+}
+function onStripMenu(e) {
+  const t = e.target.closest('.thumb'); if (!t) return;
+  e.preventDefault();
+  const i = +t.dataset.i, n = DK.deck.slides.length;
+  goSlide(i);
+  popAtPoint(e.clientX, e.clientY, menuOf([
+    ['add_box', T('שקופית חדשה'), () => addSlide()], ['content_copy', T('שכפול שקופית'), () => dupSlide(i)],
+    i > 0 ? ['arrow_upward', T('הזזה למעלה'), () => moveSlide(i, i - 1)] : null, i < n - 1 ? ['arrow_downward', T('הזזה למטה'), () => moveSlide(i, i + 1)] : null,
+    ['delete', T('מחיקת שקופית'), () => delSlide(i), true]]));
+}
+
+/* --- keys, and copy / paste of what's on a slide --- */
+const isField = t => !!(t && t.closest && t.closest('input,textarea,select,#editor'));
+function deckKey(e) {
+  if (!DK.deck || MODALS.length) return false;
+  const t = e.target, writing = !!DK.edit && t.classList && t.classList.contains('tx');
+  if (!writing && isField(t)) return false;
+  const mod = e.ctrlKey || e.metaKey, c = e.code, k = e.key;
+  if (mod && !e.altKey && (c === 'KeyZ' || c === 'KeyY')) { e.preventDefault(); if (c === 'KeyY' || e.shiftKey) dRedo(); else dUndo(); return true; }
+  if (writing) {
+    if (mod && !e.altKey && !e.shiftKey && (c === 'KeyB' || c === 'KeyI' || c === 'KeyU')) { e.preventDefault(); deckStyle({ KeyB: 'b', KeyI: 'i', KeyU: 'u' }[c]); return true; }
+    if (k === 'Tab') { e.preventDefault(); const s = getSelection(), n = s.anchorNode; if (n && (n.nodeType === 1 ? n : n.parentElement).closest('li')) document.execCommand(e.shiftKey ? 'outdent' : 'indent'); return true; }
+    return false;
+  }
+  if (k === 'F5') { e.preventDefault(); startShow(e.shiftKey ? DK.idx : 0); return true; }
+  if (mod && !e.altKey && c === 'KeyM') { e.preventDefault(); addSlide(); return true; }
+  if (mod && !e.altKey && c === 'KeyD') { e.preventDefault(); if (curEl()) dupEl(); else dupSlide(DK.idx); return true; }
+  if (mod || e.altKey) return false;
+  const el = curEl(), inStrip = !!(t.closest && t.closest('#strip'));
+  if (k === 'Delete' || k === 'Backspace') {
+    if (el) { e.preventDefault(); delEl(); return true; }
+    if (inStrip) { e.preventDefault(); delSlide(DK.idx); return true; }
+    return false;
+  }
+  if (el) {
+    if (/^Arrow(Left|Right|Up|Down)$/.test(k)) { e.preventDefault(); nudge(k, e.shiftKey ? 10 : 1); return true; }
+    if ((k === 'Enter' || k === 'F2') && el.t === 'text') { e.preventDefault(); startEdit(el.id); return true; }
+    return false;
+  }
+  if (t.closest && t.closest('button,a,[role=tab]') && !inStrip) return false;
+  const go = { PageDown: 1, ArrowDown: 1, PageUp: -1, ArrowUp: -1 }[k];
+  if (go) { e.preventDefault(); goSlide(DK.idx + go); const f = $(`#strip .thumb[data-i="${DK.idx}"]`); if (inStrip && f) f.focus({ preventScroll: true }); return true; }
+  if (k === 'Home' || k === 'End') { e.preventDefault(); goSlide(k === 'Home' ? 0 : DK.deck.slides.length - 1); return true; }
+  return false;
+}
+function onDeckCopy(e, cut) {
+  if (!deckOpen() || DK.edit || isField(e.target)) return;
+  const el = curEl(); if (!el) return;
+  e.preventDefault();
+  e.clipboardData.setData('text/plain', el.t === 'text' ? htmlText(el.html).trim() : ' ');
+  e.clipboardData.setData('application/x-floating-ink-el', JSON.stringify(el));
+  if (cut) delEl();
+}
+function onDeckPaste(e) {
+  if (!deckOpen() || isField(e.target)) return;
+  const dt = e.clipboardData; if (!dt) return;
+  if (DK.edit) {   // words only: formatting from other programs doesn't fit a slide's own look
+    e.preventDefault();
+    const t = dt.getData('text/plain');
+    if (t) document.execCommand('insertText', false, t.replace(/\r/g, ''));
+    return;
+  }
+  const img = [...dt.files].find(f => /^image\//.test(f.type));
+  if (img) { e.preventDefault(); deckImageFile(img); return; }
+  const j = dt.getData('application/x-floating-ink-el');
+  if (j) { e.preventDefault(); let el = null; try { el = normEl(JSON.parse(j), DK.deck.dir); } catch {} if (el) pasteEl(el); return; }
+  const t = dt.getData('text/plain');
+  if (t && t.trim()) { e.preventDefault(); addTextBox(t.trim()); }
+}
+
+/* --- pickers: layouts, shapes, colors, themes --- */
+function openLayoutPicker(anchor, mode) {
+  if (!DK.deck) return;
+  openPop(anchor, h('div', {},
+    h('div', { class: 'pop-t', text: mode === 'new' ? T('שקופית חדשה') : T('פריסה לשקופית הזאת') }),
+    h('div', { class: 'lay-grid' }, Object.keys(LAYOUTS).map(k => h('button', { class: 'lay-opt', onclick: () => { closePopover(); if (mode === 'new') addSlide(k); else setLayout(k); } },
+      miniSlide(makeSlide(k, DK.deck), DK.deck, 132, 'layout'), h('span', { text: T(LAYOUTS[k].n) }))))));
+}
+function openShapes(anchor) {
+  openPop(anchor, h('div', {}, h('div', { class: 'pop-t', text: T('צורות') }), h('div', { class: 'shape-grid' }, Object.entries(SHAPES).map(([k, s]) => {
+    const b = h('button', { class: 'shape-opt', title: T(s.n), 'aria-label': T(s.n), onclick: () => { closePopover(); addShape(k); } });
+    b.innerHTML = `<svg viewBox="0 0 24 20"><path d="${shapePath(k, 24, k === 'bubble' ? 16 : 20)}" fill="currentColor"/></svg>`;
+    return b;
+  }))));
+}
+function openDeckColors(anchor, what) {
+  const el = curEl(), s = curSlide();
+  if (!s || (what !== 'bg' && !el)) return;
+  const look = slideLook(DK.deck, s);
+  const pick = c => {
+    if (what === 'bg') return setSlideBg(c);
+    if (what === 'color') {
+      const hex = c === 'accent' ? look.accent : c;
+      if (DK.edit === el.id) { const tx = stageEl(el.id).querySelector('.tx'); tx.focus({ preventScroll: true }); document.execCommand('styleWithCSS', false, true); document.execCommand('foreColor', false, hex); return; }
+      return setElProp('color', hex);
+    }
+    setElProp(what, c);
+  };
+  const list = what === 'bg'
+    ? [[null, T('לפי ערכת הצבעים'), slideLook(DK.deck, { ...s, bg: null }).bg], ...PAGE_COLORS.map(([c, n]) => [c, n]), ['#16203a', T('כחול לילה')], ['#20392d', T('ירוק לוח')], ['#111111', T('שחור')]]
+    : [['accent', T('צבע הערכה'), look.accent], ...(what === 'color' ? [[look.title, T('כמו הכותרת')], [look.text, T('כמו הטקסט')]] : []), ...TEXT_COLORS, ...(what === 'color' ? [] : [['none', what === 'fill' ? T('בלי מילוי') : T('בלי קו')]])];
+  const grid = h('div', { class: 'sw-grid' }, list.map(([v, name, show]) => h('button', {
+    class: 'sw' + (v === 'none' ? ' none' : ''), style: v === 'none' ? {} : { background: show || v }, title: name, 'aria-label': name,
+    onclick: () => { closePopover(); pick(v === 'none' ? null : v); } })));
+  const custom = h('input', { type: 'color', value: '#2743d8', 'aria-label': T('צבע אחר') });
+  custom.addEventListener('change', () => { closePopover(); pick(custom.value); });
+  openPop(anchor, h('div', {}, h('div', { class: 'pop-t', text: { bg: T('צבע הרקע של השקופית'), color: T('צבע הטקסט'), fill: T('צבע המילוי'), line: T('צבע הקו') }[what] }), grid, h('label', { class: 'custom-c' }, custom, h('span', { text: T('צבע אחר…') }))));
+}
+function buildThemeGallery() {
+  const g = $('#themeGal');
+  for (const [k, t] of Object.entries(THEMES)) g.append(h('button', { class: 'theme-opt', 'data-cmd': 'theme', 'data-arg': k, title: T(t.n) }, themeMini(k, 68), h('span', { text: T(t.n) })));
+}
+
+/* --- show: the slides full screen. Next: the arrow toward the reading direction (← in Hebrew and Arabic),
+   ↓, Page Down, space, Enter, a click or the wheel. Back: the other arrow, ↑, Page Up. Esc ends --- */
+const SHOW = { on: false, i: 0, ov: null, fs: false, idle: 0, wheel: 0 };
+function startShow(from) {
+  if (!DK.deck || SHOW.on) return;
+  exitEdit(); select(null); closePopover();
+  const rtl = DK.deck.dir === 'rtl';
+  const btn = (ic, label, fn) => h('button', { type: 'button', title: label, 'aria-label': label, onclick: e => { e.stopPropagation(); fn(); } }, icon(ic));
+  const ov = h('div', { id: 'show', tabindex: '-1', role: 'dialog', 'aria-label': T('הצגה במסך מלא') },
+    h('div', { class: 'show-box' }),
+    h('div', { class: 'show-bar', dir: DK.deck.dir },
+      btn(rtl ? 'arrow_forward' : 'arrow_back', T('השקופית הקודמת'), () => showGo(-1)),
+      h('span', { class: 'cnt' }),
+      btn(rtl ? 'arrow_back' : 'arrow_forward', T('השקופית הבאה'), () => showGo(1)),
+      btn('close', T('יציאה מההצגה (Esc)'), () => endShow())));
+  document.body.append(ov);
+  Object.assign(SHOW, { on: true, i: clamp(from, 0, DK.deck.slides.length - 1), ov, fs: false });
+  ov.addEventListener('click', e => { if (!e.target.closest('.show-bar')) showGo(1); });
+  ov.addEventListener('wheel', e => { e.preventDefault(); const now = Date.now(); if (now - SHOW.wheel < 350 || !e.deltaY) return; SHOW.wheel = now; showGo(e.deltaY > 0 ? 1 : -1); }, { passive: false });
+  ov.addEventListener('mousemove', showWake);
+  let tx = null;
+  ov.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+  ov.addEventListener('touchend', e => { if (tx == null) return; const d = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(d) > 50) { e.preventDefault(); showGo((d > 0) === rtl ? 1 : -1); } });
+  drawShow(); showWake();
+  ov.focus();
+  if (ov.requestFullscreen) ov.requestFullscreen().then(() => { SHOW.fs = true; }).catch(() => {});
+}
+function drawShow() {
+  if (!SHOW.on) return;
+  const box = SHOW.ov.querySelector('.show-box'), n = DK.deck.slides.length;
+  box.textContent = '';
+  if (SHOW.i >= n) { Object.assign(box.style, { width: '', height: '' }); box.append(h('div', { class: 'show-end', text: T('סוף המצגת. לחיצה או Esc ליציאה.') })); }
+  else {
+    const k = Math.min(innerWidth / SW, innerHeight / SH), sl = renderSlide(DK.deck.slides[SHOW.i], DK.deck, 'show');
+    Object.assign(box.style, { width: SW * k + 'px', height: SH * k + 'px' });
+    sl.style.transform = `scale(${k})`;
+    box.append(sl);
+  }
+  SHOW.ov.querySelector('.cnt').textContent = `${fmt(Math.min(SHOW.i + 1, n))} / ${fmt(n)}`;
+}
+function showGo(d) {
+  const n = DK.deck.slides.length, j = SHOW.i + d;
+  if (j < 0) return;
+  if (j > n) { endShow(); return; }
+  SHOW.i = j; drawShow();
+}
+function showWake() {
+  if (!SHOW.ov) return;
+  SHOW.ov.classList.add('awake');
+  clearTimeout(SHOW.idle);
+  SHOW.idle = setTimeout(() => { if (SHOW.ov) SHOW.ov.classList.remove('awake'); }, 2200);
+}
+function endShow() {
+  if (!SHOW.on) return;
+  SHOW.on = false; clearTimeout(SHOW.idle);
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  if (SHOW.ov) SHOW.ov.remove();
+  SHOW.ov = null;
+  if (DK.deck) goSlide(Math.min(SHOW.i, DK.deck.slides.length - 1));   // back on the slide the show ended on, as in PowerPoint
+}
+function showKey(e) {
+  const rtl = DK.deck && DK.deck.dir === 'rtl', k = e.key;
+  const next = ['ArrowDown', 'PageDown', ' ', 'Enter', 'n', 'N', rtl ? 'ArrowLeft' : 'ArrowRight'], back = ['ArrowUp', 'PageUp', 'Backspace', 'p', 'P', rtl ? 'ArrowRight' : 'ArrowLeft'];
+  if (k === 'Escape') endShow();
+  else if (next.includes(k)) showGo(1);
+  else if (back.includes(k)) showGo(-1);
+  else if (k === 'Home') { SHOW.i = 0; drawShow(); }
+  else if (k === 'End') { SHOW.i = DK.deck.slides.length - 1; drawShow(); }
+  else if (k !== 'Tab') return;
+  e.preventDefault(); e.stopPropagation();
+}
+
+/* --- files: PowerPoint (.pptx), PDF and printing --- */
+/* a picture as it shows in its box: cropped to the box (cover) or letterboxed (contain), in a format PowerPoint opens */
+async function fitImg(el) {
+  let src = el.src;
+  if (!src.startsWith('data:')) src = await blobToDataURL(await (await fetch(src)).blob());
+  const img = await loadImg(src), iw = img.naturalWidth || 1, ih = img.naturalHeight || 1;
+  const mime = (/^data:(image\/[a-z+.-]+)/i.exec(src) || [])[1] || '', same = /^image\/(png|jpeg|gif)$/.test(mime), png = mime !== 'image/jpeg';
+  const crop = (sx, sy, sw, sh) => {
+    const k = Math.min(1, 1920 / sw), c = h('canvas', { width: Math.max(1, Math.round(sw * k)), height: Math.max(1, Math.round(sh * k)) }), x = c.getContext('2d');
+    if (!png) { x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); }
+    x.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    return c.toDataURL(png ? 'image/png' : 'image/jpeg', 0.9);
+  };
+  if (el.fit === 'contain') {
+    const k = Math.min(el.w / iw, el.h / ih), w = iw * k, hh = ih * k;
+    return { data: same ? src : crop(0, 0, iw, ih), x: el.x + (el.w - w) / 2, y: el.y + (el.h - hh) / 2, w, h: hh };
+  }
+  const k = Math.max(el.w / iw, el.h / ih), cw = el.w / k, ch = el.h / k;
+  const exact = Math.abs(cw - iw) < 2 && Math.abs(ch - ih) < 2;
+  return { data: exact && same ? src : crop((iw - cw) / 2, (ih - ch) / 2, cw, ch), x: el.x, y: el.y, w: el.w, h: el.h };
+}
+/* a text box's paragraphs as PowerPoint text runs, with every style read from the box as the browser draws it */
+function pptRuns(tx, box) {
+  const paras = [], out = [];
+  const walk = (node, level) => {
+    for (const c of node.children) {
+      if (c.tagName === 'UL' || c.tagName === 'OL') for (const li of c.children) {
+        if (li.tagName !== 'LI') continue;
+        paras.push({ el: li, list: c.tagName, level });
+        for (const sub of li.children) if (sub.tagName === 'UL' || sub.tagName === 'OL') walk({ children: [sub] }, level + 1);
+      } else paras.push({ el: c, list: null, level });
+    }
+  };
+  walk(tx, 0);
+  paras.forEach((p, pi) => {
+    const pcs = getComputedStyle(p.el), rtl = pcs.direction === 'rtl', ta = pcs.textAlign, text = p.el.textContent;
+    const align = ta === 'center' ? 'center' : ta === 'justify' ? 'justify' : ta === 'left' || (ta === 'start' && !rtl) || (ta === 'end' && rtl) ? 'left' : 'right';
+    const po = { align, rtlMode: rtl, lang: /[א-ת]/.test(text) ? 'he-IL' : /[ء-ي]/.test(text) ? 'ar-SA' : LOCALE };
+    const after = pxToPt(parseFloat(pcs.marginBottom) || 0);
+    if (after) po.paraSpaceAfter = after;
+    if (p.list) { po.bullet = p.list === 'OL' ? { type: 'number' } : true; if (p.level) po.indentLevel = p.level; }
+    const runs = [];
+    let soft = false;
+    const inline = n => {
+      for (const c of n.childNodes) {
+        if (c.nodeType === 3) {
+          const t = c.data.replace(/[\r\n\t]+/g, ' ').split(NBSP).join(' ');
+          if (!t) continue;
+          const cs = getComputedStyle(c.parentElement);
+          let deco = '';   // underline and strike aren't inherited: they come from the element that has them
+          for (let a = c.parentElement; a; a = a.parentElement) { deco += ' ' + getComputedStyle(a).textDecorationLine; if (a === box) break; }
+          const o = { ...po, bold: +cs.fontWeight >= 600, italic: cs.fontStyle === 'italic', color: (rgbHex(cs.color) || '000000').toUpperCase(), fontSize: pxToPt(parseFloat(cs.fontSize)), fontFace: firstFamily(cs.fontFamily) };
+          if (/underline/.test(deco)) o.underline = { style: 'sng' };
+          if (/line-through/.test(deco)) o.strike = 'sngStrike';
+          if (soft) o.softBreakBefore = true;
+          runs.push({ text: t, options: o });
+          soft = false;
+        } else if (c.nodeType === 1) {
+          if (c.tagName === 'BR') { soft = runs.length > 0; continue; }
+          if (c.tagName !== 'UL' && c.tagName !== 'OL') inline(c);   // a list inside an item is paragraphs of its own
+        }
+      }
+    };
+    inline(p.el);
+    if (!runs.length) runs.push({ text: '', options: { ...po } });
+    if (pi < paras.length - 1) runs[runs.length - 1].options.breakLine = true;
+    out.push(...runs);
+  });
+  return out;
+}
+/* two things PptxGenJS writes that PowerPoint doesn't take well, fixed in the file:
+   - a paragraph's properties again before each of its text runs: each paragraph keeps only the first;
+   - a code page on every font, Chinese for the one that draws Hebrew and Arabic. On a computer without the
+     theme's Google font, PowerPoint then draws Hebrew as empty boxes. Without it, it picks a font that has the letters */
+async function fixPptx(blob) {
+  const zip = await window.JSZip.loadAsync(blob);
+  for (const name of Object.keys(zip.files).filter(n => /^ppt\/slides\/slide\d+\.xml$/.test(n))) {
+    const x = await zip.file(name).async('string');
+    zip.file(name, x.replace(/<a:p>([\s\S]*?)<\/a:p>/g, (m, inner) => '<a:p>' + inner.replace(/<a:pPr\b[^>]*?(?:\/>|>[\s\S]*?<\/a:pPr>)/g, (pp, off) => off === 0 ? pp : '') + '</a:p>')
+      .replace(/(<a:(?:latin|ea|cs) typeface="[^"]*"(?: pitchFamily="\d+")?) charset="-?\d+"/g, '$1'));
+  }
+  return zip.generateAsync({ type: 'blob', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
+}
+async function buildPptx() {
+  await loadScript(LIB.pptx);
+  const P = window.PptxGenJS;
+  if (typeof P !== 'function' || !window.JSZip) throw new Error('lib');
+  const deck = DK.deck, rtl = deck.dir === 'rtl', IN = v => +(v / 96).toFixed(4), hex = c => c.slice(1).toUpperCase();
+  const pres = new P();
+  pres.layout = 'LAYOUT_16x9'; pres.rtlMode = rtl;
+  pres.title = displayTitle(S.cur.meta); pres.author = pres.company = 'Floating Ink';
+  const fonts = themeFonts(THEMES[deck.theme] || THEMES.ink);
+  pres.theme = { headFontFace: fonts[0], bodyFontFace: fonts[1] };
+  const host = h('div', { style: { position: 'fixed', left: '-12000px', top: '0', width: SW + 'px', height: SH + 'px' } });
+  document.body.append(host);
+  try {
+    for (const slide of deck.slides) {
+      const s = pres.addSlide(), look = slideLook(deck, slide);
+      s.background = { color: hex(look.bg) };
+      for (const d of look.deco) {
+        const c = hex(d.c === 'accent' ? look.accent : d.c), o = { x: IN(rtl ? SW - d.x - d.w : d.x), y: IN(d.y), w: IN(d.w), h: IN(d.h) };
+        if (d.lw) o.line = { color: c, width: pxToPt(d.lw) }; else o.fill = { color: c, transparency: d.a ? Math.round((1 - d.a) * 100) : 0 };
+        s.addShape(d.s, o);
+      }
+      host.textContent = '';
+      const node = renderSlide(slide, deck, 'export');
+      host.append(node);
+      for (const el of slide.els) {
+        const box = { x: IN(el.x), y: IN(el.y), w: IN(el.w), h: IN(el.h) };
+        if (el.t === 'shape') {
+          const o = { ...box }, fill = paint(el.fill, look), line = paint(el.line, look);
+          if (fill) o.fill = { color: hex(fill) };
+          if (line) o.line = { color: hex(line), width: 2.25 };
+          if (el.flip) o.flipH = true;
+          s.addShape(SHAPES[el.shape].ppt, o);
+        } else if (el.t === 'img' && el.src) {
+          const f = await fitImg(el);
+          s.addImage({ data: f.data.replace(/^data:/, ''), x: IN(f.x), y: IN(f.y), w: IN(f.w), h: IN(f.h) });
+        } else if (el.t === 'text') {
+          const n = node.querySelector(`[data-id="${el.id}"]`);
+          if (!n) continue;
+          const fill = paint(el.fill, look);
+          s.addText(pptRuns(n.querySelector('.tx'), n), { ...box, margin: [7.2, 7.2, 3.6, 3.6], valign: { t: 'top', m: 'middle', b: 'bottom' }[el.va] || 'top',
+            fontFace: elFont(el, look), fontSize: el.size, color: hex(elColor(el, look)), rtlMode: rtl, isTextBox: true, wrap: true, ...(fill ? { fill: { color: hex(fill) } } : {}) });
+        }
+      }
+    }
+    return await fixPptx(await pres.write({ outputType: 'blob' }));
+  } finally { host.remove(); }
+}
+async function buildDeckPdf() {
+  await Promise.all([loadScript(LIB.jspdf), loadScript(LIB.html2canvas)]);
+  const J = window.jspdf && window.jspdf.jsPDF, H2C = window.html2canvas;
+  if (!J || !H2C) throw new Error('lib');
+  const deck = DK.deck, host = h('div', { dir: deck.dir, style: { position: 'fixed', left: '-12000px', top: '0', width: SW + 'px', height: SH + 'px' } });
+  document.body.append(host);
+  try {
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    const pdf = new J({ orientation: 'landscape', unit: 'pt', format: [720, 405] });
+    for (const [i, slide] of deck.slides.entries()) {
+      const fitted = {};
+      for (const el of slide.els) if (el.t === 'img' && el.src) fitted[el.id] = await fitImg(el);   // the PDF tool can't crop pictures itself
+      host.textContent = '';
+      const node = renderSlide(slide, deck, 'export', fitted);
+      host.append(node);
+      await Promise.all([...node.querySelectorAll('img')].map(im => im.decode().catch(() => {})));
+      const c = await H2C(node, { scale: 2, backgroundColor: slideLook(deck, slide).bg, useCORS: true, logging: false });
+      if (i) pdf.addPage([720, 405], 'landscape');
+      pdf.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 720, 405);
+    }
+    return pdf.output('blob');
+  } finally { host.remove(); }
+}
+/* printing: every slide on a page of its own, the page the size of the slide */
+async function printDeck() {
+  const box = $('#deckPrint');
+  box.textContent = '';
+  for (const s of DK.deck.slides) box.append(h('div', { class: 'print-slide' }, renderSlide(s, DK.deck, 'show')));
+  await Promise.all([...box.querySelectorAll('img')].map(im => im.decode().catch(() => {})));
+  document.documentElement.classList.add('deck-print');
+  return () => { document.documentElement.classList.remove('deck-print'); box.textContent = ''; };
+}
+
+/* --- a new presentation: from the "New" dialog, or from Claude --- */
+const DECK_TPLS = [
+  { name: T('מצגת ריקה'), desc: T('שקופית פתיחה, וממשיכים משם'), slides: () => [['title']] },
+  { name: T('עבודה לבית הספר'), desc: T('פתיחה, מבוא, פרקים, סיכום ומקורות'), slides: () => [['title', T('שם העבודה'), T('שם התלמיד · כיתה')], ['content', T('מבוא')], ['content', T('פרק ראשון')], ['content', T('פרק שני')], ['image', T('תמונה חשובה')], ['content', T('סיכום@slide')], ['content', T('מקורות')]] },
+  { name: T('הצגת נושא'), desc: T('מה זה, עובדות, תמונה ושאלות'), slides: () => [['title', T('הנושא שלי')], ['content', T('מה זה?')], ['two', T('עובדות מעניינות')], ['image', T('ככה זה נראה')], ['section', T('שאלות?'), T('תודה שהקשבתם!')]] },
+];
+function deckFromTpl(t, theme, dir) {
+  const deck = { v: 1, theme, dir, slides: [] };
+  deck.slides = t.slides().map(([lay, title, sub]) => {
+    const s = makeSlide(lay, deck);
+    for (const [ph, v] of [['title', title], ['sub', sub]]) { const e = s.els.find(x => x.ph === ph); if (e && v) e.html = `<p>${esc(v)}</p>`; }
+    return s;
+  });
+  return deck;
+}
+/* slides the way an assistant describes them: layout, title, subtitle, text, column1, column2, caption (Markdown) */
+const LAYOUT_API = { title: 'title', content: 'content', two: 'two_columns', image: 'big_image', section: 'section', blank: 'blank' };
+const LAYOUT_IN = Object.fromEntries(Object.entries(LAYOUT_API).map(([k, v]) => [v, k]));
+const SPEC_ROLE = { title: 'title', subtitle: 'sub', text: 'body', column1: 'body', column2: 'body2', caption: 'cap' };
+const layoutOf = v => LAYOUT_IN[v] || (LAYOUTS[v] ? v : null);
+function slideFromSpec(sp, deck) {
+  sp = sp && typeof sp === 'object' ? sp : {};
+  const layout = layoutOf(sp.layout) || (sp.column1 || sp.column2 ? 'two' : sp.caption ? 'image' : sp.text ? 'content' : 'title');
+  const s = makeSlide(layout, deck);
+  fillSlide(s, sp, deck);
+  return s;
+}
+function fillSlide(s, sp, deck) {
+  for (const [k, role] of Object.entries(SPEC_ROLE)) {
+    if (sp[k] == null) continue;
+    const md = String(sp[k]).trim();
+    const html = ['title', 'sub', 'cap'].includes(role) ? (md ? `<p>${mdInline(md.replace(/\s*\n+\s*/g, ' '))}</p>` : '') : mdToHtml(md);
+    let el = s.els.find(e => e.t === 'text' && e.ph === role) || (role === 'body' && s.els.find(e => e.t === 'text' && e.ph === 'sub'));
+    if (!el) {   // text for which this layout has no place gets a box of its own
+      if (!md) continue;
+      el = { id: uid(), t: 'text', x: 60, y: 136, w: 840, h: 372, size: 20, al: deck.dir === 'rtl' ? 'r' : 'l', va: 't' };
+      s.els.push(el);
+    }
+    el.html = slideHtml(html);
+  }
+}
+function deckForAI() {
+  const md = html => { const b = document.createElement('div'); b.innerHTML = html || ''; return htmlToMd(b).trim(); };
+  return DK.deck.slides.map((s, i) => {
+    const o = { number: i + 1, layout: LAYOUT_API[s.layout] || s.layout }, more = [];
+    for (const e of s.els) {
+      if (e.t === 'text') {
+        const t = md(e.html); if (!t) continue;
+        const key = e.ph === 'body' && s.layout === 'two' ? 'column1' : { title: 'title', sub: 'subtitle', body: 'text', body2: 'column2', cap: 'caption' }[e.ph];
+        if (key && !o[key]) o[key] = t; else more.push(t);
+      } else if (e.t === 'img' && e.src) o.pictures = (o.pictures || 0) + 1;
+      else if (e.t === 'shape') o.shapes = (o.shapes || 0) + 1;
+    }
+    if (more.length) o.other_text = more;
+    return o;
+  });
+}
+function deckReplace(find, repl) {
+  const next = clone(DK.deck);
+  let total = 0;
+  for (const s of next.slides) for (const e of s.els) {
+    if (e.t !== 'text' || !e.html) continue;
+    const box = document.createElement('div'); box.innerHTML = e.html;
+    const idx = buildIndex(box), hits = [];
+    let from = 0, p;
+    while ((p = idx.text.indexOf(find, from)) >= 0) { if (isWordEdge(idx.text, p, p + find.length)) hits.push(p); from = p + find.length; }
+    if (!hits.length) continue;
+    for (const q of hits.reverse()) { const r = rangeFromIndex(idx, q, q + find.length); r.deleteContents(); r.insertNode(document.createTextNode(repl)); }
+    box.normalize(); e.html = slideHtml(box.innerHTML); total += hits.length;
+  }
+  if (total) { exitEdit(); dEdit(() => { DK.deck = next; }); deckRender(); }
+  return total;
+}
+/* Claude's new presentation comes in one slide at a time, so the user watches it being built */
+async function revealDeck(id) {
+  const n = DK.deck ? DK.deck.slides.length : 0;
+  for (let i = 1; i <= n; i++) {
+    if (!S.cur || S.cur.id !== id || !DK.deck) return;
+    DK.reveal = i; DK.idx = i - 1;
+    renderStage(); renderStrip();
+    const t = $(`#strip .thumb[data-i="${i - 1}"]`); if (t) { t.classList.add('new'); t.scrollIntoView({ block: 'nearest' }); }
+    await sleep(280);
+  }
+  DK.reveal = 0;
+  if (S.cur && S.cur.id === id && DK.deck) { DK.idx = 0; deckRender(); $('#strip').scrollTop = 0; }
+}
+
+/* =========================================================
    commands & wiring
    ========================================================= */
 const CMD = {
@@ -3719,13 +5185,26 @@ const CMD = {
   ai: a => runAI(a), aiPanel: () => openPanel('ai'), closePanel: () => closePanel(),
   tbl: a => tableOp(a), cellColor: (a, b) => openCellColors(b),
   imgSize: a => imgSize(a), imgAlign: a => imgAlign(a), imgDelete: () => removeSelectedImg(),
+  // presentations
+  dUndo: () => dUndo(), dRedo: () => dRedo(),
+  newSlide: () => addSlide(), newSlidePick: (a, b) => openLayoutPicker(b, 'new'), layout: (a, b) => openLayoutPicker(b, 'change'),
+  dupSlide: () => dupSlide(DK.idx), delSlide: () => delSlide(DK.idx),
+  dGrow: () => stepDeckFont(1), dShrink: () => stepDeckFont(-1),
+  dBold: () => deckStyle('b'), dItalic: () => deckStyle('i'), dUnderline: () => deckStyle('u'),
+  dColor: (a, b) => openDeckColors(b, 'color'), dFill: (a, b) => openDeckColors(b, 'fill'), dLine: (a, b) => openDeckColors(b, 'line'),
+  dList: a => deckList(a), dAlign: a => setElProp('al', a),
+  dFront: () => zOrder(1), dBack: () => zOrder(-1), dDel: () => delEl(),
+  addTextBox: () => addTextBox(), addPicture: () => pickSlideImage(null), shapes: (a, b) => openShapes(b),
+  theme: a => setTheme(a), slideBg: (a, b) => openDeckColors(b, 'bg'),
+  showStart: () => startShow(0), showHere: () => startShow(DK.idx),
 };
 const FREE_CMDS = new Set(['newDoc', 'openDrawer', 'closeDrawer', 'importFile', 'restoreBackup', 'backup', 'trash', 'focus', 'zoomIn', 'zoomOut', 'zoomReset', 'closePanel']);
 function selectTab(t) {
   S.tab = t;
   for (const b of $$('#tabs [data-tab]')) b.setAttribute('aria-selected', String(b.dataset.tab === t));
   for (const p of $$('#ribbon .panel')) p.hidden = p.dataset.panel !== t;
-  if (t !== 'table') { PREFS.tab = t; savePrefs(); }
+  if (DECK_TABS.includes(t)) { PREFS.dtab = t; savePrefs(); }   // a presentation's tabs, remembered apart from a document's
+  else if (t !== 'table') { PREFS.tab = t; savePrefs(); }
 }
 const scheduleUI = rafOnce(updateUI);
 function updateUI() {
@@ -3772,19 +5251,22 @@ function onEditorKey(e) {
   }
 }
 function onGlobalKey(e) {
+  if (SHOW.on) { showKey(e); return; }   // the show takes every key
   if (e.key === 'Escape') {
     if (MODALS.length) { e.preventDefault(); e.stopPropagation(); MODALS[MODALS.length - 1].close(null); return; }
     if (closePopover()) { e.preventDefault(); return; }
+    if (deckOpen() && (DK.edit || DK.sel)) { e.preventDefault(); if (DK.edit) exitEdit(); else select(null); return; }   // writing, then selecting, one step at a time
     if (painter) { painter = null; $('#btnPainter').classList.remove('on'); return; }
     if (selectedImg) { deselectImg(); return; }
     if ($('#app').classList.contains('focus')) { toggleFocus(false); return; }
-    if (S.panel && $('#side').contains(document.activeElement)) { closePanel(); restoreSel(); }
+    if (S.panel && $('#side').contains(document.activeElement)) { closePanel(); if (!deckOpen()) restoreSel(); }
     return;
   }
+  if (deckOpen() && deckKey(e)) return;
   if (!(e.ctrlKey || e.metaKey)) return;
   const c = e.code;
   if (c === 'KeyS' && !e.altKey) { e.preventDefault(); if (linkedHere()) saveToFile(); else if (S.cur) saveNow(true); return; }
-  if (MODALS.length || !S.cur) return;
+  if (MODALS.length || !S.cur || deckOpen()) return;   // the rest belong to the document editor
   if (c === 'KeyF' && !e.altKey && !e.shiftKey) { e.preventDefault(); openPanel('find'); return; }
   if (c === 'KeyH' && !e.altKey && !e.shiftKey) { e.preventDefault(); openPanel('find', { replace: true }); return; }
   if (document.activeElement !== ed) return;
@@ -3849,7 +5331,7 @@ function wire() {
   $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; selectTab(b.dataset.tab); if (b.dataset.tab === 'ai') openPanel('ai'); });
   document.addEventListener('mousedown', e => {
     if (e.target.closest('input,select,textarea,label')) return;
-    if (e.target.closest('[data-cmd],.tab,.sym,.sw,.pc,.mi,.style-chip,.paper-btn,.ai-act,.title-opt,.tgrid,.split')) e.preventDefault();
+    if (e.target.closest('[data-cmd],.tab,.sym,.sw,.pc,.mi,.style-chip,.paper-btn,.ai-act,.title-opt,.tgrid,.split,.lay-opt,.shape-opt')) e.preventDefault();
   });
   document.addEventListener('click', e => {
     const b = e.target.closest('[data-cmd]');
@@ -3897,8 +5379,34 @@ function wire() {
     e.preventDefault();
     const f = e.dataTransfer.files[0];
     if (/\.(docx|txt|md|markdown|html?)$/i.test(f.name)) importFile(f);
-    else if (/^image\//.test(f.type) && S.cur) insertImageFile(f);
+    else if (/^image\//.test(f.type) && S.cur) { if (deckOpen()) deckImageFile(f); else insertImageFile(f); }
   });
+  // presentations
+  const sb = $('#stageBox');
+  sb.addEventListener('pointerdown', onStageDown);
+  sb.addEventListener('dblclick', onStageDbl);
+  sb.addEventListener('contextmenu', onStageMenu);
+  sb.addEventListener('input', e => { if (e.target.classList && e.target.classList.contains('tx')) onTxInput(e.target); });
+  sb.addEventListener('keyup', () => { if (DK.edit) updateDeckUI(); });
+  sb.addEventListener('drop', e => {   // a picture dropped on the slide lands where it's dropped, or replaces the picture under it
+    const f = [...((e.dataTransfer && e.dataTransfer.files) || [])].find(x => /^image\//.test(x.type));
+    if (!f || !deckOpen()) return;
+    e.preventDefault();
+    const n = e.target.closest('.el-img');
+    DK.imgFor = n ? n.dataset.id : null;
+    deckImageFile(f, n ? null : stagePoint(e));
+  });
+  $('#stage').addEventListener('pointerdown', e => { if (e.target === e.currentTarget && DK.deck) { exitEdit(); select(null); } });
+  $('#strip').addEventListener('pointerdown', onStripDown);
+  $('#strip').addEventListener('contextmenu', onStripMenu);
+  $('#dFont').addEventListener('change', e => setElProp('font', e.target.value));
+  $('#dSize').addEventListener('change', e => setElProp('size', +e.target.value));
+  document.addEventListener('copy', e => onDeckCopy(e, false));
+  document.addEventListener('cut', e => onDeckCopy(e, true));
+  document.addEventListener('paste', onDeckPaste);
+  document.addEventListener('fullscreenchange', () => { if (SHOW.on && SHOW.fs && !document.fullscreenElement) endShow(); });
+  addEventListener('resize', () => { if (SHOW.on) drawShow(); });
+  if (window.ResizeObserver) { new ResizeObserver(() => fitStage()).observe($('#stage')); new ResizeObserver(() => thumbScale()).observe($('#strip')); }
   desk.addEventListener('scroll', () => { if (selectedImg) placeImgBar(); }, { passive: true });
   addEventListener('resize', () => { scheduleGuides(); if (selectedImg) placeImgBar(); closePopover(); });
   if (window.ResizeObserver) { new ResizeObserver(() => scheduleGuides()).observe(ed); new ResizeObserver(() => applyZoom()).observe(desk); }
@@ -3914,7 +5422,7 @@ function wire() {
   $('#aiSend').addEventListener('click', sendCustom);
   $('#aiPrompt').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendCustom(); } });
   $('#aiStop').addEventListener('click', () => { if (aiCtl) aiCtl.abort(); });
-  $('#fileImage').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (f) await insertImageFile(f); });
+  $('#fileImage').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (f) await (deckOpen() ? deckImageFile(f) : insertImageFile(f)); });
   $('#fileImport').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) importFile(f); });
   $('#fileBackup').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) restoreBackup(f); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && S.cur && !S.cur.isSample && S.editVer !== S.savedVer) { backupLocal(); saveNow(); } });
@@ -4005,6 +5513,9 @@ async function boot() {
   for (const s of SIZES) sizeSel.append(h('option', { value: s, text: s }));
   for (const [c, n] of PAGE_COLORS) $('#pageColors').append(h('button', { class: 'pc', style: { background: c }, title: n, 'aria-label': T('צבע דף: {0}', n), 'data-cmd': 'pageColor', 'data-arg': c }));
   for (const [k, d] of Object.entries(AI)) $('#aiGrid').append(h('button', { class: 'ai-act', onclick: () => runAI(k) }, icon(d.i), d.t));
+  for (const f of FONTS) $('#dFont').append(h('option', { value: f, text: f, style: { fontFamily: `"${f}"` } }));
+  for (const s of DSIZES) $('#dSize').append(h('option', { value: s, text: s }));
+  buildThemeGallery();
   wire();
   selectTab(PREFS.tab && PREFS.tab !== 'table' ? PREFS.tab : 'home');
   setZoom(PREFS.zoom || 100);

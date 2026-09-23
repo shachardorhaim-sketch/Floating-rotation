@@ -2,8 +2,8 @@
   "manifest_version": "0.3",
   "name": "floating-ink",
   "display_name": "Floating Ink",
-  "version": "1.3.1",
-  "description": "Work with Claude inside Floating Ink, the word processor from floatingrotations.com: Claude reads, writes and edits your documents while you watch.",
+  "version": "1.4.0",
+  "description": "Work with Claude inside Floating Ink, the word processor from floatingrotations.com: Claude reads, writes and edits your documents, and builds presentations, while you watch.",
   "long_description": "Open Floating Ink (https://floatingrotations.com/ink/), click the robot button at the top and turn on \"Connect AI\". Then ask Claude to write, fix or summarize your documents. Every change shows up live and can be undone with Ctrl+Z. The documents stay in your browser; Claude only sees what it reads through these tools.",
   "author": { "name": "Floating rotation", "url": "https://floatingrotations.com" },
   "homepage": "https://floatingrotations.com/ink/",
@@ -14,8 +14,10 @@
     "mcp_config": { "command": "node", "args": ["${__dirname}/server/index.js"] }
   },
   "tools": [
-    { "name": "list_documents", "description": "List the documents in Floating Ink" },
-    { "name": "read_document", "description": "Read a document, and the text selected in it" },
+    { "name": "list_documents", "description": "List the documents and presentations in Floating Ink" },
+    { "name": "read_document", "description": "Read a document, and the text selected in it, or a presentation" },
+    { "name": "create_presentation", "description": "Build a new presentation while you watch" },
+    { "name": "edit_presentation", "description": "Add, change, delete or move slides, or change the colors" },
     { "name": "create_document", "description": "Create a new document and open it" },
     { "name": "write_in_document", "description": "Add text to a document, or replace the selected text" },
     { "name": "replace_text", "description": "Replace a word or phrase everywhere in a document" },
