@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.3.0';
+const VERSION = '1.3.1';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -103,24 +103,16 @@ async function sendToApp(tool, args, client) {
 /* ---------- the user's messages, and the assistants listening for them ----------
    An assistant that calls wait_for_message stays here until the user writes in Floating Ink's chat panel,
    so it answers straight away instead of hearing about the message only later. */
-const PROC = crypto.randomUUID();     // this copy of the program: each one is given every message once
-let msgSeq = 0;
-const msgs = [];                      // { seq, text, t } - what the user wrote, newest last
-const cursors = new Map();            // proc -> the last seq that copy was given
-const waiters = new Set();            // { proc, resolve, timer }
+const msgs = [];                      // { text, t, taken } - what the user wrote, newest last
+const waiters = new Set();            // { resolve, timer }, in the order they started waiting
 const CANCELLED = Symbol('cancelled');
 const tellApp = () => { if (app) app.write('event: waiting\ndata: ' + JSON.stringify({ n: waiters.size }) + '\n\n'); };
 
-function cursorFor(proc) {
-  if (!cursors.has(proc)) {                              // the first time: also what was written in the last two minutes
-    const seen = msgs.filter(m => Date.now() - m.t > 120000);
-    cursors.set(proc, seen.length ? seen[seen.length - 1].seq : 0);
-  }
-  return cursors.get(proc);
-}
-function freshFor(proc) {
-  const fresh = msgs.filter(m => m.seq > cursorFor(proc));
-  if (fresh.length) cursors.set(proc, fresh[fresh.length - 1].seq);
+/* a message belongs to whoever picks it up first, so one message gets one answer even when
+   two assistants are connected */
+function takeMessages() {
+  const fresh = msgs.filter(m => !m.taken);
+  for (const m of fresh) m.taken = true;
   return fresh.map(m => ({ from: 'the user', text: m.text, time: new Date(m.t).toISOString() }));
 }
 function endWait(w, result) {
@@ -130,16 +122,17 @@ function endWait(w, result) {
   w.resolve(result);
 }
 function newMessage(text) {
-  msgs.push({ seq: ++msgSeq, text, t: Date.now() });
+  msgs.push({ text, t: Date.now(), taken: false });
   if (msgs.length > 200) msgs.shift();
-  for (const w of [...waiters]) { const fresh = freshFor(w.proc); if (fresh.length) endWait(w, fresh); }
+  const first = waiters.values().next().value;           // the one that has been waiting longest
+  if (first) endWait(first, takeMessages());
 }
-function hubWait(args, proc, hooks) {
+function hubWait(args, hooks) {
   const secs = Math.min(Math.max(Number(args && args.seconds) || 600, 5), 1800);   // long on purpose: waiting should cost almost nothing
-  const already = freshFor(proc);                        // a message that arrived while it was busy working
+  const already = takeMessages();                        // a message that arrived while it was busy working
   if (already.length) return Promise.resolve(already);
   return new Promise(resolve => {
-    const w = { proc, resolve };
+    const w = { resolve };
     w.timer = setTimeout(() => endWait(w, []), secs * 1000);
     waiters.add(w);
     if (hooks) hooks.cancel = () => endWait(w, CANCELLED);
@@ -202,7 +195,7 @@ const server = http.createServer(async (req, res) => {
       const r = await readBody(req);
       const hooks = {};                     // the other copy hung up: stop waiting, and leave the message for it
       res.on('close', () => { if (!res.writableEnded && hooks.cancel) hooks.cancel(); });
-      const out = await hubCall(r.tool, r.args, r.client, hooks, r.proc || 'unknown');
+      const out = await hubCall(r.tool, r.args, r.client, hooks);
       if (out === CANCELLED) return;
       res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ ok: true, ...out }));
     } catch (e) {
@@ -228,7 +221,7 @@ function becomeHub() {
 /* a copy that isn't the hub passes the call on; if the hub is gone, it takes its place */
 function postToHub(tool, args, client, hooks) {
   return new Promise((resolve, reject) => {
-    const body = JSON.stringify({ tool, args, client, proc: PROC });
+    const body = JSON.stringify({ tool, args, client });
     const req = http.request({ host: '127.0.0.1', port: PORT, path: '/call', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, res => {
       let data = '';
       res.setEncoding('utf8');
@@ -250,12 +243,12 @@ async function callApp(tool, args, client, hooks) {
 }
 /* in the hub: run the call, and hand back whatever the user wrote that this copy has not been given yet,
    so an assistant that is working here notices the message even when it is not listening for one */
-async function hubCall(tool, args, client, hooks, proc = PROC) {
+async function hubCall(tool, args, client, hooks) {
   if (tool === 'wait_for_message') {
-    const result = await hubWait(args, proc, hooks);
+    const result = await hubWait(args, hooks);
     return result === CANCELLED ? CANCELLED : { result, pending: [] };
   }
-  return { result: await sendToApp(tool, args, client), pending: freshFor(proc) };
+  return { result: await sendToApp(tool, args, client), pending: takeMessages() };
 }
 
 /* ---------- MCP over stdio ---------- */
