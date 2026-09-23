@@ -106,7 +106,8 @@ GAMES.forEach(g => {
 
 // פתיחת משחק חיצוני (של רובין) — נפתח ישר בלשונית חדשה
 function openExternal(g) {
-  window.open(g.url, '_blank');
+  // noopener: בלי זה הדף החיצוני מקבל גישה ל-window.opener ויכול להחליף את הלשונית שלנו
+  window.open(g.url, '_blank', 'noopener');
 }
 
 // ============================================================
