@@ -268,7 +268,7 @@
     const LOCK_DELAY = 500;     // מ"ש עד שחלק ננעל אחרי שנוגע בקרקע
     const holdStops = [];       // עצירת טיימרים של כפתורי מגע
 
-    let highScore = parseInt(localStorage.getItem('tetris3d_high') || '0');
+    let highScore = 0; try{ highScore = parseInt(localStorage.getItem('tetris3d_high') || '0'); }catch(e){}   // אחסון חסום לא ישבור את המשחק
     elHigh.textContent = highScore;
 
     // ---- אתחול ----
@@ -305,7 +305,7 @@
         gameOver = true;
         if (score > highScore) {
           highScore = score;
-          localStorage.setItem('tetris3d_high', highScore);
+          try{ localStorage.setItem('tetris3d_high', highScore); }catch(e){}   // בלי זה מסך "המשחק נגמר" לא מופיע
           elHigh.textContent = highScore;
         }
         elFinal.textContent = TT('final') + score;
@@ -498,7 +498,7 @@
       const saved = currentPiece, savedX = currentX, savedY = currentY;
       currentPiece = rotated;
       // "בעיטת קיר" — אם הסיבוב מתנגש, מנסים להזיז את החלק קצת כדי שיצליח
-      const kicks = [[0,0],[1,0],[-1,0],[2,0],[-2,0],[0,-1],[1,-1],[-1,-1]];
+      const kicks = [[0,0],[1,0],[-1,0],[2,0],[-2,0],[0,-1],[1,-1],[-1,-1],[-3,0]];   // [-3,0] — קו אנכי צמוד לקיר הימני
       let ok = false;
       for (const [kx, ky] of kicks) {
         if (!collides(kx, ky, rotated)) { currentX += kx; currentY += ky; ok = true; break; }
@@ -520,14 +520,14 @@
       if (!started || gameOver) return;
       paused = !paused;
       pauseOverlay.style.display = paused ? 'flex' : 'none';
-      if (!paused) { lastTime = 0; rafId = requestAnimationFrame(loop); }
+      if (!paused) { lastTime = 0; }   // הלולאה ממשיכה לרוץ גם בהשהיה — לא מפעילים לולאה נוספת
     }
     function canPlay() { return alive && started && !gameOver && !paused; }
 
     // ---- מקלדת ----
     function onKey(e) {
       if (!started) return;
-      if (e.key === 'p' || e.key === 'P') { if (!e.repeat) togglePause(); e.preventDefault(); return; }
+      if (e.key === 'p' || e.key === 'P' || e.code === 'KeyP') { if (!e.repeat) togglePause(); e.preventDefault(); return; }   // KeyP — גם במקלדת עברית (פ)
       if (gameOver || paused) return;
       let handled = true;
       if (e.key === 'ArrowLeft') moveLeft();
@@ -548,6 +548,7 @@
       holdStops.push(stop);
       const start = (e) => {
         e.preventDefault();
+        stop();   // אצבע שנייה על אותו כפתור — עוצרים את הטיימר הקודם כדי שלא יישאר רץ
         fn(); container.focus();
         if (repeat) { delayT = setTimeout(() => { repT = setInterval(fn, 55); }, 170); }
       };
