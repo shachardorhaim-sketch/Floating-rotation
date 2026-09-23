@@ -319,9 +319,18 @@ function mountDino(root) {
     ctx.textAlign = 'left';
   }
 
-  function loop(){
+  // כל הקצבים במשחק (כבידה, מהירות, ניקוד, מכשולים) מכוונים לצעד אחד בכל פריים של מסך 60Hz.
+  // במסכי 120/144Hz ה-rAF רץ יותר מהר וכל המשחק היה רץ פי 2 — אז מתקדמים רק בקצב של 60 בשנייה
+  const STEP = 1000/60;
+  let lastT = null, acc = 0;
+  function loop(now){
     if (!running) return;
     raf = requestAnimationFrame(loop);
+    if (now === undefined) now = performance.now();
+    if (lastT !== null) acc = Math.min(acc + (now - lastT), STEP*2);
+    lastT = now;
+    if (acc < STEP - 2) return;   // המרווח הקטן בולע רעידות בזמני הפריים ב-60Hz
+    acc -= STEP;
     frame++;
     ctx.save();
     if (shake > 0) { ctx.translate((Math.random()-.5)*shake, (Math.random()-.5)*shake); shake -= 0.6; }
