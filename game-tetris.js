@@ -117,6 +117,7 @@
     gap: 8px;
     width: min(340px, 92vw);
     margin-top: 16px;
+    direction: ltr;   /* כמו בכל שלט: ◀ תמיד משמאל. בעברית ובערבית החצים התהפכו וכל אחד הצביע החוצה */
   }
   .tetris-tbtn {
     background: rgba(255,255,255,0.07);
@@ -133,7 +134,7 @@
     transition: background 0.1s, transform 0.1s;
   }
   .tetris-tbtn:active { background: rgba(168,85,247,0.4); transform: scale(0.94); }
-  .tetris-tbtn.wide { grid-column: span 5; font-size: 15px; font-weight: 600; padding: 12px 0; }
+  .tetris-tbtn.wide { grid-column: span 5; font-size: 15px; font-weight: 600; padding: 12px 0; unicode-bidi: plaintext; }
 
   /* ----- טלפון: הניקוד, הלוח והכפתורים נכנסים יחד במסך אחד ----- */
   @media (max-width: 600px) {
