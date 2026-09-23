@@ -13,7 +13,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: var(--ink); font-family: Heebo, system-ui, sans-serif; color: var(--cream); }
 button { font: inherit; color: inherit; }
-#game-shell { position: relative; width: 100vw; height: 100dvh; overflow: hidden; background: #101411; direction: rtl; }
+#game-shell { position: relative; width: 100vw; height: 100vh; height: 100dvh; overflow: hidden; background: #101411; direction: rtl; } /* 100vh קודם: דפדפן בלי dvh (Safari לפני 15.4) היה מכווץ את המשחק לגובה 0 */
 #game { position: absolute; inset: 0; width: 100%; height: 100%; cursor: none; }
 .hidden { display: none !important; }
 .fullscreen-btn { position: absolute; z-index: 50; left: 22px; top: 20px; height: 42px; border: 1px solid rgba(255,255,255,.2); background: rgba(8,10,9,.78); color: #dedbd1; padding: 0 13px; display: flex; align-items: center; gap: 8px; cursor: pointer; backdrop-filter: blur(6px); direction: rtl; transition: .18s; }
@@ -218,7 +218,7 @@ body.lang-en .player-welcome { border-right:0; border-left:2px solid var(--acid)
 body.lang-en .delete-profile-btn { text-align:left; }
 body.lang-en .controls-hint { direction:ltr; }
 body.lang-en .upgrade,body.lang-en .weapon-choice h3,body.lang-en .weapon-choice .weapon-sub { text-align:left; direction:ltr; }
-body.lang-en .weapon-stats,body.lang-en .mission-block,body.lang-en .weapon-meta { direction:ltr; }
+body.lang-en .weapon-stats,body.lang-en .mission-block,body.lang-en .weapon-meta,body.lang-en .starter-choice b { direction:ltr; }
 .end-card { max-width: 540px; text-align: center; }
 .end-card h2 { font-size: 54px; margin: 4px 0; }
 .danger-label { color: var(--danger); font-weight: 900; letter-spacing: .2em; }
@@ -268,6 +268,7 @@ body.mode-mobile #game { cursor: default; }
 body.mode-desktop #mobile-weapon-bar { display:none !important; }
 body.mode-mobile #mobile-weapon-bar.playing { display:flex !important; }
 body.mode-mobile #weapon-inventory { display:none !important; }
+body.mode-mobile.game-running .fullscreen-btn { top:20px; left:72px; }
 
 @media (max-width: 520px) {
   h1 { font-size:76px; }
@@ -285,6 +286,6 @@ body.mode-mobile #weapon-inventory { display:none !important; }
   .fullscreen-btn b { display: none; }
   .settings-btn { left:62px; top:12px; }
   body.game-running:not(.is-fullscreen) .fullscreen-btn,
-  body.game-running.is-fullscreen .fullscreen-btn { top: 72px; }
+  body.game-running.is-fullscreen .fullscreen-btn { top: 20px; left: 12px; }
   .side-notification { right:12px; top:auto; bottom:238px; min-width:165px; }
 }
