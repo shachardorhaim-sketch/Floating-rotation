@@ -40,8 +40,11 @@
   var originals = new Map();
   var running = false, aborted = false, done = 0, total = 0, statusText = '';
   var observer = null;
+  // הכיוון של האתר עצמו (למשל dir="rtl"), כדי ש"החזר מקור" יחזיר בדיוק אותו
+  var pageDir = document.documentElement.getAttribute('dir');
 
-  function hasLetters(s) { return /[A-Za-zÀ-ÿͰ-ϿЀ-ӿ֐-׿؀-ۿ぀-ヿ一-鿿]/.test(s); }
+  // גם אותיות הודיות, תאילנדיות, קוריאניות, ארמניות וגאורגיות, אחרת באתרים כאלה "לא נמצא טקסט"
+  function hasLetters(s) { return /[A-Za-zÀ-ÿͰ-ϿЀ-ӿ֐-׿؀-ۿ぀-ヿ一-鿿\u0530-\u058F\u0900-\u0DFF\u0E00-\u0EFF\u10A0-\u10FF\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF]/.test(s); }
 
   function skippable(n) {
     var p = n.parentElement;
@@ -86,7 +89,7 @@
     if (encodeURIComponent(joined).length > MAX_ENC && lines.length > 1) {
       var mid = Math.ceil(lines.length / 2);
       return translateLines(lines.slice(0, mid)).then(function (a) {
-        return translateLines(lines.slice(mid)).then(function (b) { return a.concat(b); });
+        return translateLines(lines.slice(mid)).then(function (b) { return a && b ? a.concat(b) : null; });
       });
     }
     return gtx(joined).then(function (whole) {
@@ -187,7 +190,8 @@
     if (observer) { observer.disconnect(); observer = null; }
     originals.forEach(function (v, n) { try { n.nodeValue = v; } catch (e) {} });
     originals.clear();
-    document.documentElement.removeAttribute('dir');
+    if (pageDir == null) document.documentElement.removeAttribute('dir');
+    else document.documentElement.setAttribute('dir', pageDir);
     done = 0; total = 0; statusText = '';
     paint();
   }

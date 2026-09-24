@@ -17,6 +17,7 @@
       chapters:'השלבים', dragMe:'⇱ גרור אותי לשורת הסימניות', copyMe:'📋 העתק אותי',
       copied:'הועתק ✓', copyManual:'סמן הכל (Ctrl+A) והעתק (Ctrl+C)',
       doIt:'עשה את זה עכשיו — הכפתור אמיתי:', bmName:'תרגם',
+      builtBy:'נבנה על ידי שחר דור-חיים ורובין שמואלי',
       n1:'היי. אני המתרגם. אני יושב בשורת הסימניות של הדפדפן, ובלחיצה אחת מתרגם כל אתר שאתה נמצא בו. בוא נחבר אותי — זה לוקח פחות מדקה.',
       n2:'זו הבעיה הכי נפוצה: לרוב האנשים שורת הסימניות מוסתרת. רואה? מתחת לשורת הכתובת אין כלום. אין לי איפה לשבת.',
       n3:'לחץ Ctrl + Shift + B. במק: Cmd + Shift + B. זה מדליק את שורת הסימניות.',
@@ -35,6 +36,7 @@
       chapters:'Steps', dragMe:'⇱ Drag me to the bookmarks bar', copyMe:'📋 Copy me',
       copied:'Copied ✓', copyManual:'Select all (Ctrl+A) and copy (Ctrl+C)',
       doIt:'Do it right now — this button is real:', bmName:'Translate',
+      builtBy:'Built by Shachar Dor-Haim & Robin Shmueli',
       n1:'Hi. I am the translator. I live in your browser bookmarks bar, and with one click I translate whatever site you are on. Let us connect me — it takes under a minute.',
       n2:'This is the most common problem: for most people the bookmarks bar is hidden. See? There is nothing under the address bar. I have nowhere to sit.',
       n3:'Press Ctrl + Shift + B. On Mac: Cmd + Shift + B. That turns the bookmarks bar on.',
@@ -53,6 +55,7 @@
       chapters:'الخطوات', dragMe:'⇱ اسحبني إلى شريط المفضلة', copyMe:'📋 انسخني',
       copied:'تم النسخ ✓', copyManual:'حدّد الكل (Ctrl+A) وانسخ (Ctrl+C)',
       doIt:'جرّب الآن — هذا الزر حقيقي:', bmName:'ترجم',
+      builtBy:'بُني بواسطة شاحار دور-حاييم وروبين شموئيلي',
       n1:'مرحباً. أنا المترجم. أسكن في شريط المفضلة، وبضغطة واحدة أترجم أي موقع تتصفحه. لنوصلني — الأمر يستغرق أقل من دقيقة.',
       n2:'هذه أكثر مشكلة شيوعاً: عند معظم الناس شريط المفضلة مخفي. أترى؟ لا يوجد شيء تحت شريط العنوان. ليس لي مكان.',
       n3:'اضغط Ctrl + Shift + B. على ماك: Cmd + Shift + B. هذا يفعّل شريط المفضلة.',
@@ -71,6 +74,7 @@
       chapters:'步骤', dragMe:'⇱ 把我拖到书签栏', copyMe:'📋 复制我',
       copied:'已复制 ✓', copyManual:'全选(Ctrl+A)并复制(Ctrl+C)',
       doIt:'现在就试——这个按钮是真的:', bmName:'翻译',
+      builtBy:'由 Shachar Dor-Haim 和 Robin Shmueli 制作',
       n1:'你好,我是翻译器。我住在浏览器的书签栏里,点一下就能翻译你正在看的任何网站。我们来把我装上,不到一分钟。',
       n2:'这是最常见的问题:大多数人的书签栏是隐藏的。看到了吗?地址栏下面什么都没有。我没有地方待。',
       n3:'按 Ctrl + Shift + B。Mac 上是 Cmd + Shift + B。这会打开书签栏。',
@@ -89,6 +93,7 @@
       chapters:'Pasos', dragMe:'⇱ Arrástrame a la barra de marcadores', copyMe:'📋 Cópiame',
       copied:'Copiado ✓', copyManual:'Selecciona todo (Ctrl+A) y copia (Ctrl+C)',
       doIt:'Hazlo ahora — este botón es real:', bmName:'Traducir',
+      builtBy:'Creado por Shachar Dor-Haim y Robin Shmueli',
       n1:'Hola. Soy el traductor. Vivo en la barra de marcadores y con un clic traduzco la web en la que estés. Vamos a conectarme: menos de un minuto.',
       n2:'Este es el problema más común: para casi todos la barra de marcadores está oculta. ¿Ves? No hay nada bajo la barra de direcciones. No tengo dónde ponerme.',
       n3:'Pulsa Ctrl + Shift + B. En Mac: Cmd + Shift + B. Eso activa la barra de marcadores.',
@@ -107,6 +112,7 @@
       chapters:'Étapes', dragMe:'⇱ Glisse-moi dans la barre de favoris', copyMe:'📋 Copie-moi',
       copied:'Copié ✓', copyManual:'Tout sélectionner (Ctrl+A) et copier (Ctrl+C)',
       doIt:'Fais-le maintenant — ce bouton est réel :', bmName:'Traduire',
+      builtBy:'Créé par Shachar Dor-Haim et Robin Shmueli',
       n1:'Salut. Je suis le traducteur. J\'habite dans la barre de favoris et, en un clic, je traduis le site où tu es. Branchons-moi — moins d\'une minute.',
       n2:'C\'est le problème le plus courant : chez la plupart des gens la barre de favoris est masquée. Tu vois ? Rien sous la barre d\'adresse. Je n\'ai nulle part où me poser.',
       n3:'Appuie sur Ctrl + Maj + B. Sur Mac : Cmd + Maj + B. Cela affiche la barre de favoris.',
@@ -125,6 +131,7 @@
       chapters:'Passos', dragMe:'⇱ Arraste-me para a barra de favoritos', copyMe:'📋 Copie-me',
       copied:'Copiado ✓', copyManual:'Selecione tudo (Ctrl+A) e copie (Ctrl+C)',
       doIt:'Faça agora — este botão é real:', bmName:'Traduzir',
+      builtBy:'Criado por Shachar Dor-Haim e Robin Shmueli',
       n1:'Oi. Eu sou o tradutor. Moro na barra de favoritos e, com um clique, traduzo qualquer site em que você esteja. Vamos me conectar — leva menos de um minuto.',
       n2:'Esse é o problema mais comum: para a maioria das pessoas a barra de favoritos está escondida. Viu? Não tem nada abaixo da barra de endereço. Não tenho onde ficar.',
       n3:'Aperte Ctrl + Shift + B. No Mac: Cmd + Shift + B. Isso liga a barra de favoritos.',
@@ -143,6 +150,7 @@
       chapters:'Шаги', dragMe:'⇱ Перетащи меня на панель закладок', copyMe:'📋 Скопируй меня',
       copied:'Скопировано ✓', copyManual:'Выделите всё (Ctrl+A) и скопируйте (Ctrl+C)',
       doIt:'Сделайте прямо сейчас — кнопка настоящая:', bmName:'Перевести',
+      builtBy:'Создано Шахаром Дор-Хаимом и Робином Шмуэли',
       n1:'Привет. Я переводчик. Я живу на панели закладок и одним нажатием перевожу любой сайт, на котором вы находитесь. Давайте меня подключим — это меньше минуты.',
       n2:'Вот самая частая проблема: у большинства панель закладок скрыта. Видите? Под адресной строкой пусто. Мне негде разместиться.',
       n3:'Нажмите Ctrl + Shift + B. На Mac: Cmd + Shift + B. Это включает панель закладок.',
@@ -161,6 +169,7 @@
       chapters:'Schritte', dragMe:'⇱ Zieh mich in die Lesezeichenleiste', copyMe:'📋 Kopier mich',
       copied:'Kopiert ✓', copyManual:'Alles markieren (Strg+A) und kopieren (Strg+C)',
       doIt:'Mach es gleich — dieser Knopf ist echt:', bmName:'Übersetzen',
+      builtBy:'Erstellt von Shachar Dor-Haim & Robin Shmueli',
       n1:'Hallo. Ich bin der Übersetzer. Ich wohne in deiner Lesezeichenleiste und übersetze mit einem Klick die Seite, auf der du gerade bist. Schließen wir mich an — keine Minute.',
       n2:'Das ist das häufigste Problem: Bei den meisten ist die Lesezeichenleiste ausgeblendet. Siehst du? Unter der Adressleiste ist nichts. Ich habe keinen Platz.',
       n3:'Drück Strg + Umschalt + B. Auf dem Mac: Cmd + Umschalt + B. Das blendet die Lesezeichenleiste ein.',
@@ -292,9 +301,12 @@
     var rtl = RTL.indexOf(lang) >= 0;
     document.documentElement.lang = lang;
     document.documentElement.dir = rtl ? 'rtl' : 'ltr';
+    // style.css קובע direction:rtl על ה-body, אז גם הוא מתחלף (כמו ב-platform.js)
+    document.body.style.direction = rtl ? 'rtl' : 'ltr';
     $('#gTitle').textContent = t('title');
     $('#gSub').textContent = t('sub');
     $('#backLink').textContent = t('back');
+    $('.site-foot').textContent = t('builtBy') + ' · Floating rotation 2026';
     $('#prevBtn').textContent = t('prev');
     $('#nextBtn').textContent = t('next');
     $('#playBtn').textContent = playing ? t('play') : t('paused');
@@ -305,6 +317,7 @@
     $('#gChip').textContent = t('bmName');
     $('#gGhost').textContent = t('bmName');
     $('#gDrag').textContent = t('dragMe');
+    LANGS.forEach(function (l) { if (l[0] === lang) $('#gpLang').textContent = l[1]; });
     var ch = $('#chapters');
     ch.innerHTML = '';
     STEPS.forEach(function (k, i) {

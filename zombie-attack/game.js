@@ -82,8 +82,8 @@
     en:{pageTitle:'ZOMBIE ATTACK — Survival Game',fullscreen:'Fullscreen',exitFullscreen:'Exit Fullscreen',pause:'Pause',eyebrow:'The world fell. You are still standing.',titleFirst:'ZOMBIE',titleSecond:'ATTACK',tagline:'Fight through 20 maps, destroy mutations, and upgrade your arsenal before they find you.',start:'START JOURNEY',continue:'CONTINUE SAVED RUN',deleteUser:'Delete User',move:'Move',mouse:'Mouse',aimFire:'Aim & Attack',reload:'Reload',reloading:'RELOADING...',keysWheel:'1–9 / Wheel',switchWeapon:'Switch Weapon',mutantThreat:'MUTANT THREAT',pausedLabel:'GAME PAUSED',pausedTitle:'The fight can wait',pausedText:'Progress is saved only when you exit. Dying does not change your last save.',resume:'RESUME GAME',saveExit:'SAVE & EXIT TO MENU',settingsLabel:'SYSTEM',settings:'SETTINGS',playerName:'Player Name',saveName:'Save Name',controlMode:'Control Mode',computer:'Computer',phone:'Phone',language:'Language',closeSettings:'CLOSE SETTINGS',workbench:'WORKBENCH',chooseUpgrade:'CHOOSE AN UPGRADE',upgradeHelp:'Every choice changes your combat style. Choose wisely before the next wave.',skipUpgrade:'CONTINUE WITHOUT UPGRADE',bossLoot:'BOSS LOOT',chooseWeapon:'CHOOSE A NEW WEAPON',weaponHelp:'Only unowned weapons appear. Rare loot becomes more likely as your arsenal grows.',beforeBattle:'BEFORE DEPLOYMENT',howPlaying:'How are you playing?',deviceHelp:'Only controls suited to your device will be shown.',viaComputer:'On Computer',desktopControls:'Keyboard, mouse, and crosshair',wasdMouse:'WASD + Mouse',viaPhone:'On Phone',mobileControls:'Joystick and touch buttons',screenControls:'On-screen controls',back:'BACK',welcomeAshline:'WELCOME TO ZOMBIE ATTACK',whatName:'What is your name?',profileHelp:'Your name and progress are stored privately in this browser.',nameRequired:'Enter a name to continue',createUser:'CREATE USER',lineBroken:'THE LINE BROKE',fellBattle:'You fell in battle',tryAgain:'TRY AGAIN',backMenu:'BACK TO MENU',lightReturned:'THE LIGHT RETURNED',survived:'You survived Zombie Attack',newJourney:'NEW JOURNEY',fire:'ATTACK',weaponEquipped:'WEAPON EQUIPPED',sector:'MAP',mutationWarning:'WARNING // MUTATION',incomingWave:'INCOMING WAVE',wave:'WAVE',bossFight:'BOSS FIGHT',loaded:'LOADED!',poison:'POISON',burning:'BURNING',ignited:'IGNITED!',health:'+15 HEALTH',shield:'+20 SHIELD',needShield:'SHIELD UPGRADE REQUIRED',oneFree:'ONE CHOICE · FREE',currentLevel:'CURRENT LEVEL',freeUpgrade:'FREE · UPGRADE TO LEVEL',currentChance:'CURRENT CHANCE',damage:'DAMAGE',fireRateStat:'FIRE RATE',reloadStat:'RELOAD',range:'RANGE',fullMap:'FULL MAP',movement:'MOVEMENT',perSecond:'/s',seconds:'sec',newWeapon:'NEW WEAPON ACQUIRED',kills:'KILLS',reachedSector:'REACHED MAP',weaponsCollected:'WEAPONS COLLECTED',hello:'Hello',profileSaved:'your progress is stored in this browser.',currentUser:'current user',deleteConfirm:'Delete {name} and all saved progress?',nameSaved:'Name saved',settingsTitle:'Settings',saveFailed:'Save failed'}
   };
 
-  Object.assign(UI_TEXT.he,{starterLabel:'ציוד התחלתי',starterTitle:'עם מה יוצאים לדרך?',starterHelp:'בחר נשק אחד להתחלת המסע. בהמשך תוכל לאסוף נשקים נוספים.',starterPistol:'אקדח שירות',starterPistolHelp:'מאוזן, מהיר ומתאים לטווח בינוני',starterBat:'מחבט',starterBatHelp:'חזק מקרוב, ללא תחמושת',starterBow:'קשת',starterBowHelp:'חלשה אך שקטה — חץ כל 2 שניות'});
-  Object.assign(UI_TEXT.en,{starterLabel:'STARTING GEAR',starterTitle:'WHAT WILL YOU CARRY?',starterHelp:'Choose one weapon for the start of this run. You can collect more later.',starterPistol:'SERVICE PISTOL',starterPistolHelp:'Balanced, fast, and suited to medium range',starterBat:'BASEBALL BAT',starterBatHelp:'Strong up close, no ammunition needed',starterBow:'SURVIVOR BOW',starterBowHelp:'Weak but quiet — one arrow every 2 seconds'});
+  Object.assign(UI_TEXT.he,{starterLabel:'ציוד התחלתי',starterTitle:'עם מה יוצאים לדרך?',starterHelp:'בחר נשק אחד להתחלת המסע. בהמשך תוכל לאסוף נשקים נוספים.',starterPistol:'אקדח שירות',starterPistolHelp:'מאוזן, מהיר ומתאים לטווח בינוני',starterBat:'מחבט',starterBatHelp:'חזק מקרוב, ללא תחמושת',starterBow:'קשת',starterBowHelp:'חלשה אך שקטה — חץ כל 2 שניות',starterPistolStats:'16.25 · 4.2 / ש׳',starterBatStats:'20 · 1.35 / ש׳',starterBowStats:'25 · 2 שנ׳ לירייה'});
+  Object.assign(UI_TEXT.en,{starterLabel:'STARTING GEAR',starterTitle:'WHAT WILL YOU CARRY?',starterHelp:'Choose one weapon for the start of this run. You can collect more later.',starterPistol:'SERVICE PISTOL',starterPistolHelp:'Balanced, fast, and suited to medium range',starterBat:'BASEBALL BAT',starterBatHelp:'Strong up close, no ammunition needed',starterBow:'SURVIVOR BOW',starterBowHelp:'Weak but quiet — one arrow every 2 seconds',starterPistolStats:'16.25 · 4.2 /s',starterBatStats:'20 · 1.35 /s',starterBowStats:'25 · 2 sec per shot'});
 
   let W=0,H=0,last=0,state='menu',region=0,wave=0,kills=0,scrap=0,shake=0,slowMo=1,pickupProgress=0;
   let enemies=[],bullets=[],particles=[],pickups=[],enemyShots=[],decor=[],floaters=[];
@@ -238,9 +238,9 @@
   function reset(full=true,resumeWave=1,starterId='bat'){
     const starter=WEAPON_BY_ID[starterId]&&['bat','pistol','bow'].includes(starterId)?starterId:'bat';
     if(full){ region=0; scrap=0; kills=0; pickupProgress=0; Object.assign(player,{maxHp:100,hp:100,maxArmor:0,armor:0,speed:147,mag:1,ammo:1,reloadTime:0,fireRate:1.35,damage:20,pierce:0,pellets:1,poison:0,frost:0,explosive:0,healOnKill:0,knives:0,burnTime:0,burnTick:0,meleeSwing:0,currentWeapon:starter,ownedWeapons:[starter],weaponAmmo:{[starter]:WEAPON_BY_ID[starter].mag},upgrades:{}}); }
-    enemies=[];bullets=[];particles=[];pickups=[];enemyShots=[];floaters=[];boss=null;
+    enemies=[];bullets=[];particles=[];pickups=[];enemyShots=[];floaters=[];boss=null;$('boss-hud').classList.add('hidden');
     refreshWeaponStats(false);
-    player.x=W/2;player.y=H/2;player.hp=player.maxHp;player.armor=player.maxArmor;player.ammo=player.mag;player.weaponAmmo[player.currentWeapon]=player.ammo;player.reloading=0;player.burnTime=0;player.burnTick=0;
+    player.x=W/2;player.y=H/2;player.hp=player.maxHp;player.armor=player.maxArmor;player.ammo=player.mag;player.weaponAmmo[player.currentWeapon]=player.ammo;player.reloading=0;$('reload-indicator').classList.add('hidden');player.burnTime=0;player.burnTick=0;
     wave=Math.max(0,resumeWave-1); buildWave(); updateHud(); createDecor();
   }
 
@@ -330,7 +330,7 @@
   function update(dt){
     if(state!=='playing') return;
     dt=Math.min(dt,.033)*slowMo;
-    player.fireCooldown-=dt;player.invuln-=dt;player.flash-=dt;player.meleeSwing=Math.max(0,player.meleeSwing-dt);
+    player.fireCooldown=Math.max(player.fireCooldown-dt,-dt);player.invuln-=dt;player.flash-=dt;player.meleeSwing=Math.max(0,player.meleeSwing-dt);
     if(shake>0) shake=Math.max(0,shake-dt*22);
     if(announcementTimer>0) announcementTimer-=dt;
     if(mobileFiring) aimMobileAtNearest();
@@ -387,13 +387,13 @@
     if(w.melee){meleeAttack(w);return;}
     if(!w.infiniteAmmo&&player.ammo<=0)return;
     const shotRange=w.fullMap?Math.hypot(W,H)+120:w.range;
-    player.fireCooldown=1/player.fireRate;
+    player.fireCooldown+=1/player.fireRate;
     if(!w.infiniteAmmo){player.ammo--;player.weaponAmmo[player.currentWeapon]=player.ammo;}
     player.flash=.06;
     for(let i=0;i<player.pellets;i++){
       const spread=player.pellets>1?(i-(player.pellets-1)/2)*w.spread+(Math.random()-.5)*w.spread*.35:(Math.random()-.5)*w.spread;
       const a=player.angle+spread,color=w.flame?'#ff7b2d':w.id==='tesla'?'#63d8ff':w.id==='acid'?'#9bd342':'#f5ddae';
-      bullets.push({x:player.x+Math.cos(a)*22,y:player.y+Math.sin(a)*22,vx:Math.cos(a)*w.speed,vy:Math.sin(a)*w.speed,r:w.arrow?3:w.flame?7:5,life:shotRange/w.speed,damage:player.damage,left:player.pierce,poison:Math.max(player.poison,w.poison||0),frost:player.frost,explosive:player.explosive,splash:w.splash||0,chain:w.chain||0,color,flame:!!w.flame,arrow:!!w.arrow});
+      bullets.push({x:player.x+Math.cos(a)*22,y:player.y+Math.sin(a)*22,vx:Math.cos(a)*w.speed,vy:Math.sin(a)*w.speed,r:w.arrow?3:w.flame?7:5,life:shotRange/w.speed,damage:player.damage,left:player.pierce,hits:[],poison:Math.max(player.poison,w.poison||0),frost:player.frost,explosive:player.explosive,splash:w.splash||0,chain:w.chain||0,color,flame:!!w.flame,arrow:!!w.arrow});
     }
     const recoil=Math.min(5,1.2+w.damage/55);player.x-=Math.cos(player.angle)*recoil;player.y-=Math.sin(player.angle)*recoil;shake=Math.max(shake,w.splash?5:2.1);
     for(let i=0;i<4;i++)particle(player.x+Math.cos(player.angle)*24,player.y+Math.sin(player.angle)*24,'#ffbd62',2,130,player.angle);
@@ -401,7 +401,7 @@
   }
 
   function meleeAttack(w){
-    player.fireCooldown=1/player.fireRate;player.meleeSwing=.22;player.flash=.05;
+    player.fireCooldown+=1/player.fireRate;player.meleeSwing=.22;player.flash=.05;
     const hitRange=w.range||72,halfArc=(w.arc||1.3)/2;
     for(const e of [...enemies]){
       if(e.dead)continue;
@@ -444,9 +444,9 @@
       let remove=b.life<=0||b.x<-20||b.x>W+20||b.y<-20||b.y>H+20;
       for(const e of [...enemies]){
         if(remove)break;
-        if(e.dead)continue;
+        if(e.dead||b.hits.includes(e))continue;
         if(Math.hypot(b.x-e.x,b.y-e.y)<b.r+e.r+3){
-          e.hp-=b.damage;e.hit=.09;floaters.push({x:e.x,y:e.y-e.r,text:Math.round(b.damage),life:.55,color:'#f1e6cf',big:false});
+          b.hits.push(e);e.hp-=b.damage;e.hit=.09;floaters.push({x:e.x,y:e.y-e.r,text:Math.round(b.damage),life:.55,color:'#f1e6cf',big:false});
           if(b.poison){e.poisonTime=2.8;e.poisonDps=Math.max(e.poisonDps||0,player.damage*(.1+b.poison*.05));e.dotTick=0;}
           if(b.frost){e.frostTime=1.8;e.frostSlow=Math.min(.55,b.frost*.14);}
           if(b.flame){e.burnTime=5;e.burnDps=5;e.burnTick=0;}
@@ -748,7 +748,7 @@
   }
 
   function gameOver(){state='dead';mouse.down=false;$('game-over').classList.remove('hidden');$('death-stats').textContent=`${profile?.name ? profile.name+' · ' : ''}${t('kills')}: ${kills} · ${t('reachedSector')} ${region+1}`;$('mobile-controls').classList.remove('playing');$('mobile-weapon-bar').classList.remove('playing');$('weapon-inventory').classList.add('hidden');$('pause-btn').classList.add('hidden');}
-  function victory(){state='victory';$('victory-screen').classList.remove('hidden');$('victory-stats').textContent=`${profile?.name ? profile.name+' · ' : ''}${kills} ${t('kills')} · ${player.ownedWeapons.length} ${t('weaponsCollected')}.`;$('mobile-controls').classList.remove('playing');$('mobile-weapon-bar').classList.remove('playing');$('weapon-inventory').classList.add('hidden');$('pause-btn').classList.add('hidden');localStorage.removeItem(SAVE_KEY);$('continue-btn').classList.add('hidden');}
+  function victory(){state='victory';$('victory-screen').classList.remove('hidden');$('victory-stats').textContent=`${profile?.name ? profile.name+' · ' : ''}${kills} ${t('kills')} · ${player.ownedWeapons.length} ${t('weaponsCollected')}.`;$('mobile-controls').classList.remove('playing');$('mobile-weapon-bar').classList.remove('playing');$('weapon-inventory').classList.add('hidden');$('pause-btn').classList.add('hidden');try {localStorage.removeItem(SAVE_KEY);} catch {}$('continue-btn').classList.add('hidden');}
 
   function saveGame(){
     try {
@@ -829,7 +829,8 @@
   function deleteProfile(){
     const name=profile?.name||t('currentUser');
     if(!confirm(t('deleteConfirm').replace('{name}',name)))return;
-    localStorage.removeItem(PROFILE_KEY);localStorage.removeItem(SAVE_KEY);location.reload();
+    try {localStorage.removeItem(PROFILE_KEY);localStorage.removeItem(SAVE_KEY);} catch {}
+    location.reload();
   }
 
   function updateHud(){
@@ -1035,11 +1036,12 @@
       if(state==='playing')pauseGame();else if(state==='paused')resumeGame();else if(state==='settings')closeSettings();
       return;
     }
+    if(e.target instanceof HTMLInputElement)return;
     keys[e.code]=true;if(e.code==='KeyR')reload();if(e.code==='KeyF'){e.preventDefault();toggleFullscreen();}
     const match=e.code.match(/^Digit([0-9])$/);
     if(match&&state==='playing'){const number=Number(match[1]),index=number===0?9:number-1,id=player.ownedWeapons[index];if(id)equipWeapon(id);}
   });
-  addEventListener('keyup',e=>keys[e.code]=false);
+  addEventListener('keyup',e=>keys[e.code]=false);addEventListener('blur',()=>keys={});
   canvas.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;$('crosshair').style.transform=`translate(${mouse.x}px,${mouse.y}px)`;});
   canvas.addEventListener('mousedown',()=>mouse.down=true);addEventListener('mouseup',()=>mouse.down=false);
   canvas.addEventListener('contextmenu',e=>e.preventDefault());
@@ -1067,14 +1069,15 @@
   $('player-name-input').addEventListener('input',()=>$('profile-error').classList.add('hidden'));
   $('player-name-input').addEventListener('keydown',e=>{if(e.key==='Enter')createProfile();});
   $('delete-profile-btn').onclick=deleteProfile;
-  if(localStorage.getItem(SAVE_KEY))$('continue-btn').classList.remove('hidden');
+  try {if(localStorage.getItem(SAVE_KEY))$('continue-btn').classList.remove('hidden');} catch {}
   initProfile();
 
-  const joy=$('joystick'),knob=joy.querySelector('i');let joyId=null;
+  const joy=$('joystick'),knob=joy.querySelector('i');let joyId=null,fireId=null;
   joy.addEventListener('pointerdown',e=>{joyId=e.pointerId;joy.setPointerCapture(joyId);});
   joy.addEventListener('pointermove',e=>{if(e.pointerId!==joyId)return;const r=joy.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),m=Math.min(38,Math.hypot(dx,dy)),a=Math.atan2(dy,dx);mobileMove={x:Math.cos(a)*m/38,y:Math.sin(a)*m/38};knob.style.transform=`translate(${mobileMove.x*32}px,${mobileMove.y*32}px)`;});
   const endJoy=e=>{if(e.pointerId===joyId){joyId=null;mobileMove={x:0,y:0};knob.style.transform='';}};joy.addEventListener('pointerup',endJoy);joy.addEventListener('pointercancel',endJoy);
-  $('mobile-fire').addEventListener('pointerdown',e=>{e.preventDefault();mobileFiring=true;const nearest=enemies.reduce((best,z)=>!best||Math.hypot(z.x-player.x,z.y-player.y)<Math.hypot(best.x-player.x,best.y-player.y)?z:best,null);if(nearest){mouse.x=nearest.x;mouse.y=nearest.y;}});addEventListener('pointerup',()=>mobileFiring=false);
+  $('mobile-fire').addEventListener('pointerdown',e=>{e.preventDefault();fireId=e.pointerId;mobileFiring=true;const nearest=enemies.reduce((best,z)=>!best||Math.hypot(z.x-player.x,z.y-player.y)<Math.hypot(best.x-player.x,best.y-player.y)?z:best,null);if(nearest){mouse.x=nearest.x;mouse.y=nearest.y;}});
+  const endFire=e=>{if(e.pointerId===fireId){fireId=null;mobileFiring=false;}};addEventListener('pointerup',endFire);addEventListener('pointercancel',endFire);
   $('fullscreen-btn').onclick=toggleFullscreen;
   document.addEventListener('fullscreenchange',syncFullscreenButton);
   document.addEventListener('webkitfullscreenchange',syncFullscreenButton);
