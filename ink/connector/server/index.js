@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.4.1';
+const VERSION = '1.5.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -37,14 +37,20 @@ const INSTRUCTIONS = 'Floating Ink is a word processor open in the user\'s brows
   'in the wait instead of ending your turn.';
 
 const DOC_ID = { type: 'string', description: 'Document id from list_documents. Leave out to use the document open on screen.' };
-const THEME = { type: 'string', enum: ['ink', 'night', 'sand', 'forest', 'sunset', 'chalk', 'plain'],
-  description: 'Color theme: ink (blue on white, the default), night (dark blue), sand (warm orange), forest (green), sunset (pink and purple), chalk (a green chalkboard), plain (black on white).' };
+const THEME = { type: 'string', enum: ['ink', 'night', 'sand', 'forest', 'sunset', 'chalk', 'plain', 'notebook', 'science', 'business', 'gaming', 'history',
+  'space', 'nature', 'books', 'party', 'sports', 'music', 'minimal', 'travel', 'food', 'math', 'tech', 'creator', 'art'],
+  description: 'Design theme; pick one that fits the topic. ink (blue on white, the default), night (dark blue), sand (warm orange), forest (green), ' +
+    'sunset (pink and purple), chalk (a green chalkboard), plain (black on white), notebook (a lined school notebook), science (a dark lab, hexagons), ' +
+    'business (navy and gold), gaming (neon on dark purple), history (old parchment), space (stars and planets), nature (green leaves), ' +
+    'books (a library in burgundy), party (pink confetti), sports (black and orange), music (purple, sound waves), minimal (quiet, black on light gray), ' +
+    'travel (sky and sea), food (a warm kitchen), math (graph paper), tech (dark blue circuits), creator (red on black, like a video channel), art (bright paint blobs).' };
 const SLIDE = {
-  layout: { type: 'string', enum: ['title', 'content', 'two_columns', 'big_image', 'section', 'blank'],
-    description: 'title: the opening slide (title and subtitle). content: a title and text. two_columns: a title and two columns. big_image: a title, a big picture the user adds, and a caption. section: a chapter title. blank: nothing.' },
+  layout: { type: 'string', enum: ['title', 'content', 'two_columns', 'big_image', 'image_and_text', 'title_only', 'section', 'blank'],
+    description: 'title: the opening slide (title and subtitle). content: a title and text. two_columns: a title and two columns. big_image: a title, a big picture the user adds, and a caption. ' +
+      'image_and_text: a title and text on one side, and a picture the user adds filling the other half. title_only: just a title. section: a chapter title. blank: nothing.' },
   title: { type: 'string' },
   subtitle: { type: 'string', description: 'Under the title, on "title" and "section" slides.' },
-  text: { type: 'string', description: 'Markdown for a "content" slide: a few short bullet points ("- ..."), a numbered list or short paragraphs; **bold** works.' },
+  text: { type: 'string', description: 'Markdown for a "content" or "image_and_text" slide: a few short bullet points ("- ..."), a numbered list or short paragraphs; **bold** works.' },
   column1: { type: 'string', description: 'Markdown for the first column of a "two_columns" slide (the right one in Hebrew).' },
   column2: { type: 'string', description: 'Markdown for the second column.' },
   caption: { type: 'string', description: 'The line under the picture of a "big_image" slide.' },
