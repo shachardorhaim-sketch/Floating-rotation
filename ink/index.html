@@ -11343,7 +11343,7 @@ const ROOM_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';   // no 0/O or 1/I/L, so a c
 const ROOM_COLORS = ['#e5484d', '#0b7fd9', '#2f9e5f', '#e5650f', '#8e4ec6', '#d23a92', '#0f9488', '#b7791f', '#3e63dd', '#8d6e63'];
 /* a code typed while the keyboard is still on Hebrew, Russian or Arabic: each key counts as the Latin letter on it */
 const ROOM_KEYS = [["קראטוןםפשדגכעיחלךזסבהנמצ/'", 'ERTYUIOPASDFGHJKLZXCVBNMQW'], ['йцукенгшщзфывапролдячсмить', 'QWERTYUIOPASDFGHJKLZXCVBNM'], ['ضصثقفغعهخحشسيبلاتنمئءؤرىة', 'QWERTYUIOPASDFGHJKLZXCVNM']];
-const ROOM_KEY_RE = /^(t|m|o|h|p|[szeb]\/[a-z0-9]{4,24})$/;
+const ROOM_KEY_RE = /^(t|m|o|h|p|[szebnxa]\/[a-z0-9]{4,24})$/;   // n/ x/ a/: a slide's notes, transition and animations
 const ROOM_BIG = 4096;   // a longer string (a picture) travels apart, once to each person
 const ROOM_ARROW = '<svg width="18" height="21" viewBox="0 0 18 21" aria-hidden="true"><path d="M2 2l13.5 7.6-6 1.6-3.4 6.4z" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>';
 let R = null;   // the room of the open presentation, or the one being joined
@@ -11745,8 +11745,13 @@ function roomIndexBlobs() { const need = new Set(); for (const x of R.st.values(
 function roomNorm(k, v) {
   if (v == null) return null;
   if (k === 't') return typeof v === 'string' ? v.slice(0, 300) : undefined;
-  if (typeof v !== 'object') return undefined;
   const c = k[0];
+  if (c === 'n') return typeof v === 'string' ? v.slice(0, 20000) : undefined;
+  if (typeof v !== 'object') return undefined;
+  if (c === 'x') return normTr(v, DK.deck ? DK.deck.dir : UI_DIR) || undefined;
+  // animations: each checked here; ones whose box isn't on the slide are dropped when the slide is tidied
+  if (c === 'a') return Array.isArray(v) ? v.filter(a => a && ANIMS[a.k] && okId(a.id) && okId(a.el)).slice(0, 300).map(a => ({ id: a.id, el: a.el, k: a.k, t: STARTS[a.t] ? a.t : 'click', sp: SPEEDS[a.sp] ? a.sp : 'med',
+    ...(ANIMS[a.k].dir ? { dir: 'rlbt'.includes(a.dir) && a.dir ? a.dir : 'b' } : {}), ...(a.by === 'p' ? { by: 'p' } : {}) })) : undefined;
   if (k === 'm') { const th = normFileTheme(v.th); return { theme: THEMES[v.theme] ? v.theme : v.theme === 'file' && th ? 'file' : 'ink', dir: v.dir === 'ltr' ? 'ltr' : 'rtl', ...(th ? { th } : {}) }; }
   if (k === 'h') return okId(v.id) && /^[0-9a-f]{64}$/.test(v.x) ? { id: v.id, n: roomName(v.n), x: v.x, k: v.k === 'doc' ? 'doc' : 'deck' } : undefined;
   if (k === 'o' || c === 'z') return Array.isArray(v) ? v.filter(okId).slice(0, 5000) : undefined;
@@ -12502,7 +12507,7 @@ function renderRoomPanel() {
 /* "Shared room": open one with this presentation, or join someone's with a code. With a code from a link, just the way in */
 function openRoomDialog(code, again) {
   if (!S.store || S.inClaude) return;
-  if (R && R.docId && !again) { openPanel('room'); return; }
+  if (R && R.docId && !again && (!code || code === R.code)) { openPanel('room'); return; }   // a link to another room still asks to join it
   const invited = !!code;
   const nick = h('input', { class: 'field', type: 'text', maxlength: '24', value: PREFS.nick || '', placeholder: T('למשל: נועה'), autocomplete: 'nickname' });
   const codeIn = h('input', { class: 'field room-code-in', type: 'text', dir: 'ltr', maxlength: '9', placeholder: 'K7M-4QX', autocomplete: 'off', spellcheck: 'false', autocapitalize: 'characters', 'aria-label': T('קוד החדר') });
