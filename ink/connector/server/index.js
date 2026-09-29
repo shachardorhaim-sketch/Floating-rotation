@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.5.0';
+const VERSION = '1.6.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -27,7 +27,7 @@ const INSTRUCTIONS = 'Floating Ink is a word processor open in the user\'s brows
   'Keep the language of the document unless the user asks otherwise; many documents are in Hebrew. ' +
   'It also makes presentations (slides, like PowerPoint): create_presentation builds one while the user watches, for example ' +
   'from a script or a document they wrote (read_document it first), and edit_presentation changes one. Keep slides short: ' +
-  'a title and three to six brief points. read_document reads a presentation slide by slide. ' +
+  'a title and three to six brief points; what the presenter should say goes in the slide\'s notes. read_document reads a presentation slide by slide. ' +
   'The chat panel inside Floating Ink is shared: send_message leaves a note there, and read_messages shows ' +
   'what the user or another connected assistant wrote. The user often keeps writing to you from that panel instead of ' +
   'switching back to this window, so when they may still be talking to you there, call wait_for_message: it comes back ' +
@@ -54,7 +54,10 @@ const SLIDE = {
   column1: { type: 'string', description: 'Markdown for the first column of a "two_columns" slide (the right one in Hebrew).' },
   column2: { type: 'string', description: 'Markdown for the second column.' },
   caption: { type: 'string', description: 'The line under the picture of a "big_image" slide.' },
+  notes: { type: 'string', description: 'Speaker notes: what to say while this slide is shown. The presenter sees them in presenter view; the audience does not. An empty string removes them.' },
 };
+const TRANSITION = { type: 'string', enum: ['none', 'fade', 'push', 'wipe', 'cover', 'split', 'flip', 'cube', 'gallery', 'curtains'],
+  description: 'One transition for every slide, as in PowerPoint; it also plays in the saved PowerPoint file. none removes them. Leave out to keep what is there.' };
 const TOOLS = [
   { name: 'list_documents', description: 'List the documents and presentations in Floating Ink: id, title, kind, word count, last change, and which one is open on screen.',
     inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true } },
@@ -62,10 +65,10 @@ const TOOLS = [
     inputSchema: { type: 'object', properties: { id: DOC_ID } }, annotations: { readOnlyHint: true } },
   { name: 'create_presentation', description: 'Create a new presentation and open it on the user\'s screen, where they watch the slides come in one by one. ' +
       'Start with a "title" slide; keep each slide to a title and a few short points. The user adds the pictures themselves. Returns its id.',
-    inputSchema: { type: 'object', properties: { title: { type: 'string' }, theme: THEME, slides: { type: 'array', items: { type: 'object', properties: SLIDE } } }, required: ['title', 'slides'] } },
+    inputSchema: { type: 'object', properties: { title: { type: 'string' }, theme: THEME, transition: TRANSITION, slides: { type: 'array', items: { type: 'object', properties: SLIDE } } }, required: ['title', 'slides'] } },
   { name: 'edit_presentation', description: 'Change a presentation: add, update, delete or move slides, or change its color theme. read_document shows its slides and their numbers. ' +
       'The changes run in order, and each slide number means the slide at that step. update replaces only the fields it gives (and a new layout keeps the slide\'s text). The user can undo with Ctrl+Z.',
-    inputSchema: { type: 'object', properties: { id: DOC_ID, theme: THEME, changes: { type: 'array', items: { type: 'object', properties: {
+    inputSchema: { type: 'object', properties: { id: DOC_ID, theme: THEME, transition: TRANSITION, changes: { type: 'array', items: { type: 'object', properties: {
       action: { type: 'string', enum: ['add', 'update', 'delete', 'move'] },
       slide: { type: 'number', description: 'update, delete, move: the slide\'s number (1 is the first).' },
       at: { type: 'number', description: 'add: the number the new slide gets (default: the end). move: the number it moves to.' },
