@@ -1314,10 +1314,8 @@ window.INK_I18N = {
 "שיתוף": "Share",
 "PDF ללא שם": "Untitled PDF",
 "א": "A",
-"אי אפשר לפתוח כאן את \"{0}\". אפשר לפתוח קבצי Word, ‏PDF, טקסט ו-Markdown.": "\"{0}\" can't be opened here. You can open Word, PDF, text, and Markdown files.",
 "איך לפתוח את \"{0}\"?": "How do you want to open \"{0}\"?",
 "אין דפים ב-PDF הזה.": "This PDF has no pages.",
-"אפשר לייבא קבצי Word ‏(docx), ‏PDF, טקסט, Markdown או HTML": "You can import Word (.docx), PDF, text, Markdown, or HTML files",
 "בחירה": "Select",
 "בינוני": "Medium",
 "גדול": "Large",
@@ -1549,7 +1547,23 @@ window.INK_I18N = {
 "שורות מפוספסות": "Banded Rows",
 "שורות שוות": "Equal Rows",
 "תאים": "Cells",
-"תקשורת": "Communication"
+"תקשורת": "Communication",
+"אי אפשר לפתוח כאן את \"{0}\". אפשר לפתוח קבצי Word, פאוורפוינט, ‏PDF, טקסט ו-Markdown.": "“{0}” can’t be opened here. You can open Word, PowerPoint, PDF, text and Markdown files.",
+"אין שקופיות במצגת הזאת": "This presentation has no slides",
+"אפשר לפתוח קבצי Word ‏(docx), פאוורפוינט (pptx), ‏PDF, טקסט, Markdown או HTML": "You can open Word (docx), PowerPoint (pptx), PDF, text, Markdown or HTML files",
+"הבנתי": "Got it",
+"המצגת מוגנת בסיסמה. צריך להסיר את הסיסמה בפאוורפוינט ולנסות שוב.": "The presentation is password-protected. Remove the password in PowerPoint and try again.",
+"המצגת נפתחה": "The presentation is open",
+"הקובץ הזה לא נראה כמו מצגת פאוורפוינט": "This file doesn’t look like a PowerPoint presentation",
+"השינויים יישמרו לתוך \"{0}\" במחשב, כמו שהמצגת נראית כאן. דברים שלא נפתחו כאן בדיוק (למשל SmartArt, שנפתח כצורות) יישמרו כמו שהם כאן. השאלה הזאת לא תופיע שוב לקובץ הזה.": "Your changes will be saved into “{0}” on your computer, the way the presentation looks here. Anything that didn’t open exactly (for example SmartArt, which opens as shapes) will be saved as it is here. You won’t be asked again for this file.",
+"כמעט הכל עבר. מה שלא עבר בדיוק:": "Almost everything came across. What didn’t, exactly:",
+"לא הצלחתי לטעון את הכלי שקורא מצגות. כדאי לבדוק את החיבור לאינטרנט.": "Couldn’t load the tool that reads presentations. Check your internet connection.",
+"לא הצלחתי לפתוח את המצגת": "Couldn’t open the presentation",
+"מהקובץ": "From the file",
+"פותח את המצגת…": "Opening the presentation…",
+"פותח את המצגת… שקופית {0} מתוך {1}": "Opening the presentation… slide {0} of {1}",
+"צורה": "Shape",
+"קבצי ‎.ppt‎ ישנים לא נתמכים. אפשר לשמור אותם בפאוורפוינט כ-‎.pptx‎ ולפתוח.": "Old .ppt files aren’t supported. You can save them in PowerPoint as .pptx and open that."
 },
 "plurals": {
 "{n} מילים": {
@@ -1627,6 +1641,82 @@ window.INK_I18N = {
 "{n} סרטונים לא היו בגיבוי. במקומם תופיע התמונה שלהם.": {
 "one": "{n} video wasn’t in the backup. Its picture shows instead.",
 "other": "{n} videos weren’t in the backup. Their pictures show instead."
+},
+"{n} אובייקטים מוטמעים (כמו גיליון אקסל) לא נפתחו": {
+"one": "{n} embedded object (like an Excel sheet) didn’t open",
+"other": "{n} embedded objects (like an Excel sheet) didn’t open"
+},
+"{n} אנימציות הוחלפו באנימציה הדומה ביותר שיש כאן": {
+"one": "{n} animation was replaced with the closest one here",
+"other": "{n} animations were replaced with the closest ones here"
+},
+"{n} אנימציות של מסלול תנועה לא נפתחו": {
+"one": "{n} motion path animation didn’t open",
+"other": "{n} motion path animations didn’t open"
+},
+"{n} גרפי שטח מוצגים כאן כגרפי קווים": {
+"one": "{n} area chart is shown here as a line chart",
+"other": "{n} area charts are shown here as line charts"
+},
+"{n} גרפים מוערמים מוצגים כאן כעמודות זו ליד זו": {
+"one": "{n} stacked chart is shown here with the bars side by side",
+"other": "{n} stacked charts are shown here with the bars side by side"
+},
+"{n} גרפים מסוג שעוד אין כאן (כמו פיזור או רדאר) לא נפתחו": {
+"one": "{n} chart of a kind not available here yet (like scatter or radar) didn’t open",
+"other": "{n} charts of a kind not available here yet (like scatter or radar) didn’t open"
+},
+"{n} גרפים משולבים מוצגים כאן רק בסוג הראשון שלהם": {
+"one": "{n} combo chart is shown here only as its first kind",
+"other": "{n} combo charts are shown here only as their first kind"
+},
+"{n} גרפיקות SmartArt לא נפתחו": {
+"one": "{n} SmartArt graphic didn’t open",
+"other": "{n} SmartArt graphics didn’t open"
+},
+"{n} מעברים הוחלפו בדהייה": {
+"one": "{n} transition was replaced with a fade",
+"other": "{n} transitions were replaced with a fade"
+},
+"{n} סרטונים בפורמט שהדפדפן לא מנגן לא נפתחו": {
+"one": "{n} video in a format the browser can’t play didn’t open",
+"other": "{n} videos in a format the browser can’t play didn’t open"
+},
+"{n} סרטונים גדולים מ-200MB לא נפתחו": {
+"one": "{n} video larger than 200MB didn’t open",
+"other": "{n} videos larger than 200MB didn’t open"
+},
+"{n} סרטונים מהאינטרנט (לא מיוטיוב) לא נפתחו": {
+"one": "{n} online video (not from YouTube) didn’t open",
+"other": "{n} online videos (not from YouTube) didn’t open"
+},
+"{n} פריטים לא נפתחו": {
+"one": "{n} item didn’t open",
+"other": "{n} items didn’t open"
+},
+"{n} צורות לא מוכרות מוצגות כמלבן": {
+"one": "{n} unknown shape is shown as a rectangle",
+"other": "{n} unknown shapes are shown as rectangles"
+},
+"{n} ציורים בכתב יד לא נפתחו": {
+"one": "{n} ink drawing didn’t open",
+"other": "{n} ink drawings didn’t open"
+},
+"{n} קטעי שמע לא נפתחו": {
+"one": "{n} audio clip didn’t open",
+"other": "{n} audio clips didn’t open"
+},
+"{n} שקופיות מוסתרות נפתחו כשקופיות רגילות": {
+"one": "{n} hidden slide opened as a regular slide",
+"other": "{n} hidden slides opened as regular slides"
+},
+"{n} תמונות בפורמט ישן של Windows ‏(EMF/WMF) לא נפתחו": {
+"one": "{n} picture in an old Windows format (EMF/WMF) didn’t open",
+"other": "{n} pictures in an old Windows format (EMF/WMF) didn’t open"
+},
+"{n} תמונות לא נפתחו": {
+"one": "{n} picture didn’t open",
+"other": "{n} pictures didn’t open"
 }
 },
 "welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Welcome to Floating Ink</h1><p>This is a sample document that shows what you can do here. You can edit it, delete it, or click <b>New Document</b> to start from a blank page.</p><div class=\"callout callout-note\"><p><b>Completely private.</b> Your documents are saved only on your device, and nothing is sent to any server. So they're never lost, turn on automatic backup: <b>File → Backup</b>.</p></div><h2>What's here</h2><ul><li><b>Word-like formatting:</b> fonts, colors, <span style=\"background-color: #ffe45c\">highlighter</span>, headings, lists, and tables.</li><li><b>Insert:</b> images, freehand drawing, math symbols, emoji, the date, and a table of contents.</li><li><b>Tools:</b> find and replace, word count, word goal, read aloud, calculator, and Hebrew/English keyboard fix.</li><li><b>Files:</b> save as Word and PDF, import from Word, previous versions, and Recycle Bin.</li></ul><h2>Sample tasks</h2><ul class=\"checklist\"><li data-checked=\"true\">Open Floating Ink</li><li>Install it on your computer or phone</li><li>Add a table or a drawing</li></ul><h2>How to install</h2><ul><li><b>On a computer (Chrome or Edge):</b> the <b>Install</b> button at the top, or the install icon next to the address bar.</li><li><b>On Android:</b> Menu ⋮ → Install App.</li><li><b>On iPhone:</b> In Safari, Share button → Add to Home Screen.</li></ul><p>After installing, Floating Ink opens like a regular program, even without internet.</p><h2>Keyboard shortcuts</h2><table><tbody><tr><th>Shortcut</th><th>What it does</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Bold / Italic / Underline</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Undo / Redo</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Find / Find and Replace</td></tr><tr><td>Ctrl+K</td><td>Insert Link</td></tr><tr><td>Ctrl+Shift+X</td><td>Hebrew/English Keyboard Fix</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Heading 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Save (Floating Ink also saves by itself)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Tip:</b> You can set a word-count goal in the Tools tab to track your progress as you write.</p></div><p style=\"text-align: center\"><small>Floating Ink is part of <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",

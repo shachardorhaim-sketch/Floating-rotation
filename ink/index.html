@@ -740,6 +740,7 @@ label.bk-row:hover{background:var(--surface-2)}
 .cd-grid th .cd-x:hover{opacity:1}
 @media (max-width:760px){.cd{flex-direction:column}.cd-side{width:100%}}
 .ic-pick{display:flex;flex-direction:column;gap:10px}
+.pptx-rep ul{margin:8px 0 0;padding-inline-start:22px;display:grid;gap:4px}
 .ic-top{display:flex;gap:10px;align-items:center}
 .ic-top .field{flex:1}
 .ic-cats{flex-wrap:wrap}
@@ -1617,7 +1618,7 @@ body.aud{margin:0;height:100vh;background:#000;display:grid;place-items:center;o
 <div id="toasts" aria-live="polite"></div>
 <input type="file" id="fileImage" accept="image/*" hidden>
 <input type="file" id="fileVideo" accept="video/*,.mp4,.m4v,.mov,.webm" hidden>
-<input type="file" id="fileImport" accept=".docx,.txt,.md,.markdown,.html,.htm,.pdf" hidden>
+<input type="file" id="fileImport" accept=".docx,.txt,.md,.markdown,.html,.htm,.pdf,.pptx,.ppsx,.potx,.pptm,.ppt" hidden>
 <input type="file" id="filePdf" accept=".pdf,application/pdf" hidden>
 <input type="file" id="fileBackup" accept=".json,application/json" hidden>
 <style id="pageRule"></style>
@@ -1677,6 +1678,26 @@ const HE_ONE = {
   '{n} מסמכים יימחקו לתמיד. אי אפשר לבטל את זה.': 'מסמך אחד יימחק לתמיד. אי אפשר לבטל את זה.',
   '{n} מסמכים': 'מסמך אחד', '{n} מצגות': 'מצגת אחת', '{n} תמונות': 'תמונה אחת', 'שחזור {n} מסמכים': 'שחזור מסמך אחד',
   'בתיקייה הזאת יש גיבוי מ-{0} עם {n} מסמכים שלא נמצאים כאן. לשחזר אותם?': 'בתיקייה הזאת יש גיבוי מ-{0} עם מסמך אחד שלא נמצא כאן. לשחזר אותו?',
+  '{n} אובייקטים מוטמעים (כמו גיליון אקסל) לא נפתחו': 'אובייקט מוטמע אחד (כמו גיליון אקסל) לא נפתח',
+  '{n} אנימציות הוחלפו באנימציה הדומה ביותר שיש כאן': 'אנימציה אחת הוחלפה באנימציה הדומה ביותר שיש כאן',
+  '{n} אנימציות של מסלול תנועה לא נפתחו': 'אנימציה אחת של מסלול תנועה לא נפתחה',
+  '{n} גרפי שטח מוצגים כאן כגרפי קווים': 'גרף שטח אחד מוצג כאן כגרף קווים',
+  '{n} גרפים מוערמים מוצגים כאן כעמודות זו ליד זו': 'גרף מוערם אחד מוצג כאן כעמודות זו ליד זו',
+  '{n} גרפים מסוג שעוד אין כאן (כמו פיזור או רדאר) לא נפתחו': 'גרף אחד מסוג שעוד אין כאן (כמו פיזור או רדאר) לא נפתח',
+  '{n} גרפים משולבים מוצגים כאן רק בסוג הראשון שלהם': 'גרף משולב אחד מוצג כאן רק בסוג הראשון שלו',
+  '{n} גרפיקות SmartArt לא נפתחו': 'גרפיקת SmartArt אחת לא נפתחה',
+  '{n} מעברים הוחלפו בדהייה': 'מעבר אחד הוחלף בדהייה',
+  '{n} סרטונים בפורמט שהדפדפן לא מנגן לא נפתחו': 'סרטון אחד בפורמט שהדפדפן לא מנגן לא נפתח',
+  '{n} סרטונים גדולים מ-200MB לא נפתחו': 'סרטון אחד גדול מ-200MB לא נפתח',
+  '{n} סרטונים מהאינטרנט (לא מיוטיוב) לא נפתחו': 'סרטון אחד מהאינטרנט (לא מיוטיוב) לא נפתח',
+  '{n} פריטים לא נפתחו': 'פריט אחד לא נפתח',
+  '{n} צורות לא מוכרות מוצגות כמלבן': 'צורה לא מוכרת אחת מוצגת כמלבן',
+  '{n} ציורים בכתב יד לא נפתחו': 'ציור אחד בכתב יד לא נפתח',
+  '{n} קטעי שמע לא נפתחו': 'קטע שמע אחד לא נפתח',
+  '{n} שקופיות מוסתרות נפתחו כשקופיות רגילות': 'שקופית מוסתרת אחת נפתחה כשקופית רגילה',
+  '{n} תמונות בפורמט ישן של Windows ‏(EMF/WMF) לא נפתחו': 'תמונה אחת בפורמט ישן של Windows ‏(EMF/WMF) לא נפתחה',
+  '{n} תמונות לא נפתחו': 'תמונה אחת לא נפתחה',
+  '{n} סרטונים לא היו בגיבוי. במקומם תופיע התמונה שלהם.': 'סרטון אחד לא היה בגיבוי. במקומו תופיע התמונה שלו.',
 };
 const pluralRules = new Intl.PluralRules(LOCALE);
 function TN(he, n, ...args) {
@@ -1748,6 +1769,7 @@ const LIB = {
 const LANG_FONTS = { ar: ['Cairo', 'Amiri'], ru: ['Noto Sans', 'Noto Serif'], zh: ['Noto Sans SC', 'Noto Serif SC'] }[LANG] || [];
 const FONTS = [...LANG_FONTS, 'Assistant', 'Heebo', 'Rubik', 'Noto Sans Hebrew', 'IBM Plex Sans Hebrew', 'Varela Round', 'Alef', 'Fredoka', 'Frank Ruhl Libre', 'David Libre', 'Noto Serif Hebrew', 'Miriam Libre', 'Bellefair', 'Suez One', 'Secular One', 'Karantina', 'Amatic SC', 'Solitreo', 'Arial', 'Times New Roman', 'Courier New'];
 const FONT_NAMES = new Set(FONTS);
+const okFont = f => typeof f === 'string' && (FONT_NAMES.has(f) || /^[\p{L}\p{N} .&+-]{1,40}$/u.test(f));
 const SIZES = [8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 60, 72];
 const PAGE_SIZES = { A4: [210, 297], A5: [148, 210], Letter: [215.9, 279.4] };
 const MARGINS = { narrow: 12.7, normal: 25.4, wide: 38.1 };
@@ -4059,13 +4081,14 @@ async function importFile(f) {
   if (!S.store) return;
   const ext = (f.name.split('.').pop() || '').toLowerCase();
   if (ext === 'pdf') { await openPdfImport(f); return; }
+  if (PPTX_RE.test(f.name) || ext === 'ppt') { await openPptxImport(f); return; }
   const title = f.name.replace(/\.[^.]+$/, '');
   const busy = toast(T('מייבא את הקובץ…'), { icon: 'upload_file', ms: 120000 });
   try {
     let html;
     if (/^(docx|txt|md|markdown|html?)$/.test(ext)) html = (await fileToHtml(f, ext)).html;
     else if (ext === 'doc') { toast(T('קבצי ‎.doc‎ ישנים לא נתמכים. אפשר לשמור אותם ב-Word כ-‎.docx‎ ולייבא.'), { ms: 7000 }); return; }
-    else { toast(T('אפשר לייבא קבצי Word ‏(docx), ‏PDF, טקסט, Markdown או HTML'), { ms: 6000 }); return; }
+    else { toast(T('אפשר לפתוח קבצי Word ‏(docx), פאוורפוינט (pptx), ‏PDF, טקסט, Markdown או HTML'), { ms: 6000 }); return; }
     const clean = sanitize(html);
     if (!htmlText(clean).trim() && !/<img/i.test(clean)) { toast(T('לא נמצא טקסט בקובץ')); return; }
     if (await createDoc({ title, html: clean, page: { dir: guessDir(clean) } })) toast(T('הקובץ יובא כמסמך חדש'), { icon: 'upload_file' });
@@ -4158,13 +4181,18 @@ async function openLaunched(files) {
   for (const hd of files) await openFromDisk(hd);
 }
 async function openFromDisk(hd) {
+  if (PPTX_RE.test(hd.name)) {
+    try { await openPptxFromDisk(hd); }
+    catch (e) { console.error(e); toast(T(`לא הצלחתי לפתוח את "{0}"`, hd.name), { ms: 7000 }); }
+    return;
+  }
   if (/\.pdf$/i.test(hd.name)) {
     try { await openPdfFromDisk(hd); }
     catch (e) { console.error(e); toast(T(`לא הצלחתי לפתוח את "{0}"`, hd.name), { ms: 7000 }); }
     return;
   }
   const kind = diskKind(hd.name);
-  if (!kind) { toast(T(`אי אפשר לפתוח כאן את "{0}". אפשר לפתוח קבצי Word, ‏PDF, טקסט ו-Markdown.`, hd.name), { ms: 7000 }); return; }
+  if (!kind) { toast(T(`אי אפשר לפתוח כאן את "{0}". אפשר לפתוח קבצי Word, פאוורפוינט, ‏PDF, טקסט ו-Markdown.`, hd.name), { ms: 7000 }); return; }
   const busy = toast(T('פותח את הקובץ…'), { icon: 'description', ms: 120000 });
   try {
     const f = await hd.getFile();
@@ -4262,14 +4290,19 @@ async function saveToFile() {
       if (!(await confirmBox(T('לשמור לתוך הקובץ?'), T(`מה שכתבת יישמר לתוך "{0}" במחשב, מעל הדפים המקוריים. השאלה הזאת לא תופיע שוב לקובץ הזה.`, L.name), T('לשמור')))) return;
       L.warned = true;
     }
+    if (L.kind === 'pptx' && !L.warned) {
+      if (!(await confirmBox(T('לשמור לתוך הקובץ?'), T(`השינויים יישמרו לתוך "{0}" במחשב, כמו שהמצגת נראית כאן. דברים שלא נפתחו כאן בדיוק (למשל SmartArt, שנפתח כצורות) יישמרו כמו שהם כאן. השאלה הזאת לא תופיע שוב לקובץ הזה.`, L.name), T('לשמור')))) return;
+      L.warned = true;
+    }
     if (L.kind === 'pdf') paCommitEdit();
+    if (L.kind === 'pptx') exitEdit();
     // asking needs the key press or click that started this, so it comes before anything slow
     let p = await L.handle.queryPermission({ mode: 'readwrite' });
     if (p !== 'granted') p = await L.handle.requestPermission({ mode: 'readwrite' });
     if (p !== 'granted') { toast(T('בלי אישור לשנות את הקובץ אי אפשר לשמור לתוכו. השינויים שמורים כאן באפליקציה.'), { ms: 7000 }); return; }
     await flushSave();
     busy = toast(T('שומר לקובץ…'), { icon: 'save', ms: 120000 });
-    const data = L.kind === 'docx' ? await buildDocx() : L.kind === 'pdf' ? await buildPdfaPdf() : diskText(L);
+    const data = L.kind === 'docx' ? await buildDocx() : L.kind === 'pdf' ? await buildPdfaPdf() : L.kind === 'pptx' ? await buildPptx() : diskText(L);
     if (S.cur !== c) return;
     const w = await L.handle.createWritable();
     try { await w.write(data); await w.close(); }
@@ -6061,6 +6094,14 @@ const PATHS = {
    lw: an outline this wide instead of a fill; flip: drawn mirrored; keep: stays the same way round in right to left (a play sign) */
 const stars = (list, c = '#ffffff', a = 0.85) => list.map(([x, y, w]) => ({ s: 'star4', x, y, w, h: w, c, a }));
 const dots = (x0, y0, n, m, gap, w, c, a) => Array.from({ length: n * m }, (_, i) => ({ s: 'ellipse', x: x0 + (i % n) * gap, y: y0 + Math.floor(i / n) * gap, w, h: w, c, a }));
+/* the design of the PowerPoint file a presentation came from: its colors, fonts and background (theme 'file') */
+function normFileTheme(t) {
+  if (!t || typeof t !== 'object' || !hexOr(t.accent)) return null;
+  const f = Array.isArray(t.font) ? t.font.filter(okFont) : [];
+  return { n: N_('מהקובץ'), bg: normBg(t.bg) || '#ffffff', title: hexOr(t.title) || '#111111', text: hexOr(t.text) || '#333333', accent: hexOr(t.accent), a2: hexOr(t.a2) || hexOr(t.accent),
+    font: [f[0] || 'Arial', f[1] || f[0] || 'Arial'], tb: false, hero: null };
+}
+const deckTheme = deck => deck && deck.theme === 'file' && deck.th ? deck.th : THEMES[deck && deck.theme] || THEMES.ink;
 const DECO = {
   ink: { normal: [{ s: 'rect', x: 0, y: 0, w: 14, h: 540, c: 'accent' }], hero: [{ s: 'ellipse', x: 690, y: 290, w: 420, h: 420, c: '#ffffff', a: 0.1 }, { s: 'ellipse', x: -110, y: -130, w: 320, h: 320, c: '#ffffff', a: 0.07 }] },
   night: { normal: [{ s: 'rect', x: 70, y: 124, w: 80, h: 6, c: 'accent' }], hero: [{ s: 'ellipse', x: 650, y: -170, w: 480, h: 480, c: 'accent', a: 0.2 }, { s: 'rect', x: 440, y: 402, w: 80, h: 6, c: 'accent' }] },
@@ -6186,6 +6227,7 @@ const SHAPES = {
   homePlate: { n: N_('חץ מחומש'), ppt: 'homePlate', cat: 'arrows', size: [240, 120] },
   star4: { n: N_('כוכב 4 קצוות'), ppt: 'star4', cat: 'stars' }, star5: { n: N_('כוכב'), ppt: 'star5', cat: 'stars' }, star6: { n: N_('כוכב 6 קצוות'), ppt: 'star6', cat: 'stars' },
   bubble: { n: N_('בועת דיבור'), ppt: 'wedgeRoundRectCallout', cat: 'stars', size: [260, 150] }, rectBubble: { n: N_('בועה מלבנית'), ppt: 'wedgeRectCallout', cat: 'stars', size: [260, 150] },
+  path: { n: N_('צורה'), ppt: 'custGeom', cat: 'file' },   // from a PowerPoint file: its outline is el.path
 };
 /* lines: h1 / h2 put an arrowhead at the start / the end */
 const LINES = { line: { n: N_('קו') }, arrow: { n: N_('חץ'), h2: 'arrow' }, dblArrow: { n: N_('קו עם שני חצים'), h1: 'arrow', h2: 'arrow' } };
@@ -6247,7 +6289,7 @@ function shapePath(s, w, h) {
 const pathCache = {};
 function pathSteps(p) {
   if (pathCache[p]) return pathCache[p];
-  const tok = String(PATHS[p] || '').match(/[MLCZ]|-?\d*\.?\d+/g) || [], out = [];
+  const tok = String(PATHS[p] || (/^M/.test(p || '') ? p : '')).match(/[MLCZ]|-?\d*\.?\d+/g) || [], out = [];   // a named drawing, or a shape's own path
   for (let i = 0; i < tok.length;) {
     const c = tok[i++];
     const n = c === 'C' ? 6 : c === 'Z' ? 0 : 2;
@@ -6365,7 +6407,9 @@ function slideHtml(html) {
 /* a deck from storage, a backup, a version or an assistant: every field checked, so nothing unexpected reaches the page */
 function normDeck(j) {
   const o = j && typeof j === 'object' ? j : {};
-  const deck = { v: 1, theme: THEMES[o.theme] ? o.theme : 'ink', dir: o.dir === 'ltr' || o.dir === 'rtl' ? o.dir : UI_DIR, slides: [] };
+  const th = normFileTheme(o.th);
+  const deck = { v: 1, theme: THEMES[o.theme] ? o.theme : o.theme === 'file' && th ? 'file' : 'ink', dir: o.dir === 'ltr' || o.dir === 'rtl' ? o.dir : UI_DIR, slides: [] };
+  if (th) deck.th = th;
   for (const s of Array.isArray(o.slides) ? o.slides : []) deck.slides.push(normSlide(s, deck.dir));
   if (!deck.slides.length) deck.slides.push(makeSlide('title', deck));
   return deck;
@@ -6393,6 +6437,7 @@ function normEl(e, dir) {
   if (!e || typeof e !== 'object') return null;
   const b = { id: okId(e.id) ? e.id : uid(), t: e.t };
   if (okId(e.g)) b.g = e.g;
+  if (e.dz === true) b.dz = true;   // part of the design a PowerPoint file's master gave its slides
   if (e.op != null && +e.op < 1) b.op = numIn(e.op, 1, 0.05, 1);
   if (SHADOWS[e.sh]) b.sh = e.sh;
   if (e.t === 'line') {
@@ -6402,13 +6447,15 @@ function normEl(e, dir) {
     for (const k of ['c1', 'c2']) { const c = e[k]; if (c && okId(c.id) && ['t', 'r', 'b', 'l'].includes(c.s)) b[k] = { id: c.id, s: c.s }; }
     return b;
   }
-  Object.assign(b, { x: numIn(e.x, 0, -SW, SW * 2), y: numIn(e.y, 0, -SH, SH * 2), w: numIn(e.w, 200, 8, SW * 3), h: numIn(e.h, 100, 8, SH * 3) });
+  const least = e.t === 'text' || e.t === 'table' ? 8 : 1;
+  Object.assign(b, { x: numIn(e.x, 0, -SW, SW * 2), y: numIn(e.y, 0, -SH, SH * 2), w: numIn(e.w, 200, least, SW * 3), h: numIn(e.h, 100, least, SH * 3) });
+  const rot = ((+e.rot || 0) % 360 + 360) % 360; if (rot) b.rot = numIn(rot, 0, 0, 360);
   if (PH_ROLES.has(e.ph)) b.ph = e.ph;
   const rad = e.rad === 'max' ? 'max' : numIn(e.rad, 0, 0, 400);
   if (rad) b.rad = rad;
   if (e.t === 'text') {
     Object.assign(b, { html: slideHtml(String(e.html || '')), size: numIn(e.size, 20, 6, 200), al: ['l', 'c', 'r', 'j'].includes(e.al) ? e.al : dir === 'rtl' ? 'r' : 'l', va: ['t', 'm', 'b'].includes(e.va) ? e.va : 't' });
-    if (FONT_NAMES.has(e.font)) b.font = e.font;
+    if (okFont(e.font)) b.font = e.font;
     const col = e.color === 'on' ? 'on' : colorTok(e.color);
     if (col) b.color = col;
     if (SHADOWS[e.tsh]) b.tsh = e.tsh;
@@ -6417,6 +6464,7 @@ function normEl(e, dir) {
     if (colorTok(e.toc)) { b.toc = colorTok(e.toc); b.tow = numIn(e.tow, 1, 0.5, 6); }
     for (const k of ['b', 'i', 'u']) if (typeof e[k] === 'boolean') b[k] = e[k];
     if (e.list === true) b.list = true;
+    if (e.lh != null && Math.abs(+e.lh - 1) > 0.01) b.lh = numIn(e.lh, 1, 0.5, 3);
     // an empty text box of its own (not a placeholder) is nothing: it was left behind
     if (!b.ph && !b.fill && !b.line && htmlEmpty(b.html)) return null;
     return b;
@@ -6435,6 +6483,20 @@ function normEl(e, dir) {
   }
   if (e.t === 'shape') {
     b.shape = SHAPES[e.shape] ? e.shape : 'rect';
+    if (b.shape === 'path') {
+      if (typeof e.path !== 'string' || !/^M[MLCZ0-9.\s-]{2,30000}$/.test(e.path)) b.shape = 'rect';
+      else {
+        b.path = e.path;
+        if (/^[a-zA-Z0-9]{2,40}$/.test(e.prst || '')) {
+          b.prst = e.prst;
+          const av = e.av && typeof e.av === 'object' ? Object.entries(e.av).filter(([k, v]) => /^[a-z0-9]{1,12}$/i.test(k) && Number.isFinite(+v)).slice(0, 8) : [];
+          if (av.length) b.av = Object.fromEntries(av.map(([k, v]) => [k, Math.round(+v)]));
+          if (e.fv === true) b.fv = true;
+        }
+        if (e.open === true) b.open = true;
+      }
+    }
+    if (e.gf && hexOr(e.gf.c1) && hexOr(e.gf.c2)) b.gf = { c1: hexOr(e.gf.c1), c2: hexOr(e.gf.c2), a: numIn(e.gf.a, 135, 0, 360) };
     if (colorTok(e.fill)) b.fill = colorTok(e.fill);
     lineOf(b, e);
     if (e.flip === true) b.flip = true;
@@ -6502,7 +6564,7 @@ const curText = () => deckOpen() ? deckText(DK.deck) : pdfaOpen() ? pdfaText(PA.
 const AL = { l: 'left', c: 'center', r: 'right', j: 'justify' }, VA = { t: 'flex-start', m: 'center', b: 'flex-end' };
 const themeFonts = th => LANG_FONTS.length ? [LANG_FONTS[th.serif ? 1 : 0] || LANG_FONTS[0], LANG_FONTS[0]] : th.font;
 function slideLook(deck, slide) {
-  const th = THEMES[deck.theme] || THEMES.ink, L = LAYOUTS[slide.layout], heroSlide = !!(L && L.hero), c = heroSlide && th.hero ? th.hero : th, fonts = themeFonts(th), d = DECO[deck.theme] || {};
+  const th = deckTheme(deck), L = LAYOUTS[slide.layout], heroSlide = !!(L && L.hero), c = heroSlide && th.hero ? th.hero : th, fonts = themeFonts(th), d = DECO[deck.theme] || {};
   const bg = slide.bg || c.bg, base = baseHex(bg), dark = lum(base) < 0.2;
   // soft: a pale accent on a light slide, a deep one on a dark slide, so text in its color reads on it either way
   return { bg, title: c.title, text: c.text, accent: th.accent, a2: th.a2 || th.accent, soft: th.sf && !slide.bg && c === th ? th.sf : dark ? mix(base, th.accent, 0.25) : tint(th.accent, 0.85), dark,
@@ -6525,7 +6587,7 @@ function styleText(n, el, look) {
     border: line ? `${el.lw || 2}px ${DASH_CSS[el.dash] || 'solid'} ${line}` : '', borderRadius: radCss(el, true),
     // the box's shadow; on a box with no fill or outline it falls on the letters, as it does in PowerPoint. tsh: the letters' own
     boxShadow: sh && boxed ? shadowCss(sh, look) : '', textShadow: tsh ? shadowCss(tsh, look) : sh && !boxed ? shadowCss(sh, look) : '',
-    webkitTextStroke: el.toc ? `${el.tow || 1}px ${paint(el.toc, look)}` : '', opacity: el.op != null ? String(el.op) : '',
+    webkitTextStroke: el.toc ? `${el.tow || 1}px ${paint(el.toc, look)}` : '', opacity: el.op != null ? String(el.op) : '', lineHeight: el.lh ? String(+(1.2 * el.lh).toFixed(3)) : '',
   });
 }
 /* an SVG the size of its box, with room around it (pad) for an outline or a shadow: the PDF tool draws an SVG
@@ -6544,7 +6606,13 @@ function drawShape(n, el, look) {
   const fill = paint(el.fill, look), line = paint(el.line, look), sh = SHADOWS[el.sh], id = 'fx' + (++FID);
   const pad = Math.ceil((line ? el.lw || 3 : 0) + (sh ? sh.blur * 1.5 + Math.hypot(sh.dx, sh.dy) : 0)) + 2;
   n.style.opacity = el.op != null ? String(el.op) : '';
-  n.innerHTML = svgBox(el.w, el.h, svgShadow(sh, look, id) + `<path d="${shapePath(el.shape, el.w, el.h)}" fill="${fill || 'none'}" fill-rule="evenodd"${line ? ` stroke="${line}" stroke-width="${el.lw || 3}" stroke-linejoin="round"${DASHES[el.dash] ? ` stroke-dasharray="${DASHES[el.dash]}"` : ''}` : ''}${sh ? ` filter="url(#${id})"` : ''}/>`, el.flip ? 'transform:scaleX(-1)' : '', pad);
+  const gid = 'g' + id, gf = el.gf && !el.open ? gradDef(el.gf, gid) : '';
+  n.innerHTML = svgBox(el.w, el.h, svgShadow(sh, look, id) + gf + `<path d="${el.shape === 'path' ? pathD(el.path, el.w, el.h, false) : shapePath(el.shape, el.w, el.h)}" fill="${el.open ? 'none' : gf ? `url(#${gid})` : fill || 'none'}" fill-rule="evenodd"${line ? ` stroke="${line}" stroke-width="${el.lw || 3}" stroke-linejoin="round"${DASHES[el.dash] ? ` stroke-dasharray="${DASHES[el.dash]}"` : ''}` : ''}${sh ? ` filter="url(#${id})"` : ''}/>`, el.flip ? 'transform:scaleX(-1)' : '', pad);
+}
+/* a two-color fill for a shape, at the angle CSS gives it (0 from the bottom up, 90 from left to right) */
+function gradDef(g, id) {
+  const a = g.a * Math.PI / 180, f = v => +v.toFixed(4);
+  return `<defs><linearGradient id="${id}" x1="${f(0.5 - Math.sin(a) / 2)}" y1="${f(0.5 + Math.cos(a) / 2)}" x2="${f(0.5 + Math.sin(a) / 2)}" y2="${f(0.5 - Math.cos(a) / 2)}"><stop offset="0" stop-color="${g.c1}"/><stop offset="1" stop-color="${g.c2}"/></linearGradient></defs>`;
 }
 /* a line: its box has room around it for the arrowheads, and a wide see-through stroke is what the mouse catches */
 function drawLine(n, el, look) {
@@ -6632,6 +6700,7 @@ function elNode(el, look, dir, mode, fitted) {
   else if (el.t === 'icon') drawIcon(n, el, look);
   else if (el.t === 'video') drawVideo(n, el, look, mode);
   else return null;
+  if (el.rot) { if (mode === 'export') n.style.transform = `rotate(${el.rot}deg)`; else n.style.rotate = el.rot + 'deg'; }
   return n;
 }
 function miniSlide(slide, deck, w, mode = 'thumb') {
@@ -6640,8 +6709,8 @@ function miniSlide(slide, deck, w, mode = 'thumb') {
   return h('div', { class: 'mini', style: { width: w + 'px', height: Math.round(w * SH / SW) + 'px' } }, sl);
 }
 /* a theme's opening slide with "Aa" on it, for the theme pickers */
-function themeMini(key, w) {
-  const deck = { v: 1, theme: key, dir: UI_DIR, slides: [] }, s = makeSlide('title', deck);
+function themeMini(key, w, th) {
+  const deck = { v: 1, theme: key, th, dir: UI_DIR, slides: [] }, s = makeSlide('title', deck);
   s.els = [{ ...s.els[0], y: 120, h: 300, va: 'm', size: 150, html: '<p>Aa</p>' }];
   return miniSlide(s, deck, w);
 }
@@ -6666,11 +6735,19 @@ function setDeckMode(on) {
 function deckLoad(body) {
   stopPreview();
   DK.deck = parseDeck(body);
+  deckFontOpts();
   Object.assign(DK, { idx: 0, sel: [], edit: null, typing: false, reveal: 0, imgFor: null, bgFor: false, newBox: null, tool: null, crop: null });
   DH.stack = []; DH.idx = -1; DK.ver = ++DVER; dSnap();
   $('#pageRule').textContent = '@page{size:10in 5.625in;margin:0}';
   $('#stage').classList.remove('tooling');
   fitStage(); deckRender();
+}
+/* fonts that a presentation from a file uses, beside the app's own in the font list */
+function deckFontOpts() {
+  const sel = $('#dFont'); sel.querySelectorAll('option.xf').forEach(o => o.remove());
+  const fonts = new Set(); for (const s of DK.deck.slides) for (const e of s.els) if (e.font && !FONT_NAMES.has(e.font)) fonts.add(e.font);
+  if (DK.deck.th) for (const f of DK.deck.th.font) if (!FONT_NAMES.has(f)) fonts.add(f);
+  for (const f of fonts) sel.append(h('option', { class: 'xf', value: f, text: f, style: { fontFamily: `"${f}"` } }));
 }
 function deckRender() { renderStage(); renderStrip(); updateDeckUI(); updateStats(); }
 function fitStage() {
@@ -6795,6 +6872,7 @@ function updateDeckUI() {
   const fs = $('#dFont'), zs = $('#dSize');
   if (document.activeElement !== fs) fs.value = text ? elFont(text, look) : '';
   if (document.activeElement !== zs) zs.value = text ? String(nearest(DSIZES, text.size)) : '';
+  fileThemeOpt();
   for (const b of $$('#themeGal .theme-opt')) b.classList.toggle('on', b.dataset.arg === DK.deck.theme);
   // the format tabs appear with what they format, the way PowerPoint's do
   const shapeish = els.some(e => ['text', 'shape', 'line', 'icon'].includes(e.t)), pic = els.some(e => e.t === 'img');
@@ -6891,7 +6969,9 @@ const defaultLayout = () => { const s = curSlide(); return s && ['content', 'two
 function addSlide(layout = defaultLayout(), at = DK.idx + 1) {
   if (!DK.deck) return;
   endCrop(); exitEdit();
-  const s = makeSlide(layout, DK.deck);
+  const s = makeSlide(layout, DK.deck), src = curSlide();
+  // in a presentation from PowerPoint, a new slide gets the design the slide it follows has: its background and the master's shapes
+  if (src && DK.deck.theme === 'file') { const dz = src.els.filter(e => e.dz); if (dz.length) s.els.unshift(...freshCopy(dz)); if (src.bg) s.bg = clone(src.bg); }
   dEdit(() => { DK.deck.slides.splice(at, 0, s); DK.idx = at; });
   DK.sel = []; deckRender(); scrollThumb();
 }
@@ -6935,7 +7015,7 @@ function moveSlide(from, to) {
   deckRender(); scrollThumb();
 }
 function setTheme(key) {
-  if (!THEMES[key] || !DK.deck || DK.deck.theme === key) return;
+  if (!DK.deck || (!THEMES[key] && !(key === 'file' && DK.deck.th)) || DK.deck.theme === key) return;
   endCrop(); exitEdit(); dEdit(() => { DK.deck.theme = key; }); deckRender();
 }
 function setLayout(key) {
@@ -7842,6 +7922,13 @@ function applyPicStyle(i) {
   const p = PSTYLES[i]; if (!p) return;
   editEls(isImg, e => { for (const k of ['rad', 'line', 'lw', 'sh']) { if (p[k] != null) e[k] = p[k]; else delete e[k]; } delete e.dash; });
 }
+/* a presentation opened from PowerPoint keeps its own design first in the gallery */
+function fileThemeOpt() {
+  const g = $('#themeGal'), have = g.querySelector('.theme-opt[data-arg="file"]'), th = DK.deck && DK.deck.th, key = th ? [th.accent, th.a2, th.title, th.text, th.font.join(), typeof th.bg === 'string' ? th.bg : th.bg.t].join('|') : '';
+  if (have && have.dataset.k === key) return;
+  if (have) have.remove();
+  if (th) g.prepend(h('button', { class: 'theme-opt', 'data-cmd': 'theme', 'data-arg': 'file', 'data-k': key, title: T(th.n) }, themeMini('file', 68, th), h('span', { text: T(th.n) })));
+}
 function buildThemeGallery() {
   const g = $('#themeGal');
   for (const [k, t] of Object.entries(THEMES)) g.append(h('button', { class: 'theme-opt', 'data-cmd': 'theme', 'data-arg': k, title: T(t.n) }, themeMini(k, 68), h('span', { text: T(t.n) })));
@@ -7849,7 +7936,7 @@ function buildThemeGallery() {
 function openThemes(anchor) {
   if (!DK.deck) return;
   openPop(anchor, h('div', {}, h('div', { class: 'pop-t', text: T('כל ערכות העיצוב') }), h('div', { class: 'theme-grid' },
-    Object.entries(THEMES).map(([k, t]) => h('button', { class: 'theme-opt' + (k === DK.deck.theme ? ' on' : ''), 'data-cmd': 'theme', 'data-arg': k, title: T(t.n) }, themeMini(k, 104), h('span', { text: T(t.n) }))))));
+    [...(DK.deck.th ? [['file', DK.deck.th]] : []), ...Object.entries(THEMES)].map(([k, t]) => h('button', { class: 'theme-opt' + (k === DK.deck.theme ? ' on' : ''), 'data-cmd': 'theme', 'data-arg': k, title: T(t.n) }, themeMini(k, 104, k === 'file' ? t : undefined), h('span', { text: T(t.n) }))))));
 }
 /* the slide's background: a color, a gradient (ready or of two colors) or a picture, for this slide or for all of them */
 function openBackground(anchor) {
@@ -8701,14 +8788,23 @@ async function elPpt(s, el, look, node, patch, rtl) {
     if (fill) o.fill = { color: HX(fill), transparency: tr };
     if (line) o.line = { color: HX(line), width: PT(el.lw || 3), dashType: dash(el.dash), transparency: tr };
     if (el.flip) o.flipH = true;
+    if (el.fv) o.flipV = true;
+    if (el.rot) o.rotate = el.rot;
+    if (el.open) delete o.fill;
     if (sh && !sh.glow) o.shadow = pptShadow(sh, look, op);
-    if (sh && sh.glow) patch.els[name] = { glow: glowXml(sh, look, op) };
-    s.addShape(SHAPES[el.shape].ppt, o);
+    const e = {};
+    if (sh && sh.glow) e.glow = glowXml(sh, look, op);
+    if (el.gf && o.fill) e.grad = gradXml(el.gf);
+    if (el.shape === 'path' && el.prst) { if (el.av) e.av = `<a:avLst>${Object.entries(el.av).map(([k, v]) => `<a:gd name="${k}" fmla="val ${v}"/>`).join('')}</a:avLst>`; s.addShape(el.prst, o); }
+    else if (el.shape === 'path') { o.points = pathPts(el.path, el.w, el.h, false); s.addShape('custGeom', o); }
+    else s.addShape(SHAPES[el.shape].ppt, o);
+    if (Object.keys(e).length) patch.els[name] = e;
     return true;
   }
   if (el.t === 'img') {
     if (!el.src) return false;
     const f = await fitImg(el), o = { data: f.data.replace(/^data:/, ''), x: IN(f.x), y: IN(f.y), w: IN(f.w), h: IN(f.h), objectName: name };
+    if (el.rot) o.rotate = el.rot;
     if (tr) o.transparency = tr;
     if (sh && !sh.glow) o.shadow = pptShadow(sh, look, op);
     s.addImage(o);
@@ -8725,6 +8821,8 @@ async function elPpt(s, el, look, node, patch, rtl) {
     const fill = paint(el.fill, look), line = paint(el.line, look), boxed = !!(fill || line), tsh = SHADOWS[el.tsh], e = {};
     const o = { ...box, objectName: name, margin: [7.2, 7.2, 3.6, 3.6], valign: { t: 'top', m: 'middle', b: 'bottom' }[el.va] || 'top',
       fontFace: elFont(el, look), fontSize: el.size, color: HX(elColor(el, look)), rtlMode: rtl, isTextBox: true, wrap: true };
+    if (el.rot) o.rotate = el.rot;
+    if (el.lh) o.lineSpacingMultiple = el.lh;
     if (fill) o.fill = { color: HX(fill), transparency: tr };
     if (line) o.line = { color: HX(line), width: PT(el.lw || 2), dashType: dash(el.dash), transparency: tr };
     if (el.rad) { o.shape = 'roundRect'; o.rectRadius = IN(Math.min(el.rad === 'max' ? 9999 : el.rad, Math.min(el.w, el.h) / 2)); }
@@ -8738,7 +8836,7 @@ async function elPpt(s, el, look, node, patch, rtl) {
     if (e.glow || e.rsh) patch.els[name] = e;
     return true;
   }
-  if (el.t === 'table') return tablePpt(s, el, look, node, box, name);
+  if (el.t === 'table') return tablePpt(s, el, look, node, box, name, patch, rtl);
   if (el.t === 'chart') { chartPpt(s, el, look, box, name, rtl); return true; }
   if (el.t === 'icon') return iconPpt(s, el, look, box, name);
   if (el.t === 'video') return videoPpt(s, el, box, name);
@@ -8763,7 +8861,7 @@ async function fixPptx(blob, patches = []) {
     // tables: an id of their own (PptxGenJS may repeat another shape's), and right to left in Hebrew and Arabic
     let tn = 0;
     x = x.replace(/<p:graphicFrame>[\s\S]*?<\/p:graphicFrame>/g, m => !m.includes('<a:tbl>') ? m
-      : m.replace(/<p:cNvPr id="\d+"/, () => `<p:cNvPr id="${7001 + tn++}"`).replace('<a:tblPr/>', p && p.rtl ? '<a:tblPr rtl="1"/>' : '<a:tblPr/>'));
+      : m.replace(/<p:cNvPr id="\d+"/, () => `<p:cNvPr id="${7001 + tn++}"`).replace('<a:tblPr/>', () => { const e = p && p.els[xmlName(m)]; return (e && e.trtl != null ? e.trtl : p && p.rtl) ? '<a:tblPr rtl="1"/>' : '<a:tblPr/>'; }));
     zip.file(name, p ? patchSlideXml(x, p) : x);
   }
   return zip.generateAsync({ type: 'blob', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
@@ -8787,6 +8885,8 @@ function patchEl(b, e) {
   if (e.glow) b = b.replace(/<p:spPr>([\s\S]*?)<\/p:spPr>/, (m, inner) => '<p:spPr>' + (/<a:effectLst\s*\/>/.test(inner) ? inner.replace(/<a:effectLst\s*\/>/, () => '<a:effectLst>' + e.glow + '</a:effectLst>')
     : /<a:effectLst>/.test(inner) ? inner.replace('<a:effectLst>', () => '<a:effectLst>' + e.glow) : inner + '<a:effectLst>' + e.glow + '</a:effectLst>') + '</p:spPr>');
   if (e.rsh) b = b.replace(/(<a:rPr\b[^>]*[^/]>)([\s\S]*?)(<\/a:rPr>)/g, (m, o, inner, c) => o + runEff(inner, e.rsh) + c);
+  if (e.av) b = b.replace(/(<a:prstGeom prst="[^"]+">)\s*<a:avLst\s*(?:\/>|>[\s\S]*?<\/a:avLst>)/, (m, g) => g + e.av);   // a PowerPoint shape's own proportions
+  if (e.grad) b = b.replace(/(<p:spPr>[\s\S]*?)<a:solidFill>[\s\S]*?<\/a:solidFill>/, (m, pre) => pre + e.grad);
   return b;
 }
 /* a group: its parts, when they sit next to each other on the slide, wrapped as one */
@@ -8807,7 +8907,7 @@ async function buildPptx() {
   const pres = new P();
   pres.layout = 'LAYOUT_16x9'; pres.rtlMode = rtl;
   pres.title = displayTitle(S.cur.meta); pres.author = pres.company = 'Floating Ink';
-  const fonts = themeFonts(THEMES[deck.theme] || THEMES.ink);
+  const fonts = themeFonts(deckTheme(deck));
   pres.theme = { headFontFace: fonts[0], bodyFontFace: fonts[1] };
   const host = h('div', { style: { position: 'fixed', left: '-12000px', top: '0', width: SW + 'px', height: SH + 'px' } });
   document.body.append(host);
@@ -8925,9 +9025,11 @@ function normTable(b, e, dir) {
   b.cw = cw.map(v => +(v / sum).toFixed(4));
   b.rh = Array.from({ length: R }, (_, i) => numIn(Array.isArray(e.rh) ? e.rh[i] : 40, 40, 12, 400));
   b.ts = TSTYLES[e.ts] ? e.ts : 'med';
+  if (hexOr(e.acc)) b.acc = hexOr(e.acc);   // a table from a PowerPoint file keeps its own color
+  if (e.dir === 'rtl' || e.dir === 'ltr') b.dir = e.dir;
   b.hr = e.hr !== false; b.br = e.br !== false; b.fc = e.fc === true;
   b.size = numIn(e.size, 16, 6, 96);
-  if (FONT_NAMES.has(e.font)) b.font = e.font;
+  if (okFont(e.font)) b.font = e.font;
   if (colorTok(e.color)) b.color = colorTok(e.color);
   for (const k of ['b', 'i', 'u']) if (e[k] === true) b[k] = true;
   b.al = AL[e.al] ? e.al : dir === 'rtl' ? 'r' : 'l';
@@ -8948,7 +9050,7 @@ function cellLook(el, st, r, c, look) {
   return { fill, color, bold: head || first || !!el.b, bd };
 }
 function drawTable(n, el, look, dir) {
-  const st = TSTYLES[el.ts].f(look), tb = h('table', { class: 'tbl', dir }), body = h('tbody');
+  const tdir = el.dir || dir, st = TSTYLES[el.ts].f(tblLook(el, look)), tb = h('table', { class: 'tbl', dir: tdir }), body = h('tbody');
   tb.append(h('colgroup', {}, el.cw.map(w => h('col', { style: { width: w * 100 + '%' } }))));
   const bd = s => s ? `${s[0]}px solid ${s[1]}` : 'none';
   el.cells.forEach((row, r) => {
@@ -8960,7 +9062,7 @@ function drawTable(n, el, look, dir) {
       if (x.rs) td.rowSpan = x.rs;
       Object.assign(td.style, { background: L.fill || 'transparent', color: L.color, fontWeight: L.bold ? '700' : '400', textAlign: AL[x.al || el.al] || 'start',
         verticalAlign: { t: 'top', m: 'middle', b: 'bottom' }[x.va || el.va] || 'middle', borderTop: bd(L.bd.t), borderBottom: bd(L.bd.b), borderLeft: bd(L.bd.l), borderRight: bd(L.bd.r) });
-      const tc = h('div', { class: 'tc', dir });
+      const tc = h('div', { class: 'tc', dir: tdir });
       tc.innerHTML = x.h;
       td.append(tc); tr.append(td);
     });
@@ -8970,6 +9072,8 @@ function drawTable(n, el, look, dir) {
   Object.assign(n.style, { fontFamily: `"${elFont(el, look)}", Arial, sans-serif`, fontSize: el.size + 'pt', fontStyle: el.i ? 'italic' : '', textDecorationLine: el.u ? 'underline' : '', opacity: el.op != null ? String(el.op) : '', height: 'auto' });
   n.append(tb);
 }
+/* a table from a PowerPoint file keeps its own color in whichever look it has */
+const tblLook = (el, look) => el.acc ? { ...look, accent: el.acc, a2: el.acc, soft: tint(el.acc, 0.85) } : look;
 /* a table is as tall as its rows need: after drawing, its box takes the height the text gave it */
 function syncTables() {
   const s = curSlide(); if (!s) return;
@@ -9173,7 +9277,7 @@ function tblRedraw(el, cell) {
 function setTblProp(k, v) {
   const el = curEl(); if (!el || el.t !== 'table') return;
   const cell = DK.edit === el.id && DK.cell ? { ...DK.cell } : null;
-  dEdit(() => { if (v == null || v === false) delete el[k]; else el[k] = v; if (k === 'hr' || k === 'br') el[k] = !!v; });
+  dEdit(() => { if (v == null || v === false) delete el[k]; else el[k] = v; if (k === 'hr' || k === 'br') el[k] = !!v; if (k === 'ts') delete el.acc; });
   tblRedraw(el, cell);
 }
 function setTblAlign(k, v) { tblCells(x => { x[k] = v; }, el => { el[k] = v; for (const row of el.cells) for (const x of row) delete x[k]; }); }
@@ -9201,14 +9305,14 @@ function drawTableStyles(look) {
 /* a column's edge, pulled: the two columns beside it share their width differently */
 function colEdgeAt(el, p) {
   const tb = stageEl(el.id) && stageEl(el.id).querySelector('table'); if (!tb || p.y < el.y || p.y > el.y + el.h) return -1;
-  const rtl = DK.deck.dir === 'rtl', thr = 5 / DK.k;
+  const rtl = (el.dir || DK.deck.dir) === 'rtl', thr = 5 / DK.k;
   let at = rtl ? el.x + el.w : el.x;
   for (let c = 0; c < el.cw.length - 1; c++) { at += (rtl ? -1 : 1) * el.cw[c] * el.w; if (Math.abs(p.x - at) <= thr) return c; }
   return -1;
 }
 function colDrag(e, el, c) {
   e.preventDefault();
-  const rtl = DK.deck.dir === 'rtl', p0 = stagePoint(e), a0 = el.cw[c], b0 = el.cw[c + 1], min = 16 / el.w;
+  const rtl = (el.dir || DK.deck.dir) === 'rtl', p0 = stagePoint(e), a0 = el.cw[c], b0 = el.cw[c + 1], min = 16 / el.w;
   let moved = false;
   const move = ev => {
     if (!moved) { moved = true; dSnap(); }
@@ -9247,11 +9351,14 @@ function normChart(b, e) {
   b.leg = e.leg !== false;
   if (e.lab === true) b.lab = true;
   b.pal = PALS[e.pal] ? e.pal : 'theme';
+  if (e.dir === 'rtl' || e.dir === 'ltr') b.dir = e.dir;
+  if (Array.isArray(e.cols)) { const c = e.cols.map(hexOr).filter(Boolean).slice(0, 40); if (c.length) b.cols = c; }
   b.size = numIn(e.size, 12, 7, 40);
-  if (FONT_NAMES.has(e.font)) b.font = e.font;
+  if (okFont(e.font)) b.font = e.font;
   return b;
 }
 function chartColors(el, look, n) {
+  if (el.cols && el.cols.length) return Array.from({ length: n }, (_, i) => el.cols[i % el.cols.length]);   // a file's own colors
   const a = look.accent, b = look.a2, dk = (c, k) => mix(c, '#000000', k);
   if (el.pal === 'bright') return Array.from({ length: n }, (_, i) => BRIGHT[i % BRIGHT.length]);
   if (el.pal === 'mono') return Array.from({ length: n }, (_, i) => { const t = n < 2 ? 0.5 : i / (n - 1); return t < 0.5 ? dk(a, 0.45 * (1 - 2 * t)) : tint(a, 0.6 * (2 * t - 1)); });
@@ -9273,7 +9380,7 @@ function textW(t, px, font, bold) {
   return chartCtx.measureText(String(t)).width;
 }
 function drawChart(n, el, look, dir) {
-  const W = el.w, H = el.h, rtl = dir === 'rtl', font = elFont(el, look), fpx = el.size * 4 / 3, pad = 10;
+  const W = el.w, H = el.h, rtl = (el.dir || dir) === 'rtl', font = elFont(el, look), fpx = el.size * 4 / 3, pad = 10;
   const colors = chartColors(el, look, isRound(el) ? el.cats.length : el.ser.length), base = baseHex(look.bg);
   const ink = mix(look.text, base, 0.25), grid = mix(base, look.text, 0.16), axis = mix(base, look.text, 0.45);
   const f = v => +v.toFixed(2), svg = [], labs = [];
@@ -9447,7 +9554,7 @@ function openChartData(id) {
 function openChartColors(anchor) {
   const el = curEl(); if (!el || el.t !== 'chart') return;
   const look = curLook();
-  openPop(anchor, h('div', { class: 'menu' }, h('div', { class: 'pop-t', text: T('צבעים לגרף') }), Object.entries(PALS).map(([k, n]) => h('button', { class: 'mi' + (el.pal === k ? ' on' : ''), onclick: () => { closePopover(); editEls(e => e.t === 'chart', e => { e.pal = k; }); } },
+  openPop(anchor, h('div', { class: 'menu' }, h('div', { class: 'pop-t', text: T('צבעים לגרף') }), Object.entries(PALS).map(([k, n]) => h('button', { class: 'mi' + (el.pal === k ? ' on' : ''), onclick: () => { closePopover(); editEls(e => e.t === 'chart', e => { e.pal = k; delete e.cols; }); } },
     h('span', { class: 'pal-row' }, chartColors({ pal: k }, look, 5).map(c => h('i', { style: { background: c } }))), T(n)))));
 }
 function chartText(el) { return [el.ti, ...el.cats].filter(Boolean).join(' · '); }
@@ -9788,9 +9895,10 @@ function openTblDel(anchor) {
 }
 /* --- the new kinds in PowerPoint: a real table, a real chart (its numbers editable in PowerPoint), an icon as a shape
    of its own, a video inside the file or a YouTube video PowerPoint plays online --- */
-function tablePpt(s, el, look, node, box, name) {
+function tablePpt(s, el, look, node, box, name, patch, rtl) {
   const n = node.querySelector(`[data-id="${el.id}"]`); if (!n) return false;
-  const st = TSTYLES[el.ts].f(look), R = el.cells.length, C = el.cells[0].length, trs = [...n.querySelectorAll('tr')], rows = [];
+  const st = TSTYLES[el.ts].f(tblLook(el, look)), R = el.cells.length, C = el.cells[0].length, trs = [...n.querySelectorAll('tr')], rows = [];
+  patch.els[name] = { ...(patch.els[name] || {}), trtl: el.dir ? el.dir === 'rtl' : rtl };
   const bd = v => v ? { type: 'solid', pt: PT(v[0]), color: HX(v[1]) } : { type: 'none' };
   for (let r = 0; r < R; r++) {
     const row = [];
@@ -9819,7 +9927,7 @@ function chartPpt(s, el, look, box, name, rtl) {
   if (round) Object.assign(o, { holeSize: 50, dataLabelColor: 'FFFFFF', dataBorder: { pt: 1, color: HX(base) } });
   else Object.assign(o, { barDir: el.ck === 'bar' ? 'bar' : 'col', barGapWidthPct: 100, catAxisLabelColor: ink, valAxisLabelColor: ink, catAxisLabelFontFace: font, valAxisLabelFontFace: font,
     catAxisLabelFontSize: el.size, valAxisLabelFontSize: el.size, valGridLine: { color: HX(mix(base, look.text, 0.16)), size: 0.75 }, catGridLine: { style: 'none' }, catAxisLineColor: HX(mix(base, look.text, 0.45)), valAxisLineShow: false,
-    catAxisOrientation: rtl && el.ck !== 'bar' ? 'maxMin' : 'minMax', valAxisOrientation: rtl && el.ck === 'bar' ? 'maxMin' : 'minMax',
+    catAxisOrientation: (el.dir ? el.dir === 'rtl' : rtl) && el.ck !== 'bar' ? 'maxMin' : 'minMax', valAxisOrientation: (el.dir ? el.dir === 'rtl' : rtl) && el.ck === 'bar' ? 'maxMin' : 'minMax',
     lineSize: 2.25, lineDataSymbol: 'circle', lineDataSymbolSize: 7, dataLabelPosition: el.ck === 'line' ? 't' : 'outEnd' });
   s.addChart({ col: 'bar', bar: 'bar', line: 'line', pie: 'pie', donut: 'doughnut' }[el.ck], data, o);
 }
@@ -9828,6 +9936,7 @@ function iconPpt(s, el, look, box, name) {
   let pts;
   try { pts = svgAbs(el.d).map(({ c, v }) => c === 'Z' ? { close: true } : c === 'M' ? { x: X(v[0]), y: Y(v[1]), moveTo: true } : c === 'L' ? { x: X(v[0]), y: Y(v[1]) } : { x: X(v[4]), y: Y(v[5]), curve: { type: 'cubic', x1: X(v[0]), y1: Y(v[1]), x2: X(v[2]), y2: Y(v[3]) } }); } catch { return false; }
   const o = { ...box, objectName: name, points: pts, fill: { color: HX(paint(el.fill, look) || look.accent), transparency: Math.round((1 - op) * 100) } };
+  if (el.rot) o.rotate = el.rot;
   if (sh && !sh.glow) o.shadow = pptShadow(sh, look, op);
   s.addShape('custGeom', o);
   return true;
@@ -9883,6 +9992,930 @@ async function restoreMedia(body, j) {
     if (!ok) missing++;
   }
   return missing;
+}
+
+/* =========================================================
+   opening PowerPoint files: a .pptx becomes a presentation here, as close to what PowerPoint shows as this app
+   can draw it. Text keeps its fonts, sizes, colors and bullets (worked out through the slide, its layout, its
+   master and the theme, the way PowerPoint does), shapes keep their exact outline (from the file format's own
+   shape definitions, pptx-shapes.json), and pictures, tables, charts, SmartArt, groups, lines, backgrounds, the
+   design's own shapes, transitions, animations, notes and videos all come across. What can't is counted and told
+   ========================================================= */
+const PPTX_RE = /\.(pptx|ppsx|potx|pptm|ppsm|potm)$/i;
+const RNS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+const xkids = (e, n) => e ? [...e.children].filter(c => !n || c.localName === n) : [];
+const xkid = (e, ...path) => { for (const n of path) { if (!e) return null; e = [...e.children].find(c => c.localName === n) || null; } return e; };
+const xat = (e, a) => e ? e.getAttribute(a) : null;
+const xnum = (e, a, d) => { const v = e && e.getAttribute(a); return v == null || v === '' || !Number.isFinite(+v) ? d : +v; };
+const xrid = (e, a) => e ? e.getAttributeNS(RNS, a) || e.getAttribute('r:' + a) : null;
+const xdesc = (e, n) => e ? [...e.getElementsByTagNameNS('*', n)] : [];
+function pkgPath(dir, t) { const out = []; for (const p of (t.startsWith('/') ? t.slice(1) : dir + t).split('/')) { if (p === '..') out.pop(); else if (p && p !== '.') out.push(p); } return out.join('/'); }
+/* the file: its parts, read once each, and the relationships between them */
+class PptxPkg {
+  constructor(zip) { this.zip = zip; this.docs = new Map(); this.rl = new Map(); this.rep = new Map(); this.imgs = new Map(); }
+  file(name) { return this.zip.file(name) || this.zip.file(decodeURIComponent(name)); }
+  async xml(name) {
+    if (!this.docs.has(name)) { const f = this.file(name), t = f ? await f.async('string') : null; this.docs.set(name, t ? new DOMParser().parseFromString(t, 'application/xml') : null); }
+    return this.docs.get(name);
+  }
+  async rels(name) {
+    if (this.rl.has(name)) return this.rl.get(name);
+    const dir = name.replace(/[^/]*$/, ''), doc = await this.xml(dir + '_rels/' + name.slice(dir.length) + '.rels'), m = new Map();
+    for (const r of doc ? [...doc.getElementsByTagNameNS('*', 'Relationship')] : []) {
+      const ext = r.getAttribute('TargetMode') === 'External', t = r.getAttribute('Target') || '';
+      m.set(r.getAttribute('Id'), { type: (r.getAttribute('Type') || '').split('/').pop(), target: ext ? t : pkgPath(dir, t), ext });
+    }
+    this.rl.set(name, m); return m;
+  }
+  async relOf(name, type) { for (const r of (await this.rels(name)).values()) if (r.type === type) return r; return null; }
+  note(k, n = 1) { this.rep.set(k, (this.rep.get(k) || 0) + n); }
+}
+
+/* --- the theme: its colors, fonts and ready fills and lines --- */
+function pptTheme(doc, part) {
+  const th = { c: {}, mj: {}, mn: {}, fill: [], ln: [], bg: [], part };
+  for (const e of xkids(doc && xdesc(doc, 'clrScheme')[0])) {
+    const v = xkids(e)[0]; if (!v) continue;
+    th.c[e.localName] = v.localName === 'sysClr' ? xat(v, 'lastClr') || (xat(v, 'val') === 'window' ? 'FFFFFF' : '000000') : xat(v, 'val') || '000000';
+  }
+  const fs = doc && xdesc(doc, 'fontScheme')[0];
+  for (const [k, n] of [['mj', 'majorFont'], ['mn', 'minorFont']]) {
+    const f = xkid(fs, n); if (!f) continue;
+    th[k] = { lt: xat(xkid(f, 'latin'), 'typeface') || '', ea: xat(xkid(f, 'ea'), 'typeface') || '', cs: xat(xkid(f, 'cs'), 'typeface') || '' };
+    for (const s of xkids(f, 'font')) th[k][xat(s, 'script')] = xat(s, 'typeface') || '';
+  }
+  const fm = doc && xdesc(doc, 'fmtScheme')[0];
+  th.fill = xkids(xkid(fm, 'fillStyleLst')); th.ln = xkids(xkid(fm, 'lnStyleLst')); th.bg = xkids(xkid(fm, 'bgFillStyleLst'));
+  return th;
+}
+
+/* --- colors: a scheme color through the master's color map, with PowerPoint's changes (lighter, darker, see-through) --- */
+const PRST_CLR = { black: '000000', white: 'FFFFFF', red: 'FF0000', green: '008000', lime: '00FF00', blue: '0000FF', yellow: 'FFFF00', gray: '808080', grey: '808080', silver: 'C0C0C0', orange: 'FFA500', purple: '800080', pink: 'FFC0CB', brown: 'A52A2A', navy: '000080', teal: '008080', maroon: '800000', olive: '808000', cyan: '00FFFF', magenta: 'FF00FF', gold: 'FFD700', darkBlue: '00008B', darkRed: '8B0000', darkGreen: '006400', ltGray: 'D3D3D3', dkGray: 'A9A9A9' };
+function rgbHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; let h = 0, s = 0;
+  if (mx !== mn) { const d = mx - mn; s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h /= 6; }
+  return [h, s, l];
+}
+function hslRgb(h, s, l) {
+  if (!s) return [l, l, l].map(v => Math.round(v * 255));
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q, f = t => { t = (t % 1 + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
+  return [f(h + 1 / 3), f(h), f(h - 1 / 3)].map(v => Math.round(clamp(v, 0, 1) * 255));
+}
+function pptClr(e, cx) {
+  if (!e) return null;
+  let hex, a = 1;
+  switch (e.localName) {
+    case 'srgbClr': hex = xat(e, 'val'); break;
+    case 'sysClr': hex = xat(e, 'lastClr') || (xat(e, 'val') === 'window' ? 'FFFFFF' : '000000'); break;
+    case 'prstClr': hex = PRST_CLR[xat(e, 'val')] || '000000'; break;
+    case 'scrgbClr': hex = ['r', 'g', 'b'].map(k => { const v = clamp(xnum(e, k, 0) / 100000, 0, 1); return Math.round((v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055) * 255).toString(16).padStart(2, '0'); }).join(''); break;
+    case 'hslClr': hex = hslRgb(xnum(e, 'hue', 0) / 21600000, xnum(e, 'sat', 0) / 100000, xnum(e, 'lum', 0) / 100000).map(v => v.toString(16).padStart(2, '0')).join(''); break;
+    case 'schemeClr': {
+      const v = xat(e, 'val');
+      if (v === 'phClr') { if (!cx.ph) return null; hex = cx.ph.hex.slice(1); a = cx.ph.a; break; }
+      const m = cx.map || {}, k = { bg1: m.bg1 || 'lt1', tx1: m.tx1 || 'dk1', bg2: m.bg2 || 'lt2', tx2: m.tx2 || 'dk2' }[v] || m[v] || v;
+      hex = cx.th.c[k]; break;
+    }
+    default: return null;
+  }
+  if (!/^[0-9a-f]{6}$/i.test(hex || '')) return null;
+  let r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
+  for (const m of xkids(e)) {
+    const v = xnum(m, 'val', 100000) / 100000;
+    switch (m.localName) {
+      case 'alpha': a = v; break;
+      case 'alphaMod': a *= v; break;
+      case 'alphaOff': a = clamp(a + v, 0, 1); break;
+      case 'tint': [r, g, b] = [r, g, b].map(c => Math.round(c * v + 255 * (1 - v))); break;
+      case 'shade': [r, g, b] = [r, g, b].map(c => Math.round(c * v)); break;
+      case 'inv': [r, g, b] = [255 - r, 255 - g, 255 - b]; break;
+      case 'gray': { const y = Math.round(0.299 * r + 0.587 * g + 0.114 * b); r = g = b = y; break; }
+      case 'lumMod': case 'lumOff': case 'satMod': case 'satOff': case 'hueOff': case 'hueMod': case 'comp': {
+        let [H, S, L] = rgbHsl(r, g, b);
+        if (m.localName === 'lumMod') L *= v; else if (m.localName === 'lumOff') L += v; else if (m.localName === 'satMod') S *= v; else if (m.localName === 'satOff') S += v;
+        else if (m.localName === 'hueOff') H += xnum(m, 'val', 0) / 21600000; else if (m.localName === 'hueMod') H *= v; else H += 0.5;
+        [r, g, b] = hslRgb(H, clamp(S, 0, 1), clamp(L, 0, 1)); break;
+      }
+    }
+  }
+  return { hex: '#' + [r, g, b].map(c => clamp(c, 0, 255).toString(16).padStart(2, '0')).join(''), a: +clamp(a, 0, 1).toFixed(3) };
+}
+const clrIn = (e, cx) => pptClr(xkids(e).find(c => /Clr$/.test(c.localName)) || null, cx);
+
+/* --- fills and lines: the shape's own, or the theme's through its style (fillRef, lnRef) --- */
+function pptFillEl(e, cx) {
+  switch (e && e.localName) {
+    case 'noFill': return { t: 'none' };
+    case 'solidFill': { const c = clrIn(e, cx); return c ? { t: 'solid', c } : { t: 'none' }; }
+    case 'gradFill': {
+      const stops = xkids(xkid(e, 'gsLst'), 'gs').map(g => ({ pos: xnum(g, 'pos', 0) / 1000, c: clrIn(g, cx) })).filter(s => s.c).sort((a, b) => a.pos - b.pos);
+      const lin = xkid(e, 'lin');
+      return stops.length ? { t: 'grad', stops, ang: lin ? xnum(lin, 'ang', 0) / 60000 : 90, radial: !!xkid(e, 'path') } : { t: 'none' };
+    }
+    case 'blipFill': return { t: 'blip', e };
+    case 'pattFill': { const c = clrIn(xkid(e, 'fgClr'), cx); return c ? { t: 'solid', c } : { t: 'none' }; }
+    case 'grpFill': return cx.grpFill || { t: 'none' };
+  }
+  return null;
+}
+const FILL_TAGS = new Set(['noFill', 'solidFill', 'gradFill', 'blipFill', 'pattFill', 'grpFill']);
+const pptFill = (parent, cx) => { const e = xkids(parent).find(c => FILL_TAGS.has(c.localName)); return e ? pptFillEl(e, cx) : null; };
+function styleFill(style, cx) { return refFill(xkid(style, 'fillRef'), cx); }
+/* a fill the theme keeps (fillRef, bgRef), in the color the reference gives it. A picture among them is in the theme's own files */
+function refFill(r, cx) {
+  const idx = xnum(r, 'idx', 0); if (!r) return null;
+  if (!idx) return { t: 'none' };
+  const ph = clrIn(r, cx), e = idx >= 1001 ? cx.th.bg[idx - 1001] : cx.th.fill[idx - 1];
+  const f = e ? pptFillEl(e, { ...cx, ph }) : ph ? { t: 'solid', c: ph } : null;
+  if (f && f.t === 'blip') { f.part = cx.th.part; f.cx = { ...cx, ph }; }
+  return f;
+}
+/* a fill as one color (a gradient's middle), for what only takes one */
+const fillColor = f => !f ? null : f.t === 'solid' ? f.c : f.t === 'grad' ? { hex: mix(f.stops[0].c.hex, f.stops[f.stops.length - 1].c.hex, 0.5), a: f.stops[0].c.a } : null;
+const ARROW_ENDS = new Set(['triangle', 'arrow', 'stealth', 'diamond', 'oval']);
+function pptLine(spPr, style, cx) {
+  const ln = xkid(spPr, 'ln');
+  let f = ln ? pptFill(ln, cx) : null, w = ln ? xnum(ln, 'w', null) : null;
+  const r = xkid(style, 'lnRef'), idx = xnum(r, 'idx', 0);
+  if ((!f || w == null) && idx) {
+    const ph = clrIn(r, cx), se = cx.th.ln[idx - 1];
+    if (se) { if (!f) f = pptFill(se, { ...cx, ph }) || (ph ? { t: 'solid', c: ph } : null); if (w == null) w = xnum(se, 'w', 9525); }
+  }
+  const c = fillColor(f); if (!c || f.t === 'none') return null;
+  const dash = xat(xkid(ln, 'prstDash'), 'val') || '', end = n => ARROW_ENDS.has(xat(xkid(ln, n), 'type'));
+  return { c, w: w == null ? 9525 : w, dash: /dot/i.test(dash) && !/dash/i.test(dash) ? 'dot' : dash && dash !== 'solid' ? 'dash' : null, h1: end('headEnd'), h2: end('tailEnd') };
+}
+
+/* --- where things are: EMU to this app's 960×540 slide. A 4:3 file sits in the middle, with room at the sides --- */
+const xfrmOf = spPr => xfrmEl(xkid(spPr, 'xfrm'));
+function xfrmEl(x) {
+  const off = xkid(x, 'off'), ext = xkid(x, 'ext');
+  if (!off || !ext) return null;
+  return { x: xnum(off, 'x', 0), y: xnum(off, 'y', 0), w: xnum(ext, 'cx', 0), h: xnum(ext, 'cy', 0), rot: xnum(x, 'rot', 0) / 60000, fh: xat(x, 'flipH') === '1', fv: xat(x, 'flipV') === '1' };
+}
+/* a group's inside, drawn into its box on the slide */
+function groupTf(grpSpPr, tf) {
+  const x = xkid(grpSpPr, 'xfrm'), off = xkid(x, 'off'), ext = xkid(x, 'ext'), co = xkid(x, 'chOff'), ce = xkid(x, 'chExt');
+  if (!off || !ext || !co || !ce) return tf;
+  const ox = xnum(off, 'x', 0), oy = xnum(off, 'y', 0), cx0 = xnum(co, 'x', 0), cy0 = xnum(co, 'y', 0);
+  const sx = xnum(ce, 'cx', 0) ? xnum(ext, 'cx', 0) / xnum(ce, 'cx', 1) : 1, sy = xnum(ce, 'cy', 0) ? xnum(ext, 'cy', 0) / xnum(ce, 'cy', 1) : 1;
+  return b => tf({ ...b, x: ox + (b.x - cx0) * sx, y: oy + (b.y - cy0) * sy, w: b.w * sx, h: b.h * sy });
+}
+
+/* --- shapes: PowerPoint's own definitions, evaluated for the shape's size (the file format's formulas) --- */
+let PPT_SHAPES = null;
+async function pptShapeDefs() {
+  if (PPT_SHAPES) return PPT_SHAPES;
+  try { PPT_SHAPES = await (await fetch('pptx-shapes.json')).json(); } catch { PPT_SHAPES = {}; }
+  return PPT_SHAPES;
+}
+const GEOM_OPS = {
+  '*/': (x, y, z) => x * y / z, '+-': (x, y, z) => x + y - z, '+/': (x, y, z) => (x + y) / z, '?:': (x, y, z) => x > 0 ? y : z, abs: x => Math.abs(x),
+  at2: (x, y) => Math.atan2(y, x) * 180 / Math.PI * 60000, cat2: (x, y, z) => x * Math.cos(Math.atan2(z, y)), cos: (x, y) => x * Math.cos(y / 60000 * Math.PI / 180),
+  max: Math.max, min: Math.min, mod: (x, y, z) => Math.sqrt(x * x + y * y + z * z), pin: (x, y, z) => y < x ? x : y > z ? z : y, sat2: (x, y, z) => x * Math.sin(Math.atan2(z, y)),
+  sin: (x, y) => x * Math.sin(y / 60000 * Math.PI / 180), sqrt: x => Math.sqrt(Math.max(0, x)), tan: (x, y) => x * Math.tan(y / 60000 * Math.PI / 180), val: x => x,
+};
+/* def: { av: [[name, formula]], gd: [...], rect: [l, t, r, b], p: [{ w, h, f, s, c: ['M x y', 'L x y', 'A wR hR st sw', 'Q ..', 'C ..', 'Z'] }] }.
+   Returns the filled outline and the outline of the parts that are only drawn (fill none), as SVG, and the text's box */
+function geomOf(def, adj, w, h) {
+  const ss = Math.min(w, h), v = { w, h, l: 0, t: 0, r: w, b: h, hc: w / 2, vc: h / 2, ss, ls: Math.max(w, h), cd2: 10800000, cd4: 5400000, cd8: 2700000, '3cd4': 16200000, '3cd8': 8100000, '5cd8': 13500000, '7cd8': 18900000 };
+  for (const n of [2, 3, 4, 5, 6, 8, 10, 12, 16, 32]) { v['wd' + n] = w / n; v['hd' + n] = h / n; v['ssd' + n] = ss / n; }
+  const val = t => t in v ? v[t] : +t || 0;
+  const F = f => { const [op, a, b, c] = String(f).trim().split(/\s+/), fn = GEOM_OPS[op]; const r = fn ? fn(val(a), val(b), val(c)) : 0; return Number.isFinite(r) ? r : 0; };
+  for (const [n, f] of def.av || []) v[n] = F(adj && adj[n] != null ? adj[n] : f);
+  for (const [n, f] of def.gd || []) v[n] = F(f);
+  const fill = [], line = [], r2 = x => +x.toFixed(2);
+  for (const p of def.p || []) {
+    const sx = p.w ? w / p.w : 1, sy = p.h ? h / p.h : 1, X = t => val(t) * sx, Y = t => val(t) * sy;
+    let d = '', cx = 0, cy = 0, x0 = 0, y0 = 0;
+    for (const cmd of p.c) {
+      const [c, ...a] = cmd.split(' ');
+      if (c === 'M' || c === 'L') { cx = X(a[0]); cy = Y(a[1]); if (c === 'M') { x0 = cx; y0 = cy; } d += `${c}${r2(cx)} ${r2(cy)}`; }
+      else if (c === 'Q') { d += `Q${r2(X(a[0]))} ${r2(Y(a[1]))} ${r2(cx = X(a[2]))} ${r2(cy = Y(a[3]))}`; }
+      else if (c === 'C') { d += `C${r2(X(a[0]))} ${r2(Y(a[1]))} ${r2(X(a[2]))} ${r2(Y(a[3]))} ${r2(cx = X(a[4]))} ${r2(cy = Y(a[5]))}`; }
+      else if (c === 'Z') { d += 'Z'; cx = x0; cy = y0; }
+      else if (c === 'A') {
+        // an arc of the ellipse wR×hR: its angles are as seen, so each is turned into the ellipse's own before placing the ends
+        const wR = X(a[0]), hR = Y(a[1]), st = val(a[2]) / 60000 * Math.PI / 180, sw = val(a[3]) / 60000 * Math.PI / 180;
+        if (!wR || !hR) continue;
+        const par = th => Math.atan2(wR * Math.sin(th), hR * Math.cos(th)), t1 = par(st), ecx = cx - wR * Math.cos(t1), ecy = cy - hR * Math.sin(t1);
+        const n = Math.max(1, Math.ceil(Math.abs(sw) / (Math.PI / 2) - 1e-9));
+        for (let i = 1; i <= n; i++) {
+          const t = par(st + sw * i / n), ex = ecx + wR * Math.cos(t), ey = ecy + hR * Math.sin(t);
+          d += `A${r2(wR)} ${r2(hR)} 0 0 ${sw > 0 ? 1 : 0} ${r2(ex)} ${r2(ey)}`;
+          cx = ex; cy = ey;
+        }
+      }
+    }
+    if (!d) continue;
+    if (p.f === 'none') line.push(d); else fill.push(d);
+  }
+  const rc = def.rect ? def.rect.map(val) : [0, 0, w, h];
+  return { fill: fill.join(''), line: line.join(''), rect: { l: rc[0], t: rc[1], r: rc[2], b: rc[3] } };
+}
+/* an SVG path in the w×h box as the unit-square steps that shapes here keep (M, L, C and Z, 0 to 1) */
+function unitPath(d, w, h, fv) {
+  if (!d) return '';
+  let steps; try { steps = svgAbs(d); } catch { return ''; }
+  const f = v => +v.toFixed(4), X = x => f(w ? x / w : 0), Y = y => f(h ? (fv ? h - y : y) / h : 0);
+  return steps.map(({ c, v }) => c === 'Z' ? 'Z' : c === 'C' ? `C${X(v[0])} ${Y(v[1])} ${X(v[2])} ${Y(v[3])} ${X(v[4])} ${Y(v[5])}` : `${c}${X(v[0])} ${Y(v[1])}`).join('').slice(0, 30000);
+}
+/* the shapes this app draws by itself, by PowerPoint's name for them */
+const PPT_OWN = Object.fromEntries(Object.entries(SHAPES).filter(([k]) => k !== 'path').map(([k, s]) => [s.ppt, k]));
+function custGeomDef(cg) {
+  const gds = n => xkids(xkid(cg, n), 'gd').map(g => [xat(g, 'name'), xat(g, 'fmla')]);
+  const def = { av: gds('avLst'), gd: gds('gdLst'), p: [] }, r = xkid(cg, 'rect');
+  if (r) def.rect = ['l', 't', 'r', 'b'].map(k => xat(r, k));
+  for (const p of xkids(xkid(cg, 'pathLst'), 'path')) {
+    const c = [];
+    for (const s of xkids(p)) {
+      const pts = xkids(s, 'pt').flatMap(pt => [xat(pt, 'x'), xat(pt, 'y')]);
+      if (s.localName === 'close') c.push('Z');
+      else if (s.localName === 'arcTo') c.push(['A', xat(s, 'wR'), xat(s, 'hR'), xat(s, 'stAng'), xat(s, 'swAng')].join(' '));
+      else c.push([{ moveTo: 'M', lnTo: 'L', quadBezTo: 'Q', cubicBezTo: 'C' }[s.localName], ...pts].join(' '));
+    }
+    def.p.push({ w: xnum(p, 'w', 0), h: xnum(p, 'h', 0), f: xat(p, 'fill') === 'none' ? 'none' : undefined, c });
+  }
+  return def;
+}
+
+/* --- text: each property from the nearest place that sets it: the run, the paragraph, the shape's own list styles,
+   its layout's and master's placeholder, the master's text styles, the file's defaults --- */
+const HEB_RE = /[֐-׿יִ-ﭏ]/, ARB_RE = /[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/, LAT_RE = /[A-Za-zÀ-ɏ]/;
+const lvlOf = (lst, lvl) => lst ? xkid(lst, 'lvl' + (lvl + 1) + 'pPr') : null;
+function paraInfo(p, chain) {
+  const pPr = xkid(p, 'pPr'), lvl = clamp(xnum(pPr, 'lvl', 0), 0, 8), src = [pPr, ...chain.map(l => lvlOf(l, lvl))].filter(Boolean);
+  const pick = a => { for (const s of src) { const v = xat(s, a); if (v != null) return v; } return null; };
+  let bu = null;
+  for (const s of src) { const b = xkids(s).find(c => /^bu(None|Char|AutoNum|Blip)$/.test(c.localName)); if (b) { bu = b.localName === 'buNone' || (b.localName === 'buChar' && !(xat(b, 'char') || '').trim()) ? null : b.localName === 'buAutoNum' ? 'ol' : 'ul'; break; } }
+  let lh = null;
+  for (const s of src) { const l = xkid(s, 'lnSpc'); if (l) { const pc = xkid(l, 'spcPct'); if (pc) lh = xnum(pc, 'val', 100000) / 100000; break; } }
+  return { lvl, algn: pick('algn'), rtl: pick('rtl'), bu, lh, defs: src.filter(s => s !== pPr).map(s => xkid(s, 'defRPr')).filter(Boolean) };
+}
+function fontOf(name, th, major, text) {
+  if (!name) return '';
+  if (name[0] !== '+') return name;
+  const f = th[name[2] === 'j' ? 'mj' : 'mn'] || {}, kind = name.slice(4);
+  if (kind === 'cs') return f.cs || (ARB_RE.test(text) ? f.Arab : f.Hebr) || f.lt || '';
+  return f[kind] || f.lt || '';
+}
+function runInfo(rPr, pi, cx, text) {
+  const src = [rPr, ...pi.defs, ...(cx.fontRef ? [cx.fontRef] : [])].filter(Boolean);
+  const pick = a => { for (const s of src) { const v = xat(s, a); if (v != null) return v; } return null; };
+  const nPick = (a, d) => { const v = pick(a); return v == null || !Number.isFinite(+v) ? d : +v; };
+  let color = null;
+  // a shape's style (fontRef) colors its words before the file's general text styles do, as in PowerPoint
+  for (const s of cx.fontRef ? [rPr, cx.fontRef, ...pi.defs].filter(Boolean) : src) {
+    const f = s.localName === 'fontRef' ? (clrIn(s, cx) ? { t: 'solid', c: clrIn(s, cx) } : null) : pptFill(s, cx);
+    if (f && f.t !== 'blip') { color = f.t === 'none' ? null : fillColor(f); break; }
+  }
+  const script = HEB_RE.test(text) || ARB_RE.test(text), face = n => { for (const s of src) { const v = xat(xkid(s, n), 'typeface'); if (v) return v; } return ''; };
+  const major = cx.fontRef && xat(cx.fontRef, 'idx') === 'major';
+  let font = script ? fontOf(face('cs') || (major ? '+mj-cs' : '+mn-cs'), cx.th, major, text) : '';
+  if (!font) font = fontOf(face('latin') || (major ? '+mj-lt' : '+mn-lt'), cx.th, major, text);
+  const on = v => v === '1' || v === 'true', hl = xkids(src.find(s => xkid(s, 'highlight')) || null, 'highlight')[0];
+  return { sz: nPick('sz', 1800), b: on(pick('b')), i: on(pick('i')), u: !!pick('u') && pick('u') !== 'none', s: !!pick('strike') && pick('strike') !== 'noStrike',
+    base: nPick('baseline', 0), color, hl: hl ? clrIn(hl, cx) : null, font, cap: pick('cap') };
+}
+const cleanFont = f => String(f || '').replace(/[^\p{L}\p{N} .&+-]/gu, '').trim().slice(0, 40);
+/* a text body as this app's HTML, with what most of its text has as the box's own size, color and font */
+function pptText(tx, chain, cx, scale = 1) {
+  const paras = [], weight = new Map(), add = (k, v, n) => { const m = weight.get(k) || new Map(); m.set(v, (m.get(v) || 0) + n); weight.set(k, m); };
+  let rtlN = 0, ltrN = 0, hasText = false;
+  for (const p of xkids(tx, 'p')) {
+    const pi = paraInfo(p, chain), runs = [];
+    for (const r of xkids(p)) {
+      if (r.localName === 'br') { runs.push({ br: true }); continue; }
+      if (r.localName !== 'r' && r.localName !== 'fld') continue;
+      let text = (xkid(r, 't') || {}).textContent || ''; if (!text) continue;
+      const ri = runInfo(xkid(r, 'rPr'), pi, cx, text);
+      if (ri.cap === 'all' || ri.cap === 'small') text = text.toUpperCase();
+      runs.push({ text, ri });
+      const n = text.length;
+      add('sz', ri.sz, n); add('color', ri.color ? ri.color.hex : '', n); add('font', ri.font, n); add('b', ri.b, n); add('i', ri.i, n); add('u', ri.u, n);
+      if (/\S/.test(text)) hasText = true;
+      rtlN += (text.match(/[֐-ۿ]/g) || []).length; ltrN += (text.match(/[A-Za-z]/g) || []).length;
+    }
+    const end = runInfo(xkid(p, 'endParaRPr'), pi, cx, '');
+    if (!runs.length) { add('sz', end.sz, 0.5); add('font', end.font, 0.1); add('color', end.color ? end.color.hex : '', 0.1); }
+    paras.push({ pi, runs });
+  }
+  const top = k => { const m = weight.get(k); if (!m) return null; let best = null, bn = -1; for (const [v, n] of m) if (n > bn) { best = v; bn = n; } return best; };
+  const base = { sz: top('sz') || 1800, color: top('color') || '', font: top('font') || '', b: top('b') === true, i: top('i') === true, u: top('u') === true };
+  const pt = sz => Math.round(sz / 100 * cx.k * scale * 2) / 2;
+  const runHtml = ({ text, ri }) => {
+    let s = esc(text);
+    const st = [];
+    if (ri.sz !== base.sz) st.push(`font-size:${pt(ri.sz)}pt`);
+    if (ri.color && ri.color.hex !== base.color) st.push(`color:${ri.color.hex}`);
+    if (ri.font && ri.font !== base.font && cleanFont(ri.font)) st.push(`font-family:'${cleanFont(ri.font)}'`);
+    if (ri.b !== base.b && !ri.b) st.push('font-weight:400');
+    if (ri.i !== base.i && !ri.i) st.push('font-style:normal');
+    if (ri.hl) st.push(`background-color:${ri.hl.hex}`);
+    if (st.length) s = `<span style="${st.join(';')}">${s}</span>`;
+    if (ri.b && !base.b) s = `<b>${s}</b>`;
+    if (ri.i && !base.i) s = `<i>${s}</i>`;
+    if (ri.u && !base.u) s = `<u>${s}</u>`;
+    if (ri.s) s = `<s>${s}</s>`;
+    if (ri.base > 0) s = `<sup>${s}</sup>`; else if (ri.base < 0) s = `<sub>${s}</sub>`;
+    return s;
+  };
+  // paragraphs, and bullets as lists: one level inside the item above it, the way PowerPoint indents them
+  let html = '';
+  const stack = [];
+  const closeTo = d => { while (stack.length > d) html += stack.pop() === 'ol' ? '</li></ol>' : '</li></ul>'; };
+  for (const { pi, runs } of paras) {
+    const inner = runs.map(r => r.br ? '<br>' : runHtml(r)).join('') || '<br>';
+    if (!pi.bu) { closeTo(0); html += `<p>${inner}</p>`; continue; }
+    const depth = Math.min(pi.lvl, stack.length) + 1;
+    if (depth <= stack.length) { closeTo(depth); if (stack[depth - 1] !== pi.bu) { closeTo(depth - 1); html += `<${pi.bu}><li>`; stack.push(pi.bu); } else html += '</li><li>'; }
+    else { html += `<${pi.bu}><li>`; stack.push(pi.bu); }
+    html += inner;
+  }
+  closeTo(0);
+  const first = paras.find(p => p.runs.length) || paras[0], ai = first ? first.pi : { algn: null, rtl: null, lh: null };
+  const rtl = ai.rtl != null ? ai.rtl === '1' : rtlN > ltrN;
+  const al = { l: 'l', ctr: 'c', r: 'r', just: 'j', dist: 'j', justLow: 'j', thaiDist: 'j' }[ai.algn] || (rtl ? 'r' : 'l');
+  return { html, hasText, size: pt(base.sz), color: base.color, font: cleanFont(base.font), b: base.b, i: base.i, u: base.u, al, rtlN, ltrN, lh: ai.lh, single: paras.length === 1 && !paras[0].runs.some(r => r.br) };
+}
+
+/* --- placeholders: a slide's is drawn where its layout's (or the master's) is, unless it has a place of its own --- */
+const phOf = sp => { const nv = xkids(sp).find(c => /^nv/.test(c.localName)), ph = xkid(nv, 'nvPr', 'ph'); return ph ? { type: xat(ph, 'type') || 'obj', idx: xat(ph, 'idx') } : null; };
+const PH_MASTER = { ctrTitle: 'title', title: 'title', subTitle: 'body', obj: 'body', body: 'body', pic: 'body', tbl: 'body', chart: 'body', dgm: 'body', media: 'body', clipArt: 'body', dt: 'dt', ftr: 'ftr', sldNum: 'sldNum' };
+function findPh(tree, ph, master) {
+  if (!tree || !ph) return null;
+  const all = xkids(tree).filter(c => c.localName === 'sp' || c.localName === 'pic'), info = all.map(sp => [sp, phOf(sp)]).filter(x => x[1]);
+  if (!master && ph.idx != null) { const hit = info.find(([, p]) => p.idx === ph.idx); if (hit) return hit[0]; }
+  const want = master ? PH_MASTER[ph.type] || 'body' : ph.type;
+  const hit = info.find(([, p]) => (master ? PH_MASTER[p.type] || 'body' : p.type) === want) || (!master && ph.type === 'ctrTitle' && info.find(([, p]) => p.type === 'title'));
+  return hit ? hit[0] : null;
+}
+const txStyleOf = (ph, cx) => { if (!ph) return cx.otherStyle; const t = PH_MASTER[ph.type] || 'body'; return t === 'title' ? cx.titleStyle : t === 'body' ? cx.bodyStyle : cx.otherStyle; };
+
+/* --- pictures: from the file, made small enough to keep, once each --- */
+const IMG_EXT = /\.(png|jpe?g|gif|bmp|webp|svg)$/i;
+async function pptImage(pk, part, rid, blip, cx) {
+  const r = rid && (await pk.rels(part)).get(rid);
+  if (!r || r.ext) return null;
+  const duo = blip && cx ? xkids(xkid(blip, 'duotone')).map(c => pptClr(c, cx)).filter(Boolean) : [];
+  if (duo.length === 2) {
+    const key = r.target + '|' + duo.map(c => c.hex).join();
+    if (pk.imgs.has(key)) return pk.imgs.get(key);
+    const plain = await pptImage(pk, part, rid);
+    let src = plain;
+    if (plain) try {
+      const im = await loadImg(plain.startsWith('data:') ? plain : await blobToDataURL(await (await fetch(plain)).blob())), c = h('canvas', { width: im.naturalWidth || 1, height: im.naturalHeight || 1 }), x = c.getContext('2d');
+      x.drawImage(im, 0, 0);
+      const d = x.getImageData(0, 0, c.width, c.height), a = duo.map(k => [1, 3, 5].map(i => parseInt(k.hex.slice(i, i + 2), 16)));
+      for (let i = 0; i < d.data.length; i += 4) { const l = (0.299 * d.data[i] + 0.587 * d.data[i + 1] + 0.114 * d.data[i + 2]) / 255; for (let j = 0; j < 3; j++) d.data[i + j] = a[0][j] + (a[1][j] - a[0][j]) * l; }
+      x.putImageData(d, 0, 0);
+      src = await storeImage(await new Promise(res => c.toBlob(res, 'image/jpeg', 0.88)));
+    } catch {}
+    pk.imgs.set(key, src);
+    return src;
+  }
+  if (pk.imgs.has(r.target)) return pk.imgs.get(r.target);
+  let src = null;
+  if (!IMG_EXT.test(r.target)) pk.note('emf');
+  else {
+    try {
+      const ext = r.target.split('.').pop().toLowerCase(), raw = await pk.file(r.target).async('blob');
+      let blob = new Blob([raw], { type: ext === 'svg' ? 'image/svg+xml' : ext === 'jpg' ? 'image/jpeg' : 'image/' + ext });
+      if (ext === 'bmp') {   // kept as PNG: a picture here is PNG, JPEG, GIF, WebP or SVG
+        const im = await loadImg(await blobToDataURL(blob)), c = h('canvas', { width: im.naturalWidth || 1, height: im.naturalHeight || 1 });
+        c.getContext('2d').drawImage(im, 0, 0); blob = await new Promise(res => c.toBlob(res, 'image/png'));
+      }
+      if (ext !== 'gif' && ext !== 'svg') blob = await shrinkImage(blob, 1920);
+      src = await storeImage(blob);
+    } catch { pk.note('imgfail'); }
+  }
+  pk.imgs.set(r.target, src);
+  return src;
+}
+const cropOfSrc = e => { const s = xkid(e, 'srcRect'); if (!s) return null; const c = { l: xnum(s, 'l', 0) / 1e5, t: xnum(s, 't', 0) / 1e5, r: xnum(s, 'r', 0) / 1e5, b: xnum(s, 'b', 0) / 1e5 }; for (const k in c) c[k] = clamp(c[k], 0, 0.95); return c.l + c.r < 0.97 && c.t + c.b < 0.97 && (c.l || c.t || c.r || c.b) ? c : null; };
+
+/* --- one shape tree (a slide's, a layout's, a master's, a group's or a SmartArt's): its boxes, in order --- */
+async function pptTree(tree, cx, out) {
+  for (const n of xkids(tree)) {
+    if (n.localName === 'AlternateContent') {   // newer things keep an older copy beside them: the older one, which this app knows
+      const ch = xkid(n, 'Choice'), fb = xkid(n, 'Fallback');
+      if (ch && xdesc(ch, 'contentPart').length) { cx.pk.note('ink'); continue; }
+      if (ch && [...ch.getElementsByTagName('*')].some(e => /chartex/i.test(e.namespaceURI || ''))) { cx.pk.note('chart'); continue; }
+      const use = fb && xkids(fb).length ? fb : ch;
+      if (use) await pptTree(use, cx, out);
+      continue;
+    }
+    try {
+      switch (n.localName) {
+        case 'sp': await pptSp(n, cx, out); break;
+        case 'pic': await pptPic(n, cx, out); break;
+        case 'cxnSp': pptCxn(n, cx, out); break;
+        case 'grpSp': {
+          const spPr = xkid(n, 'grpSpPr'), g = cx.g || uid(), before = out.length;
+          await pptTree(n, { ...cx, tf: groupTf(spPr, cx.tf), g, grpFill: pptFill(spPr, cx) || cx.grpFill }, out);
+          const got = out.length - before;
+          if (!cx.g && got < 2) for (const e of out.slice(before)) if (e.g === g) delete e.g;   // a group of one is just that one
+          if (got) markSpid(n, cx, !cx.g && got > 1 ? g : out[before].g || out[before].id);
+          break;
+        }
+        case 'graphicFrame': await pptFrame(n, cx, out); break;
+        case 'contentPart': cx.pk.note('ink'); break;
+      }
+    } catch (e) { console.warn('pptx shape', e); cx.pk.note('shape'); }
+  }
+}
+function boxPx(b, cx) {
+  const k = cx.k;
+  return { x: +(cx.ox + b.x / 9525 * k).toFixed(1), y: +(cx.oy + b.y / 9525 * k).toFixed(1), w: +Math.max(1, b.w / 9525 * k).toFixed(1), h: +Math.max(1, b.h / 9525 * k).toFixed(1) };
+}
+function markSpid(node, cx, id) {
+  if (!cx.spids || !id) return;
+  const nv = xkids(node).find(c => /^nv/.test(c.localName)), sid = xat(xkid(nv, 'cNvPr'), 'id');
+  if (sid) cx.spids.set(sid, id);
+}
+const shadowOf = spPr => { const e = xkid(spPr, 'effectLst'); return xkid(e, 'outerShdw') ? 'soft' : xkid(e, 'glow') ? 'glow' : null; };
+const opOf = c => c && c.a < 0.999 ? Math.max(0.05, +c.a.toFixed(2)) : null;
+async function pptSp(sp, cx, out) {
+  const ph = phOf(sp);
+  if (ph && cx.from !== 'slide') return;   // a layout's or master's placeholders only give their place and styles
+  if (ph && ['dt', 'ftr', 'sldNum', 'hdr'].includes(ph.type) && !xdesc(sp, 't').some(t => t.textContent.trim())) return;
+  const lph = ph ? findPh(cx.layoutTree, ph, false) : null, mph = ph ? findPh(cx.masterTree, lph ? phOf(lph) || ph : ph, true) : null;
+  const spPr = xkid(sp, 'spPr'), style = xkid(sp, 'style'), tx = xkid(sp, 'txBody');
+  const xf = xfrmOf(spPr) || xfrmOf(xkid(lph, 'spPr')) || xfrmOf(xkid(mph, 'spPr'));
+  if (!xf || (!xf.w && !xf.h)) return;
+  const b = boxPx(cx.tf(xf), cx), rot = Math.round(xf.rot * 10) / 10;
+  const geomEl = xkid(spPr, 'prstGeom') || xkid(spPr, 'custGeom') || xkid(xkid(lph, 'spPr'), 'prstGeom') || xkid(xkid(mph, 'spPr'), 'prstGeom');
+  const prst = geomEl && geomEl.localName === 'prstGeom' ? xat(geomEl, 'prst') : geomEl ? 'custom' : 'rect';
+  const fill = xat(sp, 'useBgFill') === '1' ? { t: 'solid', c: { hex: cx.bgHex || '#ffffff', a: 1 } }
+    : pptFill(spPr, cx) || (lph && pptFill(xkid(lph, 'spPr'), cx)) || (mph && pptFill(xkid(mph, 'spPr'), cx)) || styleFill(style, cx) || { t: 'none' };
+  const line = pptLine(spPr, style, cx) || (ph ? pptLine(xkid(lph, 'spPr'), null, cx) || pptLine(xkid(mph, 'spPr'), null, cx) : null);
+  const fontRef = xkid(style, 'fontRef');
+  if (prst === 'line' || prst === 'straightConnector1' || /^(bent|curved)Connector/.test(prst)) { pptCxn(sp, cx, out); return; }
+  // the text, with the styles it inherits
+  const chain = [xkid(tx, 'lstStyle'), lph && xkid(xkid(lph, 'txBody'), 'lstStyle'), mph && xkid(xkid(mph, 'txBody'), 'lstStyle'), txStyleOf(ph, cx), ph ? null : cx.defStyle].filter(Boolean);
+  const body = xkid(tx, 'bodyPr'), lb = xkid(xkid(lph, 'txBody'), 'bodyPr'), mb = xkid(xkid(mph, 'txBody'), 'bodyPr');
+  const bodyAt = a => xat(body, a) ?? xat(lb, a) ?? xat(mb, a);
+  const fitEl = xkid(body, 'normAutofit') || (!xkid(body, 'noAutofit') && !xkid(body, 'spAutoFit') && (xkid(lb, 'normAutofit') || xkid(mb, 'normAutofit'))), scale = fitEl ? xnum(fitEl, 'fontScale', 100000) / 100000 : 1;
+  const t = tx ? pptText(tx, chain, { ...cx, fontRef }, scale) : null;
+  const role = ph ? ({ title: 'title', ctrTitle: 'title', subTitle: 'sub', pic: 'img' }[ph.type] || (['body', 'obj'].includes(ph.type) ? (cx.bodies++ ? 'body2' : 'body') : null)) : null;
+  const fc = fillColor(fill), fop = opOf(fc), sh = shadowOf(spPr);
+  const lineTo = e => { if (line) { e.line = line.c.hex; e.lw = +Math.max(0.5, line.w / 9525 * cx.k).toFixed(2); if (line.dash) e.dash = line.dash; } };
+  const common = e => { if (rot) e.rot = rot; if (cx.g) e.g = cx.g; if (sh && !e.sh) e.sh = sh; return e; };
+  // SmartArt keeps its words' own box beside the shape
+  const txX = xfrmEl(xkid(sp, 'txXfrm')), tbox = txX ? boxPx(cx.tf(txX), cx) : null;
+  // a picture that fills a shape: a picture, rounded or round like the shape
+  if (fill.t === 'blip') {
+    const src = await pptImage(cx.pk, fill.part || cx.part, xrid(xkid(fill.e, 'blip'), 'embed'), xkid(fill.e, 'blip'), fill.cx || cx);
+    if (src) {
+      const el = common({ id: uid(), t: 'img', ...b, src, fit: 'cover' }), crop = cropOfSrc(fill.e);
+      if (crop) el.crop = crop;
+      if (prst === 'ellipse') el.rad = 'max'; else if (prst === 'roundRect') el.rad = Math.round(Math.min(b.w, b.h) * 0.1667);
+      lineTo(el); out.push(el); markSpid(sp, cx, el.id);
+    }
+    if (t && t.hasText) out.push(common(textEl(t, tbox || b, cx, bodyAt, null)));
+    return;
+  }
+  // an empty picture placeholder: the picture's place, waiting for one
+  if (role === 'img' && !(t && t.hasText)) { const el = common({ id: uid(), t: 'img', ...b, fit: 'cover', ph: 'img' }); out.push(el); markSpid(sp, cx, el.id); return; }
+  const own = PPT_OWN[prst], adj = Object.fromEntries(xkids(xkid(geomEl, 'avLst'), 'gd').map(g => [xat(g, 'name'), xat(g, 'fmla')]));
+  const plainBox = !tbox && (prst === 'rect' || (prst === 'roundRect' && !Object.keys(adj).length));
+  // text in a rectangle, or a placeholder: one text box, with the rectangle's fill and outline
+  if (t && (t.hasText || ph) && plainBox) {
+    const el = textEl(t, b, cx, bodyAt, role);
+    if (fc && fill.t !== 'none') { el.fill = fc.hex; if (fop) el.op = fop; }
+    lineTo(el);
+    if (prst === 'roundRect') el.rad = Math.round(Math.min(b.w, b.h) * 0.1667);
+    out.push(common(el)); markSpid(sp, cx, el.id);
+    return;
+  }
+  if (fill.t === 'none' && !line && !(t && t.hasText)) return;
+  // the shape itself: one this app draws by name, or PowerPoint's own outline for it
+  let el, trect = null;
+  if (fill.t !== 'none' || line) {
+    if (own && !Object.keys(adj).length && !xf.fv) el = { id: uid(), t: 'shape', shape: own, ...b };
+    else {
+      const def = prst === 'custom' ? custGeomDef(geomEl) : (await pptShapeDefs())[prst];
+      if (!def) { cx.pk.note('geom'); el = { id: uid(), t: 'shape', shape: 'rect', ...b }; }
+      else {
+        const g = geomOf(def, adj, b.w, b.h), path = unitPath(g.fill || g.line, b.w, b.h, xf.fv);
+        if (!path) el = { id: uid(), t: 'shape', shape: 'rect', ...b };
+        else {
+          el = { id: uid(), t: 'shape', shape: 'path', path, ...b };
+          if (prst !== 'custom' && /^[a-zA-Z0-9]{2,40}$/.test(prst)) {
+            el.prst = prst;
+            const av = Object.entries(adj).filter(([k, v]) => /^[a-z0-9]{1,12}$/i.test(k) && /^val -?\d+$/.test(v || '')).map(([k, v]) => [k, +v.slice(4)]);
+            if (av.length) el.av = Object.fromEntries(av.slice(0, 8));
+            if (xf.fv) el.fv = true;
+          }
+          if (!g.fill) el.open = true;   // only a line (an arc, a bracket): nothing to fill
+          if (def.rect) trect = g.rect;
+        }
+      }
+    }
+    if (fill.t === 'grad') { const st = fill.stops; el.gf = { c1: st[0].c.hex, c2: st[st.length - 1].c.hex, a: Math.round(((fill.ang + 90) % 360 + 360) % 360) }; }
+    if (fc && fill.t !== 'none' && !el.open) el.fill = fc.hex;
+    if (fop) el.op = fop;
+    lineTo(el);
+    if (xf.fh) el.flip = true;
+    out.push(common(el)); markSpid(sp, cx, el.id);
+  }
+  // its words: a text box over it, in the part of the shape that holds text, grouped with it
+  if (t && t.hasText) {
+    const tb = tbox || (trect && el ? { x: b.x + trect.l, y: b.y + trect.t, w: Math.max(8, trect.r - trect.l), h: Math.max(8, trect.b - trect.t) } : b);
+    const te = textEl(t, tb, cx, bodyAt, el ? null : role);
+    if (el) { if (!el.g) el.g = cx.g || uid(); te.g = el.g; if (!cx.g) markSpid(sp, cx, el.g); }
+    else if (cx.g) te.g = cx.g;
+    if (rot) te.rot = rot;
+    out.push(te);
+    if (!el) markSpid(sp, cx, te.id);
+  }
+}
+/* a text box from converted text: its place allowing for PowerPoint's own margins, and its words' look */
+function textEl(t, b, cx, bodyAt, role) {
+  const k = cx.k, ins = (a, d) => { const v = bodyAt(a); return (v == null || !Number.isFinite(+v) ? d : +v) / 9525 * k; };
+  const l = ins('lIns', 91440), r = ins('rIns', 91440), tp = ins('tIns', 45720), bt = ins('bIns', 45720);
+  // this app keeps 9.6px at the sides and 4.8px above and below: the box moves so the words stay where they were
+  const x = b.x + l - 9.6, y = b.y + tp - 4.8, w = Math.max(8, b.w - l - r + 19.2), h = Math.max(8, b.h - tp - bt + 9.6);
+  const el = { id: uid(), t: 'text', x: +x.toFixed(1), y: +y.toFixed(1), w: +w.toFixed(1), h: +h.toFixed(1), html: t.hasText ? t.html : '', size: clamp(t.size || 18, 6, 200), al: t.al, va: { t: 't', ctr: 'm', b: 'b' }[bodyAt('anchor')] || 't' };
+  if (t.font) el.font = t.font;
+  if (t.color) el.color = t.color;
+  el.b = !!t.b; if (t.i) el.i = true; if (t.u) el.u = true;
+  if (t.lh && Math.abs(t.lh - 1) > 0.04) el.lh = +clamp(t.lh, 0.5, 3).toFixed(2);   // PowerPoint's line spacing
+  if (role) el.ph = role;
+  // one line that PowerPoint doesn't wrap: as wide as its words need
+  if (bodyAt('wrap') === 'none' && t.single && t.hasText) {
+    const tw = textW(htmlText(el.html), el.size * 4 / 3, el.font || 'Arial', el.b) + 24;
+    if (tw > el.w) { if (el.al === 'r') el.x -= tw - el.w; else if (el.al === 'c') el.x -= (tw - el.w) / 2; el.w = +tw.toFixed(1); }
+  }
+  return el;
+}
+function pptCxn(node, cx, out) {
+  const spPr = xkid(node, 'spPr'), xf = xfrmOf(spPr); if (!xf) return;
+  const b = boxPx(cx.tf(xf), cx), ln = pptLine(spPr, xkid(node, 'style'), cx);
+  if (!ln) return;
+  let x1 = xf.fh ? b.x + b.w : b.x, x2 = xf.fh ? b.x : b.x + b.w, y1 = xf.fv ? b.y + b.h : b.y, y2 = xf.fv ? b.y : b.y + b.h;
+  if (xf.rot) {   // turned: its ends turn around its middle
+    const mx = b.x + b.w / 2, my = b.y + b.h / 2, a = xf.rot * Math.PI / 180, R = (x, y) => [mx + (x - mx) * Math.cos(a) - (y - my) * Math.sin(a), my + (x - mx) * Math.sin(a) + (y - my) * Math.cos(a)];
+    [x1, y1] = R(x1, y1); [x2, y2] = R(x2, y2);
+  }
+  const el = { id: uid(), t: 'line', x1: Math.round(x1), y1: Math.round(y1), x2: Math.round(x2), y2: Math.round(y2), line: ln.c.hex, lw: +Math.max(0.5, ln.w / 9525 * cx.k).toFixed(2) };
+  if (ln.dash) el.dash = ln.dash;
+  if (ln.h1) el.h1 = 'arrow';
+  if (ln.h2) el.h2 = 'arrow';
+  const op = opOf(ln.c); if (op) el.op = op;
+  if (cx.g) el.g = cx.g;
+  out.push(el); markSpid(node, cx, el.id);
+}
+async function pptPic(pic, cx, out) {
+  const ph = phOf(pic);
+  if (ph && cx.from !== 'slide') return;
+  const spPr = xkid(pic, 'spPr'), lph = ph ? findPh(cx.layoutTree, ph, false) : null;
+  const xf = xfrmOf(spPr) || xfrmOf(xkid(lph, 'spPr')); if (!xf) return;
+  const b = boxPx(cx.tf(xf), cx), nvPr = xkid(pic, 'nvPicPr', 'nvPr'), blip = xkid(pic, 'blipFill', 'blip');
+  const vf = xkid(nvPr, 'videoFile'), af = xkid(nvPr, 'audioFile');
+  if (af) { cx.pk.note('audio'); return; }
+  const src = await pptImage(cx.pk, cx.part, xrid(blip, 'embed'), blip, cx);
+  if (vf) { await pptVideo(pic, vf, b, src, cx, out); return; }
+  if (!src) return;
+  const el = { id: uid(), t: 'img', ...b, src, fit: 'cover' }, crop = cropOfSrc(xkid(pic, 'blipFill'));
+  if (crop) el.crop = crop;
+  const geom = xat(xkid(spPr, 'prstGeom'), 'prst');
+  if (geom === 'ellipse') el.rad = 'max'; else if (geom === 'roundRect') el.rad = Math.round(Math.min(b.w, b.h) * 0.1667);
+  const ln = pptLine(spPr, xkid(pic, 'style'), cx);
+  if (ln) { el.line = ln.c.hex; el.lw = +Math.max(0.5, ln.w / 9525 * cx.k).toFixed(2); if (ln.dash) el.dash = ln.dash; }
+  const am = xkid(blip, 'alphaModFix'); if (am) el.op = Math.max(0.05, +(xnum(am, 'amt', 100000) / 100000).toFixed(2));
+  const sh = shadowOf(spPr); if (sh) el.sh = sh;
+  if (xf.rot) el.rot = Math.round(xf.rot * 10) / 10;
+  if (ph && ph.type === 'pic') el.ph = 'img';
+  if (cx.g) el.g = cx.g;
+  out.push(el); markSpid(pic, cx, el.id);
+}
+const VID_MIME = { mp4: 'video/mp4', m4v: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', ogv: 'video/ogg' };
+async function pptVideo(pic, vf, b, poster, cx, out) {
+  const rels = await cx.pk.rels(cx.part), link = rels.get(xrid(vf, 'link'));
+  const emb = xdesc(pic, 'media').map(m => rels.get(xrid(m, 'embed'))).find(Boolean) || (link && !link.ext ? link : null);
+  const el = { id: uid(), t: 'video', ...b };
+  if (poster && /^data:/.test(poster)) el.poster = poster;
+  if (emb && !emb.ext) {
+    const ext = emb.target.split('.').pop().toLowerCase(), mime = VID_MIME[ext], f = mime && cx.pk.file(emb.target);
+    if (!f) { cx.pk.note('vidfmt'); return; }
+    const blob = new Blob([await f.async('blob')], { type: mime });
+    if (blob.size > 200e6) { cx.pk.note('vidbig'); return; }
+    el.src = 'vid:' + await mediaPut(blob);
+  } else {
+    const yt = link && link.ext ? ytParse(link.target) : null;
+    if (!yt) { cx.pk.note('vidweb'); return; }
+    el.yt = yt.id; if (yt.st) el.ys = yt.st;
+  }
+  el.ar = +(b.w / b.h).toFixed(4);
+  if (cx.g) el.g = cx.g;
+  out.push(el); markSpid(pic, cx, el.id);
+}
+/* tables, charts and SmartArt live in graphic frames */
+async function pptFrame(gf, cx, out) {
+  const px = xkid(gf, 'xfrm'), off = xkid(px, 'off'), ext = xkid(px, 'ext');
+  if (!off || !ext) return;
+  const xf = { x: xnum(off, 'x', 0), y: xnum(off, 'y', 0), w: xnum(ext, 'cx', 0), h: xnum(ext, 'cy', 0) }, b = boxPx(cx.tf(xf), cx);
+  const gd = xkid(gf, 'graphic', 'graphicData'), uri = xat(gd, 'uri') || '';
+  const put = el => { if (!el) return; if (cx.g) el.g = cx.g; out.push(el); markSpid(gf, cx, el.id); };
+  if (/table$/.test(uri)) { put(await pptTable(xkid(gd, 'tbl'), b, cx)); return; }
+  if (/chart$/.test(uri)) { put(await pptChart(xrid(xkid(gd, 'chart'), 'id'), b, cx)); return; }
+  if (/diagram$/.test(uri)) {   // SmartArt: PowerPoint keeps a drawing of it, which comes across as shapes, grouped
+    const rels = await cx.pk.rels(cx.part), dm = rels.get(xrid(xkid(gd, 'relIds'), 'dm'));
+    let drawing = null;
+    if (dm) { const doc = await cx.pk.xml(dm.target), de = doc && xdesc(doc, 'dataModelExt')[0], rid = xat(de, 'relId'); if (rid && rels.get(rid)) drawing = rels.get(rid).target; }
+    if (!drawing) { for (const r of rels.values()) if (r.type === 'diagramDrawing' && !cx.usedDrawings.has(r.target)) { drawing = r.target; break; } }
+    const ddoc = drawing && await cx.pk.xml(drawing), tree = ddoc && xdesc(ddoc, 'spTree')[0];
+    if (!tree) { cx.pk.note('smartart'); return; }
+    cx.usedDrawings.add(drawing);
+    const g = cx.g || uid(), before = out.length;
+    await pptTree(tree, { ...cx, part: drawing, g, spids: null, tf: bb => cx.tf({ ...bb, x: bb.x + xf.x, y: bb.y + xf.y }) }, out);
+    if (!cx.g && out.length - before < 2) for (const e of out.slice(before)) delete e.g;
+    if (out.length > before) markSpid(gf, cx, out.length - before > 1 ? g : out[before].id);
+    return;
+  }
+  cx.pk.note(/ole$/.test(uri) ? 'ole' : 'shape');
+}
+/* PowerPoint's ready table looks, by their ids: Medium Style 2 in each theme color is the one it gives new tables */
+const PPT_TSTYLES = {
+  '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}': ['med', 'accent1'], '{21E4AEA4-8DFA-4A89-87EB-49C32662AFE8}': ['med', 'accent2'], '{F5AB1C69-6EDB-4FF4-983F-18BD219EF322}': ['med', 'accent3'],
+  '{00A15C55-8517-42AA-B614-E9B94910E393}': ['med', 'accent4'], '{7DF18680-E054-41AD-8BC1-D1AEF772440D}': ['med', 'accent5'], '{93296810-A885-4BE3-A3E7-6D5BEEA58F35}': ['med', 'accent6'],
+  '{073A0DAA-6AF3-43AB-8588-CEC1D06C72B9}': ['med', 'dk1'], '{2D5ABB26-0587-4C30-8999-92F81FD0307C}': ['plain'], '{5940675A-B579-460E-94D1-54222C63F5DA}': ['grid'],
+};
+async function pptTable(tbl, b, cx) {
+  if (!tbl) return null;
+  const pr = xkid(tbl, 'tblPr'), grid = xkids(xkid(tbl, 'tblGrid'), 'gridCol').map(g => xnum(g, 'w', 0)), C = grid.length;
+  if (!C) return null;
+  const sid = ((xkid(pr, 'tableStyleId') || {}).textContent || '').trim().toUpperCase(), map = PPT_TSTYLES[sid];
+  const el = { id: uid(), t: 'table', ...b, cells: [], cw: [], rh: [], hr: xat(pr, 'firstRow') === '1', br: xat(pr, 'bandRow') === '1', fc: xat(pr, 'firstCol') === '1', size: 18 * cx.k, dir: xat(pr, 'rtl') === '1' ? 'rtl' : 'ltr', va: 't' };
+  el.al = el.dir === 'rtl' ? 'r' : 'l';
+  const hexOfKey = key => { const c = cx.th.c[key === 'dk1' ? (cx.map.tx1 === 'dk2' ? 'dk2' : 'dk1') : key]; return c ? '#' + c.toLowerCase() : null; };
+  if (map) { el.ts = map[0]; if (map[1] && hexOfKey(map[1])) el.acc = hexOfKey(map[1]); }
+  else if (sid) { el.ts = 'med'; if (hexOfKey('accent1')) el.acc = hexOfKey('accent1'); }
+  else el.ts = 'plain';
+  const sum = grid.reduce((a, v) => a + v, 0) || 1;
+  el.cw = grid.map(v => +(v / sum).toFixed(4));
+  const sizes = new Map();
+  xkids(tbl, 'tr').forEach((tr, r) => {
+    const row = [];
+    el.rh.push(Math.max(12, +(xnum(tr, 'h', 370840) / 9525 * cx.k).toFixed(1)));
+    for (const tc of xkids(tr, 'tc')) {
+      const x = { h: '' };
+      if (xat(tc, 'hMerge') === '1' || xat(tc, 'vMerge') === '1') x.m = 1;
+      if (xnum(tc, 'gridSpan', 1) > 1) x.cs = xnum(tc, 'gridSpan', 1);
+      if (xnum(tc, 'rowSpan', 1) > 1) x.rs = xnum(tc, 'rowSpan', 1);
+      const tcPr = xkid(tc, 'tcPr'), f = pptFill(tcPr, cx), fc = f && fillColor(f);
+      if (fc && f.t !== 'none') x.fill = fc.hex;
+      const an = xat(tcPr, 'anchor'); if (an) x.va = { t: 't', ctr: 'm', b: 'b' }[an] || 't';
+      const tb = xkid(tc, 'txBody');
+      if (tb && !x.m) {
+        const t = pptText(tb, [], cx);
+        if (t.hasText) {
+          // the cell's words keep their own color and weight; the table's look gives the rest
+          const open = (t.color ? `<span style="color:${t.color}">` : '') + (t.b && !(el.hr && r === 0) ? '<b>' : ''), close = (t.b && !(el.hr && r === 0) ? '</b>' : '') + (t.color ? '</span>' : '');
+          x.h = open ? t.html.replace(/<p>/g, '<p>' + open).replace(/<\/p>/g, close + '</p>') : t.html;
+          x.al = t.al;
+          sizes.set(t.size, (sizes.get(t.size) || 0) + htmlText(t.html).length);
+        }
+      }
+      row.push(x);
+    }
+    while (row.length < C) row.push({ h: '' });
+    el.cells.push(row.slice(0, C));
+  });
+  if (!el.cells.length) return null;
+  let best = 0, bs = 18 * cx.k; for (const [sz, n] of sizes) if (n > best) { best = n; bs = sz; }
+  el.size = clamp(bs, 6, 96);
+  el.h = el.rh.reduce((a, v) => a + v, 0);
+  return el;
+}
+/* a chart: its kind, categories, series and colors, from the chart part */
+const CHART_KINDS = { barChart: 'bar', bar3DChart: 'bar', lineChart: 'line', line3DChart: 'line', areaChart: 'line', area3DChart: 'line', pieChart: 'pie', pie3DChart: 'pie', ofPieChart: 'pie', doughnutChart: 'donut' };
+const cacheVals = e => {
+  const c = e && (xdesc(e, 'strCache')[0] || xdesc(e, 'numCache')[0] || xdesc(e, 'multiLvlStrCache')[0] || xdesc(e, 'strLit')[0] || xdesc(e, 'numLit')[0]);
+  if (!c) { const v = xkid(e, 'v'); return v ? [v.textContent] : []; }
+  const n = xnum(xkid(c, 'ptCount'), 'val', 0), out = Array(n).fill('');
+  // categories on several levels: the first level's
+  for (const p of xkids(c.localName === 'multiLvlStrCache' ? xkid(c, 'lvl') : c, 'pt')) { const i = xnum(p, 'idx', 0); if (i < 2000) out[i] = (xkid(p, 'v') || {}).textContent || ''; }
+  return out;
+};
+async function pptChart(rid, b, cx) {
+  const r = rid && (await cx.pk.rels(cx.part)).get(rid), doc = r && await cx.pk.xml(r.target);
+  const plot = doc && xdesc(doc, 'plotArea')[0]; if (!plot) { cx.pk.note('chart'); return null; }
+  const types = xkids(plot).filter(e => /Chart$/.test(e.localName));
+  const ty = types.find(e => CHART_KINDS[e.localName]);
+  if (!ty) { cx.pk.note('chart'); return null; }
+  if (types.length > 1) cx.pk.note('combo');
+  let ck = CHART_KINDS[ty.localName];
+  if (ck === 'bar') ck = xat(xkid(ty, 'barDir'), 'val') === 'bar' ? 'bar' : 'col';
+  if (/stacked/i.test(xat(xkid(ty, 'grouping'), 'val') || '')) cx.pk.note('stacked');
+  if (/^area/.test(ty.localName)) cx.pk.note('area');
+  const sers = xkids(ty, 'ser'); if (!sers.length) return null;
+  let cats = cacheVals(xkid(sers[0], 'cat'));
+  const ser = sers.map((s, i) => ({ n: (cacheVals(xkid(s, 'tx'))[0] || T('סדרה {0}', fmt(i + 1))).slice(0, 80), v: cacheVals(xkid(s, 'val')).map(v => +v || 0) }));
+  const n = Math.max(cats.length, ...ser.map(s => s.v.length));
+  if (!n) return null;
+  cats = Array.from({ length: Math.min(40, n) }, (_, i) => String(cats[i] ?? fmt(i + 1)).slice(0, 80));
+  for (const s of ser) s.v = cats.map((_, i) => s.v[i] || 0);
+  const accents = ['accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6'].map(k => '#' + (cx.th.c[k] || '4472C4').toLowerCase());
+  const sp = s => { const f = pptFill(xkid(s, 'spPr'), cx), c = fillColor(f); if (c) return c.hex; const ln = xkid(xkid(s, 'spPr'), 'ln'), lc = ln && fillColor(pptFill(ln, cx)); return lc ? lc.hex : null; };
+  let cols;
+  if (ck === 'pie' || ck === 'donut') { const pts = new Map(xkids(sers[0], 'dPt').map(d => [xnum(xkid(d, 'idx'), 'val', 0), sp(d)])); cols = cats.map((_, i) => pts.get(i) || accents[i % 6]); }
+  else cols = sers.map((s, i) => sp(s) || accents[i % 6]);
+  const chart = xdesc(doc, 'chart')[0], title = xkid(chart, 'title'), auto = xat(xkid(chart, 'autoTitleDeleted'), 'val') === '1';
+  const rich = title ? xdesc(title, 't').map(t => t.textContent).join('') : '';
+  const el = { id: uid(), t: 'chart', ck, cats, ser: ser.slice(0, 12), leg: !!xkid(chart, 'legend'), pal: 'theme', cols: cols.filter(Boolean).slice(0, 40), ...b };
+  if (ck !== 'pie' && ck !== 'donut') { const ax = xkid(plot, ck === 'bar' ? 'valAx' : 'catAx'); el.dir = xat(xkid(xkid(ax, 'scaling'), 'orientation'), 'val') === 'maxMin' ? 'rtl' : 'ltr'; }
+  if (rich.trim()) el.ti = rich.trim().slice(0, 150); else if (title && !auto && ser.length === 1) el.ti = ser[0].n;
+  if (xdesc(ty, 'showVal').some(e => xat(e, 'val') === '1') || xdesc(ty, 'showPercent').some(e => xat(e, 'val') === '1')) el.lab = true;
+  const sz = xnum(xkid(xkid(doc.documentElement, 'txPr'), 'p') && xdesc(xkid(doc.documentElement, 'txPr'), 'defRPr')[0], 'sz', 0);
+  el.size = clamp(Math.round((sz || 1200) / 100 * cx.k * 2) / 2, 7, 40);
+  const lat = xdesc(doc, 'latin').map(e => xat(e, 'typeface')).find(Boolean), font = cleanFont(fontOf(lat || '+mn-lt', cx.th, false, cats.join('')));
+  if (font) el.font = font;
+  return el;
+}
+
+/* --- a slide's background: its own, its layout's or its master's --- */
+async function pptBg(docs, cx) {
+  for (const [doc, part] of docs) {
+    const bg = doc && xkid(xdesc(doc, 'cSld')[0], 'bg'); if (!bg) continue;
+    const pr = xkid(bg, 'bgPr'), ref = xkid(bg, 'bgRef');
+    let fill = null;
+    if (pr) fill = pptFill(pr, cx);
+    else if (ref) fill = refFill(ref, cx);
+    if (!fill) continue;
+    if (fill.t === 'solid') return fill.c.hex;
+    if (fill.t === 'grad') { const s = fill.stops; return { t: 'grad', c1: s[0].c.hex, c2: s[s.length - 1].c.hex, a: Math.round(((fill.ang + 90) % 360 + 360) % 360) }; }
+    if (fill.t === 'blip') { const src = await pptImage(cx.pk, fill.part || part, xrid(xkid(fill.e, 'blip'), 'embed'), xkid(fill.e, 'blip'), fill.cx || cx); if (src) return { t: 'img', src, dim: 0 }; }
+    if (fill.t === 'none') return '#ffffff';
+  }
+  return '#ffffff';
+}
+/* --- transitions and animations: PowerPoint's names turned into this app's, and the nearest one for the rest --- */
+const TR_IN = { fade: 'fade', dissolve: 'fade', push: 'push', wipe: 'wipe', cover: 'cover', pull: 'cover', split: 'split', flip: 'flip', prism: 'cube', gallery: 'gallery' };
+const DIR_IN = { l: 'r', r: 'l', u: 'b', d: 't' };
+function pptTrans(sld, pk) {
+  let tr = null;
+  for (const e of xkids(sld)) {
+    if (e.localName === 'transition') tr = e;
+    if (e.localName === 'AlternateContent') tr = xkid(xkid(e, 'Choice'), 'transition') || xkid(xkid(e, 'Fallback'), 'transition') || tr;
+  }
+  if (!tr) return null;
+  const kid = xkids(tr).find(c => !['sndAc', 'extLst'].includes(c.localName));
+  if (!kid) return null;
+  let k = kid.localName === 'prstTrans' ? (xat(kid, 'prst') === 'curtains' ? 'curtains' : null) : TR_IN[kid.localName];
+  if (kid.localName === 'cut') return null;
+  if (!k) { k = 'fade'; pk.note('trans'); }
+  const o = { k }, d = xat(kid, 'dir');
+  if (TRANS[k].dirs) { const dd = DIR_IN[d] || 'r'; o.dir = TRANS[k].dirs.includes(dd) ? dd : TRANS[k].dirs[0]; }
+  const dur = +(tr.getAttribute('p14:dur') || [...tr.attributes].find(a => a.localName === 'dur')?.value || 0);
+  if (dur) { const r = dur / TRANS[k].ms; o.sp = r < 0.75 ? 'fast' : r > 1.5 ? 'slow' : 'med'; }
+  else o.sp = { slow: 'slow', fast: 'fast' }[xat(tr, 'spd')] || 'med';
+  return o;
+}
+const ANIM_IN = { entr: { 1: 'appear', 10: 'fade', 2: 'fly', 7: 'fly', 12: 'fly', 23: 'zoom', 53: 'zoom', 17: 'zoom', 31: 'growturn' }, emph: { 26: 'pulse', 8: 'spin', 32: 'teeter', 6: 'grow' }, exit: { 1: 'disappear', 10: 'fadeout', 2: 'flyout', 7: 'flyout', 12: 'flyout', 23: 'zoomout', 53: 'zoomout', 17: 'zoomout' } };
+const ANIM_DEF = { entr: 'fade', emph: 'pulse', exit: 'fadeout' };
+function pptAnims(sld, spids, pk, els) {
+  const main = xdesc(sld, 'cTn').find(c => xat(c, 'nodeType') === 'mainSeq'); if (!main) return [];
+  const out = [], vids = new Set(els.filter(e => e.t === 'video').map(e => e.id));
+  xkids(xkid(main, 'childTnLst'), 'par').forEach((step, si) => {
+    for (const c of xdesc(step, 'cTn')) {
+      const cls = xat(c, 'presetClass'); if (!cls) continue;
+      const tg = xdesc(c, 'spTgt')[0], el = tg && spids.get(xat(tg, 'spid'));
+      if (cls === 'mediacall') { if (el && vids.has(el) && si === 0 && xat(c, 'nodeType') !== 'clickEffect') { const v = els.find(e => e.id === el); if (v) v.auto = true; } continue; }
+      if (cls === 'path') { pk.note('motion'); continue; }
+      if (!ANIM_IN[cls]) continue;
+      if (!el) continue;
+      const id = xnum(c, 'presetID', 0), sub = xnum(c, 'presetSubtype', 0);
+      let k = ANIM_IN[cls][id];
+      if (!k) { k = ANIM_DEF[cls]; pk.note('anim'); }
+      const p = xdesc(tg, 'pRg')[0], t = { clickEffect: 'click', withEffect: 'with', afterEffect: 'after' }[xat(c, 'nodeType')] || 'click';
+      const prev = out[out.length - 1];
+      if (p && prev && prev.el === el && prev.k === k && prev._p != null) { prev.by = 'p'; prev._p = xnum(p, 'st', 0); continue; }   // the next paragraph of the same effect
+      const durs = xdesc(c, 'cTn').map(x => +xat(x, 'dur')).filter(v => v > 1), ms = durs.length ? Math.max(...durs) : ANIMS[k].ms;
+      const r = ms / ANIMS[k].ms, a = { id: uid(), el, k, t, sp: ANIMS[k].ms <= 1 ? 'med' : r < 0.75 ? 'fast' : r > 1.5 ? 'slow' : 'med' };
+      if (ANIMS[k].dir) a.dir = sub & 8 ? 'l' : sub & 2 ? 'r' : sub & 1 ? 't' : 'b';
+      if (p) a._p = xnum(p, 'st', 0);
+      out.push(a);
+    }
+  });
+  for (const a of out) delete a._p;
+  return out;
+}
+async function pptNotes(pk, part) {
+  const r = await pk.relOf(part, 'notesSlide'), doc = r && await pk.xml(r.target); if (!doc) return '';
+  for (const sp of xdesc(doc, 'sp')) {
+    const ph = phOf(sp); if (!ph || ph.type !== 'body') continue;
+    return xkids(xkid(sp, 'txBody'), 'p').map(p => xkids(p).map(r => r.localName === 'br' ? '\n' : (xkid(r, 't') || {}).textContent || '').join('')).join('\n').trim().slice(0, 20000);
+  }
+  return '';
+}
+
+/* --- the whole file --- */
+async function parsePptx(buf, onSlide) {
+  await loadScript(LIB.pptx);
+  const u8 = new Uint8Array(buf.slice(0, 4));
+  if (u8[0] === 0xd0 && u8[1] === 0xcf) throw new Error('locked');   // a protected file is an encrypted container, not a zip
+  let zip; try { zip = await window.JSZip.loadAsync(buf); } catch { throw new Error('notpptx'); }
+  const pk = new PptxPkg(zip), pres = await pk.xml('ppt/presentation.xml');
+  if (!pres) throw new Error('notpptx');
+  const sz = xdesc(pres, 'sldSz')[0], W = xnum(sz, 'cx', 12192000) / 9525, H = xnum(sz, 'cy', 6858000) / 9525, k = Math.min(SW / W, SH / H);
+  const base = { pk, k, ox: (SW - W * k) / 2, oy: (SH - H * k) / 2, tf: b => b, defStyle: xdesc(pres, 'defaultTextStyle')[0] || null, usedDrawings: new Set() };
+  const prels = await pk.rels('ppt/presentation.xml'), ids = xkids(xdesc(pres, 'sldIdLst')[0], 'sldId').map(s => prels.get(xrid(s, 'id'))).filter(r => r && !r.ext);
+  const slides = [], themes = new Map();
+  let rtlN = 0, ltrN = 0, firstCx = null;
+  for (const [i, rel] of ids.entries()) {
+    if (onSlide) onSlide(i, ids.length);
+    const part = rel.target, doc = await pk.xml(part); if (!doc) continue;
+    const sld = doc.documentElement, lr = await pk.relOf(part, 'slideLayout'), lay = lr && await pk.xml(lr.target);
+    const mr = lr && await pk.relOf(lr.target, 'slideMaster'), mas = mr && await pk.xml(mr.target), mkey = mr ? mr.target : '';
+    if (!themes.has(mkey)) { const tr = mr && await pk.relOf(mr.target, 'theme'); themes.set(mkey, pptTheme(tr && await pk.xml(tr.target), tr && tr.target)); }
+    const th = themes.get(mkey), map = {};
+    // the color map: the master's, unless the layout or the slide changes it
+    for (const a of (mas && xdesc(mas, 'clrMap')[0] || { attributes: [] }).attributes) map[a.name] = a.value;
+    for (const d of [lay, doc]) { const o = d && xdesc(d, 'overrideClrMapping')[0]; if (o) for (const a of o.attributes) map[a.name] = a.value; }
+    const txs = mas && xdesc(mas, 'txStyles')[0];
+    const cx = { ...base, th, map, part, from: 'slide', layoutTree: lay && xdesc(lay, 'spTree')[0], masterTree: mas && xdesc(mas, 'spTree')[0], spids: new Map(), bodies: 0,
+      titleStyle: xkid(txs, 'titleStyle'), bodyStyle: xkid(txs, 'bodyStyle'), otherStyle: xkid(txs, 'otherStyle') };
+    if (!firstCx) firstCx = cx;
+    const bg = await pptBg([[doc, part], [lay, lr && lr.target], [mas, mr && mr.target]], cx);
+    cx.bgHex = baseHex(bg);
+    const els = [];
+    // the design's own shapes first (the master's, then the layout's), unless the slide or its layout hides them
+    const showM = xat(sld, 'showMasterSp') !== '0' && xat(lay && lay.documentElement, 'showMasterSp') !== '0';
+    if (showM && mas) await pptTree(xdesc(mas, 'spTree')[0], { ...cx, part: mr.target, from: 'master', spids: null }, els);
+    if (xat(sld, 'showMasterSp') !== '0' && lay) await pptTree(xdesc(lay, 'spTree')[0], { ...cx, part: lr.target, from: 'layout', spids: null }, els);
+    for (const e of els) e.dz = true;
+    await pptTree(xdesc(doc, 'spTree')[0], cx, els);
+    for (const e of els) { const t = e.t === 'text' ? htmlText(e.html) : e.t === 'table' ? tableText(e) : e.t === 'chart' ? chartText(e) + ' ' + e.ser.map(x => x.n).join(' ') : ''; rtlN += (t.match(/[֐-ۿ]/g) || []).length; ltrN += (t.match(/[A-Za-z]/g) || []).length; }
+    const s = { id: uid(), layout: 'blank', els, bg };
+    const roles = new Set(els.map(e => e.ph).filter(Boolean));
+    s.layout = roles.has('title') && roles.has('sub') ? 'title' : roles.has('body2') ? 'two' : roles.has('title') && roles.has('body') ? 'content' : roles.has('title') ? 'titleonly' : 'blank';
+    const t = pptTrans(sld, pk); if (t) s.tr = t;
+    const an = pptAnims(sld, cx.spids, pk, els); if (an.length) s.anim = an;
+    const notes = await pptNotes(pk, part); if (notes) s.notes = notes;
+    if (xat(sld, 'show') === '0') pk.note('hidden');
+    slides.push(s);
+  }
+  if (!slides.length) throw new Error('empty');
+  // the file's own design, for the slides added here: its colors, fonts and background
+  const cx = firstCx, th = cx.th, rtl = rtlN > ltrN, hx = key => /^[0-9a-f]{6}$/i.test(th.c[key] || '') ? '#' + th.c[key].toLowerCase() : null;
+  const styleColor = lst => { const d = xkid(lvlOf(lst, 0), 'defRPr'), f = d && pptFill(d, cx), c = f && fillColor(f); return c ? c.hex : null; };
+  const font = f => cleanFont(rtl ? f.cs || f.Hebr || f.lt : f.lt) || 'Arial';
+  const plain = slides.find(s => s.layout !== 'title') || slides[0];
+  const fileTh = { bg: plain.bg, title: styleColor(cx.titleStyle) || hx('dk2') || '#111111', text: styleColor(cx.bodyStyle) || hx('dk1') || '#333333',
+    accent: hx('accent1') || '#2743d8', a2: hx('accent2') || hx('accent1') || '#2743d8', font: [font(th.mj || {}), font(th.mn || {})] };
+  return { deck: { v: 1, theme: 'file', th: fileTh, dir: rtl ? 'rtl' : 'ltr', slides }, rep: pk.rep };
+}
+/* what couldn't come across, in words */
+const PPTX_REP = {
+  emf: N_('{n} תמונות בפורמט ישן של Windows ‏(EMF/WMF) לא נפתחו'), imgfail: N_('{n} תמונות לא נפתחו'), smartart: N_('{n} גרפיקות SmartArt לא נפתחו'),
+  chart: N_('{n} גרפים מסוג שעוד אין כאן (כמו פיזור או רדאר) לא נפתחו'), stacked: N_('{n} גרפים מוערמים מוצגים כאן כעמודות זו ליד זו'), area: N_('{n} גרפי שטח מוצגים כאן כגרפי קווים'),
+  combo: N_('{n} גרפים משולבים מוצגים כאן רק בסוג הראשון שלהם'), audio: N_('{n} קטעי שמע לא נפתחו'), vidfmt: N_('{n} סרטונים בפורמט שהדפדפן לא מנגן לא נפתחו'),
+  vidbig: N_('{n} סרטונים גדולים מ-200MB לא נפתחו'), vidweb: N_('{n} סרטונים מהאינטרנט (לא מיוטיוב) לא נפתחו'), ole: N_('{n} אובייקטים מוטמעים (כמו גיליון אקסל) לא נפתחו'),
+  ink: N_('{n} ציורים בכתב יד לא נפתחו'), motion: N_('{n} אנימציות של מסלול תנועה לא נפתחו'), anim: N_('{n} אנימציות הוחלפו באנימציה הדומה ביותר שיש כאן'),
+  trans: N_('{n} מעברים הוחלפו בדהייה'), geom: N_('{n} צורות לא מוכרות מוצגות כמלבן'), shape: N_('{n} פריטים לא נפתחו'), hidden: N_('{n} שקופיות מוסתרות נפתחו כשקופיות רגילות'),
+};
+function pptxReport(rep) { return [...rep].filter(([k, n]) => PPTX_REP[k] && n > 0).map(([k, n]) => TN(PPTX_REP[k], n)); }
+/* opening one: a new presentation in the list, with a word about anything that didn't come across */
+async function openPptxImport(f, link) {
+  if (!S.store) return null;
+  if (/\.ppt$/i.test(f.name)) { toast(T('קבצי ‎.ppt‎ ישנים לא נתמכים. אפשר לשמור אותם בפאוורפוינט כ-‎.pptx‎ ולפתוח.'), { ms: 8000 }); return null; }
+  const busy = toast(T('פותח את המצגת…'), { icon: 'slideshow', ms: 600000 }), label = busy.querySelector('span:not(.ms)');
+  try {
+    const { deck, rep } = await parsePptx(await f.arrayBuffer(), (i, n) => { if (label) label.textContent = T('פותח את המצגת… שקופית {0} מתוך {1}', fmt(i + 1), fmt(n)); });
+    const id = await createDoc({ title: f.name.replace(PPTX_RE, '').slice(0, 200), html: JSON.stringify(deck), kind: 'deck', page: { dir: deck.dir } });
+    if (!id) return null;
+    roomMedia();
+    const lines = pptxReport(rep);
+    if (lines.length) modal({ title: T('המצגת נפתחה'), body: h('div', { class: 'pptx-rep' }, h('p', { text: T('כמעט הכל עבר. מה שלא עבר בדיוק:') }), h('ul', {}, lines.map(l => h('li', { text: l })))), actions: [{ label: T('הבנתי'), kind: 'primary' }] });
+    else toast(T('המצגת נפתחה'), { icon: 'slideshow' });
+    return id;
+  } catch (e) {
+    console.error(e);
+    const m = e && e.message;
+    toast(m === 'locked' ? T('המצגת מוגנת בסיסמה. צריך להסיר את הסיסמה בפאוורפוינט ולנסות שוב.') : m === 'notpptx' ? T('הקובץ הזה לא נראה כמו מצגת פאוורפוינט') : m === 'empty' ? T('אין שקופיות במצגת הזאת')
+      : m === 'lib' ? T('לא הצלחתי לטעון את הכלי שקורא מצגות. כדאי לבדוק את החיבור לאינטרנט.') : T('לא הצלחתי לפתוח את המצגת'), { ms: 8000 });
+    return null;
+  } finally { busy.remove(); }
+}
+/* "Open with" Floating Ink on a .pptx: the same file opened again goes back to its presentation, and Ctrl+S saves into it */
+async function openPptxFromDisk(hd) {
+  const f = await hd.getFile();
+  let old = null;
+  for (const r of await fileLinks.all()) {
+    if (r.kind !== 'pptx' || !r.handle) continue;
+    const m = findMeta(r.docId);
+    if (!m || m.trashed) continue;
+    try { if (await r.handle.isSameEntry(hd)) { old = r; break; } } catch {}
+  }
+  if (old && old.mod === f.lastModified) { old.handle = hd; await fileLinks.put(old); await openDoc(old.docId); await loadLink(old.docId); return; }
+  const id = await openPptxImport(f);
+  if (!id) return;
+  if (old) await fileLinks.del(old.docId);
+  await fileLinks.put({ handle: hd, name: f.name, kind: 'pptx', mod: f.lastModified, docId: id, synced: S.cur ? S.cur.meta.updatedAt : Date.now() });
+  await loadLink(id);
 }
 
 /* --- ready presentations: each slide is a recipe, drawn for left to right and mirrored for right to left.
@@ -10417,7 +11450,7 @@ function sameEl(b, e) { let n = 0; for (const k in e) { if (!same(e[k], b[k])) r
 function setEl(e, v) { for (const k of Object.keys(e)) if (!(k in v) || k === '_s') delete e[k]; for (const k in v) if (k !== '_s') e[k] = clone(v[k]); return e; }
 function deckScan(d, title, each) {
   each('t', () => title, b => b === title);
-  each('m', () => ({ theme: d.theme, dir: d.dir }), b => b.theme === d.theme && b.dir === d.dir);
+  each('m', () => d.th ? { theme: d.theme, dir: d.dir, th: clone(d.th) } : { theme: d.theme, dir: d.dir }, b => b.theme === d.theme && b.dir === d.dir && same(b.th, d.th));
   each('o', () => d.slides.map(s => s.id), b => sameIds(b, d.slides));
   for (const s of d.slides) {
     each('s/' + s.id, () => s.bg ? { layout: s.layout, bg: clone(s.bg) } : { layout: s.layout }, b => b.layout === s.layout && same(b.bg, s.bg));
@@ -10714,7 +11747,7 @@ function roomNorm(k, v) {
   if (k === 't') return typeof v === 'string' ? v.slice(0, 300) : undefined;
   if (typeof v !== 'object') return undefined;
   const c = k[0];
-  if (k === 'm') return { theme: THEMES[v.theme] ? v.theme : 'ink', dir: v.dir === 'ltr' ? 'ltr' : 'rtl' };
+  if (k === 'm') { const th = normFileTheme(v.th); return { theme: THEMES[v.theme] ? v.theme : v.theme === 'file' && th ? 'file' : 'ink', dir: v.dir === 'ltr' ? 'ltr' : 'rtl', ...(th ? { th } : {}) }; }
   if (k === 'h') return okId(v.id) && /^[0-9a-f]{64}$/.test(v.x) ? { id: v.id, n: roomName(v.n), x: v.x, k: v.k === 'doc' ? 'doc' : 'deck' } : undefined;
   if (k === 'o' || c === 'z') return Array.isArray(v) ? v.filter(okId).slice(0, 5000) : undefined;
   if (c === 's') { const o = { layout: LAYOUTS[v.layout] ? v.layout : 'blank' }, bg = normBg(v.bg); if (bg) o.bg = bg; return o; }
@@ -10816,7 +11849,7 @@ function deckBuild(d, acc) {
   });
   if (!slides.length) return false;
   d.slides = slides;
-  const m = val('m'); if (m) { d.theme = m.theme; d.dir = m.dir; }
+  const m = val('m'); if (m) { d.theme = m.theme; d.dir = m.dir; if (m.th) d.th = clone(m.th); else delete d.th; }
   return true;
 }
 const MOTION_KEYS = [['n', 'notes'], ['x', 'tr'], ['a', 'anim']], MOTION_OF = Object.fromEntries(MOTION_KEYS);
@@ -10830,7 +11863,7 @@ function patchDeck(d, acc) {
   const at = new Map(d.slides.map(s => [s.id, s])), where = new Map();
   for (const s of d.slides) for (const e of s.els) where.set(e.id, s);
   for (const [k, v] of acc) {
-    if (k === 'm' && v) { d.theme = v.theme; d.dir = v.dir; }
+    if (k === 'm' && v) { d.theme = v.theme; d.dir = v.dir; if (v.th) d.th = clone(v.th); else delete d.th; }
     if (!k.startsWith('s/')) continue;
     const id = k.slice(2), s = at.get(id);
     if (!v) { if (s) { d.slides = d.slides.filter(x => x !== s); at.delete(id); } }
@@ -11785,8 +12818,9 @@ function wire() {
     if (e.defaultPrevented || !e.dataTransfer || !e.dataTransfer.files.length) return;
     e.preventDefault();
     const f = e.dataTransfer.files[0];
-    if (/\.(docx|txt|md|markdown|html?|pdf)$/i.test(f.name)) importFile(f);
+    if (/\.(docx|txt|md|markdown|html?|pdf|pptx|ppsx|potx|pptm|ppt)$/i.test(f.name)) importFile(f);
     else if (/^image\//.test(f.type) && S.cur && !pdfaOpen()) { if (deckOpen()) deckImageFile(f); else insertImageFile(f); }
+    else if (/^video\//.test(f.type) && deckOpen()) deckVideoFile(f);
   });
   // PDF pages
   const ps = $('#paStage');

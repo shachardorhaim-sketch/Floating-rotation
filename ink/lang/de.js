@@ -1314,10 +1314,8 @@ window.INK_I18N = {
 "שיתוף": "Teilen",
 "PDF ללא שם": "PDF ohne Titel",
 "א": "A",
-"אי אפשר לפתוח כאן את \"{0}\". אפשר לפתוח קבצי Word, ‏PDF, טקסט ו-Markdown.": "„{0}\" kann hier nicht geöffnet werden. Du kannst Word-, PDF-, Text- und Markdown-Dateien öffnen.",
 "איך לפתוח את \"{0}\"?": "Wie möchtest du „{0}\" öffnen?",
 "אין דפים ב-PDF הזה.": "Dieses PDF hat keine Seiten.",
-"אפשר לייבא קבצי Word ‏(docx), ‏PDF, טקסט, Markdown או HTML": "Du kannst Word-Dateien (docx), PDF, Text, Markdown oder HTML importieren.",
 "בחירה": "Auswählen",
 "בינוני": "Mittel",
 "גדול": "Groß",
@@ -1549,7 +1547,23 @@ window.INK_I18N = {
 "שורות מפוספסות": "Gebänderte Zeilen",
 "שורות שוות": "Gleiche Zeilen",
 "תאים": "Zellen",
-"תקשורת": "Kommunikation"
+"תקשורת": "Kommunikation",
+"אי אפשר לפתוח כאן את \"{0}\". אפשר לפתוח קבצי Word, פאוורפוינט, ‏PDF, טקסט ו-Markdown.": "„{0}“ kann hier nicht geöffnet werden. Du kannst Word-, PowerPoint-, PDF-, Text- und Markdown-Dateien öffnen.",
+"אין שקופיות במצגת הזאת": "Diese Präsentation hat keine Folien",
+"אפשר לפתוח קבצי Word ‏(docx), פאוורפוינט (pptx), ‏PDF, טקסט, Markdown או HTML": "Du kannst Word- (docx), PowerPoint- (pptx), PDF-, Text-, Markdown- oder HTML-Dateien öffnen",
+"הבנתי": "Verstanden",
+"המצגת מוגנת בסיסמה. צריך להסיר את הסיסמה בפאוורפוינט ולנסות שוב.": "Die Präsentation ist kennwortgeschützt. Entferne das Kennwort in PowerPoint und versuch es noch einmal.",
+"המצגת נפתחה": "Die Präsentation ist geöffnet",
+"הקובץ הזה לא נראה כמו מצגת פאוורפוינט": "Diese Datei sieht nicht wie eine PowerPoint-Präsentation aus",
+"השינויים יישמרו לתוך \"{0}\" במחשב, כמו שהמצגת נראית כאן. דברים שלא נפתחו כאן בדיוק (למשל SmartArt, שנפתח כצורות) יישמרו כמו שהם כאן. השאלה הזאת לא תופיע שוב לקובץ הזה.": "Die Änderungen werden so in „{0}“ auf deinem Computer gespeichert, wie die Präsentation hier aussieht. Was sich nicht genau öffnen ließ (zum Beispiel SmartArt, das als Formen geöffnet wird), wird so gespeichert, wie es hier ist. Für diese Datei wirst du nicht noch einmal gefragt.",
+"כמעט הכל עבר. מה שלא עבר בדיוק:": "Fast alles wurde übernommen. Was nicht genau übernommen wurde:",
+"לא הצלחתי לטעון את הכלי שקורא מצגות. כדאי לבדוק את החיבור לאינטרנט.": "Das Werkzeug zum Lesen von Präsentationen konnte nicht geladen werden. Prüf deine Internetverbindung.",
+"לא הצלחתי לפתוח את המצגת": "Die Präsentation konnte nicht geöffnet werden",
+"מהקובץ": "Aus der Datei",
+"פותח את המצגת…": "Präsentation wird geöffnet…",
+"פותח את המצגת… שקופית {0} מתוך {1}": "Präsentation wird geöffnet… Folie {0} von {1}",
+"צורה": "Form",
+"קבצי ‎.ppt‎ ישנים לא נתמכים. אפשר לשמור אותם בפאוורפוינט כ-‎.pptx‎ ולפתוח.": "Alte .ppt-Dateien werden nicht unterstützt. Du kannst sie in PowerPoint als .pptx speichern und dann öffnen."
 },
 "plurals": {
 "{n} מילים": {
@@ -1627,6 +1641,82 @@ window.INK_I18N = {
 "{n} סרטונים לא היו בגיבוי. במקומם תופיע התמונה שלהם.": {
 "one": "{n} Video war nicht in der Sicherung. Stattdessen wird sein Bild gezeigt.",
 "other": "{n} Videos waren nicht in der Sicherung. Stattdessen werden ihre Bilder gezeigt."
+},
+"{n} אובייקטים מוטמעים (כמו גיליון אקסל) לא נפתחו": {
+"one": "{n} eingebettetes Objekt (wie eine Excel-Tabelle) wurde nicht geöffnet",
+"other": "{n} eingebettete Objekte (wie eine Excel-Tabelle) wurden nicht geöffnet"
+},
+"{n} אנימציות הוחלפו באנימציה הדומה ביותר שיש כאן": {
+"one": "{n} Animation wurde durch die ähnlichste hier ersetzt",
+"other": "{n} Animationen wurden durch die ähnlichsten hier ersetzt"
+},
+"{n} אנימציות של מסלול תנועה לא נפתחו": {
+"one": "{n} Animationspfad wurde nicht geöffnet",
+"other": "{n} Animationspfade wurden nicht geöffnet"
+},
+"{n} גרפי שטח מוצגים כאן כגרפי קווים": {
+"one": "{n} Flächendiagramm wird hier als Liniendiagramm gezeigt",
+"other": "{n} Flächendiagramme werden hier als Liniendiagramme gezeigt"
+},
+"{n} גרפים מוערמים מוצגים כאן כעמודות זו ליד זו": {
+"one": "{n} gestapeltes Diagramm wird hier mit Balken nebeneinander gezeigt",
+"other": "{n} gestapelte Diagramme werden hier mit Balken nebeneinander gezeigt"
+},
+"{n} גרפים מסוג שעוד אין כאן (כמו פיזור או רדאר) לא נפתחו": {
+"one": "{n} Diagramm eines Typs, den es hier noch nicht gibt (wie Punkt- oder Netzdiagramm), wurde nicht geöffnet",
+"other": "{n} Diagramme eines Typs, den es hier noch nicht gibt (wie Punkt- oder Netzdiagramm), wurden nicht geöffnet"
+},
+"{n} גרפים משולבים מוצגים כאן רק בסוג הראשון שלהם": {
+"one": "{n} Kombidiagramm wird hier nur als sein erster Typ gezeigt",
+"other": "{n} Kombidiagramme werden hier nur als ihr erster Typ gezeigt"
+},
+"{n} גרפיקות SmartArt לא נפתחו": {
+"one": "{n} SmartArt-Grafik wurde nicht geöffnet",
+"other": "{n} SmartArt-Grafiken wurden nicht geöffnet"
+},
+"{n} מעברים הוחלפו בדהייה": {
+"one": "{n} Übergang wurde durch Verblassen ersetzt",
+"other": "{n} Übergänge wurden durch Verblassen ersetzt"
+},
+"{n} סרטונים בפורמט שהדפדפן לא מנגן לא נפתחו": {
+"one": "{n} Video in einem Format, das der Browser nicht abspielt, wurde nicht geöffnet",
+"other": "{n} Videos in einem Format, das der Browser nicht abspielt, wurden nicht geöffnet"
+},
+"{n} סרטונים גדולים מ-200MB לא נפתחו": {
+"one": "{n} Video über 200MB wurde nicht geöffnet",
+"other": "{n} Videos über 200MB wurden nicht geöffnet"
+},
+"{n} סרטונים מהאינטרנט (לא מיוטיוב) לא נפתחו": {
+"one": "{n} Online-Video (nicht von YouTube) wurde nicht geöffnet",
+"other": "{n} Online-Videos (nicht von YouTube) wurden nicht geöffnet"
+},
+"{n} פריטים לא נפתחו": {
+"one": "{n} Element wurde nicht geöffnet",
+"other": "{n} Elemente wurden nicht geöffnet"
+},
+"{n} צורות לא מוכרות מוצגות כמלבן": {
+"one": "{n} unbekannte Form wird als Rechteck gezeigt",
+"other": "{n} unbekannte Formen werden als Rechtecke gezeigt"
+},
+"{n} ציורים בכתב יד לא נפתחו": {
+"one": "{n} Freihandzeichnung wurde nicht geöffnet",
+"other": "{n} Freihandzeichnungen wurden nicht geöffnet"
+},
+"{n} קטעי שמע לא נפתחו": {
+"one": "{n} Audioclip wurde nicht geöffnet",
+"other": "{n} Audioclips wurden nicht geöffnet"
+},
+"{n} שקופיות מוסתרות נפתחו כשקופיות רגילות": {
+"one": "{n} ausgeblendete Folie wurde als normale Folie geöffnet",
+"other": "{n} ausgeblendete Folien wurden als normale Folien geöffnet"
+},
+"{n} תמונות בפורמט ישן של Windows ‏(EMF/WMF) לא נפתחו": {
+"one": "{n} Bild in einem alten Windows-Format (EMF/WMF) wurde nicht geöffnet",
+"other": "{n} Bilder in einem alten Windows-Format (EMF/WMF) wurden nicht geöffnet"
+},
+"{n} תמונות לא נפתחו": {
+"one": "{n} Bild wurde nicht geöffnet",
+"other": "{n} Bilder wurden nicht geöffnet"
 }
 },
 "welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Willkommen bei Floating Ink</h1><p>Das ist ein Beispieldokument, das zeigt, was du hier machen kannst. Du kannst es bearbeiten, löschen oder auf <b>Neues Dokument</b> klicken und mit einer leeren Seite beginnen.</p><div class=\"callout callout-note\"><p><b>Komplett privat.</b> Die Dokumente werden nur auf deinem Gerät gespeichert, und nichts wird an irgendeinen Server gesendet. Damit sie nie verloren gehen, schalte die automatische Sicherung ein: <b>Datei → Sicherung</b>.</p></div><h2>Was es hier gibt</h2><ul><li><b>Formatierung wie in Word:</b> Schriftarten, Farben, <span style=\"background-color: #ffe45c\">Textmarker</span>, Überschriften, Listen und Tabellen.</li><li><b>Einfügen:</b> Bilder, Zeichnungen von Hand, Mathesymbole, Emoji, Datum und Inhaltsverzeichnis.</li><li><b>Werkzeuge:</b> Suchen und Ersetzen, Wörter zählen, Wortziel, Vorlesen, Rechner und Tastaturlayout-Korrektur.</li><li><b>Dateien:</b> Speichern als Word und als PDF, Import aus Word, frühere Versionen und Papierkorb.</li></ul><h2>Beispielaufgaben</h2><ul class=\"checklist\"><li data-checked=\"true\">Floating Ink öffnen</li><li>Es auf dem Computer oder Handy installieren</li><li>Eine Tabelle oder Zeichnung hinzufügen</li></ul><h2>So installierst du es</h2><ul><li><b>Am Computer (Chrome oder Edge):</b> Der Button <b>Installieren</b> oben, oder das Installationssymbol neben der Adressleiste.</li><li><b>Auf Android:</b> Menü ⋮ → App installieren.</li><li><b>Auf dem iPhone:</b> In Safari: Teilen-Symbol → Zum Home-Bildschirm.</li></ul><p>Nach der Installation öffnet sich Floating Ink wie eine normale Software, auch ohne Internet.</p><h2>Tastenkombinationen</h2><table><tbody><tr><th>Tastenkombination</th><th>Was sie macht</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Fett / Kursiv / Unterstrichen</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Rückgängig / Wiederholen</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Suchen / Suchen und Ersetzen</td></tr><tr><td>Ctrl+K</td><td>Link einfügen</td></tr><tr><td>Ctrl+Shift+X</td><td>Tastaturlayout (Hebräisch/Englisch)</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Überschrift 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Speichern (Floating Ink speichert auch von selbst)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Tipp:</b> Du kannst dir ein Wortziel setzen. Deinen Fortschritt siehst du dann unten in der Statusleiste.</p></div><p style=\"text-align: center\"><small>Floating Ink ist Teil von <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",

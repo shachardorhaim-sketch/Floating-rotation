@@ -1314,10 +1314,8 @@ window.INK_I18N = {
 "שיתוף": "Compartir",
 "PDF ללא שם": "PDF sin título",
 "א": "A",
-"אי אפשר לפתוח כאן את \"{0}\". אפשר לפתוח קבצי Word, ‏PDF, טקסט ו-Markdown.": "No se puede abrir \"{0}\" aquí. Puedes abrir archivos de Word, PDF, texto y Markdown.",
 "איך לפתוח את \"{0}\"?": "¿Cómo quieres abrir \"{0}\"?",
 "אין דפים ב-PDF הזה.": "Este PDF no tiene páginas.",
-"אפשר לייבא קבצי Word ‏(docx), ‏PDF, טקסט, Markdown או HTML": "Puedes importar archivos de Word (docx), PDF, texto, Markdown o HTML",
 "בחירה": "Seleccionar",
 "בינוני": "Mediano",
 "גדול": "Grande",
@@ -1549,7 +1547,23 @@ window.INK_I18N = {
 "שורות מפוספסות": "Filas con bandas",
 "שורות שוות": "Filas iguales",
 "תאים": "Celdas",
-"תקשורת": "Comunicación"
+"תקשורת": "Comunicación",
+"אי אפשר לפתוח כאן את \"{0}\". אפשר לפתוח קבצי Word, פאוורפוינט, ‏PDF, טקסט ו-Markdown.": "Aquí no se puede abrir “{0}”. Puedes abrir archivos de Word, PowerPoint, PDF, texto y Markdown.",
+"אין שקופיות במצגת הזאת": "Esta presentación no tiene diapositivas",
+"אפשר לפתוח קבצי Word ‏(docx), פאוורפוינט (pptx), ‏PDF, טקסט, Markdown או HTML": "Puedes abrir archivos de Word (docx), PowerPoint (pptx), PDF, texto, Markdown o HTML",
+"הבנתי": "Entendido",
+"המצגת מוגנת בסיסמה. צריך להסיר את הסיסמה בפאוורפוינט ולנסות שוב.": "La presentación está protegida con contraseña. Quita la contraseña en PowerPoint y vuelve a intentarlo.",
+"המצגת נפתחה": "La presentación está abierta",
+"הקובץ הזה לא נראה כמו מצגת פאוורפוינט": "Este archivo no parece una presentación de PowerPoint",
+"השינויים יישמרו לתוך \"{0}\" במחשב, כמו שהמצגת נראית כאן. דברים שלא נפתחו כאן בדיוק (למשל SmartArt, שנפתח כצורות) יישמרו כמו שהם כאן. השאלה הזאת לא תופיע שוב לקובץ הזה.": "Los cambios se guardarán en “{0}” en tu ordenador, tal como se ve aquí la presentación. Lo que no se abrió exactamente (por ejemplo SmartArt, que se abre como formas) se guardará como está aquí. No se te volverá a preguntar para este archivo.",
+"כמעט הכל עבר. מה שלא עבר בדיוק:": "Casi todo se pasó. Lo que no, exactamente:",
+"לא הצלחתי לטעון את הכלי שקורא מצגות. כדאי לבדוק את החיבור לאינטרנט.": "No se pudo cargar la herramienta que lee presentaciones. Revisa la conexión a internet.",
+"לא הצלחתי לפתוח את המצגת": "No se pudo abrir la presentación",
+"מהקובץ": "Del archivo",
+"פותח את המצגת…": "Abriendo la presentación…",
+"פותח את המצגת… שקופית {0} מתוך {1}": "Abriendo la presentación… diapositiva {0} de {1}",
+"צורה": "Forma",
+"קבצי ‎.ppt‎ ישנים לא נתמכים. אפשר לשמור אותם בפאוורפוינט כ-‎.pptx‎ ולפתוח.": "Los archivos .ppt antiguos no son compatibles. Puedes guardarlos en PowerPoint como .pptx y abrirlos."
 },
 "plurals": {
 "{n} מילים": {
@@ -1627,6 +1641,82 @@ window.INK_I18N = {
 "{n} סרטונים לא היו בגיבוי. במקומם תופיע התמונה שלהם.": {
 "one": "{n} vídeo no estaba en la copia de seguridad. Se verá su imagen.",
 "other": "{n} vídeos no estaban en la copia de seguridad. Se verán sus imágenes."
+},
+"{n} אובייקטים מוטמעים (כמו גיליון אקסל) לא נפתחו": {
+"one": "{n} objeto incrustado (como una hoja de Excel) no se abrió",
+"other": "{n} objetos incrustados (como una hoja de Excel) no se abrieron"
+},
+"{n} אנימציות הוחלפו באנימציה הדומה ביותר שיש כאן": {
+"one": "{n} animación se cambió por la más parecida que hay aquí",
+"other": "{n} animaciones se cambiaron por las más parecidas que hay aquí"
+},
+"{n} אנימציות של מסלול תנועה לא נפתחו": {
+"one": "{n} animación de trayectoria no se abrió",
+"other": "{n} animaciones de trayectoria no se abrieron"
+},
+"{n} גרפי שטח מוצגים כאן כגרפי קווים": {
+"one": "{n} gráfico de área se muestra aquí como gráfico de líneas",
+"other": "{n} gráficos de área se muestran aquí como gráficos de líneas"
+},
+"{n} גרפים מוערמים מוצגים כאן כעמודות זו ליד זו": {
+"one": "{n} gráfico apilado se muestra aquí con las barras una al lado de otra",
+"other": "{n} gráficos apilados se muestran aquí con las barras una al lado de otra"
+},
+"{n} גרפים מסוג שעוד אין כאן (כמו פיזור או רדאר) לא נפתחו": {
+"one": "{n} gráfico de un tipo que aún no hay aquí (como dispersión o radial) no se abrió",
+"other": "{n} gráficos de un tipo que aún no hay aquí (como dispersión o radial) no se abrieron"
+},
+"{n} גרפים משולבים מוצגים כאן רק בסוג הראשון שלהם": {
+"one": "{n} gráfico combinado se muestra aquí solo con su primer tipo",
+"other": "{n} gráficos combinados se muestran aquí solo con su primer tipo"
+},
+"{n} גרפיקות SmartArt לא נפתחו": {
+"one": "{n} gráfico SmartArt no se abrió",
+"other": "{n} gráficos SmartArt no se abrieron"
+},
+"{n} מעברים הוחלפו בדהייה": {
+"one": "{n} transición se cambió por un desvanecimiento",
+"other": "{n} transiciones se cambiaron por un desvanecimiento"
+},
+"{n} סרטונים בפורמט שהדפדפן לא מנגן לא נפתחו": {
+"one": "{n} vídeo en un formato que el navegador no reproduce no se abrió",
+"other": "{n} vídeos en un formato que el navegador no reproduce no se abrieron"
+},
+"{n} סרטונים גדולים מ-200MB לא נפתחו": {
+"one": "{n} vídeo de más de 200MB no se abrió",
+"other": "{n} vídeos de más de 200MB no se abrieron"
+},
+"{n} סרטונים מהאינטרנט (לא מיוטיוב) לא נפתחו": {
+"one": "{n} vídeo de internet (no de YouTube) no se abrió",
+"other": "{n} vídeos de internet (no de YouTube) no se abrieron"
+},
+"{n} פריטים לא נפתחו": {
+"one": "{n} elemento no se abrió",
+"other": "{n} elementos no se abrieron"
+},
+"{n} צורות לא מוכרות מוצגות כמלבן": {
+"one": "{n} forma desconocida se muestra como rectángulo",
+"other": "{n} formas desconocidas se muestran como rectángulos"
+},
+"{n} ציורים בכתב יד לא נפתחו": {
+"one": "{n} dibujo a mano no se abrió",
+"other": "{n} dibujos a mano no se abrieron"
+},
+"{n} קטעי שמע לא נפתחו": {
+"one": "{n} clip de audio no se abrió",
+"other": "{n} clips de audio no se abrieron"
+},
+"{n} שקופיות מוסתרות נפתחו כשקופיות רגילות": {
+"one": "{n} diapositiva oculta se abrió como normal",
+"other": "{n} diapositivas ocultas se abrieron como normales"
+},
+"{n} תמונות בפורמט ישן של Windows ‏(EMF/WMF) לא נפתחו": {
+"one": "{n} imagen en un formato antiguo de Windows (EMF/WMF) no se abrió",
+"other": "{n} imágenes en un formato antiguo de Windows (EMF/WMF) no se abrieron"
+},
+"{n} תמונות לא נפתחו": {
+"one": "{n} imagen no se abrió",
+"other": "{n} imágenes no se abrieron"
 }
 },
 "welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>¡Bienvenido a Floating Ink!</h1><p>Este es un documento de ejemplo que muestra lo que puedes hacer aquí. Puedes editarlo, eliminarlo o hacer clic en <b>Documento nuevo</b> para empezar desde una página en blanco.</p><div class=\"callout callout-note\"><p><b>Totalmente privado.</b> Los documentos se guardan solo en tu dispositivo, y no se envía nada a ningún servidor. Para no perderlos nunca, activa la copia automática: <b>Archivo → Copia de seguridad</b>.</p></div><h2>Qué hay aquí</h2><ul><li><b>Formato como en Word:</b> fuentes, colores, <span style=\"background-color: #ffe45c\">resaltador</span>, títulos, listas y tablas.</li><li><b>Insertar:</b> imágenes, dibujo a mano, símbolos matemáticos, emoji, fecha y tabla de contenido.</li><li><b>Herramientas:</b> buscar y reemplazar, recuento de palabras, meta de palabras, lectura en voz alta, calculadora y corrección de idioma del teclado.</li><li><b>Archivos:</b> guardar como Word y como PDF, importar desde Word, versiones anteriores y papelera de reciclaje.</li></ul><h2>Tareas de ejemplo</h2><ul class=\"checklist\"><li data-checked=\"true\">Abrir Floating Ink</li><li>Instalarlo en el equipo o el teléfono</li><li>Agregar una tabla o un dibujo</li></ul><h2>Cómo instalarlo</h2><ul><li><b>En el equipo (Chrome o Edge):</b> botón <b>Instalar</b> arriba, o el icono de instalación junto a la barra de direcciones.</li><li><b>En Android:</b> menú ⋮ → Instalar la aplicación.</li><li><b>En iPhone:</b> en Safari, botón de compartir → Agregar a pantalla de inicio.</li></ul><p>Después de instalarlo, Floating Ink se abre como un programa normal, incluso sin internet.</p><h2>Atajos de teclado</h2><table><tbody><tr><th>Atajo</th><th>Qué hace</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Negrita / cursiva / subrayado</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Deshacer / rehacer</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Buscar / buscar y reemplazar</td></tr><tr><td>Ctrl+K</td><td>Insertar enlace</td></tr><tr><td>Ctrl+Shift+X</td><td>Corregir idioma del teclado</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Título 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Guardar (Floating Ink también guarda solo)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Consejo:</b> ¿Tienes que escribir una cantidad de palabras? Activa una meta de palabras y verás tu progreso en la barra de estado.</p></div><p style=\"text-align: center\"><small>Floating Ink es parte de <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",
