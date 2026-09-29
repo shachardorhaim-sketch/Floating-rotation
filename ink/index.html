@@ -8633,6 +8633,33 @@ function mirrorEl(e) {
   e.x = SW - e.x - e.w;
   if (e.t === 'text' && (e.al === 'l' || e.al === 'r')) e.al = e.al === 'l' ? 'r' : 'l';
 }
+/* the size that keeps a template's text inside its box, wrapped the way the box wraps it: no word wider than the box (in English
+   "Measurement" broke in two), and no more lines than the box holds, or than lines when it is given.
+   Measured in the theme's font, which themeFontsReady loads first, with a little air */
+let fitCtx;
+function fitSize(text, w, h, size, theme, bold, most) {
+  fitCtx = fitCtx || document.createElement('canvas').getContext('2d');
+  const font = themeFonts(THEMES[theme] || THEMES.ink)[1], room = (w - 19.2) * 0.92;
+  // Chinese, Japanese and Korean may break between any two letters, so there each letter is a word
+  const words = [...String(text).matchAll(/(\s*)([\u3000-\u9fff\uac00-\ud7af\uff00-\uffef]|[^\s\u3000-\u9fff\uac00-\ud7af\uff00-\uffef]+)/g)];
+  for (let s = size; ; s--) {
+    fitCtx.font = `${bold ? 'bold ' : ''}${s * 4 / 3}px "${font}", Arial, sans-serif`;
+    const sp = fitCtx.measureText(' ').width;
+    let lines = 1, x = 0, wide = false;
+    for (const [, gap, word] of words) {
+      const ww = fitCtx.measureText(word).width;
+      if (ww > room) wide = true;
+      if (x && x + (gap ? sp : 0) + ww > room) { lines++; x = ww; } else x += (x && gap ? sp : 0) + ww;
+    }
+    if (s <= 12 || (!wide && (most ? lines <= most : lines * s * 1.6 <= h - 9.6))) return s;
+  }
+}
+/* the theme's text font, loaded before a template is measured: a second and a half at most, for when there's no internet */
+function themeFontsReady(theme) {
+  if (!document.fonts || !document.fonts.load) return Promise.resolve();
+  const f = themeFonts(THEMES[theme] || THEMES.ink)[1], sample = T('שלבי הניסוי') + ' Aa1';
+  return Promise.race([Promise.all([`20px "${f}"`, `bold 20px "${f}"`].map(s => document.fonts.load(s, sample).catch(() => {}))), sleep(1500)]);
+}
 function recipeSlide(r, deck) {
   const [kind, ...a] = r, L = { ...deck, dir: 'ltr' };
   const tx = (html, o) => ({ id: uid(), t: 'text', html, size: 20, al: 'c', va: 't', ...o });
@@ -8641,6 +8668,13 @@ function recipeSlide(r, deck) {
   const col = c => Array.isArray(c) ? `**${c[0]}**\n${points(c[1])}` : String(c || '');
   const titled = title => { const s = makeSlide('titleonly', L), t = s.els.find(e => e.ph === 'title'); if (t && title) t.html = p(title); return s; };
   const slot = n => 840 / n, mid = (i, n) => 60 + slot(n) * (i + 0.5);
+  const rowSize = (texts, w, h, size, bold, most) => Math.min(...texts.map(t => fitSize(t, w, h, size, deck.theme, bold, most)));   // one size for the row
+  // a row of headings: on one line if that keeps them at 17pt or more, else on two, and the text under them moves down by dy
+  const heads = (texts, w, h, size) => {
+    const one = rowSize(texts, w, h, size, true, 1); if (one >= 17) return { size: one, h, dy: 0 };
+    const two = rowSize(texts, w, h, size, true, 2), hh = Math.ceil(two * 3.2 + 12);
+    return { size: two, h: Math.max(h, hh), dy: Math.max(0, hh - h) };
+  };
   let s;
   switch (kind) {
     case 'cover': case 'section': case 'end':
@@ -8660,23 +8694,25 @@ function recipeSlide(r, deck) {
       });
       break;
     }
-    case 'cards':
+    case 'cards': {
       s = titled(a[0]);
+      const H = heads(a[1].map(c => c[1]), 232, 50, 22), bs = rowSize(a[1].map(c => c[2]), 232, 140 - H.dy, 16);
       a[1].forEach(([emo, head, body], i) => {
         const x = 60 + i * 290, g = uid();
         s.els.push({ id: uid(), t: 'shape', shape: 'roundRect', x, y: 150, w: 260, h: 318, fill: 'soft', g },
           tx(p(emo), { x: x + 20, y: 172, w: 220, h: 80, size: 40, va: 'm', g }),
-          tx(bold(head), { x: x + 14, y: 262, w: 232, h: 50, size: 22, va: 'm', color: 'title', g }),
-          tx(p(body), { x: x + 14, y: 316, w: 232, h: 140, size: 16, g }));
+          tx(bold(head), { x: x + 14, y: 262, w: 232, h: H.h, size: H.size, va: 'm', color: 'title', g }),
+          tx(p(body), { x: x + 14, y: 316 + H.dy, w: 232, h: 140 - H.dy, size: bs, g }));
       });
       break;
+    }
     case 'steps': {
       s = titled(a[0]);
-      const n = a[1].length, w = Math.round(slot(n) - 20), ids = [];
+      const n = a[1].length, w = Math.round(slot(n) - 20), ids = [], H = heads(a[1].map(x => x[0]), w, 46, 22), bs = rowSize(a[1].map(x => x[1]), w, 120 - H.dy, 16);
       a[1].forEach(([head, body], i) => {
         const cx = mid(i, n), c = tx(bold(fmt(i + 1)), { x: Math.round(cx - 40), y: 160, w: 80, h: 80, size: 28, va: 'm', fill: 'accent', color: 'on', rad: 'max' });
         ids.push(c.id);
-        s.els.push(c, tx(bold(head), { x: Math.round(cx - w / 2), y: 262, w, h: 46, size: 22, va: 'm', color: 'title' }), tx(p(body), { x: Math.round(cx - w / 2), y: 312, w, h: 120, size: 16 }));
+        s.els.push(c, tx(bold(head), { x: Math.round(cx - w / 2), y: 262, w, h: H.h, size: H.size, va: 'm', color: 'title' }), tx(p(body), { x: Math.round(cx - w / 2), y: 312 + H.dy, w, h: 120 - H.dy, size: bs }));
       });
       // arrows held by the circles: move a circle and its arrows follow
       for (let i = 0; i + 1 < ids.length; i++) s.els.push({ id: uid(), t: 'line', x1: 0, y1: 0, x2: 0, y2: 0, line: 'accent', lw: 3, h2: 'arrow', c1: { id: ids[i], s: 'r' }, c2: { id: ids[i + 1], s: 'l' } });
@@ -8684,12 +8720,12 @@ function recipeSlide(r, deck) {
     }
     case 'stats': {
       s = titled(a[0]);
-      const n = a[1].length, w = Math.round(slot(n) - 20);
+      const n = a[1].length, w = Math.round(slot(n) - 20), ls = rowSize(a[1].map(x => x[1]), w, 110, 20);
       a[1].forEach(([num, label], i) => {
         const cx = mid(i, n);
         s.els.push(tx(bold(num), { x: Math.round(cx - w / 2), y: 168, w, h: 124, size: num.length <= 4 ? 60 : num.length <= 6 ? 48 : 36, va: 'b', color: 'accent' }),
           { id: uid(), t: 'shape', shape: 'rect', x: Math.round(cx - 30), y: 304, w: 60, h: 6, fill: 'a2' },
-          tx(p(label), { x: Math.round(cx - w / 2), y: 326, w, h: 110, size: 20 }));
+          tx(p(label), { x: Math.round(cx - w / 2), y: 326, w, h: 110, size: ls }));
       });
       break;
     }
@@ -8705,12 +8741,12 @@ function recipeSlide(r, deck) {
     }
     case 'timeline': {
       s = titled(a[0]);
-      const n = a[1].length, w = Math.round(slot(n) - 16);
+      const n = a[1].length, w = Math.round(slot(n) - 16), ws = rowSize(a[1].map(x => x[0]), w, 62, 26, true, 1), qs = rowSize(a[1].map(x => x[1]), w, 120, 16);
       s.els.push({ id: uid(), t: 'line', x1: 70, y1: 300, x2: 890, y2: 300, line: 'accent', lw: 4, h2: 'arrow' });
       a[1].forEach(([when, what], i) => {
         const cx = mid(i, n);
         s.els.push({ id: uid(), t: 'shape', shape: 'ellipse', x: Math.round(cx - 14), y: 286, w: 28, h: 28, fill: 'a2' },
-          tx(bold(when), { x: Math.round(cx - w / 2), y: 212, w, h: 62, size: 26, va: 'b', color: 'accent' }), tx(p(what), { x: Math.round(cx - w / 2), y: 328, w, h: 120, size: 16 }));
+          tx(bold(when), { x: Math.round(cx - w / 2), y: 212, w, h: 62, size: ws, va: 'b', color: 'accent' }), tx(p(what), { x: Math.round(cx - w / 2), y: 328, w, h: 120, size: qs }));
       });
       break;
     }
@@ -8889,7 +8925,7 @@ function drawDeckChooser(body, close) {
   const grid = h('div', { class: 'tpl-grid dtpl-grid' }), mw = matchMedia('(max-width:700px)').matches ? 184 : 238;   // the preview fills the card
   for (const t of DECK_TPLS.filter(t => cat === 'all' || t.cat === cat)) {
     const deck = { v: 1, theme: t.theme, dir: UI_DIR, slides: [] }, first = recipeSlide(t.slides()[0], deck);
-    grid.append(h('button', { class: 'tpl dtpl', onclick: () => make(deckFromTpl(t, UI_DIR)) }, miniSlide(first, deck, mw), h('b', { text: T(t.name) }), h('span', { text: T(t.desc) })));
+    grid.append(h('button', { class: 'tpl dtpl', onclick: async () => { await themeFontsReady(t.theme); make(deckFromTpl(t, UI_DIR)); } }, miniSlide(first, deck, mw), h('b', { text: T(t.name) }), h('span', { text: T(t.desc) })));
   }
   const themes = h('div', { class: 'new-themes' }, Object.entries(THEMES).map(([k, th]) => h('button', { class: 'theme-opt', title: T(th.n), onclick: () => make(blankDeck(k, UI_DIR)) }, themeMini(k, 92), h('span', { text: T(th.n) }))));
   body.append(chips, grid, h('div', { class: 'pop-t new-blank', text: T('או מצגת ריקה, בעיצוב לבחירה') }), themes);
