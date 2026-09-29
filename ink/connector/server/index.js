@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.6.0';
+const VERSION = '1.7.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -28,6 +28,8 @@ const INSTRUCTIONS = 'Floating Ink is a word processor open in the user\'s brows
   'It also makes presentations (slides, like PowerPoint): create_presentation builds one while the user watches, for example ' +
   'from a script or a document they wrote (read_document it first), and edit_presentation changes one. Keep slides short: ' +
   'a title and three to six brief points; what the presenter should say goes in the slide\'s notes. read_document reads a presentation slide by slide. ' +
+  'It also makes spreadsheets, like Excel: create_spreadsheet builds one with values, formulas and formatting (a budget, a table of grades, a list with totals), ' +
+  'read_spreadsheet reads one, and write_cells changes cells in one. Formulas are written the way Excel writes them in English, with commas: =SUM(B2:B9). ' +
   'The chat panel inside Floating Ink is shared: send_message leaves a note there, and read_messages shows ' +
   'what the user or another connected assistant wrote. The user often keeps writing to you from that panel instead of ' +
   'switching back to this window, so when they may still be talking to you there, call wait_for_message: it comes back ' +
@@ -58,10 +60,31 @@ const SLIDE = {
 };
 const TRANSITION = { type: 'string', enum: ['none', 'fade', 'push', 'wipe', 'cover', 'split', 'flip', 'cube', 'gallery', 'curtains'],
   description: 'One transition for every slide, as in PowerPoint; it also plays in the saved PowerPoint file. none removes them. Leave out to keep what is there.' };
+const NUMBER_FORMATS = 'general, number (1,234.50), integer (1,235), currency (in the user\'s currency, ₪ in Hebrew), currency_ils, currency_usd, currency_eur, percent (12%), percent2 (12.34%), date, long_date, time, text, or an Excel format code such as #,##0.00 "₪"';
+const SHEET = {
+  name: { type: 'string', description: 'The sheet\'s name on its tab (up to 31 characters).' },
+  start: { type: 'string', description: 'The cell where rows begins, like A1 (the default).' },
+  rows: { type: 'array', items: { type: 'array', items: {} }, description: 'Rows of cells from start, the first row first, the first column first. Each value is a number, text, true/false, or null for an empty cell. ' +
+    'Text that starts with = is a formula, in English with commas as in Excel: =SUM(B2:B9), =AVERAGE(B2:D2), =IF(E2>=55,"pass","fail"), =B2*C2, =\'Sheet 2\'!B7. ' +
+    'Functions that work: SUM, AVERAGE, MIN, MAX, COUNT and IF, with + - * / ^ %, & (joining text), comparisons, cells and ranges. Other functions show #NAME?. Write plain numbers (1200), and set their look with formats. ' +
+    'One call takes up to 5,000 rows of up to 500 cells; for more, call write_cells again with a later start.' },
+  cells: { type: 'object', additionalProperties: {}, description: 'Single cells by address, like {"B2": 1200, "C2": "=B2*2"}; the same values as rows.' },
+  formats: { type: 'array', description: 'Formatting for ranges, applied in order (up to 500, each range up to 100,000 cells).', items: { type: 'object', properties: {
+    range: { type: 'string', description: 'Like A1:D1 or B2.' }, bold: { type: 'boolean' }, italic: { type: 'boolean' }, underline: { type: 'boolean' }, wrap: { type: 'boolean', description: 'Several lines in the cell.' },
+    color: { type: 'string', description: 'Text color, #rrggbb.' }, fill: { type: 'string', description: 'Background color, #rrggbb.' }, font_size: { type: 'number' },
+    align: { type: 'string', enum: ['left', 'center', 'right'] }, valign: { type: 'string', enum: ['top', 'middle', 'bottom'] },
+    number_format: { type: 'string', description: 'How numbers show: ' + NUMBER_FORMATS + '.' },
+    border: { type: 'string', enum: ['all', 'outside', 'thick_outside', 'bottom', 'top', 'none'] },
+    merge: { type: 'boolean', description: 'One cell over the whole range, as for a title.' } }, required: ['range'] } },
+  column_widths: { type: 'object', additionalProperties: { type: 'number' }, description: 'Widths in pixels by column letter, like {"A": 160, "B": 90}. The default is 100.' },
+  freeze_rows: { type: 'number', description: 'How many rows at the top stay in view when scrolling (1 for a header row).' },
+  freeze_columns: { type: 'number' },
+  direction: { type: 'string', enum: ['rtl', 'ltr'], description: 'rtl puts column A on the right, as Hebrew Excel does. Leave out to follow the language of the text.' },
+};
 const TOOLS = [
-  { name: 'list_documents', description: 'List the documents and presentations in Floating Ink: id, title, kind, word count, last change, and which one is open on screen.',
+  { name: 'list_documents', description: 'List the documents, presentations and spreadsheets in Floating Ink: id, title, kind, word count, last change, and which one is open on screen.',
     inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true } },
-  { name: 'read_document', description: 'Read a document as Markdown, or a presentation slide by slide. Without an id, reads the one open on screen; for a document, also returns the text the user has selected in it.',
+  { name: 'read_document', description: 'Read a document as Markdown, a presentation slide by slide, or a spreadsheet\'s cells. Without an id, reads the one open on screen; for a document, also returns the text the user has selected in it.',
     inputSchema: { type: 'object', properties: { id: DOC_ID } }, annotations: { readOnlyHint: true } },
   { name: 'create_presentation', description: 'Create a new presentation and open it on the user\'s screen, where they watch the slides come in one by one. ' +
       'Start with a "title" slide; keep each slide to a title and a few short points. The user adds the pictures themselves. Returns its id.',
@@ -73,6 +96,14 @@ const TOOLS = [
       slide: { type: 'number', description: 'update, delete, move: the slide\'s number (1 is the first).' },
       at: { type: 'number', description: 'add: the number the new slide gets (default: the end). move: the number it moves to.' },
       ...SLIDE }, required: ['action'] } } } } },
+  { name: 'create_spreadsheet', description: 'Create a new spreadsheet (like Excel) and open it on the user\'s screen: one or more sheets of cells with values, formulas and formatting. ' +
+      'Use it for tables, budgets, schedules, lists with totals and anything the user wants to calculate. Put a header row on top (bold, with a fill, frozen), give numbers a number_format, and total with formulas. Returns its id.',
+    inputSchema: { type: 'object', properties: { title: { type: 'string' }, direction: SHEET.direction, sheets: { type: 'array', items: { type: 'object', properties: SHEET } } }, required: ['title', 'sheets'] } },
+  { name: 'read_spreadsheet', description: 'Read a spreadsheet: the names of its sheets, and for one sheet (the one on screen, or `sheet`) what each cell shows and the formulas in it. Without a range, reads the part that is used.',
+    inputSchema: { type: 'object', properties: { id: DOC_ID, sheet: { type: 'string' }, range: { type: 'string', description: 'Like A1:F40.' } } }, annotations: { readOnlyHint: true } },
+  { name: 'write_cells', description: 'Write values, formulas and formatting into a spreadsheet (it opens on screen, and the user can undo it with Ctrl+Z). The fields are the same as a sheet in create_spreadsheet. ' +
+      '`sheet` picks a sheet by name (a new sheet is added if none has that name; leave out for the sheet on screen), and `clear` empties a range first.',
+    inputSchema: { type: 'object', properties: { id: DOC_ID, sheet: { type: 'string' }, clear: { type: 'string', description: 'A range to empty before writing, like A1:H50.' }, ...Object.fromEntries(Object.entries(SHEET).filter(([k]) => k !== 'name')) } } },
   { name: 'create_document', description: 'Create a new document from Markdown and open it on the user\'s screen. Returns its id.',
     inputSchema: { type: 'object', properties: { title: { type: 'string' }, content: { type: 'string', description: 'Markdown' } }, required: ['title', 'content'] } },
   { name: 'write_in_document', description: 'Add Markdown content to a document (it opens on screen). where: "end" (default), "start", "after_selection" or "replace_selection" (the text the user selected).',

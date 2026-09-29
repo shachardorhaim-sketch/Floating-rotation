@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Floating Ink",
   "short_name": "Floating Ink",
-  "description": "מסמכים ומצגות בעברית: עיצוב כמו בוורד ובפאוורפוינט, טבלאות, גרפים, תמונות, ציור ביד, כתיבה על קובצי PDF, פתיחה ושמירה של קובצי Word ופאוורפוינט. הכל נשמר רק במכשיר שלך.",
+  "description": "מסמכים, מצגות וגיליונות בעברית: עיצוב כמו בוורד, בפאוורפוינט ובאקסל, טבלאות, נוסחאות, גרפים, תמונות, ציור ביד, כתיבה על קובצי PDF, פתיחה ושמירה של קובצי Word, פאוורפוינט ואקסל. הכל נשמר רק במכשיר שלך.",
   "lang": "he",
   "dir": "rtl",
   "start_url": "./",
@@ -20,7 +20,9 @@
         "text/markdown": [".md"],
         "application/pdf": [".pdf"],
         "application/vnd.openxmlformats-officedocument.presentationml.presentation": [".pptx"],
-        "application/vnd.openxmlformats-officedocument.presentationml.slideshow": [".ppsx"]
+        "application/vnd.openxmlformats-officedocument.presentationml.slideshow": [".ppsx"],
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+        "text/csv": [".csv"]
       }
     }
   ],
