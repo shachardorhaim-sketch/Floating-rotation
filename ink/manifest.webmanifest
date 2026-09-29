@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Floating Ink",
   "short_name": "Floating Ink",
-  "description": "מעבד תמלילים בעברית: עיצוב כמו בוורד, טבלאות, תמונות, ציור ביד ושמירה כ-Word וכ-PDF. המסמכים נשמרים רק במכשיר שלך.",
+  "description": "מעבד תמלילים בעברית: עיצוב כמו בוורד, טבלאות, תמונות, ציור ביד, כתיבה על קובצי PDF ושמירה כ-Word וכ-PDF. המסמכים נשמרים רק במכשיר שלך.",
   "lang": "he",
   "dir": "rtl",
   "start_url": "./",
@@ -17,7 +17,8 @@
       "accept": {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
         "text/plain": [".txt"],
-        "text/markdown": [".md"]
+        "text/markdown": [".md"],
+        "application/pdf": [".pdf"]
       }
     }
   ],
