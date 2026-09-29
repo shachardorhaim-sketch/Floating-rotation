@@ -2421,6 +2421,7 @@ async function shrinkImage(blob, max) {
   cx.drawImage(img, 0, 0, c.width, c.height);
   let out = await new Promise(r => c.toBlob(r, png ? 'image/png' : 'image/jpeg', 0.88));
   if (png && out && out.size > 3e6) out = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.88));
+  c.width = c.height = 0;
   return out || blob;
 }
 async function storeImage(blob) {
@@ -5988,7 +5989,8 @@ async function paOntoOriginal(doc) {
   for (const [i, p] of doc.pages.entries()) {
     if (!p.els.length) continue;
     const c = await paPageCanvas(p, clamp(2400 / Math.max(p.w, p.h), 1.5, 3), false);
-    const png = await out.embedPng(new Uint8Array(await (await new Promise(r => c.toBlob(r, 'image/png'))).arrayBuffer()));
+    const b = await new Promise(r => c.toBlob(r, 'image/png')); c.width = c.height = 0;
+    const png = await out.embedPng(new Uint8Array(await b.arrayBuffer()));
     const pg = pages[i], { x, y, width: W, height: H } = pg.getCropBox(), rot = ((pg.getRotation().angle % 360) + 360) % 360;
     // the picture is upright the way the page is shown, so on a turned page it is turned back in the page's own terms
     const at = rot === 90 ? { x: x + W, y, width: H, height: W } : rot === 180 ? { x: x + W, y: y + H, width: W, height: H } : rot === 270 ? { x, y: y + H, width: H, height: W } : { x, y, width: W, height: H };
@@ -6004,9 +6006,10 @@ async function paPicturesPdf(doc) {
   let pdf = null;
   for (const p of doc.pages) {
     const W = p.pw || p.w * 0.75, H = p.ph || p.h * 0.75, o = W > H ? 'landscape' : 'portrait';
-    const c = await paPageCanvas(p, clamp(2000 / Math.max(p.w, p.h), 1.2, 2.5), true);
+    const c = await paPageCanvas(p, clamp(2000 / Math.max(p.w, p.h), 1.2, 2.5), true), jpg = c.toDataURL('image/jpeg', 0.9);
+    c.width = c.height = 0;
     if (!pdf) pdf = new J({ orientation: o, unit: 'pt', format: [W, H] }); else pdf.addPage([W, H], o);
-    pdf.addImage(c.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, W, H);
+    pdf.addImage(jpg, 'JPEG', 0, 0, W, H);
   }
   return pdf.output('blob');
 }
@@ -8387,6 +8390,7 @@ function openAudience() {
   d.body.className = 'aud';
   const box = d.createElement('div'); box.className = 'show-box';
   const full = d.createElement('button'); full.className = 'aud-full'; full.type = 'button'; full.textContent = T('לחיצה כאן למסך מלא');
+  full.hidden = !d.documentElement.requestFullscreen;
   full.addEventListener('click', e => { e.stopPropagation(); d.documentElement.requestFullscreen().catch(() => {}); });
   d.body.append(box, full);
   d.addEventListener('fullscreenchange', () => { full.hidden = !!d.fullscreenElement; });
@@ -8671,7 +8675,8 @@ async function fitImg(el) {
     const k = Math.min(1, 1920 / sw), c = h('canvas', { width: Math.max(1, Math.round(sw * k)), height: Math.max(1, Math.round(sh * k)) }), x = c.getContext('2d');
     if (!png) { x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); }
     x.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
-    return c.toDataURL(png ? 'image/png' : 'image/jpeg', 0.9);
+    const d = c.toDataURL(png ? 'image/png' : 'image/jpeg', 0.9); c.width = c.height = 0;
+    return d;
   };
   if (el.crop) { const c = el.crop; return { data: crop(c.l * iw, c.t * ih, Math.max(1, (1 - c.l - c.r) * iw), Math.max(1, (1 - c.t - c.b) * ih)), x: el.x, y: el.y, w: el.w, h: el.h }; }
   if (el.fit === 'contain') {
@@ -8690,7 +8695,8 @@ async function coverImg(src) {
   const im = await loadImg(src), iw = im.naturalWidth || 1, ih = im.naturalHeight || 1, k = Math.max(SW / iw, SH / ih), cw = SW / k, ch = SH / k;
   const W = Math.max(1, Math.min(1920, Math.round(cw))), c = h('canvas', { width: W, height: Math.round(W * SH / SW) });
   c.getContext('2d').drawImage(im, (iw - cw) / 2, (ih - ch) / 2, cw, ch, 0, 0, c.width, c.height);
-  return c.toDataURL('image/jpeg', 0.9);
+  const d = c.toDataURL('image/jpeg', 0.9); c.width = c.height = 0;
+  return d;
 }
 /* a text box's paragraphs as PowerPoint text runs, with every style read from the box as the browser draws it.
    x: what the whole box adds to each run: op (see-through), glow (a glow on the letters) */
@@ -8948,9 +8954,10 @@ async function buildDeckPdf() {
       const node = renderSlide(slide, deck, 'export', fitted);
       host.append(node);
       await imgsReady(node);
-      const c = await H2C(node, { scale: 2, backgroundColor: baseHex(bg), useCORS: true, logging: false });
+      const c = await H2C(node, { scale: 2, backgroundColor: baseHex(bg), useCORS: true, logging: false }), jpg = c.toDataURL('image/jpeg', 0.92);
+      c.width = c.height = 0;   // an iPhone counts every canvas until it is collected, and past its limit draws nothing
       if (i) pdf.addPage([720, 405], 'landscape');
-      pdf.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 720, 405);
+      pdf.addImage(jpg, 'JPEG', 0, 0, 720, 405);
       for (const el of slide.els) if (el.t === 'video' && el.yt) pdf.link(el.x * 0.75, el.y * 0.75, el.w * 0.75, el.h * 0.75, { url: ytLink(el) });   // a click on a YouTube video opens it
     }
     return pdf.output('blob');
@@ -9740,10 +9747,11 @@ function videoPoster(url) {
   return new Promise((res, rej) => {
     const v = document.createElement('video'), t = setTimeout(() => rej(new Error('timeout')), 20000);
     v.muted = true; v.preload = 'auto'; v.playsInline = true;
-    v.onerror = () => { clearTimeout(t); rej(new Error('decode')); };
+    const kick = setTimeout(() => { const p = v.play(); if (p) p.then(() => v.pause(), () => {}); }, 3000);   // an iPhone may not load a video until it plays
+    v.onerror = () => { clearTimeout(t); clearTimeout(kick); rej(new Error('decode')); };
     v.onloadedmetadata = () => { if (!v.videoWidth) { clearTimeout(t); rej(new Error('decode')); return; } v.currentTime = Math.min(1, (v.duration || 4) / 4); };
     v.onseeked = () => {
-      clearTimeout(t);
+      clearTimeout(t); clearTimeout(kick); v.pause();
       const k = Math.min(1, 1280 / v.videoWidth), c = h('canvas', { width: Math.round(v.videoWidth * k), height: Math.round(v.videoHeight * k) });
       c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
       res({ poster: c.toDataURL('image/jpeg', 0.82), ar: v.videoWidth / v.videoHeight });
@@ -9946,7 +9954,8 @@ async function coverPng(el) {
   const c = h('canvas', { width: 1280, height: Math.round(1280 / (el.ar || 16 / 9)) }), x = c.getContext('2d');
   x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height);
   if (el.poster) try { x.drawImage(await loadImg(el.poster), 0, 0, c.width, c.height); } catch {}
-  return c.toDataURL('image/png');
+  const d = c.toDataURL('image/png'); c.width = c.height = 0;
+  return d;
 }
 async function videoPpt(s, el, box, name) {
   const cover = await coverPng(el);
@@ -10370,7 +10379,8 @@ async function pptImage(pk, part, rid, blip, cx) {
       const d = x.getImageData(0, 0, c.width, c.height), a = duo.map(k => [1, 3, 5].map(i => parseInt(k.hex.slice(i, i + 2), 16)));
       for (let i = 0; i < d.data.length; i += 4) { const l = (0.299 * d.data[i] + 0.587 * d.data[i + 1] + 0.114 * d.data[i + 2]) / 255; for (let j = 0; j < 3; j++) d.data[i + j] = a[0][j] + (a[1][j] - a[0][j]) * l; }
       x.putImageData(d, 0, 0);
-      src = await storeImage(await new Promise(res => c.toBlob(res, 'image/jpeg', 0.88)));
+      const b = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.88)); c.width = c.height = 0;
+      src = await storeImage(b);
     } catch {}
     pk.imgs.set(key, src);
     return src;
@@ -10384,7 +10394,7 @@ async function pptImage(pk, part, rid, blip, cx) {
       let blob = new Blob([raw], { type: ext === 'svg' ? 'image/svg+xml' : ext === 'jpg' ? 'image/jpeg' : 'image/' + ext });
       if (ext === 'bmp') {   // kept as PNG: a picture here is PNG, JPEG, GIF, WebP or SVG
         const im = await loadImg(await blobToDataURL(blob)), c = h('canvas', { width: im.naturalWidth || 1, height: im.naturalHeight || 1 });
-        c.getContext('2d').drawImage(im, 0, 0); blob = await new Promise(res => c.toBlob(res, 'image/png'));
+        c.getContext('2d').drawImage(im, 0, 0); blob = await new Promise(res => c.toBlob(res, 'image/png')); c.width = c.height = 0;
       }
       if (ext !== 'gif' && ext !== 'svg') blob = await shrinkImage(blob, 1920);
       src = await storeImage(blob);
