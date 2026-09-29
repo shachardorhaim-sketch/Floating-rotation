@@ -66,7 +66,7 @@
     overflow: hidden;
     border: 1px solid rgba(255,255,255,0.1);
     box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 4px rgba(255,255,255,0.03);
-    width: min(320px, 74vw);
+    width: min(320px, 74vw, calc((100dvh - 180px) / 2));   /* גם לפי הגובה, כדי שהלוח כולו ייכנס במסך נמוך */
     line-height: 0;
   }
   .tetris-board-wrap canvas { display: block; width: 100%; height: auto; }
@@ -117,6 +117,7 @@
     gap: 8px;
     width: min(340px, 92vw);
     margin-top: 16px;
+    direction: ltr;   /* כמו בכל שלט: ◀ תמיד משמאל. בעברית ובערבית החצים התהפכו וכל אחד הצביע החוצה */
   }
   .tetris-tbtn {
     background: rgba(255,255,255,0.07);
@@ -133,7 +134,21 @@
     transition: background 0.1s, transform 0.1s;
   }
   .tetris-tbtn:active { background: rgba(168,85,247,0.4); transform: scale(0.94); }
-  .tetris-tbtn.wide { grid-column: span 5; font-size: 15px; font-weight: 600; padding: 12px 0; }
+  .tetris-tbtn.wide { grid-column: span 5; font-size: 15px; font-weight: 600; padding: 12px 0; unicode-bidi: plaintext; }
+
+  /* ----- טלפון: הניקוד, הלוח והכפתורים נכנסים יחד במסך אחד ----- */
+  @media (max-width: 600px) {
+    .tetris-wrap { padding: 4px 0; }
+    .tetris-title, .tetris-sub, .tetris-help { display: none; }
+    .tetris-main { gap: 8px; }
+    .tetris-stats { flex-direction: row; width: 100%; min-width: 0; gap: 6px; }
+    .tetris-stats .tetris-card { flex: 1; padding: 6px 8px; }
+    .tetris-value { font-size: 17px; }
+    .tetris-side { min-width: 0; width: 64px; }
+    .tetris-next { padding: 6px; }
+    .tetris-board-wrap { width: min(320px, calc(100vw - 110px), calc((100dvh - 300px) / 2)); }
+    .tetris-touch { margin-top: 8px; }
+  }
   `;
 
   function ensureCSS() {
@@ -268,7 +283,7 @@
     const LOCK_DELAY = 500;     // מ"ש עד שחלק ננעל אחרי שנוגע בקרקע
     const holdStops = [];       // עצירת טיימרים של כפתורי מגע
 
-    let highScore = parseInt(localStorage.getItem('tetris3d_high') || '0');
+    let highScore = 0; try{ highScore = parseInt(localStorage.getItem('tetris3d_high') || '0'); }catch(e){}   // אחסון חסום לא ישבור את המשחק
     elHigh.textContent = highScore;
 
     // ---- אתחול ----
@@ -305,7 +320,7 @@
         gameOver = true;
         if (score > highScore) {
           highScore = score;
-          localStorage.setItem('tetris3d_high', highScore);
+          try{ localStorage.setItem('tetris3d_high', highScore); }catch(e){}   // בלי זה מסך "המשחק נגמר" לא מופיע
           elHigh.textContent = highScore;
         }
         elFinal.textContent = TT('final') + score;
@@ -498,7 +513,7 @@
       const saved = currentPiece, savedX = currentX, savedY = currentY;
       currentPiece = rotated;
       // "בעיטת קיר" — אם הסיבוב מתנגש, מנסים להזיז את החלק קצת כדי שיצליח
-      const kicks = [[0,0],[1,0],[-1,0],[2,0],[-2,0],[0,-1],[1,-1],[-1,-1]];
+      const kicks = [[0,0],[1,0],[-1,0],[2,0],[-2,0],[0,-1],[1,-1],[-1,-1],[-3,0]];   // [-3,0] — קו אנכי צמוד לקיר הימני
       let ok = false;
       for (const [kx, ky] of kicks) {
         if (!collides(kx, ky, rotated)) { currentX += kx; currentY += ky; ok = true; break; }
@@ -520,14 +535,14 @@
       if (!started || gameOver) return;
       paused = !paused;
       pauseOverlay.style.display = paused ? 'flex' : 'none';
-      if (!paused) { lastTime = 0; rafId = requestAnimationFrame(loop); }
+      if (!paused) { lastTime = 0; }   // הלולאה ממשיכה לרוץ גם בהשהיה — לא מפעילים לולאה נוספת
     }
     function canPlay() { return alive && started && !gameOver && !paused; }
 
     // ---- מקלדת ----
     function onKey(e) {
       if (!started) return;
-      if (e.key === 'p' || e.key === 'P') { if (!e.repeat) togglePause(); e.preventDefault(); return; }
+      if (e.key === 'p' || e.key === 'P' || e.code === 'KeyP') { if (!e.repeat) togglePause(); e.preventDefault(); return; }   // KeyP — גם במקלדת עברית (פ)
       if (gameOver || paused) return;
       let handled = true;
       if (e.key === 'ArrowLeft') moveLeft();
@@ -548,6 +563,7 @@
       holdStops.push(stop);
       const start = (e) => {
         e.preventDefault();
+        stop();   // אצבע שנייה על אותו כפתור — עוצרים את הטיימר הקודם כדי שלא יישאר רץ
         fn(); container.focus();
         if (repeat) { delayT = setTimeout(() => { repT = setInterval(fn, 55); }, 170); }
       };
