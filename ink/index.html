@@ -593,6 +593,9 @@ label.bk-row:hover{background:var(--surface-2)}
 .pa-tx.editing{box-shadow:0 0 0 1.5px var(--accent);background:rgba(255,255,255,.6);cursor:text;user-select:text;-webkit-user-select:text}
 .pa-tx.editing:empty::before{content:attr(data-ph);color:#98a1b3}
 #paStage.pick .pa-tx{cursor:move}
+.pa-cover{position:absolute}
+#paStage.text .pa-cover{cursor:text}
+.pa-hover{position:absolute;pointer-events:none;border:1.5px dashed var(--accent);border-radius:3px;background:rgba(39,67,216,.07);z-index:1}
 .pa-selbox{position:absolute;pointer-events:none;border:1.5px dashed var(--accent);border-radius:4px;z-index:2}
 .pa-del,.pa-grip,.pa-handle{position:absolute;pointer-events:auto;touch-action:none;display:grid;place-items:center;padding:0;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.28)}
 .pa-del{top:-14px;right:-14px;width:26px;height:26px;background:#cf3727;color:#fff;cursor:pointer}
@@ -876,7 +879,7 @@ label.bk-row:hover{background:var(--surface-2)}
         <button class="rb" data-cmd="paRedo" title="חזרה (Ctrl+Y)" aria-label="חזרה"><span class="ms flip">redo</span></button>
       </div><div class="gn" data-t="ביטול@undo">ביטול</div></div>
       <div class="grp"><div class="gb">
-        <button class="rb big" data-cmd="paTool" data-arg="text" title="לוחצים במקום כלשהו בדף ומקלידים"><span class="ms">text_fields</span>טקסט</button>
+        <button class="rb big" data-cmd="paTool" data-arg="text" title="לוחצים על מקום ריק כדי לכתוב, או על טקסט שבדף כדי לשנות אותו"><span class="ms">text_fields</span>טקסט</button>
         <button class="rb big" data-cmd="paTool" data-arg="pen" title="ציור ביד חופשית"><span class="ms">edit</span>עט</button>
         <button class="rb big" data-cmd="paTool" data-arg="marker" title="צבע שקוף מעל הטקסט, כמו מרקר"><span class="ms">ink_highlighter</span>מרקר</button>
         <button class="rb big" data-cmd="paTool" data-arg="select" title="לוחצים על משהו שכתבת או ציירת כדי להזיז או למחוק אותו"><span class="ms">arrow_selector_tool</span>בחירה</button>
@@ -886,6 +889,7 @@ label.bk-row:hover{background:var(--surface-2)}
         <button class="rb big" data-cmd="paTool" data-arg="oval" title="עיגול, למשל מסביב לתשובה הנכונה"><span class="ms">circle</span>עיגול</button>
         <button class="rb big" data-cmd="paTool" data-arg="rect" title="מלבן מסביב למשהו"><span class="ms">crop_landscape</span>מלבן</button>
         <button class="rb big" data-cmd="paTool" data-arg="eraser" title="עוברים עם המחק על קו או על צורה, והם נמחקים"><span class="ms">ink_eraser</span>מחק</button>
+        <button class="rb big" data-cmd="paTool" data-arg="white" title="מכסה מה שכתוב בדף בצבע של הדף, כדי לכתוב במקומו"><span class="ms">format_color_fill</span>טיפקס</button>
       </div><div class="gn">סימון</div></div>
       <div class="grp"><div class="gb pa-colors" id="paColors"></div><div class="gn">צבע</div></div>
       <div class="grp"><div class="gb" id="paSizes"></div><div class="gn" id="paSizeName">עובי</div></div>
@@ -4729,13 +4733,15 @@ function openDraw() {
    shape { shape: rect|oval, x, y, w, h, color, lw }, text { x, y, w, txt, size, color }
    ========================================================= */
 const PA_EW = 900;
-const PA = { doc: null, idx: 0, sel: null, edit: null, zoom: 1, k: 1, pages: [], g: null, dragged: false };
+const PA = { doc: null, idx: 0, sel: null, edit: null, zoom: 1, k: 1, pages: [], g: null, dragged: false, lines: [], linesFor: null };
 const PAH = { stack: [], idx: 0 };
 const PA_PEN = ['#1b1f2a', '#2743d8', '#cf3727', '#1d8249', '#d9701a', '#7a3fc9'];
 const PA_HL = ['#ffe45c', '#b9f0ae', '#bfe0ff', '#ffc9e2', '#ffd5a8'];
 const PA_W = { pen: [2, 3.5, 6], marker: [12, 20, 30], shape: [2, 3.5, 6], text: [15, 19, 26] };
-const PA_TOOLS = ['text', 'pen', 'marker', 'select', 'line', 'oval', 'rect', 'eraser'];
-const PA_DRAW = new Set(['pen', 'marker', 'line', 'oval', 'rect', 'eraser']);
+const PA_TOOLS = ['text', 'pen', 'marker', 'select', 'line', 'oval', 'rect', 'eraser', 'white'];
+const PA_DRAW = new Set(['pen', 'marker', 'line', 'oval', 'rect', 'eraser', 'white']);
+/* letters like the page's own, for text of the page that is changed: plain or with serifs */
+const PA_FONTS = { sans: 'Arial, Heebo, sans-serif', serif: '"Times New Roman", "David Libre", serif' };
 const PA_SVG = 'http://www.w3.org/2000/svg';
 const paR = v => Math.round(v * 10) / 10;
 const paHe = t => (String(t).match(/[א-ת]/g) || []).length;
@@ -4744,7 +4750,7 @@ const paFam = t => t === 'marker' ? 'marker' : t === 'text' ? 'text' : t === 'pe
 const paElFam = e => e.t === 'ink' ? (e.tool === 'marker' ? 'marker' : 'pen') : e.t === 'text' ? 'text' : 'shape';
 const paEl = id => { if (PA.doc) for (const p of PA.doc.pages) { const e = p.els.find(x => x.id === id); if (e) return e; } return null; };
 const paNode = id => $(`#paStage [data-id="${id}"]`);
-const paCopyEl = e => e.pts ? { ...e, pts: e.pts.map(q => [q[0], q[1]]) } : { ...e };
+const paCopyEl = e => e.pts ? { ...e, pts: e.pts.map(q => [q[0], q[1]]) } : e.cover ? { ...e, cover: { ...e.cover } } : { ...e };
 /* a copy for the undo history: the pictures and the original file are shared, not copied */
 const paClone = d => ({ v: 1, dir: d.dir, src: d.src, pages: d.pages.map(p => ({ ...p, els: p.els.map(paCopyEl) })) });
 function paPref() {
@@ -4779,7 +4785,7 @@ function askPdfMode(name) {
       h('p', { class: 'muted', style: { margin: '0 0 12px' }, text: T('איך לפתוח את "{0}"?', name) }),
       h('div', { class: 'pdf-choice' },
         h('button', { class: 'pdf-opt', type: 'button', autofocus: true, onclick: () => pick('write') }, icon('draw'), h('b', { text: T('לכתוב על הדפים') }),
-          h('span', { text: T('כל עמוד נכנס כמו שהוא, ואפשר להקליד תשובות בכל מקום, לצייר ולסמן. מתאים לדפי עבודה מבית הספר.') })),
+          h('span', { text: T('כל עמוד נכנס כמו שהוא, ואפשר להקליד תשובות בכל מקום, לשנות את מה שכתוב, לצייר ולסמן. מתאים לדפי עבודה מבית הספר.') })),
         h('button', { class: 'pdf-opt', type: 'button', onclick: () => pick('text') }, icon('article'), h('b', { text: T('להוציא את הטקסט') }),
           h('span', { text: T('הטקסט נכנס למסמך רגיל, ואפשר לערוך אותו כמו כל מסמך.') })))) });
   });
@@ -4838,7 +4844,7 @@ async function pdfToPages(pdf, title, src, say) {
   if (pdf.numPages > n) toast(T('נפתחו רק {0} העמודים הראשונים מתוך {1}.', fmt(n), fmt(pdf.numPages)), { ms: 8000 });
   const dir = he || la ? (he >= la ? 'rtl' : 'ltr') : UI_DIR;
   const id = await createDoc({ title, html: JSON.stringify({ v: 1, dir, src: pdf.numPages > n ? null : src, pages }), kind: 'pdfpage', page: { dir } });
-  if (id) toast(T('אפשר לכתוב: לוחצים במקום כלשהו בדף ומקלידים.'), { icon: 'draw', ms: 6000 });
+  if (id) toast(T('אפשר לכתוב: לוחצים על מקום ריק ומקלידים, או על טקסט שכתוב בדף כדי לשנות אותו.'), { icon: 'draw', ms: 7000 });
   return id;
 }
 
@@ -4985,7 +4991,7 @@ function setPdfMode(on) {
     if (S.panel && S.panel !== 'versions' && S.panel !== 'link') closePanel();
     if (!was) selectTab('pwrite');
   } else if (was) {
-    Object.assign(PA, { doc: null, sel: null, edit: null, g: null, pages: [] });
+    Object.assign(PA, { doc: null, sel: null, edit: null, g: null, pages: [], lines: [], linesFor: null });
     $('#paStage').textContent = ''; $('#paStrip').textContent = '';
     if (!deckOpen()) selectTab(PREFS.tab && !DECK_TABS.includes(PREFS.tab) ? PREFS.tab : 'home');
   }
@@ -5009,6 +5015,7 @@ function pdfaRender() {
   });
   if (!PA.doc.pages.length) st.append(h('p', { class: 'muted', text: T('אין דפים ב-PDF הזה.') }));
   paLayout(); paStripAll(); paStageMode(); paToolbar(); paStat();
+  paLoadLines();
 }
 /* what is written on page i, drawn again */
 function paFill(i) {
@@ -5019,6 +5026,8 @@ function paFill(i) {
 }
 /* the drawing and the typing of page p, into box (which has the page's size) */
 function paLayer(box, p, dir) {
+  // patches of the page's color over its own text where that text was changed or covered, under everything else
+  for (const e of p.els) if (e.cover) box.append(h('div', { class: 'pa-cover', 'data-cover': e.id, style: { left: e.cover.x + 'px', top: e.cover.y + 'px', width: e.cover.w + 'px', height: e.cover.h + 'px', background: e.cover.c } }));
   const svg = document.createElementNS(PA_SVG, 'svg');
   svg.setAttribute('class', 'pa-svg'); svg.setAttribute('viewBox', `0 0 ${p.w} ${p.h}`);
   svg.setAttribute('width', p.w); svg.setAttribute('height', p.h);
@@ -5034,7 +5043,7 @@ function paSvgNode(e) {
   if (e.t === 'ink') return mk('path', { d: paPath(e.pts), fill: 'none', stroke: e.color, 'stroke-width': e.lw, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', ...(e.tool === 'marker' ? { 'stroke-opacity': 0.45 } : {}) });
   if (e.t === 'line') return mk('line', { x1: e.x1, y1: e.y1, x2: e.x2, y2: e.y2, stroke: e.color, 'stroke-width': e.lw, 'stroke-linecap': 'round' });
   if (e.t === 'shape' && e.shape === 'oval') return mk('ellipse', { cx: e.x + e.w / 2, cy: e.y + e.h / 2, rx: Math.max(0.5, e.w / 2), ry: Math.max(0.5, e.h / 2), fill: 'none', stroke: e.color, 'stroke-width': e.lw });
-  if (e.t === 'shape') return mk('rect', { x: e.x, y: e.y, width: Math.max(1, e.w), height: Math.max(1, e.h), rx: 4, fill: 'none', stroke: e.color, 'stroke-width': e.lw });
+  if (e.t === 'shape') return mk('rect', { x: e.x, y: e.y, width: Math.max(1, e.w), height: Math.max(1, e.h), rx: e.fill ? 0 : 4, fill: e.fill || 'none', stroke: e.lw ? e.color : 'none', 'stroke-width': e.lw });
   return null;
 }
 /* a line through the points, smoothed with curves between their midpoints */
@@ -5050,7 +5059,7 @@ function paPath(pts) {
    so -3 or (2, 5) stay the right way round next to Hebrew */
 function paTextNode(e, dir, pw) {
   const rtl = dir === 'rtl';
-  const n = h('div', { class: 'pa-tx', dir: 'auto', 'data-id': e.id, style: { ...(rtl ? { right: pw - e.x - e.w + 'px' } : { left: e.x + 'px' }), top: e.y + 'px', maxWidth: e.w + 'px', fontSize: e.size + 'px', color: e.color, textAlign: rtl ? 'right' : 'left' } });
+  const n = h('div', { class: 'pa-tx', dir: 'auto', 'data-id': e.id, style: { ...(rtl ? { right: pw - e.x - e.w + 'px' } : { left: e.x + 'px' }), top: e.y + 'px', maxWidth: e.w + 'px', fontSize: e.size + 'px', color: e.color, textAlign: rtl ? 'right' : 'left', ...(PA_FONTS[e.font] ? { fontFamily: PA_FONTS[e.font] } : {}), ...(e.b ? { fontWeight: '700' } : {}) } });
   n.textContent = e.txt || '';
   return n;
 }
@@ -5081,6 +5090,7 @@ function paZoomBy(d) {
 function paStageMode() {
   const st = $('#paStage'), t = paPref().tool;
   st.classList.toggle('draw', PA_DRAW.has(t)); st.classList.toggle('text', t === 'text'); st.classList.toggle('pick', t === 'select');
+  paHoverOff();
 }
 const paPoint = (e, i) => { const r = PA.pages[i].wrap.getBoundingClientRect(); return [(e.clientX - r.left) / PA.k, (e.clientY - r.top) / PA.k]; };
 
@@ -5126,7 +5136,7 @@ function paToolbar() {
   if (!PA.doc) return;
   const pr = paPref(), tool = pr.tool, sel = PA.sel && paEl(PA.sel.id);
   for (const b of $$('#ribbon [data-cmd="paTool"]')) b.classList.toggle('on', b.dataset.arg === tool);
-  const fam = sel ? paElFam(sel) : paFam(tool), off = !sel && (tool === 'select' || tool === 'eraser');
+  const fam = sel ? paElFam(sel) : paFam(tool), off = sel ? !!sel.fill : ['select', 'eraser', 'white'].includes(tool);
   const cur = sel ? sel.color : pr.c[fam];
   $('#paColors').replaceChildren(...(fam === 'marker' ? PA_HL : PA_PEN).map(c => h('button', { class: 'sw' + (!off && c === cur ? ' on' : ''), type: 'button', 'data-cmd': 'paColor', 'data-arg': c, style: { background: c }, title: paColorName(c), 'aria-label': paColorName(c), disabled: off })));
   const list = PA_W[fam], val = sel ? (fam === 'text' ? sel.size : sel.lw) : list[pr.s[fam]];
@@ -5200,10 +5210,11 @@ function paClick(e) {
   const t = e.target, wrap = t.closest('.pa-page');
   if (!wrap) { if (t === e.currentTarget) { paCommitEdit(); paSelect(null); } return; }
   if (paPref().tool !== 'text' || t.closest('.pa-selbox') || t.closest('.pa-tx.editing')) return;
-  const i = +wrap.dataset.i, box = t.closest('.pa-tx');
+  const i = +wrap.dataset.i, box = t.closest('.pa-tx'), cov = t.closest('.pa-cover');
   paCommitEdit();
   if (box) paEditText(box.dataset.id, i, e);
-  else paNewText(i, paPoint(e, i));
+  else if (cov && paEl(cov.dataset.cover)) paEditText(cov.dataset.cover, i);
+  else { const pt = paPoint(e, i), seg = paSegAt(i, pt); if (seg) paEditLine(i, seg, e); else paNewText(i, pt); }
 }
 /* a double click on typed text writes in it. Found by the spot, since a drag that began there holds the pointer */
 function paDbl(e) {
@@ -5238,6 +5249,144 @@ function paEditText(id, i, ev) {
   const s = getSelection(); s.removeAllRanges(); s.addRange(r);
   paDrawSel(); paToolbar();
 }
+/* --- the page's own text. Read once from the original file, in the background, so that a click on a line of it can
+   change it: the line goes into a box with letters of the same size in the same place, over a patch of the page's
+   color that hides the original. Runs of ____ or .... are blanks to write in, so they aren't offered --- */
+async function paLoadLines() {
+  const doc = PA.doc, id = S.cur && S.cur.id;
+  if (!doc || !doc.src || !id || PA.linesFor === id) return;
+  PA.linesFor = id; PA.lines = [];
+  let pdf = null;
+  try {
+    pdf = await readPdf(b64Bytes(doc.src));
+    for (let i = 0; i < Math.min(pdf.numPages, doc.pages.length); i++) {
+      if (PA.linesFor !== id || !PA.doc) return;
+      if (PA.pages[i]) await imgsReady(PA.pages[i].inner);
+      const pg = await pdf.getPage(i + 1), lines = await paPageLines(pg, i, PA.doc.dir === 'rtl');
+      pg.cleanup();
+      if (PA.linesFor !== id) return;
+      PA.lines[i] = lines;
+    }
+  } catch (e) { console.warn('could not read the text of the pages', e); }
+  finally { if (pdf) pdf.destroy().catch(() => {}); }
+}
+async function paPageLines(pg, i, rtl) {
+  if (((pg.rotate % 360) + 360) % 360) return [];   // on a turned page the lines run sideways
+  const p = PA.doc.pages[i], vp = pg.getViewport({ scale: p.w / pg.getViewport({ scale: 1 }).width }), tc = await pg.getTextContent();
+  if (!tc.items.length) return [];
+  try { await pg.getOperatorList(); } catch {}   // loads the fonts, to tell bold and serif letters
+  const font = n => { try { return pg.commonObjs.has(n) ? pg.commonObjs.get(n) : null; } catch { return null; } };
+  const items = [];
+  for (const it of tc.items) {
+    if (!it.str || !it.str.trim() || !it.transform) continue;   // (the spaces between pieces are worked out from the gaps)
+    const [a, b, c, d, x, y] = it.transform;
+    if (Math.abs(b) > 0.01 || Math.abs(c) > 0.01 || a <= 0 || d <= 0) continue;   // turned or mirrored text is left as it is
+    const f = font(it.fontName), name = (f && f.name) || '';
+    items.push(...paPieces({ str: it.str, x, y, w: it.width || a * it.str.length * 0.5, h: d, rtl: it.dir === 'rtl', bold: !!(f && (f.bold || f.black)) || /bold|black|heavy/i.test(name), serif: /times|david|frank|narkis|serif/i.test(name) && !/sans/i.test(name) }));
+  }
+  items.sort((p1, q) => q.y - p1.y);
+  const rows = [];
+  for (const it of items) {
+    const r = rows.find(R => Math.abs(R.y - it.y) < Math.max(2, Math.min(R.h, it.h) * 0.5));
+    if (r) { r.items.push(it); r.h = Math.max(r.h, it.h); } else rows.push({ y: it.y, h: it.h, items: [it] });
+  }
+  const FILL = /^[\s_.\-–—…·]+$/, segs = [];
+  for (const r of rows) {
+    const vis = r.items.sort((p1, q) => p1.x - q.x), blank = vis.map(it => !!it.blank);
+    for (let j = 0; j < vis.length;) {
+      if (!vis[j].str.trim() || !FILL.test(vis[j].str)) { j++; continue; }
+      let k = j, len = 0;
+      while (k < vis.length && FILL.test(vis[k].str)) { len += vis[k].str.trim().length; k++; }
+      if (len >= 3) for (let q = j; q < k; q++) blank[q] = true;
+      j = k;
+    }
+    let cur = [];
+    const flush = () => { if (cur.length) segs.push(cur); cur = []; };
+    vis.forEach((it, j) => {
+      if (blank[j]) { flush(); return; }
+      const prev = cur[cur.length - 1];
+      if (prev && it.x - (prev.x + prev.w) > Math.max(prev.h, it.h) * 2.2) flush();   // a wide gap: another piece
+      cur.push(it);
+    });
+    flush();
+  }
+  const out = [];
+  for (const sg of segs) {
+    const ln = pdfLines(sg.map(it => ({ ...it })), rtl)[0];
+    // letters the file can't name (a font with no map to real letters) would come out as boxes
+    if (!ln || !/[0-9A-Za-zא-ת]/.test(ln.text) || [...ln.text].some(ch => { const c = ch.codePointAt(0); return (c >= 0xE000 && c <= 0xF8FF) || c === 0xFFFD; })) continue;
+    const x0 = Math.min(...sg.map(it => it.x)), x1 = Math.max(...sg.map(it => it.x + it.w)), base = sg.reduce((t, it) => t + it.y, 0) / sg.length;
+    const [lx, by] = vp.convertToViewportPoint(x0, base), [rx] = vp.convertToViewportPoint(x1, base), size = Math.max(...sg.map(it => it.h)) * vp.scale;
+    const seg = { x: lx, y: by - size * 0.95, w: rx - lx, h: size * 1.2, base: by, size, t: ln.text, b: sg.filter(it => it.bold).length * 2 > sg.length, serif: sg.filter(it => it.serif).length * 2 > sg.length };
+    out.push(Object.assign(seg, paInkPaper(i, seg.x, seg.y, seg.w, seg.h)));
+  }
+  return out;
+}
+/* a piece of the page's text split where a blank to write in (____ or ....) sits inside it. Where each part falls is
+   worked out from how wide its letters are, measured in a similar font */
+const PA_BLANK = /_{3,}|\.{4,}|…{2,}|[-–—]{4,}/g;
+let paMeasure = null;
+function paPieces(it) {
+  const s = it.str, runs = [...s.matchAll(PA_BLANK)];
+  if (!runs.length) return [it];
+  const cx = paMeasure || (paMeasure = h('canvas').getContext('2d'));
+  cx.font = `${Math.max(4, it.h)}px Arial`;
+  const full = cx.measureText(s).width || 1, at = k => cx.measureText(s.slice(0, k)).width / full, parts = [];
+  let k = 0;
+  for (const m of runs) { if (m.index > k) parts.push([k, m.index, false]); parts.push([m.index, m.index + m[0].length, true]); k = m.index + m[0].length; }
+  if (k < s.length) parts.push([k, s.length, false]);
+  return parts.map(([a, b, blank]) => {
+    const ra = at(a), rb = at(b), x0 = it.rtl ? it.x + it.w * (1 - rb) : it.x + it.w * ra, x1 = it.rtl ? it.x + it.w * (1 - ra) : it.x + it.w * rb;
+    return { ...it, str: s.slice(a, b), x: x0, w: x1 - x0, blank };
+  }).filter(p => p.blank || p.str.trim());
+}
+/* the color of the letters and of the paper in a part of page i, from its picture */
+function paInkPaper(i, x, y, w, hh) {
+  const img = PA.pages[i] && PA.pages[i].inner.querySelector('img'), p = PA.doc && PA.doc.pages[i], out = { ink: '#1b1f2a', paper: '#ffffff' };
+  if (!img || !p || !img.naturalWidth) return out;
+  const k = img.naturalWidth / p.w, sx = clamp(Math.floor(x * k), 0, img.naturalWidth - 1), sy = clamp(Math.floor(y * k), 0, img.naturalHeight - 1);
+  const sw = clamp(Math.ceil(w * k), 1, img.naturalWidth - sx), sh = clamp(Math.ceil(hh * k), 1, img.naturalHeight - sy);
+  try {
+    const cx = h('canvas', { width: sw, height: sh }).getContext('2d', { willReadFrequently: true });
+    cx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+    const d = cx.getImageData(0, 0, sw, sh).data, ink = [0, 0, 0, 0], paper = [0, 0, 0, 0];
+    for (let j = 0; j < d.length; j += 4) {
+      const l = (d[j] * 299 + d[j + 1] * 587 + d[j + 2] * 114) / 255000, t = l < 0.5 ? ink : l > 0.8 ? paper : null;
+      if (t) { t[0] += d[j]; t[1] += d[j + 1]; t[2] += d[j + 2]; t[3]++; }
+    }
+    const hex = t => '#' + t.slice(0, 3).map(v => Math.round(v / t[3]).toString(16).padStart(2, '0')).join('');
+    if (ink[3]) out.ink = hex(ink);
+    // white paper comes out of the page's picture a shade off white, which would show as a patch
+    if (paper[3] && paper.slice(0, 3).some(v => v / paper[3] < 244)) out.paper = hex(paper);
+  } catch {}
+  return out;
+}
+function paSegAt(i, [x, y]) {
+  const segs = PA.lines[i];
+  return (segs && segs.find(s => x >= s.x - 2 && x <= s.x + s.w + 2 && y >= s.y - 2 && y <= s.y + s.h + 2)) || null;
+}
+function paEditLine(i, s, ev) {
+  const p = PA.doc.pages[i], rtl = PA.doc.dir === 'rtl', w = paR(Math.min(p.w, s.w + 80)), x = rtl ? paR(Math.max(0, s.x + s.w + 4 - w)) : paR(Math.max(0, s.x - 4));
+  const el = { id: uid(), t: 'text', x, y: paR(s.base - s.size - 2), w: rtl ? paR(s.x + s.w + 4 - x) : w, txt: s.t, size: paR(s.size), color: s.ink, font: s.serif ? 'serif' : 'sans', ...(s.b ? { b: true } : {}), orig: s.t,
+    cover: { x: paR(s.x - 2), y: paR(s.y - 1), w: paR(s.w + 4), h: paR(s.h + 2), c: s.paper } };
+  p.els.push(el);
+  paFill(i);
+  paHoverOff();
+  paEditText(el.id, i, ev);
+  if (PA.edit) PA.edit.isNew = true;
+}
+/* with the text tool, the page's own text that can be changed is outlined under the pointer */
+function paHoverOff() { const b = $('#paStage .pa-hover'); if (b) b.remove(); }
+function paHover(e) {
+  const t = e.target;
+  if (!PA.doc || PA.g || paPref().tool !== 'text' || !t.closest || t.closest('.pa-tx,.pa-cover,.pa-selbox')) { paHoverOff(); return; }
+  const wrap = t.closest('.pa-page'), i = wrap ? +wrap.dataset.i : -1, s = wrap && paSegAt(i, paPoint(e, i));
+  if (!s) { paHoverOff(); return; }
+  let b = $('#paStage .pa-hover');
+  if (!b || b.parentElement !== wrap) { paHoverOff(); b = h('div', { class: 'pa-hover' }); wrap.append(b); }
+  const k = PA.k;
+  Object.assign(b.style, { left: s.x * k - 3 + 'px', top: s.y * k - 2 + 'px', width: s.w * k + 6 + 'px', height: s.h * k + 4 + 'px' });
+}
 const paReadText = n => n.innerText.replaceAll(NBSP, ' ').replace(/\n+$/, '');
 function paInput(e) {
   const n = e.target.closest && e.target.closest('.pa-tx.editing'), el = n && paEl(n.dataset.id);
@@ -5260,12 +5409,18 @@ function paCommitEdit() {
   if (!el || !PA.doc) return;
   if (n) el.txt = paReadText(n);
   const p = PA.doc.pages[E.i];
-  if (!el.txt.trim()) {
+  if (!el.txt.trim() && !el.cover) {
     p.els = p.els.filter(x => x !== el);
     if (n) n.remove();
     if (PA.sel && PA.sel.id === E.id) PA.sel = null;
     if (!E.isNew) paCommit();
-  } else {
+  } else if (el.cover && E.isNew && !E.styled && el.txt === el.orig) {   // a line of the page opened and left as it was: the page stays untouched
+    p.els = p.els.filter(x => x !== el);
+    if (n) n.remove();
+    const c = $(`#paStage [data-cover="${E.id}"]`);
+    if (c) c.remove();
+    if (PA.sel && PA.sel.id === E.id) PA.sel = null;
+  } else {   // (a changed line of the page left empty stays: its patch keeps the old text hidden)
     if (n) n.textContent = el.txt;
     if (E.isNew || E.styled || el.txt !== E.before) paCommit();
     if (paPref().tool === 'text' && PA.sel && PA.sel.id === E.id) PA.sel = null;
@@ -5283,6 +5438,7 @@ function paDraw(e, i, pt, tool) {
   else {
     if (tool === 'pen' || tool === 'marker') g.el = { id: uid(), t: 'ink', tool, color, lw: tool === 'pen' && e.pointerType === 'pen' && e.pressure ? paR(lw * (0.6 + e.pressure * 0.8)) : lw, pts: [[paR(pt[0]), paR(pt[1])]] };
     else if (tool === 'line') g.el = { id: uid(), t: 'line', x1: paR(pt[0]), y1: paR(pt[1]), x2: paR(pt[0]), y2: paR(pt[1]), color, lw };
+    else if (tool === 'white') g.el = { id: uid(), t: 'shape', shape: 'rect', x: paR(pt[0]), y: paR(pt[1]), w: 0, h: 0, color: '#ffffff', lw: 0, fill: '#ffffff' };
     else g.el = { id: uid(), t: 'shape', shape: tool, x: paR(pt[0]), y: paR(pt[1]), w: 0, h: 0, color, lw };
     g.node = paSvgNode(g.el); P.svg.append(g.node);
   }
@@ -5326,6 +5482,7 @@ function paDrawEnd(g) {
     const w = el.shape === 'oval' ? 120 : 140, hh = 56;
     Object.assign(el, { x: paR(g.p0[0] - w / 2), y: paR(g.p0[1] - hh / 2), w, h: hh });
   }
+  if (el.fill) el.fill = el.color = paInkPaper(g.i, el.x, el.y, el.w, el.h).paper;   // whiteout in the color of the paper under it
   p.els.push(el);
   g.node.replaceWith(paSvgNode(el));
   paCommit(); paThumbSoon(g.i);
@@ -5356,7 +5513,7 @@ function paHitEl(e, [x, y], r, edge) {
   if (e.t === 'line') return paSeg(x, y, e.x1, e.y1, e.x2, e.y2) <= m;
   if (e.shape === 'rect') {
     const out = x >= e.x - m && x <= e.x + e.w + m && y >= e.y - m && y <= e.y + e.h + m;
-    return out && (!edge || !(x > e.x + m && x < e.x + e.w - m && y > e.y + m && y < e.y + e.h - m));
+    return out && (!edge || !!e.fill || !(x > e.x + m && x < e.x + e.w - m && y > e.y + m && y < e.y + e.h - m));
   }
   const rx = Math.max(1, e.w / 2), ry = Math.max(1, e.h / 2), d = Math.hypot((x - e.x - rx) / rx, (y - e.y - ry) / ry);
   return edge ? Math.abs(d - 1) * Math.min(rx, ry) <= m : d <= 1 + m / Math.min(rx, ry);
@@ -5390,7 +5547,7 @@ function paDrawSel() {
   if (!el || !P) return;
   const b = paBounds(el), k = PA.k, pad = 5;
   const box = h('div', { class: 'pa-selbox', style: { left: b.x * k - pad + 'px', top: b.y * k - pad + 'px', width: b.w * k + 2 * pad + 'px', height: b.h * k + 2 * pad + 'px' } },
-    h('button', { class: 'pa-del', type: 'button', title: T('מחיקה'), 'aria-label': T('מחיקה') }, icon('close')),
+    h('button', { class: 'pa-del', type: 'button', title: el.cover ? T('החזרת הטקסט המקורי') : T('מחיקה'), 'aria-label': el.cover ? T('החזרת הטקסט המקורי') : T('מחיקה') }, icon('close')),
     h('span', { class: 'pa-grip', title: T('גוררים כדי להזיז') }, icon('open_with')));
   if (el.t === 'text') box.append(h('span', { class: 'pa-handle ew', title: T('גוררים כדי לשנות את הרוחב'), style: PA.doc.dir === 'rtl' ? { left: '-9px' } : { right: '-9px' } }));
   else if (el.t === 'shape') box.append(h('span', { class: 'pa-handle se', title: T('גוררים כדי לשנות את הגודל') }));
@@ -5442,6 +5599,8 @@ function paDelSel() {
   const p = PA.doc.pages[s.i], n = paNode(s.id), had = p.els.some(e => e.id === s.id);
   p.els = p.els.filter(e => e.id !== s.id);
   if (n) n.remove();
+  const c = $(`#paStage [data-cover="${s.id}"]`);   // a changed line of the page: its original comes back
+  if (c) c.remove();
   PA.sel = null;
   if (had) paCommit();
   paDrawSel(); paToolbar(); paThumbSoon(s.i);
@@ -6015,8 +6174,13 @@ function paNormEl(e) {
   const n = v => Number.isFinite(+v) ? +v : 0, col = c => /^#[0-9a-f]{3,8}$/i.test(c) ? c : '#1b1f2a', lw = v => clamp(n(v) || 3, 0.5, 60);
   if (e.t === 'ink' && Array.isArray(e.pts) && e.pts.length) return { id: e.id, t: 'ink', tool: e.tool === 'marker' ? 'marker' : 'pen', color: col(e.color), lw: lw(e.lw), pts: e.pts.filter(Array.isArray).map(q => [n(q[0]), n(q[1])]) };
   if (e.t === 'line') return { id: e.id, t: 'line', x1: n(e.x1), y1: n(e.y1), x2: n(e.x2), y2: n(e.y2), color: col(e.color), lw: lw(e.lw) };
-  if (e.t === 'shape') return { id: e.id, t: 'shape', shape: e.shape === 'oval' ? 'oval' : 'rect', x: n(e.x), y: n(e.y), w: Math.max(1, n(e.w)), h: Math.max(1, n(e.h)), color: col(e.color), lw: lw(e.lw) };
-  if (e.t === 'text' && String(e.txt || '').trim()) return { id: e.id, t: 'text', x: n(e.x), y: n(e.y), w: Math.max(20, n(e.w)), txt: String(e.txt), size: clamp(n(e.size) || 19, 6, 120), color: col(e.color) };
+  const fill = e.fill && e.shape !== 'oval' ? (/^#[0-9a-f]{3,8}$/i.test(e.fill) ? e.fill : '#ffffff') : null;
+  if (e.t === 'shape') return { id: e.id, t: 'shape', shape: e.shape === 'oval' ? 'oval' : 'rect', x: n(e.x), y: n(e.y), w: Math.max(1, n(e.w)), h: Math.max(1, n(e.h)), color: col(e.color), lw: fill ? clamp(n(e.lw), 0, 60) : lw(e.lw), ...(fill ? { fill } : {}) };
+  if (e.t === 'text') {   // cover: the patch over the page's own text that this one replaces (it may then be empty)
+    const c = e.cover && typeof e.cover === 'object' ? { x: n(e.cover.x), y: n(e.cover.y), w: Math.max(1, n(e.cover.w)), h: Math.max(1, n(e.cover.h)), c: /^#[0-9a-f]{3,8}$/i.test(e.cover.c) ? e.cover.c : '#ffffff' } : null;
+    if (!c && !String(e.txt || '').trim()) return null;
+    return { id: e.id, t: 'text', x: n(e.x), y: n(e.y), w: Math.max(20, n(e.w)), txt: String(e.txt || ''), size: clamp(n(e.size) || 19, 6, 120), color: col(e.color), ...(e.font === 'sans' || e.font === 'serif' ? { font: e.font } : {}), ...(e.b ? { b: true } : {}), ...(c ? { cover: c, orig: String(e.orig ?? '') } : {}) };
+  }
   return null;
 }
 function normPdfa(j) {
@@ -9556,6 +9720,8 @@ function wire() {
   ps.addEventListener('dblclick', paDbl);
   ps.addEventListener('input', paInput);
   ps.addEventListener('focusout', paBlur);
+  ps.addEventListener('pointermove', paHover);
+  ps.addEventListener('pointerleave', paHoverOff);
   ps.addEventListener('scroll', rafOnce(paScrolled), { passive: true });
   ps.addEventListener('wheel', e => { if (!(e.ctrlKey || e.metaKey) || !PA.doc) return; e.preventDefault(); paZoomBy(e.deltaY < 0 ? 1 : -1); }, { passive: false });
   if (window.ResizeObserver) new ResizeObserver(() => { if (PA.doc) paLayoutSoon(); }).observe(ps);

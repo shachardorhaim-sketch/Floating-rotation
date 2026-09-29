@@ -1319,7 +1319,6 @@ window.INK_I18N = {
 "איך לפתוח את \"{0}\"?": "How do you want to open \"{0}\"?",
 "אין דפים ב-PDF הזה.": "This PDF has no pages.",
 "אפשר לייבא קבצי Word ‏(docx), ‏PDF, טקסט, Markdown או HTML": "You can import Word (.docx), PDF, text, Markdown, or HTML files",
-"אפשר לכתוב: לוחצים במקום כלשהו בדף ומקלידים.": "Ready to write: click anywhere on the page and type.",
 "בחירה": "Select",
 "בינוני": "Medium",
 "גדול": "Large",
@@ -1334,7 +1333,6 @@ window.INK_I18N = {
 "הטקסט נכנס למסמך רגיל, ואפשר לערוך אותו כמו כל מסמך.": "The text goes into a regular document that you can edit like any other.",
 "הטקסט של ה-PDF נכנס למסמך חדש, ואפשר לערוך אותו.": "The PDF's text is now in a new document, ready to edit.",
 "התאמה לרוחב החלון": "Fit to window width",
-"כל עמוד נכנס כמו שהוא, ואפשר להקליד תשובות בכל מקום, לצייר ולסמן. מתאים לדפי עבודה מבית הספר.": "Each page comes in just as it is, and you can type answers anywhere, draw and mark it up. Great for school worksheets.",
 "כתיבה וציור": "Write & Draw",
 "כתיבה על הדפים": "Write on Pages",
 "לא הצלחתי לטעון את הכלי שקורא קבצי PDF. כדאי לבדוק את החיבור לאינטרנט.": "I couldn't load the tool that reads PDF files. Check your internet connection.",
@@ -1342,7 +1340,6 @@ window.INK_I18N = {
 "לא נמצא טקסט ב-PDF הזה. כנראה שהדפים שלו הם תמונות, למשל סריקה. אפשר לפתוח אותו לכתיבה על הדפים.": "No text was found in this PDF. Its pages are probably pictures, like a scan. You can open it to write on its pages instead.",
 "לא נמצאו עמודים בקובץ": "No pages were found in the file",
 "להוציא את הטקסט": "Take out the text",
-"לוחצים במקום כלשהו בדף ומקלידים": "Click anywhere on the page and type",
 "לוחצים על משהו שכתבת או ציירת כדי להזיז או למחוק אותו": "Click something you wrote or drew to move or delete it",
 "לכתוב על הדפים": "Write on the pages",
 "מה שכתבת יישמר לתוך \"{0}\" במחשב, מעל הדפים המקוריים. השאלה הזאת לא תופיע שוב לקובץ הזה.": "What you wrote will be saved into \"{0}\" on your computer, on top of the original pages. You won't be asked this again for this file.",
@@ -1364,7 +1361,13 @@ window.INK_I18N = {
 "קורא את הטקסט… עמוד {0} מתוך {1}": "Reading the text… page {0} of {1}",
 "קטן": "Small",
 "תצוגה@view": "View",
-"בחלק מהדפים לא נמצא טקסט, כנראה כי הם תמונות. אפשר לפתוח את ה-PDF גם לכתיבה על הדפים.": "Some pages had no text, probably because they are pictures. You can also open the PDF to write on its pages."
+"בחלק מהדפים לא נמצא טקסט, כנראה כי הם תמונות. אפשר לפתוח את ה-PDF גם לכתיבה על הדפים.": "Some pages had no text, probably because they are pictures. You can also open the PDF to write on its pages.",
+"אפשר לכתוב: לוחצים על מקום ריק ומקלידים, או על טקסט שכתוב בדף כדי לשנות אותו.": "Ready to write: click an empty spot and type, or click text on the page to change it.",
+"החזרת הטקסט המקורי": "Bring back the original text",
+"טיפקס": "Whiteout",
+"כל עמוד נכנס כמו שהוא, ואפשר להקליד תשובות בכל מקום, לשנות את מה שכתוב, לצייר ולסמן. מתאים לדפי עבודה מבית הספר.": "Each page comes in just as it is, and you can type answers anywhere, change what's written, draw and mark it up. Great for school worksheets.",
+"לוחצים על מקום ריק כדי לכתוב, או על טקסט שבדף כדי לשנות אותו": "Click an empty spot to write, or click text on the page to change it",
+"מכסה מה שכתוב בדף בצבע של הדף, כדי לכתוב במקומו": "Covers what's printed on the page with the page's color, so you can write in its place"
 },
 "plurals": {
 "{n} מילים": {
