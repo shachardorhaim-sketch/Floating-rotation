@@ -135,6 +135,10 @@ function normSheet(x, dir, taken) {
   if (+x.dh >= 8 && +x.dh <= 200) s.dh = Math.round(+x.dh);
   const ac = parseA1(x.ac); if (ac) s.ac = ac;
   if (+x.zoom >= 25 && +x.zoom <= 400) s.zoom = Math.round(+x.zoom);
+  // in a shared room: the ids of its rows and columns (see the rooms, at the end)
+  const ri = x.ri && unpackIds(x.ri, s.id + '/ri', RMAX), ci = x.ci && unpackIds(x.ci, s.id + '/ci', CMAX);
+  if (ri) s.ri = ri;
+  if (ci) s.ci = ci;
   return s;
 }
 /* a workbook from anywhere (storage, a version, a backup, a room, Claude) comes through here */
@@ -177,6 +181,8 @@ function sheetOut(s) {
   const ac = s === WS && SEL ? SEL : s.ac;
   if (ac.r || ac.c) o.ac = A1(ac.r, ac.c);
   if (s.zoom !== 100) o.zoom = s.zoom;
+  if (s.ri && s.ri.length) o.ri = packIds(s.ri, s.id + '/ri');
+  if (s.ci && s.ci.length) o.ci = packIds(s.ci, s.id + '/ci');
   return o;
 }
 const bookOut = b => ({ v: 1, dir: b.dir, active: b.sheets.includes(WS) ? b.sheets.indexOf(WS) : clamp(b.active | 0, 0, b.sheets.length - 1), sheets: b.sheets.map(sheetOut) });
@@ -1095,20 +1101,23 @@ function edit(fn) {
 function setCell(s, r, c, cell) {
   const k = KEY(r, c);
   if (TX) { const id = s.id + '|' + k; if (!TX.cells.has(id)) TX.cells.set(id, { s, k, before: s.cells.get(k) || null }); }
+  if (RM.on) RM.cells.add(s.id + '|' + k);
   if (cell) s.cells.set(k, cell); else s.cells.delete(k);
 }
 function setProp(s, name, val) {
   if (TX) { const id = s.id + '|' + name; if (!TX.props.has(id)) TX.props.set(id, { s, name, before: s[name] }); }
+  if (RM.on) (name === 'ri' || name === 'ci' ? RM.lists : RM.props).add(s.id);
   s[name] = val;
 }
 function bookStep(fn) {
   if (TX && !TX.book) TX.book = { sheets: [...WB.sheets], dir: WB.dir };
+  if (RM.on) RM.book = true;
   fn();
 }
 function applyStep(st, back) {
-  for (const x of st.cells) { const v = back ? x.before : x.after; if (v) x.s.cells.set(x.k, v); else x.s.cells.delete(x.k); }
-  for (const x of st.props) x.s[x.name] = back ? x.before : x.after;
-  if (st.book) { const b = back ? st.book.before : st.book.after; WB.sheets = [...b.sheets]; WB.dir = b.dir; }
+  for (const x of st.cells) { const v = back ? x.before : x.after; if (v) x.s.cells.set(x.k, v); else x.s.cells.delete(x.k); if (RM.on) RM.cells.add(x.s.id + '|' + x.k); }
+  for (const x of st.props) { x.s[x.name] = back ? x.before : x.after; if (RM.on) (x.name === 'ri' || x.name === 'ci' ? RM.lists : RM.props).add(x.s.id); }
+  if (st.book) { const b = back ? st.book.before : st.book.after; WB.sheets = [...b.sheets]; WB.dir = b.dir; if (RM.on) RM.book = true; }
   const snap = back ? st.sel0 : st.sel1, s = WB.sheets.find(x => x.id === snap.sid) || WB.sheets[0];
   if (s !== WS) showSheet(s, true);
   SEL = { r: snap.r, c: snap.c, er: snap.er, ec: snap.ec };
@@ -1247,6 +1256,7 @@ function render() {
   if (WS.fc) place(part(V.side, 'frz', 'sh-frz'), RHW + FW - 1, 0, 1, H);
   if (WS.fr && WS.fc) { place(part(V.corner, 'frzh', 'sh-frz'), 0, CHH + FH - 1, RHW + FW, 1); place(part(V.corner, 'frzv', 'sh-frz'), RHW + FW - 1, 0, 1, CHH + FH); }
   for (const [L, rr, cc] of layers) drawSel(L, rr, cc, g);
+  if (RM.peers.length) for (const [L, rr, cc] of layers) drawPeers(L, rr, cc);
   for (const L of [V.body, V.top, V.side, V.corner]) sweep(L);
   placeEditor();
 }
@@ -1448,6 +1458,8 @@ function editText(x) {
 function startEdit(mode, text, from = 'cell') {
   if (ED.on || !WS) return;
   const m = mergeAt(WS, SEL.r, SEL.c), r = m ? m.r1 : SEL.r, c = m ? m.c1 : SEL.c;
+  const p = RM.on && RM.peers.find(x => x.pr && x.pr.ed && x.pr.ed.s === WS.id && x.pr.ed.r === r && x.pr.ed.c === c);
+  if (p) { V.ed.value = ''; toast(T('התא הזה בעריכה אצל {0}', p.name), { icon: 'edit' }); return; }
   Object.assign(ED, { on: true, mode, r, c, sid: WS.id, from, point: null, refs: null, all: false });
   ED.orig = editText(cellAt(WS, r, c));
   const t = text == null ? ED.orig : text;
@@ -2125,6 +2137,14 @@ function spliceSheet(axis, at, n) {
   const s = WS, R = axis === 'r';
   if (n > 0 && ((R ? usedEnd(s).r : usedEnd(s).c) + n > (R ? MAXR : MAXC))) { toast(T('אין מקום להוסיף כאן עוד שורות או עמודות, כי הגיליון מלא עד הסוף.')); return; }
   edit(() => {
+    if (s.ri || s.ci || RM.on) {   // in a shared room: new rows (or columns) get new ids, and the ids of the ones taken out go
+      const key = R ? 'ri' : 'ci', used = usedEnd(s);
+      grow(s, key, Math.min((R ? used.r : used.c) + 1, R ? RMAX : CMAX));
+      const a = s[key].slice();
+      if (n > 0) { if (at <= a.length) a.splice(at, 0, ...Array.from({ length: n }, newId)); }
+      else a.splice(at, -n);
+      setProp(s, key, a);
+    }
     const moved = [];
     for (const [k, x] of s.cells) { const r = kr(k), c = kc(k); if ((R ? r : c) >= at) moved.push([r, c, x]); }
     for (const [r, c] of moved) setCell(s, r, c, null);
@@ -2565,7 +2585,7 @@ async function deleteSheet(s = WS) {
   refresh(); focusGrid();
 }
 function dupSheet(s = WS) {
-  const c = { ...s, id: sid(), name: freeName(s.name.slice(0, 26) + ' (2)', takenNames()), cells: new Map(s.cells), cw: new Map(s.cw), rh: new Map(s.rh), hc: new Set(s.hc), hr: new Set(s.hr), cs: new Map(s.cs), rs: new Map(s.rs), merges: s.merges.map(m => ({ ...m })), af: s.af ? { ...s.af, hide: { ...s.af.hide } } : null, ac: { ...s.ac }, _sc: null, _fh: null };
+  const c = { ...s, id: sid(), name: freeName(s.name.slice(0, 26) + ' (2)', takenNames()), cells: new Map(s.cells), cw: new Map(s.cw), rh: new Map(s.rh), hc: new Set(s.hc), hr: new Set(s.hr), cs: new Map(s.cs), rs: new Map(s.rs), merges: s.merges.map(m => ({ ...m })), af: s.af ? { ...s.af, hide: { ...s.af.hide } } : null, ac: { ...s.ac }, _sc: null, _fh: null, ri: undefined, ci: undefined, _ri: null, _ci: null };
   edit(() => { bookStep(() => { WB.sheets.splice(WB.sheets.indexOf(s) + 1, 0, c); }); showSheet(c, true); });
   WB.active = WB.sheets.indexOf(c);
   refresh(); focusGrid();
@@ -2994,6 +3014,8 @@ const CSS = `
 .sh-clip{z-index:6;background:linear-gradient(90deg,#2743d8 50%,transparent 0) repeat-x 0 0/8px 2px,linear-gradient(90deg,#2743d8 50%,transparent 0) repeat-x 0 100%/8px 2px,linear-gradient(0deg,#2743d8 50%,transparent 0) repeat-y 0 0/2px 8px,linear-gradient(0deg,#2743d8 50%,transparent 0) repeat-y 100% 0/2px 8px;animation:shants .5s linear infinite}
 @keyframes shants{to{background-position:8px 0,-8px 100%,0 -8px,100% 8px}}
 .sh-ref{z-index:5;border:2px solid var(--rc);background:color-mix(in srgb,var(--rc) 9%,transparent)}
+.sh-peer{z-index:4;border:2px solid var(--pc);pointer-events:none}
+.sh-ptag{z-index:7;width:auto!important;height:16px!important;padding:0 5px;border-radius:4px 4px 4px 0;background:var(--pc);color:#fff;font:600 11px/16px var(--ui);white-space:nowrap;pointer-events:none}
 .sh-over{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:7}
 .sh-ed{position:absolute;width:2px;height:2px;min-width:0;min-height:0;opacity:0;border:0;padding:0;margin:0;resize:none;overflow:hidden;background:#fff;color:#1b1f2a;outline:none;caret-color:transparent;white-space:pre;line-height:1.2;pointer-events:none}
 .sh-over.editing .sh-ed{opacity:1;padding:2px 3px 0;border:2px solid #2743d8;caret-color:#1b1f2a;box-shadow:0 3px 10px rgba(0,0,0,.18);pointer-events:auto}
@@ -3997,6 +4019,7 @@ function replace(body) {
   if (ED.on) endEdit(false);
   const nb = parseBook(body);
   edit(() => { bookStep(() => { WB.sheets = nb.sheets; WB.dir = nb.dir; }); showSheet(WB.sheets[nb.active] || WB.sheets[0], true); });
+  if (RM.on) RM.all = true;
   refresh();
 }
 function preview(body) {
@@ -4004,6 +4027,386 @@ function preview(body) {
   WB = b; WS = s;
   try { recalc(); const u = usedRange(s) || { r1: 0, c1: 0, r2: 0, c2: 0 }; const t = tableEl(s, { r1: 0, c1: 0, r2: Math.min(u.r2, 60), c2: Math.min(u.c2, 15) }, { grid: true }); return h('div', { class: 'sh-prev', style: { overflow: 'auto', maxHeight: '60vh', direction: s.dir } }, h('p', { class: 'muted small', text: b.sheets.map(x => x.name).join(' · ') }), t); }
   finally { [WB, WS] = keep; }
+}
+
+/* =========================================================
+   shared rooms (the rooms themselves are in index.html): the workbook as entries, each with its own stamp.
+   m its direction, o the order of the sheets, g/<sheet> a sheet's settings, r/<sheet> and k/<sheet> the ids of its
+   rows and columns, c/<sheet>/<row>/<column> a cell. A row and a column are known by an id that moves with it, so
+   what someone writes stays in its row while someone else adds or takes out rows above it. The ids follow from
+   each other (nextId), so rows nobody moved have the same ids in every browser without being sent: a list travels
+   as the ids that don't follow, with counts for the runs that do
+   ========================================================= */
+const RM = { on: false, cells: new Set(), props: new Set(), lists: new Set(), full: new Set(), book: false, all: false, peers: [] };
+const RMAX = 100000;   // rows past this in a room aren't shared (a sheet in a room is small; Excel's last row would cost a second)
+const CMAX = MAXC;
+const ID = /^[a-z0-9]{1,12}$/;
+const nextId = id => 'x' + hash53(id + '/').slice(0, 10);
+const newId = () => 'n' + (Math.random().toString(36).slice(2) + '0000000').slice(0, 7);
+function packIds(a, seed) {
+  const out = [];
+  let prev = seed, run = 0;
+  for (const id of a) {
+    if (id === nextId(prev)) run++;
+    else { if (run) out.push(run); run = 0; out.push(id); }
+    prev = id;
+  }
+  if (run) out.push(run);
+  return out;
+}
+function unpackIds(p, seed, max) {
+  if (!Array.isArray(p)) return null;
+  const out = [];
+  let prev = seed;
+  for (const x of p) {
+    if (typeof x === 'string') { if (!ID.test(x)) return null; out.push(prev = x); }
+    else if (Number.isInteger(x) && x > 0 && out.length + x <= max) for (let i = 0; i < x; i++) out.push(prev = nextId(prev));
+    else return null;
+    if (out.length > max) return null;
+  }
+  return out;
+}
+/* a sheet's row (ri) or column (ci) ids, long enough to reach n */
+function grow(s, key, n) {
+  const a = s[key] || [];
+  if (a.length >= n) { s[key] = a; return; }
+  let last = a.length ? a[a.length - 1] : s.id + '/' + key;
+  const add = [];
+  while (a.length + add.length < n) { last = nextId(last); add.push(last); }
+  s[key] = a.concat(add);
+  if (RM.on) RM.lists.add(s.id);
+}
+const idAt = (s, key, i) => i < (key === 'ri' ? RMAX : CMAX) ? (grow(s, key, i + 1), s[key][i]) : null;
+function posOf(s, key) {   // id → row or column
+  const a = s[key] || [], c = s['_' + key];
+  if (c && c.a === a) return c;
+  const m = new Map();
+  a.forEach((id, i) => m.set(id, i));
+  m.a = a; s['_' + key] = m;
+  return m;
+}
+const cellKey = (s, r, c) => { const a = idAt(s, 'ri', r), b = idAt(s, 'ci', c); return a && b ? 'c/' + s.id + '/' + a + '/' + b : null; };
+/* a cell as it travels: a formula without its result, which each browser works out */
+function recOut(x) { const j = cellOut(x); if (x.f != null && !x.x) { delete j.v; delete j.e; } return j; }
+/* a sheet's settings, by row and column ids */
+function gOut(s) {
+  const rid = r => idAt(s, 'ri', r), cid = c => idAt(s, 'ci', c);
+  const pairs = (m, f) => [...m].map(([i, v]) => [f(i), v]).filter(p => p[0]);
+  const box = g => { const b = [rid(g.r1), cid(g.c1), rid(g.r2), cid(g.c2)]; return b.every(Boolean) ? b : null; };
+  const o = { name: s.name, dir: s.dir };
+  if (s.fr) o.fr = s.fr;
+  if (s.fc) o.fc = s.fc;
+  if (!s.gl) o.gl = false;
+  if (s.tab) o.tab = s.tab;
+  if (s.dw !== DEF_W) o.dw = s.dw;
+  if (s.dh !== DEF_H) o.dh = s.dh;
+  if (s.ds) o.ds = s.ds;
+  if (s.cw.size) o.cw = pairs(s.cw, cid);
+  if (s.rh.size) o.rh = pairs(s.rh, rid);
+  if (s.cs.size) o.cs = pairs(s.cs, cid);
+  if (s.rs.size) o.rs = pairs(s.rs, rid);
+  if (s.hc.size) o.hc = [...s.hc].map(cid).filter(Boolean);
+  if (s.hr.size) o.hr = [...s.hr].map(rid).filter(Boolean);
+  if (s.merges.length) o.mg = s.merges.map(box).filter(Boolean);
+  if (s.af) { const b = box(s.af); if (b) o.af = { g: b, hide: Object.entries(s.af.hide).map(([c, v]) => [cid(+c), v]).filter(p => p[0]) }; }
+  return o;
+}
+/* the same, checked, from someone else */
+function gNorm(v) {
+  if (!v || typeof v !== 'object' || Array.isArray(v) || typeof v.name !== 'string') return undefined;
+  const okid = x => typeof x === 'string' && ID.test(x);
+  const n = (x, lo, hi) => Number.isFinite(+x) ? clamp(Math.round(+x), lo, hi) : null;
+  const pairs = (l, f) => (Array.isArray(l) ? l : []).slice(0, RMAX).filter(p => Array.isArray(p) && okid(p[0])).map(p => [p[0], f(p[1])]).filter(p => p[1] != null);
+  const box = b => Array.isArray(b) && b.length === 4 && b.every(okid) ? b.slice() : null;
+  const o = { name: cleanName(v.name) || sheetWord(1), dir: v.dir === 'ltr' ? 'ltr' : 'rtl' };
+  if (v.fr) o.fr = n(v.fr, 0, 200);
+  if (v.fc) o.fc = n(v.fc, 0, 60);
+  if (v.gl === false) o.gl = false;
+  if (HEX.test(v.tab)) o.tab = v.tab.toLowerCase();
+  if (v.dw != null) o.dw = n(v.dw, 10, 600);
+  if (v.dh != null) o.dh = n(v.dh, 8, 200);
+  const ds = normStyle(v.ds); if (ds) o.ds = ds;
+  for (const [k, f] of [['cw', x => n(x, 2, 2000)], ['rh', x => n(x, 4, 800)], ['cs', normStyle], ['rs', normStyle]]) { const p = pairs(v[k], f); if (p.length) o[k] = p; }
+  for (const k of ['hc', 'hr']) { const l = (Array.isArray(v[k]) ? v[k] : []).filter(okid).slice(0, RMAX); if (l.length) o[k] = l; }
+  const mg = (Array.isArray(v.mg) ? v.mg : []).map(box).filter(Boolean).slice(0, 5000); if (mg.length) o.mg = mg;
+  const af = v.af && typeof v.af === 'object' && box(v.af.g);
+  if (af) o.af = { g: af, hide: pairs(v.af.hide, x => Array.isArray(x) ? x.filter(t => typeof t === 'string').slice(0, 20000) : null) };
+  return o;
+}
+/* into a sheet, by the ids it has now */
+function gIn(s, g, taken) {
+  const rp = posOf(s, 'ri'), cp = posOf(s, 'ci'), R_ = id => rp.get(id), C_ = id => cp.get(id);
+  const name = cleanName(g.name) || s.name || sheetWord(1);
+  s.name = taken ? freeName(name, taken) : name;
+  if (taken) taken.add(s.name.toLowerCase());
+  s.dir = g.dir === 'ltr' ? 'ltr' : 'rtl';
+  s.fr = g.fr || 0; s.fc = g.fc || 0; s.gl = g.gl !== false; s.tab = g.tab || null;
+  s.dw = g.dw || DEF_W; s.dh = g.dh || DEF_H; s.ds = g.ds || null;
+  const map = (l, P) => { const m = new Map(); for (const [id, v] of l || []) { const i = P(id); if (i != null) m.set(i, v); } return m; };
+  s.cw = map(g.cw, C_); s.rh = map(g.rh, R_); s.cs = map(g.cs, C_); s.rs = map(g.rs, R_);
+  s.hc = new Set((g.hc || []).map(C_).filter(i => i != null)); s.hr = new Set((g.hr || []).map(R_).filter(i => i != null));
+  const box = b => { const r1 = R_(b[0]), c1 = C_(b[1]), r2 = R_(b[2]), c2 = C_(b[3]); return r1 == null || c1 == null || r2 == null || c2 == null || r2 < r1 || c2 < c1 ? null : { r1, c1, r2, c2 }; };
+  s.merges = [];
+  for (const b of g.mg || []) { const m = box(b); if (m && (m.r1 !== m.r2 || m.c1 !== m.c2) && !s.merges.some(o => meets(o, m))) s.merges.push(m); }
+  const af = g.af && box(g.af.g);
+  if (af) { const hide = {}; for (const [id, v] of g.af.hide || []) { const c = C_(id); if (c != null && c >= af.c1 && c <= af.c2) hide[c] = v; } s.af = { ...af, hide }; }
+  else s.af = null;
+}
+/* an entry from someone else, checked the way a workbook from storage is (undefined: not taken) */
+function roomNorm(k, v) {
+  if (v == null) return null;
+  if (k === 'm') return typeof v === 'object' ? { dir: v.dir === 'ltr' ? 'ltr' : 'rtl' } : undefined;
+  if (k === 'o') return Array.isArray(v) ? v.filter(okId).slice(0, 250) : undefined;
+  const c = k[0];
+  if (c === 'g') return gNorm(v);
+  if (c === 'r' || c === 'k') return unpackIds(v, 'x', c === 'r' ? RMAX : CMAX) ? v : undefined;
+  if (c === 'c') { const x = normCell(v); return x ? recOut(x) : undefined; }
+  return undefined;
+}
+/* --- this browser's side --- */
+function roomStart() {
+  RM.on = true;
+  RM.cells.clear(); RM.props.clear(); RM.lists.clear(); RM.full.clear(); RM.book = RM.all = false;
+}
+function roomStop(drop) {
+  RM.on = false; RM.peers = [];
+  RM.cells.clear(); RM.props.clear(); RM.lists.clear(); RM.full.clear();
+  if (drop && WB) for (const s of WB.sheets) { delete s.ri; delete s.ci; }   // out of the room, the ids aren't needed
+  if (WB && V.view) renderSoon();
+}
+function bookEntries(each) {
+  const ids = WB.sheets.map(s => s.id), dir = WB.dir;
+  each('m', () => ({ dir }), b => b.dir === dir);
+  each('o', () => ids.slice(), b => same(b, ids));
+}
+function listEntries(s, each) {
+  grow(s, 'ri', 0); grow(s, 'ci', 0);
+  const r = packIds(s.ri, s.id + '/ri'), c = packIds(s.ci, s.id + '/ci');
+  each('r/' + s.id, () => r, b => same(b, r));
+  each('k/' + s.id, () => c, b => same(b, c));
+}
+function sheetEntries(s, each) {
+  const cells = [];
+  for (const [k, x] of s.cells) { const key = cellKey(s, kr(k), kc(k)); if (key) cells.push([key, recOut(x)]); }
+  const g = gOut(s);
+  for (const [key, v] of cells) each(key, () => v, b => same(b, v));
+  each('g/' + s.id, () => g, b => same(b, g));
+  listEntries(s, each);   // last: the cells and settings above may have made the lists longer
+}
+/* every entry, as it is now: each(key, make the value, is this the same value) */
+function roomEntries(each) {
+  bookEntries(each);
+  for (const s of WB.sheets) sheetEntries(s, each);
+}
+/* what changed since the last look, into look(); what is gone, into gone(key) */
+function roomChanges(look, gone, base) {
+  if (!WB) return;
+  bookEntries(look);
+  const byId = new Map(WB.sheets.map(s => [s.id, s]));
+  if (RM.all || RM.book) {
+    for (const [k, b] of base) if (b != null && k[1] === '/' && 'grkc'.includes(k[0]) && !byId.has(k.split('/')[1])) gone(k);   // sheets taken out
+    for (const s of WB.sheets) if (RM.all || !base.has('g/' + s.id)) RM.full.add(s.id); else RM.props.add(s.id);
+  }
+  for (const id of RM.full) {
+    const s = byId.get(id); if (!s) continue;
+    const have = new Set(), pre = 'c/' + id + '/';
+    sheetEntries(s, (k, mk, eq) => { have.add(k); look(k, mk, eq); });
+    for (const [k, b] of base) if (b != null && k.startsWith(pre) && !have.has(k)) gone(k);
+  }
+  for (const x of RM.cells) {
+    const i = x.indexOf('|'), s = byId.get(x.slice(0, i));
+    if (!s || RM.full.has(s.id)) continue;
+    const k = +x.slice(i + 1), key = cellKey(s, kr(k), kc(k)), cell = key && s.cells.get(k);
+    if (!key) continue;
+    if (cell) { const v = recOut(cell); look(key, () => v, b => same(b, v)); }
+    else if (base.get(key) != null) gone(key);
+  }
+  for (const id of new Set([...RM.props, ...RM.lists])) {
+    const s = byId.get(id); if (!s || RM.full.has(id)) continue;
+    const g = gOut(s); look('g/' + id, () => g, b => same(b, g));
+  }
+  for (const id of RM.lists) {   // rows or columns taken out: their cells go with them
+    const s = byId.get(id); if (!s || RM.full.has(id)) continue;
+    const rs = posOf(s, 'ri'), cs = posOf(s, 'ci'), pre = 'c/' + id + '/';
+    for (const [k, b] of base) if (b != null && k.startsWith(pre)) { const p = k.split('/'); if (!rs.has(p[2]) || !cs.has(p[3])) gone(k); }
+  }
+  for (const s of WB.sheets) if (RM.lists.has(s.id) || RM.full.has(s.id)) listEntries(s, look);
+  RM.cells.clear(); RM.props.clear(); RM.lists.clear(); RM.full.clear(); RM.book = RM.all = false;
+}
+/* an entry's value here, the way this browser writes it (after something came in, so it doesn't go back out) */
+function roomValue(k) {
+  if (!WB) return null;
+  if (k === 'm') return { dir: WB.dir };
+  if (k === 'o') return WB.sheets.map(s => s.id);
+  const p = k.split('/'), s = WB.sheets.find(x => x.id === p[1]);
+  if (!s) return null;
+  if (p[0] === 'g') return gOut(s);
+  if (p[0] === 'r') { grow(s, 'ri', 0); return packIds(s.ri, s.id + '/ri'); }
+  if (p[0] === 'k') { grow(s, 'ci', 0); return packIds(s.ci, s.id + '/ci'); }
+  if (p[0] === 'c') { const r = posOf(s, 'ri').get(p[2]), c = posOf(s, 'ci').get(p[3]), x = r != null && c != null ? s.cells.get(KEY(r, c)) : null; return x ? recOut(x) : null; }
+  return null;
+}
+/* a sheet built again from the room's entries: its ids, its settings, its cells */
+function buildSheet(s, st, taken) {
+  const val = k => { const x = st.get(k); return x ? x[0] : null; };
+  const ri = unpackIds(val('r/' + s.id), s.id + '/ri', RMAX), ci = unpackIds(val('k/' + s.id), s.id + '/ci', CMAX);
+  if (ri) s.ri = ri;
+  if (ci) s.ci = ci;
+  const g = val('g/' + s.id);
+  if (g) gIn(s, g, taken);
+  const rp = posOf(s, 'ri'), cp = posOf(s, 'ci'), pre = 'c/' + s.id + '/', cells = new Map();
+  for (const [k, x] of st) {
+    if (x[0] == null || !k.startsWith(pre)) continue;
+    const p = k.split('/'), r = rp.get(p[2]), c = cp.get(p[3]), cell = r != null && c != null && normCell(x[0]);
+    if (cell) cells.set(KEY(r, c), cell);
+  }
+  s.cells = cells;
+  s._fh = null;
+}
+/* the sheets in the order entry, then any missing from it (added at the same moment), oldest first */
+function sheetIds(st) {
+  const val = k => { const x = st.get(k); return x ? x[0] : null; };
+  const order = (val('o') || []).filter(id => val('g/' + id));
+  const rest = [...st].filter(([k, x]) => k[0] === 'g' && x[0] != null && !order.includes(k.slice(2))).sort((a, b) => a[1][1] - b[1][1]).map(([k]) => k.slice(2));
+  return [...new Set([...order, ...rest])];
+}
+/* where the selection and the cell being written in are, by their ids, so they stay on the same cells */
+function anchorNow() {
+  if (!WS) return null;
+  const id = (key, i) => WS[key] && i < WS[key].length ? WS[key][i] : null;
+  return { s: WS, sel: { ...SEL }, r: id('ri', SEL.r), c: id('ci', SEL.c), er: id('ri', SEL.er), ec: id('ci', SEL.ec), ed: ED.on && ED.sid === WS.id ? [id('ri', ED.r), id('ci', ED.c)] : null };
+}
+function anchorBack(a) {
+  if (!a || a.s !== WS) return;
+  const rp = posOf(WS, 'ri'), cp = posOf(WS, 'ci'), at = (m, id, i) => id != null && m.has(id) ? m.get(id) : i;
+  SEL = { r: at(rp, a.r, a.sel.r), c: at(cp, a.c, a.sel.c), er: at(rp, a.er, a.sel.er), ec: at(cp, a.ec, a.sel.ec) };
+  if (a.ed && ED.on) {
+    const r = a.ed[0] == null ? ED.r : rp.get(a.ed[0]), c = a.ed[1] == null ? ED.c : cp.get(a.ed[1]);
+    if (r == null || c == null) { endEdit(false); toast(T('התא שכתבת בו נמחק'), { icon: 'delete' }); }
+    else { ED.r = r; ED.c = c; }
+  }
+}
+/* someone else changed sheet s: undo steps from before this person's last row or column change there no longer fit it
+   (their cells moved under them), and redo is gone */
+function dropSteps(s) {
+  HIST.list.length = HIST.at;
+  let i = -1;
+  HIST.list.forEach((h, j) => { if (h.props.some(y => y.s === s && (y.name === 'ri' || y.name === 'ci'))) i = j; });
+  if (i >= 0) { HIST.list.splice(0, i + 1); HIST.at = HIST.list.length; }
+}
+/* what came in (acc: [key, value, ...]), into the workbook; st: all of the room's entries. Gives back the keys whose
+   value here is further along than what came (a longer list of rows), so they go out again */
+function roomApply(acc, st) {
+  const stale = new Set();
+  if (!WB) return stale;
+  const val = k => { const x = st.get(k); return x ? x[0] : null; };
+  const byId = id => WB.sheets.find(x => x.id === id);
+  let whole = false;
+  const again = new Set(), lists = [], props = new Set(), put = new Set();
+  for (const [k] of acc) {
+    if (k === 'o' || k === 'm') whole = true;
+    else if (k[0] === 'r' || k[0] === 'k') lists.push(k);
+    else if (k[0] === 'g') props.add(k.slice(2));
+    else if (k[0] === 'c') put.add(k);
+  }
+  const keep = anchorNow();
+  if (whole) {
+    const m = val('m'), old = new Map(WB.sheets.map(s => [s.id, s])), next = [];
+    if (m) WB.dir = m.dir;
+    for (const id of sheetIds(st)) { let s = old.get(id); if (!s) { s = Object.assign(newSheet('', WB.dir), { id }); again.add(id); } next.push(s); }
+    if (next.length) WB.sheets = next;
+  }
+  // a list that only goes further than this one adds rows at the end, and nothing moves. Anything else moved rows
+  // (or columns), and the sheet is built again from the entries
+  const grown = new Map();
+  for (const k of lists) {
+    const id = k.slice(2), s = byId(id);
+    if (!s || again.has(id)) continue;
+    const key = k[0] === 'r' ? 'ri' : 'ci', now = s[key] || [], got = unpackIds(val(k), id + '/' + key, key === 'ri' ? RMAX : CMAX);
+    if (!got) continue;
+    const n = Math.min(now.length, got.length);
+    let i = 0;
+    while (i < n && now[i] === got[i]) i++;
+    if (i < n) { again.add(id); continue; }
+    if (got.length > now.length) { s[key] = got; if (!grown.has(s)) grown.set(s, new Set()); for (const x of got.slice(now.length)) grown.get(s).add(x); }
+    else if (got.length < now.length) stale.add(k);
+  }
+  if (again.size) {
+    const taken = new Set(WB.sheets.filter(s => !again.has(s.id)).map(s => s.name.toLowerCase()));
+    for (const s of WB.sheets) if (again.has(s.id)) buildSheet(s, st, taken);
+  }
+  for (const id of props) {
+    const s = byId(id), g = val('g/' + id);
+    if (!s || !g || again.has(id)) continue;
+    gIn(s, g, new Set(WB.sheets.filter(x => x !== s).map(x => x.name.toLowerCase())));
+    for (const h of HIST.list) h.props = h.props.filter(y => !(y.s === s && y.name !== 'ri' && y.name !== 'ci'));
+    dropSteps(s);
+  }
+  // cells: the ones that came, and any that were waiting for their row or column to arrive
+  for (const [s, ids] of grown) {
+    const pre = 'c/' + s.id + '/';
+    for (const [k, x] of st) if (x[0] != null && k.startsWith(pre)) { const p = k.split('/'); if (ids.has(p[2]) || ids.has(p[3])) put.add(k); }
+  }
+  const touched = new Set();
+  for (const k of put) {
+    const p = k.split('/');
+    if (again.has(p[1])) continue;
+    const s = byId(p[1]); if (!s) continue;
+    const r = posOf(s, 'ri').get(p[2]), c = posOf(s, 'ci').get(p[3]); if (r == null || c == null) continue;
+    const v = val(k), x = v && normCell(v), key = KEY(r, c);
+    if (x) s.cells.set(key, x); else s.cells.delete(key);
+    for (const h of HIST.list) h.cells = h.cells.filter(y => !(y.s === s && y.k === key));   // undo takes back only this person's own writing
+    touched.add(s);
+  }
+  for (const s of touched) dropSteps(s);
+  if (whole || again.size) { HIST.list = []; HIST.at = 0; }   // rows moved under every step kept for undo
+  if (!WB.sheets.includes(WS)) showSheet(WB.sheets[0], true);
+  anchorBack(keep);
+  geoDirty(); recalc();
+  for (const s of WB.sheets) filterRows(s);
+  refresh();
+  return stale;
+}
+/* the workbook of a room just joined, from its entries */
+function roomBook(st) {
+  const m = st.get('m'), dir = m && m[0] ? m[0].dir : UI_DIR, book = { v: 1, dir, active: 0, sheets: [] }, taken = new Set();
+  for (const id of sheetIds(st)) { const s = Object.assign(newSheet('', dir), { id }); buildSheet(s, st, taken); book.sheets.push(s); }
+  return book.sheets.length ? JSON.stringify(bookOut(book)) : null;
+}
+/* --- the others --- */
+function roomPresence() {
+  if (!WS) return null;
+  const g = selG();
+  return { s: WS.id, r: SEL.r, c: SEL.c, g: [g.r1, g.c1, g.r2, g.c2], ed: ED.on ? { s: ED.sid, r: ED.r, c: ED.c } : null };
+}
+function roomPeers(list) { RM.peers = list || []; if (WB && V.view) renderSoon(); }
+function roomGo(pr) {
+  const s = WB && pr && WB.sheets.find(x => x.id === pr.s); if (!s) return;
+  if (s !== WS) showSheet(s, true);
+  SEL = { r: pr.r, c: pr.c, er: pr.r, ec: pr.c };
+  refresh(); scrollToSel(); focusGrid();
+}
+/* each one's selection in their color, and their name on the cell they are on */
+function drawPeers(L, rr, cc) {
+  if (rr[1] < rr[0] || cc[1] < cc[0]) return;
+  const frR = L === V.top || L === V.corner, frC = L === V.side || L === V.corner;
+  const lo = { r: frR ? 0 : WS.fr, c: frC ? 0 : WS.fc }, hi = { r: frR ? WS.fr - 1 : EXT.rows - 1, c: frC ? WS.fc - 1 : EXT.cols - 1 };
+  for (const p of RM.peers) {
+    const q = p.pr;
+    if (!q || q.s !== WS.id) continue;
+    const y = { r1: Math.max(q.g[0], lo.r), c1: Math.max(q.g[1], lo.c), r2: Math.min(q.g[2], hi.r), c2: Math.min(q.g[3], hi.c) };
+    if (y.r1 <= y.r2 && y.c1 <= y.c2) {
+      const e = part(L, 'peer' + p.id, 'sh-peer');
+      place(e, colX(y.c1) - 1, rowY(y.r1) - 1, colX(y.c2 + 1) - colX(y.c1) + 1, rowY(y.r2 + 1) - rowY(y.r1) + 1);
+      e.style.setProperty('--pc', p.color);
+    }
+    if (q.r < lo.r || q.r > hi.r || q.c < lo.c || q.c > hi.c) continue;
+    const t = part(L, 'ptag' + p.id, 'sh-ptag'), label = (q.ed ? '✎ ' : '') + p.name;
+    if (t.textContent !== label) t.textContent = label;
+    t.style.setProperty('--pc', p.color);
+    t.dir = 'auto';
+    place(t, colX(q.c), Math.max(0, rowY(q.r) - 16), 0, 16);
+  }
 }
 
 window.INK_SHEET = {
@@ -4016,6 +4419,9 @@ window.INK_SHEET = {
   focus: () => focusGrid(),
   commit: () => { if (ED.on && LOADED === S.cur) endEdit(true); },
   refresh: () => { if (WB) refresh(); },
+  ready: cur => !!WB && LOADED === cur,
+  cellCount: () => WB ? WB.sheets.reduce((n, s) => n + s.cells.size, 0) : 0,
+  room: { start: roomStart, stop: roomStop, entries: roomEntries, changes: roomChanges, value: roomValue, norm: roomNorm, apply: roomApply, book: roomBook, presence: roomPresence, peers: roomPeers, go: roomGo },
 };
 
 // ==SHEET-END==

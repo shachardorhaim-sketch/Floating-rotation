@@ -6165,7 +6165,7 @@ function setSheetMode(on) {
   app.classList.toggle('sheet', on);
   if (on) {
     $('#sheetView').prepend($('#banner'));
-    if (S.panel && S.panel !== 'versions' && S.panel !== 'link') closePanel();
+    if (S.panel && S.panel !== 'versions' && S.panel !== 'link' && S.panel !== 'room') closePanel();
     if (!was) selectTab(S.tab === 'file' ? 'file' : SHEET_TABS.includes(PREFS.stab) ? PREFS.stab : 'shome');
   } else if (was) {
     if (SK) SK.unload();
@@ -11512,7 +11512,7 @@ async function revealDeck(id) {
 }
 
 /* =========================================================
-   rooms: several people editing one presentation, live
+   rooms: several people editing one document, presentation or spreadsheet, live
    ========================================================= */
 /* The browsers connect straight to each other (WebRTC, through the Trystero library). To find each other
    they use free public meeting points: six Nostr relays and three WebTorrent trackers, all at once, so a
@@ -11522,7 +11522,7 @@ async function revealDeck(id) {
    presentation itself travels only between the browsers, encrypted.
    A room is a set of entries, each with a time stamp: t the title, m the theme and direction, o the order
    of the slides, s/<id> a slide's layout and background, z/<id> the order of its boxes, e/<id> a box (its
-   slide in _s), and h who opened the room. The latest stamp wins, entry by entry, so two people changing
+   slide in _s), and h who opened the room. A spreadsheet's entries are listed in sheet.js, in its part about rooms. The latest stamp wins, entry by entry, so two people changing
    different boxes never undo each other, and every browser ends up with the same presentation whatever
    order the changes arrive in.
    Every 80 ms the open presentation is compared with the entries, and what changed goes out. What comes
@@ -11540,7 +11540,8 @@ const ROOM_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';   // no 0/O or 1/I/L, so a c
 const ROOM_COLORS = ['#e5484d', '#0b7fd9', '#2f9e5f', '#e5650f', '#8e4ec6', '#d23a92', '#0f9488', '#b7791f', '#3e63dd', '#8d6e63'];
 /* a code typed while the keyboard is still on Hebrew, Russian or Arabic: each key counts as the Latin letter on it */
 const ROOM_KEYS = [["קראטוןםפשדגכעיחלךזסבהנמצ/'", 'ERTYUIOPASDFGHJKLZXCVBNMQW'], ['йцукенгшщзфывапролдячсмить', 'QWERTYUIOPASDFGHJKLZXCVBNM'], ['ضصثقفغعهخحشسيبلاتنمئءؤرىة', 'QWERTYUIOPASDFGHJKLZXCVNM']];
-const ROOM_KEY_RE = /^(t|m|o|h|p|[szebnxa]\/[a-z0-9]{4,24})$/;   // n/ x/ a/: a slide's notes, transition and animations
+const ROOM_KEY_RE = /^(t|m|o|h|p|[szebnxagrk]\/[a-z0-9]{4,24}|c\/[a-z0-9]{4,24}\/[a-z0-9]{1,12}\/[a-z0-9]{1,12})$/;   // n/ x/ a/: a slide's notes, transition and animations; g/ r/ k/ c/: a spreadsheet's
+const ROOM_CELLS = 5000;   // a spreadsheet with more filled cells than this is too big to share: each cell's stamp is kept in localStorage (about 85 bytes)
 const ROOM_BIG = 4096;   // a longer string (a picture) travels apart, once to each person
 const ROOM_ARROW = '<svg width="18" height="21" viewBox="0 0 18 21" aria-hidden="true"><path d="M2 2l13.5 7.6-6 1.6-3.4 6.4z" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>';
 let R = null;   // the room of the open presentation, or the one being joined
@@ -11659,18 +11660,23 @@ function deckScan(d, title, each) {
   }
 }
 /* every entry of the open document or presentation, as it is now */
-const roomEntries = each => R.kind === 'doc' ? docEntries(each) : deckScan(DK.deck, S.cur.meta.title || '', each);
+const roomEntries = each => R.kind === 'doc' ? docEntries(each) : R.kind === 'sheet' ? roomSheetEntries(each) : deckScan(DK.deck, S.cur.meta.title || '', each);
+function roomSheetEntries(each) { const title = S.cur.meta.title || ''; each('t', () => title, b => b === title); SK.room.entries(each); }
 function roomBaseNow() { R.base.clear(); roomEntries((k, mk) => R.base.set(k, mk())); }
 const roomClock = () => (R.clock = Math.max(Date.now(), R.clock + 1));
 const later = (t, a, x) => !x || t > x[1] || (t === x[1] && a > x[2]);   // is stamp (t, a) newer than entry x = [value, t, a]?
-const roomHere = () => { const r = R, c = S.cur; return !!r && !!r.docId && !!c && c.id === r.docId && (r.kind === 'doc' ? !deckOpen() : !!DK.deck); };
+const roomHere = () => { const r = R, c = S.cur; return !!r && !!r.docId && !!c && c.id === r.docId && (r.kind === 'doc' ? !deckOpen() : r.kind === 'sheet' ? !!SK && SK.ready(c) : !!DK.deck); };
 /* whatever changed here since the last look goes out, each entry with a new stamp */
 function roomScan() {
   if (!roomHere()) return;
   const r = R, out = [];
   const look = (k, mk, eq) => { const b = r.base.get(k); if (b != null && eq(b)) return; r.base.set(k, mk()); out.push(k); };
   if (r.kind === 'doc') docChanges(look, out);
-  else {
+  else if (r.kind === 'sheet') {
+    const title = S.cur.meta.title || '';
+    look('t', () => title, b => b === title);
+    SK.room.changes(look, k => { r.base.set(k, null); out.push(k); }, r.base);
+  } else {
     const seen = new Set();
     deckScan(DK.deck, S.cur.meta.title || '', (k, mk, eq) => { seen.add(k); look(k, mk, eq); });
     for (const [k, b] of r.base) if (b != null && !seen.has(k)) { r.base.set(k, null); out.push(k); }
@@ -11942,6 +11948,7 @@ function roomIndexBlobs() { const need = new Set(); for (const x of R.st.values(
 function roomNorm(k, v) {
   if (v == null) return null;
   if (k === 't') return typeof v === 'string' ? v.slice(0, 300) : undefined;
+  if (R && R.kind === 'sheet' && k !== 'h') return SK ? SK.room.norm(k, v) : undefined;
   const c = k[0];
   if (c === 'n') return typeof v === 'string' ? v.slice(0, 20000) : undefined;
   if (typeof v !== 'object') return undefined;
@@ -11950,7 +11957,7 @@ function roomNorm(k, v) {
   if (c === 'a') return Array.isArray(v) ? v.filter(a => a && ANIMS[a.k] && okId(a.id) && okId(a.el)).slice(0, 300).map(a => ({ id: a.id, el: a.el, k: a.k, t: STARTS[a.t] ? a.t : 'click', sp: SPEEDS[a.sp] ? a.sp : 'med',
     ...(ANIMS[a.k].dir ? { dir: 'rlbt'.includes(a.dir) && a.dir ? a.dir : 'b' } : {}), ...(a.by === 'p' ? { by: 'p' } : {}) })) : undefined;
   if (k === 'm') { const th = normFileTheme(v.th); return { theme: THEMES[v.theme] ? v.theme : v.theme === 'file' && th ? 'file' : 'ink', dir: v.dir === 'ltr' ? 'ltr' : 'rtl', ...(th ? { th } : {}) }; }
-  if (k === 'h') return okId(v.id) && /^[0-9a-f]{64}$/.test(v.x) ? { id: v.id, n: roomName(v.n), x: v.x, k: v.k === 'doc' ? 'doc' : 'deck' } : undefined;
+  if (k === 'h') return okId(v.id) && /^[0-9a-f]{64}$/.test(v.x) ? { id: v.id, n: roomName(v.n), x: v.x, k: v.k === 'doc' || v.k === 'sheet' ? v.k : 'deck' } : undefined;
   if (k === 'o' || c === 'z') return Array.isArray(v) ? v.filter(okId).slice(0, 5000) : undefined;
   if (c === 's') { const o = { layout: LAYOUTS[v.layout] ? v.layout : 'blank' }, bg = normBg(v.bg); if (bg) o.bg = bg; return o; }
   if (c === 'e') { if (!okId(v._s)) return undefined; const e = roomEl(v, k.slice(2)); return e ? { ...e, _s: v._s } : undefined; }
@@ -12012,6 +12019,7 @@ function roomApply(acc) {
   if (!R.docId) { roomJoinCheck(); return; }
   if (!roomHere()) return;
   if (R.kind === 'doc') { docApply(acc); return; }
+  if (R.kind === 'sheet') { sheetApply(acc); return; }
   const c = S.cur, d = DK.deck, cur = curSlide(), prev = { cur: cur && cur.id, idx: DK.idx, ids: new Set(d.slides.map(s => s.id)), at: new Map() };
   for (const s of d.slides) for (const e of s.els) prev.at.set(e.id, s.id);
   if (!deckBuild(d, acc)) return;
@@ -12055,6 +12063,18 @@ function deckBuild(d, acc) {
   return true;
 }
 const MOTION_KEYS = [['n', 'notes'], ['x', 'tr'], ['a', 'anim']], MOTION_OF = Object.fromEntries(MOTION_KEYS);
+/* what came in, into the open spreadsheet. What went in is the new base, the way this browser writes it, so it doesn't go back out */
+function sheetApply(acc) {
+  const r = R, ti = acc.find(a => a[0] === 't');
+  const stale = SK.room.apply(acc, r.st);
+  if (ti) {
+    S.cur.meta.title = ti[1] || '';
+    if (document.activeElement !== $('#docTitle')) $('#docTitle').value = S.cur.meta.title;
+    updateDocTitle(); renderDocsSoon();
+  }
+  for (const [k] of acc) r.base.set(k, k === 't' ? S.cur.meta.title || '' : stale.has(k) ? null : SK.room.value(k));   // stale: this browser's longer list goes out again
+  markDirty();
+}
 function inOrder(list, ids) {
   const pos = new Map((ids || []).map((id, i) => [id, i]));
   const byStamp = (a, b) => a[1][1] - b[1][1] || (a[1][2] < b[1][2] ? -1 : a[1][2] > b[1][2] ? 1 : a[0] < b[0] ? -1 : 1);
@@ -12225,7 +12245,9 @@ function roomThumbs() {
     if (t) t.append(h('div', { class: 'rdots' }, ps.map(p => h('i', { style: { background: p.color }, title: p.name }))));
   });
 }
-function roomPeersChanged() { if (R && R.kind === 'doc') docPaint(); else { roomPaint(); roomThumbs(); } roomUI(); }
+function roomPeersChanged() { if (R && R.kind === 'doc') docPaint(); else if (R && R.kind === 'sheet') sheetPeers(); else { roomPaint(); roomThumbs(); } roomUI(); }
+/* in a spreadsheet: each one's cell and selection, drawn by sheet.js */
+function sheetPeers() { if (SK) SK.room.peers(R && roomHere() ? [...R.peers.values()].filter(p => p.links.size && p.pr).map(p => ({ id: p.id, name: p.name, color: p.color, pr: p.pr })) : []); }
 function roomPointer(e) {
   if (!R || !R.docId || !DK.deck) return;
   const s = curSlide();
@@ -12248,10 +12270,11 @@ function roomTick() {
   roomScan();
   let pr;
   if (r.kind === 'doc') { pr = docPresence(); if (r.ticks % 3 === 0 && r.peers.size) docPaint(); }   // the page moves under the carets (writing, zoom): drawn again often
+  else if (r.kind === 'sheet') pr = SK.room.presence() || {};
   else { const s = curSlide(); pr = { s: s ? s.id : null, sel: DK.sel.slice(0, 100), ed: DK.edit || null }; }
   const pk = JSON.stringify(pr);
   if (pk !== r.prKey) { r.prKey = pk; r.pr = pr; roomToAll({ t: 'pr', q: ++r.seq, ...pr }); }
-  if (r.kind === 'doc') return;
+  if (r.kind !== 'deck') return;
   const ck = r.cur ? r.cur.s + ':' + r.cur.x + ':' + r.cur.y : '';
   if (ck !== r.curKey) { r.curKey = ck; roomToAll(r.cur ? { t: 'cu', q: ++r.seq, ...r.cur } : { t: 'cu', q: ++r.seq, s: null }); }
 }
@@ -12320,14 +12343,21 @@ function roomHello(tr, pid) {
 }
 const roomNear = () => [...R.peers.values()].filter(p => p.links.size).map(p => p.id);
 const okPt = x => Array.isArray(x) && okId(x[0]) && Number.isInteger(x[1]) && x[1] >= 0 ? [x[0], x[1]] : null;
-const roomPr = m => R.kind === 'doc' ? { a: okPt(m.a), z: okPt(m.z), ty: m.ty ? 1 : 0 }
+const roomPr = m => R.kind === 'doc' ? { a: okPt(m.a), z: okPt(m.z), ty: m.ty ? 1 : 0 } : R.kind === 'sheet' ? sheetPr(m)
   : { s: okId(m.s) ? m.s : null, sel: Array.isArray(m.sel) ? m.sel.filter(okId).slice(0, 100) : [], ed: okId(m.ed) ? m.ed : null };
+/* in a spreadsheet: the sheet, the active cell, the selection, and the cell being written in */
+function sheetPr(m) {
+  const n = (x, max) => Number.isInteger(x) && x >= 0 && x < max ? x : 0, g = Array.isArray(m.g) ? m.g : [], e = m.ed && typeof m.ed === 'object' && okId(m.ed.s) ? m.ed : null;
+  const r1 = n(g[0], 1048576), c1 = n(g[1], 16384);
+  return { s: okId(m.s) ? m.s : null, r: n(m.r, 1048576), c: n(m.c, 16384), g: [r1, c1, Math.max(r1, n(g[2], 1048576)), Math.max(c1, n(g[3], 16384))], ed: e ? { s: e.s, r: n(e.r, 1048576), c: n(e.c, 16384) } : null };
+}
 function roomMsg(tr, pid, m) {
   if (!m || typeof m !== 'object' || typeof pid !== 'string') return;
   const key = tr.kind + ':' + pid;
   if (m.t === 'hi') { roomOnHi(tr, pid, key, m); return; }
   const p = R.peers.get(R.links.get(key));
   if (!p) return;   // nothing counts before hello
+  if ((m.t === 'ops' || m.t === 'blob') && R.kind === 'sheet' && !SK) { const r = R; loadSheetKit().then(() => { if (R === r) roomMsg(tr, pid, m); }, () => {}); return; }
   switch (m.t) {
     case 'ops': {
       roomTakeBlobs(p, m.b);
@@ -12380,7 +12410,8 @@ function roomOnHi(tr, pid, key, m) {
   if (m.pr && typeof m.pr === 'object') p.pr = roomPr(m.pr);
   if (Array.isArray(m.bl)) for (const x of m.bl) if (typeof x === 'string') p.has.add(x);
   p.links.set(key, { tr, pid }); R.links.set(key, p.id);
-  if (!R.docId && !R.kind && (m.k === 'doc' || m.k === 'deck')) R.kind = m.k;   // joining: a document or a presentation
+  if (!R.docId && !R.kind && (m.k === 'doc' || m.k === 'deck' || m.k === 'sheet')) R.kind = m.k;   // joining: a document, a presentation or a spreadsheet
+  if (R.kind === 'sheet' && !SK) loadSheetKit().catch(() => {});
   if (!fresh) return;   // the same person, reached a second way
   if (m.v !== ROOM_V && !R.warnedV) { R.warnedV = true; toast(T('למישהו בחדר יש גרסה אחרת של Floating Ink. כדאי שכולם ירעננו את הדף.'), { icon: 'refresh', ms: 8000 }); }
   roomColorCheck(p);
@@ -12464,13 +12495,18 @@ function roomPersist(stamps) {
 async function roomOpen(name) {
   const c = S.cur;
   if (!c || c.isSample || R) return;
-  const kind = deckOpen() ? 'deck' : 'doc';
+  const kind = deckOpen() ? 'deck' : sheetOpen() ? 'sheet' : 'doc';
+  if (kind === 'sheet') {
+    if (!SK || !SK.ready(c)) return;
+    if (SK.cellCount() > ROOM_CELLS) { toast(T('הגיליון הזה גדול מדי לחדר משותף: יש בו יותר מ-{0} תאים מלאים.', fmt(ROOM_CELLS)), { icon: 'group_off', ms: 8000 }); return; }
+  }
   await flushSave();
   if (S.cur !== c || R) return;
   const id = uid(), key = hexOf(crypto.getRandomValues(new Uint8Array(16)));
   const rec = { code: newRoomCode(), id, name, color: ROOM_COLORS[0], host: true, key };
   const r = R = roomNew({ docId: c.id, kind, code: rec.code, rec, me: { id, name, color: rec.color, host: true } });
   if (kind === 'doc') docWatch(r);
+  else if (kind === 'sheet') SK.room.start();
   const t = roomClock();
   roomEntries((k, mk) => { const v = mk(); r.base.set(k, v); roomSet(k, v, t, id); });
   r.st.set('h', [{ id, n: name, x: await sha256(key), k: kind }, t, id]);
@@ -12481,8 +12517,9 @@ async function roomOpen(name) {
 }
 /* a presentation that is in a room, opened again: back in, with the stamps it was saved with */
 function roomResume(docId, rec) {
-  const r = R = roomNew({ docId, kind: isDeck(S.cur.meta) ? 'deck' : 'doc', code: rec.code, rec, me: { id: rec.id, name: roomName(rec.name), color: roomColor(rec.color), host: !!rec.host } });
+  const r = R = roomNew({ docId, kind: isDeck(S.cur.meta) ? 'deck' : isSheet(S.cur.meta) ? 'sheet' : 'doc', code: rec.code, rec, me: { id: rec.id, name: roomName(rec.name), color: roomColor(rec.color), host: !!rec.host } });
   if (r.kind === 'doc') docWatch(r);
+  else if (r.kind === 'sheet') SK.room.start();
   const saved = rec.st && typeof rec.st === 'object' ? rec.st : {}, t0 = S.cur.meta.updatedAt || 0, me = r.me.id;
   const okx = x => Array.isArray(x) && Number.isFinite(x[0]) && okId(x[1]);
   // changed while not in the room: stamped as of the document's last save, the latest it could have happened
@@ -12531,7 +12568,7 @@ function roomJoinCheck() {
   const hx = r.st.get('h'); if (!hx || !hx[0]) return;
   r.kind = hx[0].k;
   const has = pre => [...r.st].some(([k, x]) => k.startsWith(pre) && x[0]);
-  if (r.kind === 'deck' ? !((r.st.get('m') || [])[0] && has('s/')) : !has('b/')) return;
+  if (r.kind === 'deck' ? !((r.st.get('m') || [])[0] && has('s/')) : r.kind === 'sheet' ? !((r.st.get('o') || [])[0] && has('g/')) : !has('b/')) return;
   r.adopting = true;
   roomCreateLocal(r);
 }
@@ -12545,6 +12582,9 @@ async function roomCreateLocal(r) {
     const o = r.st.get('o'), p = r.st.get('p');
     const html = inOrder(list, o && o[0]).map(([bid, x]) => docNode(x[0], bid).outerHTML).join('');
     id = await createDoc({ title, html: html || '<p><br></p>', page: p && p[0] ? p[0] : undefined });
+  } else if (r.kind === 'sheet') {
+    const K = await loadSheetKit().catch(() => null), html = K && K.room.book(r.st);
+    id = html && R === r ? await createDoc({ title, kind: 'sheet', html }) : null;
   } else {
     const d = { v: 1, theme: 'ink', dir: UI_DIR, slides: [] };
     deckBuild(d, null);
@@ -12556,6 +12596,7 @@ function roomAdopt() {
   const r = R, c = S.cur;
   Object.assign(r, { adopt: false, adopting: false, joining: false, docId: c.id });
   if (r.kind === 'doc') docWatch(r);
+  else if (r.kind === 'sheet') SK.room.start();
   else if (deckBuild(DK.deck, null)) { DH.stack = []; DH.idx = -1; dSnap(); }   // exactly the entries: storing drops a text box nobody wrote in yet
   roomBaseNow(); roomPersist();
   roomLock(r).then(ok => { if (R === r && !ok) { r.elsewhere = true; roomUI(); } });
@@ -12571,6 +12612,13 @@ function roomAdopt() {
 /* a document was opened: the room goes with the document it belongs to */
 function roomDocLoaded() {
   const c = S.cur;
+  if (c && isSheet(c.meta) && !(SK && SK.ready(c))) {   // a spreadsheet: once its workbook is in
+    if (R && R.docId && c.id !== R.docId) roomDrop();
+    const p = S.sheetReady;
+    if (p) p.then(() => { if (S.cur === c && SK && SK.ready(c)) roomDocLoaded(); }, () => {});
+    roomUI();
+    return;
+  }
   if (R && R.adopt && c && !c.isSample) { roomAdopt(); return; }
   if (R && R.docId && (!c || c.id !== R.docId)) roomDrop();
   if (!R && c && !c.isSample) { const rec = roomRec(c.id); if (rec && roomCode(rec.code).length === 6 && okId(rec.id)) roomResume(c.id, rec); }
@@ -12585,21 +12633,23 @@ function roomDrop() {
   roomLeaving = Promise.all([roomLeaving, ...r.tr.map(tr => Promise.resolve().then(() => tr.room.leave()).catch(() => {}))]);
   if (r.unlock) r.unlock();
   if (r.mo) r.mo.disconnect();
+  if (SK) { SK.room.peers([]); SK.room.stop(false); }
   roomPaint(); roomThumbs(); docPaint(); roomUI();
   if (S.panel === 'room') closePanel();
 }
 function roomEnd(kind) {
   const r = R; if (!r) return;
-  const doc = r.kind === 'doc';
+  const doc = r.kind === 'doc', sht = r.kind === 'sheet';
   if (r.docId) lsDel('fink:room:' + r.docId);
   roomDrop();
-  if (kind === 'closed') modal({ title: T('החדר נסגר'), body: h('p', { text: doc ? T('מי שפתח את החדר סגר אותו. המסמך נשאר אצלך במכשיר, ואפשר להמשיך לעבוד עליו לבד.') : T('מי שפתח את החדר סגר אותו. המצגת נשארה אצלך במכשיר, ואפשר להמשיך לעבוד עליה לבד.') }), actions: [{ label: T('אישור'), kind: 'primary' }] });
+  if (sht && SK && S.cur && S.cur.id === r.docId && SK.ready(S.cur)) { SK.room.stop(true); markDirty(); }   // the rows' ids aren't needed out of the room
+  if (kind === 'closed') modal({ title: T('החדר נסגר'), body: h('p', { text: doc ? T('מי שפתח את החדר סגר אותו. המסמך נשאר אצלך במכשיר, ואפשר להמשיך לעבוד עליו לבד.') : sht ? T('מי שפתח את החדר סגר אותו. הגיליון נשאר אצלך במכשיר, ואפשר להמשיך לעבוד עליו לבד.') : T('מי שפתח את החדר סגר אותו. המצגת נשארה אצלך במכשיר, ואפשר להמשיך לעבוד עליה לבד.') }), actions: [{ label: T('אישור'), kind: 'primary' }] });
   else if (kind === 'mine') toast(T('החדר נסגר. כל מי שהיה בו נשאר עם עותק משלו.'), { icon: 'check_circle', ms: 5000 });
-  else toast(doc ? T('יצאת מהחדר. המסמך נשאר אצלך.') : T('יצאת מהחדר. המצגת נשארה אצלך.'), { icon: 'logout', ms: 5000 });
+  else toast(doc ? T('יצאת מהחדר. המסמך נשאר אצלך.') : sht ? T('יצאת מהחדר. הגיליון נשאר אצלך.') : T('יצאת מהחדר. המצגת נשארה אצלך.'), { icon: 'logout', ms: 5000 });
 }
 async function roomClose() {
   const r = R; if (!r || !r.me.host) return;
-  if (!(await confirmBox(T('סגירת החדר'), r.kind === 'doc' ? T('כל מי שבחדר יישאר עם עותק משלו של המסמך, והשינויים כבר לא יעברו ביניכם.') : T('כל מי שבחדר יישאר עם עותק משלו של המצגת, והשינויים כבר לא יעברו ביניכם.'), T('סגירת החדר'), true))) return;
+  if (!(await confirmBox(T('סגירת החדר'), r.kind === 'doc' ? T('כל מי שבחדר יישאר עם עותק משלו של המסמך, והשינויים כבר לא יעברו ביניכם.') : r.kind === 'sheet' ? T('כל מי שבחדר יישאר עם עותק משלו של הגיליון, והשינויים כבר לא יעברו ביניכם.') : T('כל מי שבחדר יישאר עם עותק משלו של המצגת, והשינויים כבר לא יעברו ביניכם.'), T('סגירת החדר'), true))) return;
   if (R !== r) return;
   roomScan();
   roomToAll({ t: 'end', k: r.rec.key });
@@ -12608,7 +12658,7 @@ async function roomClose() {
 }
 async function roomLeave() {
   const r = R; if (!r) return;
-  if (!(await confirmBox(T('יציאה מהחדר'), r.kind === 'doc' ? T('המסמך יישאר אצלך, אבל השינויים כבר לא יעברו בינך לבין האחרים.') : T('המצגת תישאר אצלך, אבל השינויים כבר לא יעברו בינך לבין האחרים.'), T('יציאה'), false))) return;
+  if (!(await confirmBox(T('יציאה מהחדר'), r.kind === 'doc' ? T('המסמך יישאר אצלך, אבל השינויים כבר לא יעברו בינך לבין האחרים.') : r.kind === 'sheet' ? T('הגיליון יישאר אצלך, אבל השינויים כבר לא יעברו בינך לבין האחרים.') : T('המצגת תישאר אצלך, אבל השינויים כבר לא יעברו בינך לבין האחרים.'), T('יציאה'), false))) return;
   if (R !== r) return;
   roomScan();
   roomToAll({ t: 'bye' });
@@ -12665,11 +12715,12 @@ function renderRoomPanel() {
   v.textContent = '';
   const r = R && R.docId ? R : null;
   if (!r) { v.append(h('p', { class: 'muted', text: T('אין כאן חדר משותף כרגע.') }), h('button', { class: 'btn primary', onclick: () => { closePanel(); openRoomDialog(); } }, icon('group_add'), T('חדר משותף'))); return; }
-  const st = roomState(), people = [...r.peers.values()], hx = r.st.get('h'), host = hx && hx[0] ? hx[0].id : null, doc = r.kind === 'doc';
+  const st = roomState(), people = [...r.peers.values()], hx = r.st.get('h'), host = hx && hx[0] ? hx[0].id : null, doc = r.kind === 'doc', sht = r.kind === 'sheet';
   const copy = (text, done) => navigator.clipboard.writeText(text).then(() => toast(done, { icon: 'content_copy' }), () => toast(T('לא הצלחתי להעתיק. אפשר לסמן ולהעתיק בעצמך.')));
   const [ic, tx] = ROOM_STATES[st] || ROOM_STATES.connecting;
   // where each one is: their slide, or in a document a button to where their caret is
   const where = (p, self) => {
+    if (sht) return !self && p.pr && p.pr.s && SK ? h('button', { class: 'room-go', title: T('מעבר למקום של {0}', p.name), onclick: () => SK.room.go(p.pr) }, T('מעבר')) : null;
     if (doc) {
       const b = !self && p.pr && p.pr.z && ed.querySelector(`:scope > [data-b="${p.pr.z[0]}"]`);
       return b ? h('button', { class: 'room-go', title: T('מעבר למקום של {0}', p.name), onclick: () => b.scrollIntoView({ block: 'center', behavior: 'smooth' }) }, T('מעבר')) : null;
@@ -12690,15 +12741,15 @@ function renderRoomPanel() {
     h('div', { class: 'room-link' },
       h('input', { class: 'field', readonly: true, dir: 'ltr', value: roomLink(r.code), 'aria-label': T('הקישור לחדר'), onfocus: e => e.target.select() }),
       h('button', { class: 'btn small', onclick: () => copy(roomLink(r.code), T('הקישור הועתק')) }, icon('link'), T('העתקת הקישור')),
-      navigator.share ? h('button', { class: 'btn small', onclick: () => navigator.share({ title: 'Floating Ink', text: doc ? T('בואו לערוך איתי מסמך ב-Floating Ink. הקוד: {0}', fmtCode(r.code)) : T('בואו לערוך איתי מצגת ב-Floating Ink. הקוד: {0}', fmtCode(r.code)), url: roomLink(r.code) }).catch(() => {}) }, icon('share'), T('שיתוף')) : null),
+      navigator.share ? h('button', { class: 'btn small', onclick: () => navigator.share({ title: 'Floating Ink', text: doc ? T('בואו לערוך איתי מסמך ב-Floating Ink. הקוד: {0}', fmtCode(r.code)) : sht ? T('בואו לערוך איתי גיליון ב-Floating Ink. הקוד: {0}', fmtCode(r.code)) : T('בואו לערוך איתי מצגת ב-Floating Ink. הקוד: {0}', fmtCode(r.code)), url: roomLink(r.code) }).catch(() => {}) }, icon('share'), T('שיתוף')) : null),
     h('div', { class: 'room-state ' + st }, icon(ic), h('span', { text: st === 'live' ? TN('{n} אנשים בחדר עכשיו', people.filter(p => p.links.size).length + 1) : T(tx) })),
     h('div', { class: 'room-h', text: T('מי בחדר') }),
     h('ul', { class: 'room-people' }, row(r.me, true), people.map(p => row(p, false))),
     h('div', { class: 'btn-row' }, r.me.host
       ? h('button', { class: 'btn danger', onclick: roomClose }, icon('close'), T('סגירת החדר'))
       : h('button', { class: 'btn', onclick: roomLeave }, icon('logout'), T('יציאה מהחדר'))),
-    h('p', { class: 'muted small', text: r.me.host ? (doc ? T('כשסוגרים את החדר, כל מי שהיה בו נשאר עם עותק משלו של המסמך.') : T('כשסוגרים את החדר, כל מי שהיה בו נשאר עם עותק משלו של המצגת.'))
-      : doc ? T('כשיוצאים מהחדר, או כשמי שפתח אותו סוגר אותו, המסמך נשאר אצלך במכשיר.') : T('כשיוצאים מהחדר, או כשמי שפתח אותו סוגר אותו, המצגת נשארת אצלך במכשיר.') }),
+    h('p', { class: 'muted small', text: r.me.host ? (doc ? T('כשסוגרים את החדר, כל מי שהיה בו נשאר עם עותק משלו של המסמך.') : sht ? T('כשסוגרים את החדר, כל מי שהיה בו נשאר עם עותק משלו של הגיליון.') : T('כשסוגרים את החדר, כל מי שהיה בו נשאר עם עותק משלו של המצגת.'))
+      : doc ? T('כשיוצאים מהחדר, או כשמי שפתח אותו סוגר אותו, המסמך נשאר אצלך במכשיר.') : sht ? T('כשיוצאים מהחדר, או כשמי שפתח אותו סוגר אותו, הגיליון נשאר אצלך במכשיר.') : T('כשיוצאים מהחדר, או כשמי שפתח אותו סוגר אותו, המצגת נשארת אצלך במכשיר.') }),
     h('p', { class: 'muted small', text: T('מה שכותבים עובר ישירות בין המכשירים שבחדר, מוצפן, ולא נשמר באף שרת. רק מי שיש לו את הקוד יכול להיכנס.') }));
 }
 /* "Shared room": open one with this presentation, or join someone's with a code. With a code from a link, just the way in */
@@ -12725,7 +12776,7 @@ function openRoomDialog(code, again) {
     };
     view('sync', T('מתחבר לחדר {0}…', fmtCode(cc)), T('זה לוקח בדרך כלל כמה שניות.'), true);
     return {
-      step: k => view('sync', k === 'doc' ? T('מקבל את המסמך…') : T('מקבל את המצגת…'), '', true),
+      step: k => view('sync', k === 'doc' ? T('מקבל את המסמך…') : k === 'sheet' ? T('מקבל את הגיליון…') : T('מקבל את המצגת…'), '', true),
       lost: () => view('search', T('לא מצאתי אף אחד בחדר {0}.', fmtCode(cc)), T('כדאי לבדוק את הקוד, ושמי שפתח את החדר עדיין מחובר. אפשר גם להמשיך לחכות כאן.'), false),
       fail: t => view('error', t, '', false),
       done: () => m.close(true),
@@ -12748,12 +12799,12 @@ function openRoomDialog(code, again) {
       h('div', { class: 'btn-row' }, h('button', { class: 'btn primary', onclick: join }, icon('login'), T('כניסה לחדר'))), note);
     return;
   }
-  const canOpen = !!S.cur && !S.cur.isSample && !pdfaOpen() && !sheetOpen();
-  body.append(h('p', { class: 'room-intro', text: T('עובדים ביחד על אותו מסמך או על אותה מצגת, בזמן אמת: כל שינוי מופיע מיד אצל כולם.') }),
+  const canOpen = !!S.cur && !S.cur.isSample && !pdfaOpen();
+  body.append(h('p', { class: 'room-intro', text: T('עובדים ביחד על אותו מסמך, מצגת או גיליון, בזמן אמת: כל שינוי מופיע מיד אצל כולם.') }),
     h('label', { class: 'fld' }, h('span', { text: T('הכינוי שלך') }), nick),
     h('div', { class: 'room-opts' },
       h('section', { class: 'room-opt' }, icon('group_add', 'big'), h('b', { text: T('פתיחת חדר') }),
-        h('span', { text: pdfaOpen() ? T('דפים של PDF עוד אי אפשר לערוך ביחד. אפשר לפתוח חדר ממסמך או ממצגת.') : sheetOpen() ? T('גיליונות עוד אי אפשר לערוך ביחד. אפשר לפתוח חדר ממסמך או ממצגת.') : !canOpen ? T('כדי לפתוח חדר, פותחים קודם מסמך או מצגת משלך.') : deckOpen() ? T('חברים שיקבלו את הקוד יערכו איתך את המצגת הזאת.') : T('חברים שיקבלו את הקוד יערכו איתך את המסמך הזה.') }),
+        h('span', { text: pdfaOpen() ? T('דפים של PDF עוד אי אפשר לערוך ביחד. אפשר לפתוח חדר ממסמך, ממצגת או מגיליון.') : !canOpen ? T('כדי לפתוח חדר, פותחים קודם מסמך, מצגת או גיליון משלך.') : deckOpen() ? T('חברים שיקבלו את הקוד יערכו איתך את המצגת הזאת.') : sheetOpen() ? T('חברים שיקבלו את הקוד יערכו איתך את הגיליון הזה.') : T('חברים שיקבלו את הקוד יערכו איתך את המסמך הזה.') }),
         h('button', { class: 'btn primary', disabled: !canOpen, onclick: open }, T('פתיחת חדר'))),
       h('section', { class: 'room-opt' }, icon('login', 'big'), h('b', { text: T('כניסה לחדר') }),
         h('span', { text: T('קיבלת קוד מחבר? מקלידים אותו כאן.') }), codeIn,
