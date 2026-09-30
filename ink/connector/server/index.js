@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.8.0';
+const VERSION = '1.9.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -28,7 +28,7 @@ const INSTRUCTIONS = 'Floating Ink is a word processor open in the user\'s brows
   'It also makes presentations (slides, like PowerPoint): create_presentation builds one while the user watches, for example ' +
   'from a script or a document they wrote (read_document it first), and edit_presentation changes one. Keep slides short: ' +
   'a title and three to six brief points; what the presenter should say goes in the slide\'s notes. read_document reads a presentation slide by slide. ' +
-  'It also makes spreadsheets, like Excel: create_spreadsheet builds one with values, formulas, formatting and charts (a budget, a table of grades, a list with totals, a chart of them), ' +
+  'It also makes spreadsheets, like Excel: create_spreadsheet builds one with values, formulas, formatting, conditional formatting and charts (a budget, a table of grades, a list with totals, a chart of them), ' +
   'read_spreadsheet reads one, and write_cells changes cells in one. Formulas are written the way Excel writes them in English, with commas: =SUM(B2:B9). ' +
   'The chat panel inside Floating Ink is shared: send_message leaves a note there, and read_messages shows ' +
   'what the user or another connected assistant wrote. The user often keeps writing to you from that panel instead of ' +
@@ -66,7 +66,8 @@ const SHEET = {
   start: { type: 'string', description: 'The cell where rows begins, like A1 (the default).' },
   rows: { type: 'array', items: { type: 'array', items: {} }, description: 'Rows of cells from start, the first row first, the first column first. Each value is a number, text, true/false, or null for an empty cell. ' +
     'Text that starts with = is a formula, in English with commas as in Excel: =SUM(B2:B9), =AVERAGE(B2:D2), =IF(E2>=55,"pass","fail"), =B2*C2, =\'Sheet 2\'!B7. ' +
-    'Functions that work: SUM, AVERAGE, MIN, MAX, COUNT and IF, with + - * / ^ %, & (joining text), comparisons, cells and ranges. Other functions show #NAME?. Write plain numbers (1200), and set their look with formats. ' +
+    'About 150 Excel functions work: SUM, SUMIF(S), SUMPRODUCT, ROUND, AVERAGE, COUNTIF(S), MAXIFS, MEDIAN, RANK, IF, IFS, AND, OR, IFERROR, SWITCH, TEXT, LEFT, MID, TEXTJOIN, SUBSTITUTE, TODAY, DATE, EDATE, DATEDIF, NETWORKDAYS, XLOOKUP, VLOOKUP, INDEX, MATCH and more, with + - * / ^ %, & (joining text), comparisons, cells and ranges. ' +
+    'As in Excel 365, a formula whose answer is several values spills them into the cells below and beside it: =SORT(A2:B20,2,-1), =FILTER(A2:C20,C2:C20>50), =UNIQUE(A2:A20), =SEQUENCE(10); leave those cells empty, and refer to the whole spill as A2#. INDIRECT, OFFSET, LET and financial functions are not there yet (they show #NAME?). Write plain numbers (1200), and set their look with formats. ' +
     'One call takes up to 5,000 rows of up to 500 cells; for more, call write_cells again with a later start.' },
   cells: { type: 'object', additionalProperties: {}, description: 'Single cells by address, like {"B2": 1200, "C2": "=B2*2"}; the same values as rows.' },
   formats: { type: 'array', description: 'Formatting for ranges, applied in order (up to 500, each range up to 100,000 cells).', items: { type: 'object', properties: {
@@ -90,6 +91,21 @@ const SHEET = {
     series_in: { type: 'string', enum: ['columns', 'rows'], description: 'Leave out to let the sheet decide, as Excel does.' },
     legend: { type: 'boolean', description: 'true by default.' },
     labels: { type: 'boolean', description: 'The numbers on the bars or slices.' } }, required: ['type', 'range'] } },
+  conditional_formats: { type: 'array', description: 'Conditional formatting, as in Excel: cells colored by their values, data bars, color scales and icons. They follow the cells when they change. The first rule is the strongest.', items: { type: 'object', properties: {
+    range: { type: 'string', description: 'The cells, like B2:B20 (several ranges with spaces between them).' },
+    type: { type: 'string', enum: ['greater_than', 'greater_or_equal', 'less_than', 'less_or_equal', 'equal', 'not_equal', 'between', 'not_between', 'text_contains', 'text_not_contains', 'text_begins', 'text_ends', 'date', 'blanks', 'no_blanks', 'errors', 'no_errors', 'top', 'bottom', 'above_average', 'below_average', 'duplicates', 'unique', 'formula', 'data_bar', 'color_scale', 'icon_set'] },
+    value: { description: 'For the comparisons: a number, text, or a formula like "=$E$1".' }, value2: { description: 'The other end, for between.' },
+    text: { type: 'string', description: 'For the text types.' },
+    period: { type: 'string', enum: ['yesterday', 'today', 'tomorrow', 'last_7_days', 'last_week', 'this_week', 'next_week', 'last_month', 'this_month', 'next_month'], description: 'For date.' },
+    count: { type: 'number', description: 'For top and bottom: how many (10 by default).' }, percent: { type: 'boolean', description: 'For top and bottom: count is a percent.' },
+    formula: { type: 'string', description: 'For formula: true colors the cell. Written for the first cell of the range, and moved for each cell like a copied formula: "=$C2>100" colors each row whose C is over 100.' },
+    style: { type: 'string', enum: ['red', 'yellow', 'green', 'fill', 'text'], description: 'The look for the highlighting types: red is a light red fill with dark red text (the default), yellow and green the same in their colors, fill a light red fill only, text red text only.' },
+    fill: { type: 'string', description: 'Instead of style: a fill #rrggbb.' }, text_color: { type: 'string', description: 'Instead of style: a text color #rrggbb.' }, bold: { type: 'boolean' }, italic: { type: 'boolean' },
+    color: { type: 'string', description: 'For data_bar: #rrggbb (blue by default).' }, solid: { type: 'boolean', description: 'For data_bar: a solid bar instead of a gradient.' },
+    colors: { type: 'array', items: { type: 'string' }, description: 'For color_scale: 2 or 3 colors #rrggbb, from the lowest values to the highest (red, yellow, green by default).' },
+    icons: { type: 'string', enum: ['arrows', 'triangles', 'traffic_lights', 'signs', 'symbols', 'flags', 'stars', 'ratings', 'quarters'], description: 'For icon_set.' },
+    reverse: { type: 'boolean', description: 'For icon_set: the icons the other way around.' }, hide_values: { type: 'boolean', description: 'For data_bar and icon_set: show only the bar or the icon.' },
+    stop_if_true: { type: 'boolean' } }, required: ['range', 'type'] } },
 };
 const TOOLS = [
   { name: 'list_documents', description: 'List the documents, presentations and spreadsheets in Floating Ink: id, title, kind, word count, last change, and which one is open on screen.',
