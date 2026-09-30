@@ -64,7 +64,7 @@ const DEF_FONT = 'Arial', DEF_FS = 10, DEF_W = 100, DEF_H = 21;
 const sid = () => { let s = ''; while (s.length < 8) s += Math.random().toString(36).slice(2); return s.slice(0, 8); };
 function newSheet(name, dir) {
   return { id: sid(), name, dir, cells: new Map(), cw: new Map(), rh: new Map(), hc: new Set(), hr: new Set(), cs: new Map(), rs: new Map(), ds: null,
-    fr: 0, fc: 0, merges: [], af: null, gl: true, tab: null, dw: DEF_W, dh: DEF_H, ac: { r: 0, c: 0 }, zoom: 100 };
+    fr: 0, fc: 0, merges: [], af: null, gl: true, tab: null, dw: DEF_W, dh: DEF_H, ac: { r: 0, c: 0 }, zoom: 100, charts: [] };
 }
 const sheetWord = n => T('גיליון{0}', n);
 /* Excel's rules for a sheet's name: up to 31 letters, none of : \ / ? * [ ], no ' at either end */
@@ -135,6 +135,7 @@ function normSheet(x, dir, taken) {
   if (+x.dh >= 8 && +x.dh <= 200) s.dh = Math.round(+x.dh);
   const ac = parseA1(x.ac); if (ac) s.ac = ac;
   if (+x.zoom >= 25 && +x.zoom <= 400) s.zoom = Math.round(+x.zoom);
+  s.charts = (Array.isArray(x.charts) ? x.charts : []).slice(0, 50).map(normSheetChart).filter(Boolean);
   // in a shared room: the ids of its rows and columns (see the rooms, at the end)
   const ri = x.ri && unpackIds(x.ri, s.id + '/ri', RMAX), ci = x.ci && unpackIds(x.ci, s.id + '/ci', CMAX);
   if (ri) s.ri = ri;
@@ -181,6 +182,7 @@ function sheetOut(s) {
   const ac = s === WS && SEL ? SEL : s.ac;
   if (ac.r || ac.c) o.ac = A1(ac.r, ac.c);
   if (s.zoom !== 100) o.zoom = s.zoom;
+  if (s.charts.length) o.charts = s.charts.map(chartOut);
   if (s.ri && s.ri.length) o.ri = packIds(s.ri, s.id + '/ri');
   if (s.ci && s.ci.length) o.ci = packIds(s.ci, s.id + '/ci');
   return o;
@@ -1137,6 +1139,7 @@ function redo() {
 function changed() {
   geoDirty();
   recalc();
+  CHV++;
   for (const s of WB.sheets) filterRows(s);
   markDirty();
   refresh();
@@ -1255,6 +1258,7 @@ function render() {
   if (WS.fr) place(part(V.top, 'frz', 'sh-frz'), 0, CHH + FH - 1, W, 1);
   if (WS.fc) place(part(V.side, 'frz', 'sh-frz'), RHW + FW - 1, 0, 1, H);
   if (WS.fr && WS.fc) { place(part(V.corner, 'frzh', 'sh-frz'), 0, CHH + FH - 1, RHW + FW, 1); place(part(V.corner, 'frzv', 'sh-frz'), RHW + FW - 1, 0, 1, CHH + FH); }
+  drawCharts();
   for (const [L, rr, cc] of layers) drawSel(L, rr, cc, g);
   if (RM.peers.length) for (const [L, rr, cc] of layers) drawPeers(L, rr, cc);
   for (const L of [V.body, V.top, V.side, V.corner]) sweep(L);
@@ -1730,6 +1734,9 @@ function hit(e, loose) {
 let DRAG = null;
 function onDown(e) {
   if (!WS || (e.button !== 0 && e.button !== 2)) return;
+  const ce = e.target.closest && e.target.closest('.sh-chart');
+  if (ce) { chartDown(e, ce); return; }
+  if (CH.id) { CH.id = null; renderSoon(); }
   TOUCHY = e.pointerType === 'touch';
   const hh = hit(e);
   if (!hh) return;
@@ -1773,6 +1780,7 @@ function onMove(e) {
     if (V.scroll.style.cursor !== cur) V.scroll.style.cursor = cur;
     return;
   }
+  if (DRAG.kind === 'chart') { chartMove(e); return; }
   if (DRAG.kind === 'tap') { if (Math.hypot(e.clientX - DRAG.x, e.clientY - DRAG.y) > 8) DRAG = null; return; }
   if (DRAG.kind === 'resize') { moveResize(e); return; }
   DRAG.ev = { clientX: e.clientX, clientY: e.clientY };
@@ -1828,11 +1836,14 @@ function onUp(e) {
     return;
   }
   if (d.kind === 'resize') { endResize(d); return; }
+  if (d.kind === 'chart') { chartUp(d); return; }
   if (d.kind === 'fill') { if (d.to) fillRange(d.g, d.to); else { SEL = { r: SEL.r, c: SEL.c, er: d.g.r1 === SEL.r ? d.g.r2 : d.g.r1, ec: d.g.c1 === SEL.c ? d.g.c2 : d.g.c1 }; after(); } return; }
   if (d.kind === 'point') { taOf().focus({ preventScroll: true }); return; }
   focusGrid();
 }
 function onDbl(e) {
+  const ce = chartAt(e);
+  if (ce) { openChartDialog(ce.dataset.id); return; }
   const hh = hit(e);
   if (!hh) return;
   if (hh.kind === 'colb') autoFit('c', hh.i);
@@ -1902,6 +1913,7 @@ function onKey(e) {
   if (!inBar && !inGrid) return false;
   if (e.isComposing || e.keyCode === 229) return false;
   if (AC.on && acKey(e)) return true;
+  if (CH.id && !ED.on && !inBar) return chartKey(e);
   return ED.on ? editKey(e) : inBar ? false : gridKey(e);
 }
 function editKey(e) {
@@ -1958,6 +1970,7 @@ function onEsc() {
   if (!WB || !LOADED || LOADED !== S.cur) return false;
   if (AC.on) { acHide(); return true; }
   if (ED.on) { endEdit(false); return true; }
+  if (CH.id) { CH.id = null; renderSoon(); return true; }
   if (CLIP && CLIP.ants) { CLIP.ants = false; render(); return true; }
   return false;
 }
@@ -2178,6 +2191,8 @@ function spliceSheet(axis, at, n) {
       }
     }
     eachFormula((f, self) => spliceFormula(f, self, s.name, axis, at, n));
+    eachChart((f, self) => spliceFormula(f, self, s.name, axis, at, n));
+    moveCharts(s, axis, at, n);
   });
 }
 function insertRows(where) {
@@ -2570,7 +2585,7 @@ async function renameSheet(s = WS) {
   if (takenNames(s).has(n.toLowerCase())) { toast(T('כבר יש גיליון בשם הזה')); return; }
   if (n === s.name) return;
   const old = s.name;
-  edit(() => { setProp(s, 'name', n); eachFormula(f => renameInFormula(f, old, n)); });
+  edit(() => { setProp(s, 'name', n); eachFormula(f => renameInFormula(f, old, n)); eachChart(f => renameInFormula(f, old, n)); });
 }
 async function deleteSheet(s = WS) {
   if (WB.sheets.length < 2) { toast(T('בחוברת צריך להישאר לפחות גיליון אחד')); return; }
@@ -2579,13 +2594,14 @@ async function deleteSheet(s = WS) {
   edit(() => {
     bookStep(() => { WB.sheets.splice(i, 1); });
     eachFormula(f => dropSheetInFormula(f, s.name));
+    eachChart(f => dropSheetInFormula(f, s.name));
     if (s === WS) showSheet(next, true);
   });
   WB.active = WB.sheets.indexOf(WS);
   refresh(); focusGrid();
 }
 function dupSheet(s = WS) {
-  const c = { ...s, id: sid(), name: freeName(s.name.slice(0, 26) + ' (2)', takenNames()), cells: new Map(s.cells), cw: new Map(s.cw), rh: new Map(s.rh), hc: new Set(s.hc), hr: new Set(s.hr), cs: new Map(s.cs), rs: new Map(s.rs), merges: s.merges.map(m => ({ ...m })), af: s.af ? { ...s.af, hide: { ...s.af.hide } } : null, ac: { ...s.ac }, _sc: null, _fh: null, ri: undefined, ci: undefined, _ri: null, _ci: null };
+  const c = { ...s, id: sid(), name: freeName(s.name.slice(0, 26) + ' (2)', takenNames()), cells: new Map(s.cells), cw: new Map(s.cw), rh: new Map(s.rh), hc: new Set(s.hc), hr: new Set(s.hr), cs: new Map(s.cs), rs: new Map(s.rs), merges: s.merges.map(m => ({ ...m })), af: s.af ? { ...s.af, hide: { ...s.af.hide } } : null, ac: { ...s.ac }, _sc: null, _fh: null, ri: undefined, ci: undefined, _ri: null, _ci: null, charts: s.charts.map(ch => ({ ...bare(ch), id: sid() })) };
   edit(() => { bookStep(() => { WB.sheets.splice(WB.sheets.indexOf(s) + 1, 0, c); }); showSheet(c, true); });
   WB.active = WB.sheets.indexOf(c);
   refresh(); focusGrid();
@@ -3015,6 +3031,27 @@ const CSS = `
 @keyframes shants{to{background-position:8px 0,-8px 100%,0 -8px,100% 8px}}
 .sh-ref{z-index:5;border:2px solid var(--rc);background:color-mix(in srgb,var(--rc) 9%,transparent)}
 .sh-peer{z-index:4;border:2px solid var(--pc);pointer-events:none}
+.sh-chart{z-index:8;background:#fff;border:1px solid #d9d9d9;box-sizing:border-box;cursor:move;touch-action:none}
+.sh-chart.on{outline:2px solid #2743d8;outline-offset:0}
+.sh-ch-in{position:absolute;inset:0;overflow:hidden;pointer-events:none;direction:ltr;color:#404040}
+.sh-ch-in svg{position:absolute;inset:0;width:100%;height:100%}
+.sh-ch-in .ch-l{position:absolute;white-space:nowrap;line-height:1.2}
+.sh-ch-none{position:absolute;inset:0;display:grid;place-items:center;padding:12px;text-align:center;color:#8a8f98;font:13px var(--ui)}
+.sh-hd{position:absolute;width:9px;height:9px;background:#fff;border:1.5px solid #2743d8;border-radius:50%;display:none;z-index:1}
+.sh-chart.on .sh-hd{display:block}
+.h-ts,.h-t,.h-te{top:-5px}.h-bs,.h-b,.h-be{bottom:-5px}.h-s,.h-e{top:calc(50% - 5px)}
+.h-ts,.h-s,.h-bs{inset-inline-start:-5px}.h-te,.h-e,.h-be{inset-inline-end:-5px}.h-t,.h-b{inset-inline-start:calc(50% - 5px)}
+.h-ts,.h-be{cursor:nwse-resize}.h-te,.h-bs{cursor:nesw-resize}.h-t,.h-b{cursor:ns-resize}.h-s,.h-e{cursor:ew-resize}
+[dir=rtl] .h-ts,[dir=rtl] .h-be{cursor:nesw-resize}[dir=rtl] .h-te,[dir=rtl] .h-bs{cursor:nwse-resize}
+.sh-ch-dlg{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.sh-ch-side{flex:1 1 260px;display:flex;flex-direction:column;gap:9px;min-width:0}
+.sh-ch-types{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.sh-ch-type{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);font-size:12px}
+.sh-ch-type .ms{font-size:24px}
+.sh-ch-type.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.sh-ch-prev{flex:0 0 440px;max-width:100%;height:260px;position:relative;border:1px solid #d9d9d9;background:#fff;border-radius:6px;overflow:hidden}
+.sh-ch-err{color:var(--danger,#c0392b);font-size:13px;margin:0}
+@media (max-width:700px){.sh-ch-prev{flex-basis:100%;height:220px}}
 .sh-ptag{z-index:7;width:auto!important;height:16px!important;padding:0 5px;border-radius:4px 4px 4px 0;background:var(--pc);color:#fff;font:600 11px/16px var(--ui);white-space:nowrap;pointer-events:none}
 .sh-over{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:7}
 .sh-ed{position:absolute;width:2px;height:2px;min-width:0;min-height:0;opacity:0;border:0;padding:0;margin:0;resize:none;overflow:hidden;background:#fff;color:#1b1f2a;outline:none;caret-color:transparent;white-space:pre;line-height:1.2;pointer-events:none}
@@ -3138,9 +3175,11 @@ function ribbonPanels() {
     group(T('חלון'), '', rbtn('shFreezeMenu', 'ac_unit', T('הקפאה'), { big: true, title: T('השורות והעמודות הראשונות נשארות במקום בגלילה') })),
     group(T('תצוגה@view'), '', rbtn('shGrid', 'grid_on', T('קווי רשת'), { big: true, id: 'shGridBtn' }), rbtn('shDir', 'format_textdirection_r_to_l', T('גיליון מימין לשמאל'), { big: true, id: 'shDirBtn' })),
     group(T('זום'), '', rbtn('shZoom', 'remove', T('הקטנה'), { arg: '-1' }), h('button', { class: 'rb txt', type: 'button', 'data-cmd': 'shZoom', 'data-arg': '0', id: 'shZoomPct', title: T('חזרה ל-100%') }, '100%'), rbtn('shZoom', 'add', T('הגדלה'), { arg: '1' })));
-  return [home, formulas, data, viewP];
+  const insert = h('div', { class: 'panel sheet-only', 'data-panel': 'sinsert', hidden: true },
+    group(T('גרפים'), '', ...CKS.map(k => rbtn('shChart', CHARTS[k].ic, T(CHARTS[k].n), { big: true, arg: k, title: T('גרף חדש מהתאים שבחרת') }))));
+  return [home, insert, formulas, data, viewP];
 }
-const SHEET_TAB_LIST = () => [['shome', T('בית')], ['sformula', T('נוסחאות')], ['sdata', T('נתונים')], ['sview', T('תצוגה@view')]];
+const SHEET_TAB_LIST = () => [['shome', T('בית')], ['sinsert', T('הוספה')], ['sformula', T('נוסחאות')], ['sdata', T('נתונים')], ['sview', T('תצוגה@view')]];
 function mount() {
   if (V.view) return;
   document.head.append(h('style', { id: 'sheetcss' }, CSS));
@@ -3173,7 +3212,7 @@ function mount() {
   sc.addEventListener('pointerup', onUp);
   sc.addEventListener('pointercancel', () => { cancelAnimationFrame(SCROLLER); if (DRAG && DRAG.line) DRAG.line.remove(); DRAG = null; });
   sc.addEventListener('dblclick', onDbl);
-  sc.addEventListener('contextmenu', e => { if (!WS) return; e.preventDefault(); const hh = hit(e); if (hh && hh.kind === 'filt') return; openCellMenu(e.clientX, e.clientY); });
+  sc.addEventListener('contextmenu', e => { if (!WS) return; e.preventDefault(); const ce = chartAt(e); if (ce) { CH.id = ce.dataset.id; renderSoon(); openChartMenu(e.clientX, e.clientY); return; } const hh = hit(e); if (hh && hh.kind === 'filt') return; openCellMenu(e.clientX, e.clientY); });
   sc.addEventListener('scroll', () => { renderSoon(); if (AC.box && !AC.box.hidden) requestAnimationFrame(acShow); }, { passive: true });
   sc.addEventListener('wheel', e => { if (!(e.ctrlKey || e.metaKey) || !WS) return; e.preventDefault(); setZoom(WS.zoom + (e.deltaY < 0 ? 10 : -10)); }, { passive: false });
   if (window.ResizeObserver) new ResizeObserver(() => renderSoon()).observe(sc);
@@ -3313,6 +3352,7 @@ function openCellMenu(x, y) {
     { ic: 'arrow_upward', label: T('מיון מהקטן לגדול'), run: () => quickSort(false) },
     { ic: 'arrow_downward', label: T('מיון מהגדול לקטן'), run: () => quickSort(true) },
     { ic: 'filter_alt', label: WS.af ? T('הסרת הסינון') : T('סינון'), run: toggleFilter },
+    { ic: 'bar_chart', label: T('גרף מהתאים האלה'), run: () => insertChart('col') },
     '-',
     ...sizeItems().filter(it => it && it !== '-'),
   ]);
@@ -3425,7 +3465,7 @@ function formulaHelp() {
 }
 /* the commands the ribbon's buttons call (data-cmd), added to the app's own list */
 const COMMANDS = {
-  shUndo: () => undo(), shRedo: () => redo(),
+  shUndo: () => undo(), shRedo: () => redo(), shChart: a => insertChart(a),
   shCut: () => copyButton(true), shCopy: () => copyButton(false), shPaste: () => pasteButton('all'),
   shLook: a => toggleLook(a),
   shColor: () => setLook('c', PREFS.shColor || '#cf3727'), shColorMenu: (a, b) => colorMenu(b, 'c'),
@@ -3564,11 +3604,11 @@ async function readXlsx(buf) {
   if (u8[0] === 0xD0 && u8[1] === 0xCF) throw new Error('locked');
   if (u8[0] !== 0x50 || u8[1] !== 0x4B) throw new Error('notxlsx');
   const names = new TextDecoder('latin1').decode(u8), count = re => (names.match(re) || []).length;
-  const rep = new Map([['chart', count(/xl\/charts\/chart\d+\.xml/g) / 2 | 0], ['pivot', count(/xl\/pivotTables\/pivotTable\d+\.xml/g) / 2 | 0]]);
+  const rep = new Map([['pivot', count(/xl\/pivotTables\/pivotTable\d+\.xml/g) / 2 | 0]]), hasCharts = count(/xl\/charts\/chart\d+\.xml/g) > 0;
   const add = (k, n = 1) => rep.set(k, (rep.get(k) || 0) + n);
   const ExcelJS = await excelLib(), wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buf);
-  const theme = themeOf(wb), VT = ExcelJS.ValueType, taken = new Set(), book = { v: 1, dir: UI_DIR, active: 0, sheets: [] };
+  const theme = themeOf(wb), VT = ExcelJS.ValueType, taken = new Set(), book = { v: 1, dir: UI_DIR, active: 0, sheets: [] }, xlNames = [];
   let anyRtl = null;
   wb.eachSheet(ws => {
     if (ws.state === 'veryHidden') return;
@@ -3634,12 +3674,32 @@ async function readXlsx(buf) {
     if (dv && Object.keys(dv).length) add('valid');
     if (ws.tables && Object.keys(ws.tables).length) add('table');
     book.sheets.push(sheetOut(s));
+    xlNames.push(ws.name);
   });
   if (!book.sheets.length) throw new Error('empty');
   const act = wb.views && wb.views[0] && wb.views[0].activeTab;
   book.active = clamp(act | 0, 0, book.sheets.length - 1);
   book.dir = anyRtl ? 'rtl' : anyRtl === false ? 'ltr' : UI_DIR;
-  return { book: bookOut(normBook(book)), rep };
+  const nb = normBook(book);
+  if (hasCharts) await importCharts(buf, nb, xlNames, rep);
+  return { book: bookOut(nb), rep };
+}
+/* the file's charts onto its sheets (by the sheet's name in the file); kinds that aren't here are counted for the report */
+async function importCharts(buf, nb, xlNames, rep) {
+  let found;
+  try { found = await readXlsxCharts(buf); } catch (e) { console.warn(e); return; }
+  const keep = [WB, WS];
+  WB = nb;   // references name this workbook's sheets
+  try {
+    for (const [name, list] of found) {
+      const s = nb.sheets[xlNames.indexOf(name)];
+      if (!s) continue;
+      for (const x of list) {
+        const ch = x.chart ? placeXlsxChart(s, x) : null;
+        if (ch && s.charts.length < 50) s.charts.push(ch); else rep.set('chart', (rep.get('chart') || 0) + 1);
+      }
+    }
+  } finally { [WB, WS] = keep; }
 }
 /* newer Excel functions need _xlfn. before their names inside the file, or Excel reads them as unknown */
 const NEW_FNS = new Set(['CONCAT', 'TEXTJOIN', 'IFS', 'SWITCH', 'MAXIFS', 'MINIFS', 'XLOOKUP', 'XMATCH', 'FILTER', 'SORT', 'SORTBY', 'UNIQUE', 'SEQUENCE', 'RANDARRAY', 'LET', 'LAMBDA', 'IFNA', 'DAYS', 'ISOWEEKNUM', 'STDEV.S', 'STDEV.P', 'VAR.S', 'VAR.P', 'CEILING.MATH', 'FLOOR.MATH', 'AGGREGATE', 'FORMULATEXT', 'TEXTBEFORE', 'TEXTAFTER', 'TEXTSPLIT', 'VSTACK', 'HSTACK', 'TAKE', 'DROP', 'CHOOSECOLS', 'CHOOSEROWS', 'TOCOL', 'TOROW', 'WRAPROWS', 'WRAPCOLS', 'EXPAND']);
@@ -3704,7 +3764,8 @@ async function writeXlsx() {
     for (const m of s.merges) ws.mergeCells(m.r1 + 1, m.c1 + 1, m.r2 + 1, m.c2 + 1);
     if (s.af) ws.autoFilter = { from: { row: s.af.r1 + 1, column: s.af.c1 + 1 }, to: { row: filterEnd(s.af, s) + 1, column: s.af.c2 + 1 } };
   }
-  return new Blob([await wb.xlsx.writeBuffer()], { type: XLSX_MIME });
+  const buf = await wb.xlsx.writeBuffer();
+  return new Blob([WB.sheets.some(s => s.charts.length) ? await addXlsxCharts(buf) : buf], { type: XLSX_MIME });
 }
 /* CSV: each cell as text another program reads back the same: numbers plain (no ₪ or thousands marks), dates, times and
    percents the way they show. A comma between cells (a semicolon where the comma is the decimal point), and a BOM
@@ -3775,7 +3836,7 @@ async function readFile(f) {
   return readXlsx(await f.arrayBuffer());
 }
 const REP = {
-  chart: N_('{n} גרפים לא נפתחו (גרפים מתוך גיליון יגיעו בהמשך)'), pivot: N_('{n} טבלאות ציר נפתחו כתאים רגילים'), img: N_('{n} תמונות לא נפתחו'),
+  chart: N_('{n} גרפים מסוג שעוד אין כאן לא נפתחו'), pivot: N_('{n} טבלאות ציר נפתחו כתאים רגילים'), img: N_('{n} תמונות לא נפתחו'),
   fn: N_('{n} נוסחאות משתמשות בפונקציות שעוד אין כאן. הן מראות את הערך שנשמר בקובץ'), note: N_('{n} הערות על תאים לא נפתחו'), link: N_('{n} קישורים נפתחו כטקסט רגיל'),
   cond: N_('{n} גיליונות עם עיצוב מותנה נפתחו בלי העיצוב הזה'), valid: N_('{n} גיליונות עם רשימות נפתחות נפתחו בלי הרשימות'), table: N_('{n} גיליונות עם טבלאות מעוצבות נפתחו כתאים רגילים'),
   hidden: N_('{n} גיליונות מוסתרים נפתחו כגיליונות רגילים'),
@@ -3801,6 +3862,7 @@ async function sheetPdf() {
     if (cur.length || !pages.length) pages.push(cur);
     const pdf = new window.jspdf.jsPDF({ orientation: land ? 'landscape' : 'portrait', unit: 'mm', format: 'a4', compress: true });
     const mm = 25.4 / 96;
+    let lastY = 10;
     for (let i = 0; i < pages.length; i++) {
       const t = table.cloneNode(false);
       t.append(table.querySelector('colgroup').cloneNode(true));
@@ -3815,6 +3877,21 @@ async function sheetPdf() {
       const wmm = W * k * mm, hmm = cv.height / cv.width * wmm, x = WS.dir === 'rtl' ? (land ? 297 : 210) - 10 - wmm : 10;
       pdf.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', x, 10, wmm, hmm);
       cv.width = cv.height = 0;
+      lastY = 10 + hmm;
+    }
+    // the charts after the table: each at its size (or the page's width), below it while there is room
+    const pw = (land ? 297 : 210) - 20, ph = (land ? 210 : 297) - 10;
+    let y = lastY + 6;
+    for (const box of chartEls(WS, pw / mm)) {
+      const holder = h('div', { style: { position: 'fixed', left: '-20000px', top: '0' } }, box);
+      document.body.append(holder);
+      const cv = await window.html2canvas(box, { scale: 2, backgroundColor: '#ffffff', logging: false });
+      holder.remove();
+      const wmm = parseFloat(box.style.width) * mm, hmm = parseFloat(box.style.height) * mm;
+      if (y + hmm > ph) { pdf.addPage('a4', land ? 'landscape' : 'portrait'); y = 10; }
+      pdf.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', WS.dir === 'rtl' ? (land ? 297 : 210) - 10 - wmm : 10, y, wmm, hmm);
+      cv.width = cv.height = 0;
+      y += hmm + 6;
     }
     return pdf.output('blob');
   } finally { host.remove(); }
@@ -3828,7 +3905,7 @@ async function sheetPrint() {
   const rule = $('#pageRule'), before = rule.textContent;
   rule.textContent = `@page{size:A4 ${land ? 'landscape' : 'portrait'};margin:10mm}`;
   V.print.textContent = '';
-  V.print.append(h('div', { class: 'sh-print-sheet', dir: WS.dir }, t));
+  V.print.append(h('div', { class: 'sh-print-sheet', dir: WS.dir }, t, ...chartEls(WS, room).map(b => h('div', { style: { marginTop: '14px', breakInside: 'avoid' } }, b))));
   document.documentElement.classList.add('sheet-print');
   return () => { document.documentElement.classList.remove('sheet-print'); V.print.textContent = ''; rule.textContent = before; };
 }
@@ -3893,6 +3970,15 @@ function applySpec(book, s, spec) {
     }
     if (f.merge && (g.r1 !== g.r2 || g.c1 !== g.c2)) setProp(s, 'merges', [...s.merges.filter(m => !meets(m, g)), { ...g }]);
   }
+  for (const c of Array.isArray(spec.charts) ? spec.charts.slice(0, 20) : []) {
+    const g = c && parseRange(c.range);
+    if (!g || wholeCols(g) || wholeRows(g)) continue;
+    const src = guessSrc(s, g);
+    if (c.series_in === 'rows') src.by = 'r'; else if (c.series_in === 'columns') src.by = 'c';
+    const at = parseA1(c.at) || { r: g.r1, c: g.c2 + 2 };
+    const ch = normSheetChart({ ck: CK_API[c.type] || 'col', src, at: A1(at.r, at.c), w: c.width || 480, h: c.height || 288, ti: c.title, leg: c.legend !== false, lab: c.labels === true });
+    if (ch) { setProp(s, 'charts', [...s.charts, ch]); n++; }
+  }
   if (spec.freeze_rows != null) setProp(s, 'fr', clamp(Math.round(+spec.freeze_rows) || 0, 0, 200));
   if (spec.freeze_columns != null) setProp(s, 'fc', clamp(Math.round(+spec.freeze_columns) || 0, 0, 60));
   if (spec.direction === 'rtl' || spec.direction === 'ltr') setProp(s, 'dir', spec.direction);
@@ -3949,6 +4035,7 @@ function forAI(args = {}) {
   let g = args.range ? parseRange(args.range) : used;
   if (args.range && !g) throw new Error(`"${args.range}" is not a range. Use A1 notation, like A1:D20.`);
   const out = { sheets: WB.sheets.map(x => { const u = usedRange(x); return { name: x.name, used_range: u ? rangeA1(u) : null }; }), sheet: s.name, direction: s.dir };
+  if (s.charts.length) out.charts = s.charts.map(ch => ({ type: Object.keys(CK_API).find(k => CK_API[k] === ch.ck), ...(ch.ti ? { title: ch.ti } : {}), data: ch.src ? ch.src.ref : ch.ser.map(x => x.v).join(', '), at: A1(ch.at.r, ch.at.c) }));
   if (!g) return { ...out, range: null, rows: [], note: 'This sheet is empty.' };
   g = { r1: g.r1, c1: g.c1, r2: Math.min(g.r2, used ? used.r2 : g.r2, g.r1 + 399), c2: Math.min(g.c2, used ? used.c2 : g.c2, g.c1 + 59) };
   const rows = [], formulas = {};
@@ -4000,6 +4087,7 @@ function load(body, cur) {
   GEO = null;
   SEL = { r: WS.ac.r, c: WS.ac.c, er: WS.ac.r, ec: WS.ac.c };
   recalc();
+  CHV++; CH.id = null;
   for (const s of WB.sheets) filterRows(s);
   V.scroll.scrollTop = 0; V.scroll.scrollLeft = 0;
   refresh();
@@ -4027,6 +4115,548 @@ function preview(body) {
   WB = b; WS = s;
   try { recalc(); const u = usedRange(s) || { r1: 0, c1: 0, r2: 0, c2: 0 }; const t = tableEl(s, { r1: 0, c1: 0, r2: Math.min(u.r2, 60), c2: Math.min(u.c2, 15) }, { grid: true }); return h('div', { class: 'sh-prev', style: { overflow: 'auto', maxHeight: '60vh', direction: s.dir } }, h('p', { class: 'muted small', text: b.sheets.map(x => x.name).join(' · ') }), t); }
   finally { [WB, WS] = keep; }
+}
+
+/* =========================================================
+   charts: drawn over the sheet from its cells, the way Excel's are. A chart keeps where its numbers are: src, a range
+   with its series down the columns (by 'c') or along the rows (by 'r'), names in its first row (hr) and categories in
+   its first column (hc) or the other way round; or ser, each series' own references, as Excel files keep them. It
+   also keeps where it sits (at: a cell, and a distance from that cell's corner in pixels at 100%) and its size. The
+   drawing is the presentations' (drawChart)
+   ========================================================= */
+const OFFICE = ['#4472c4', '#ed7d31', '#a5a5a5', '#ffc000', '#5b9bd5', '#70ad47', '#264478', '#9e480e', '#636363', '#997300'];
+const SHEET_LOOK = { accent: '#4472c4', a2: '#ed7d31', text: '#404040', bg: '#ffffff', fBody: DEF_FONT, fTitle: DEF_FONT };
+const CKS = ['col', 'bar', 'line', 'pie', 'donut'];
+const CK_API = { column: 'col', bar: 'bar', line: 'line', pie: 'pie', donut: 'donut' };   // the names Claude uses
+const CH_PALS = { office: N_('צבעים רגילים'), bright: N_('צבעוני'), mono: N_('גוונים של צבע אחד') };
+const CH = { id: null };   // the chart chosen on screen
+let CHV = 0;               // goes up with every change, so a chart works out its numbers again only then
+const bare = ch => { const o = { ...ch }; delete o._v; delete o._d; delete o._s; return o; };
+function normSheetChart(x) {
+  if (!x || typeof x !== 'object') return null;
+  const at = parseA1(x.at);
+  if (!at) return null;
+  const n = (v, lo, hi, d) => Number.isFinite(+v) ? clamp(Math.round(+v), lo, hi) : d;
+  const ch = { id: typeof x.id === 'string' && /^[a-z0-9]{4,24}$/.test(x.id) ? x.id : sid(), ck: CKS.includes(x.ck) ? x.ck : 'col',
+    at: { r: at.r, c: at.c, dx: n(x.dx, 0, 5000, 0), dy: n(x.dy, 0, 5000, 0) }, w: n(x.w, 60, 4000, 480), h: n(x.h, 40, 4000, 288),
+    leg: x.leg !== false, pal: CH_PALS[x.pal] ? x.pal : 'office' };
+  if (typeof x.ti === 'string' && x.ti.trim()) ch.ti = x.ti.trim().slice(0, 150);
+  if (x.lab === true) ch.lab = true;
+  if (x.dir === 'ltr' || x.dir === 'rtl') ch.dir = x.dir;   // a chart from a file keeps its own direction; one made here follows its sheet
+  const ref = v => typeof v === 'string' && v.trim() && v.length <= 300 ? v.trim() : null;
+  if (x.src && typeof x.src === 'object' && ref(x.src.ref)) ch.src = { ref: ref(x.src.ref), by: x.src.by === 'r' ? 'r' : 'c', hr: x.src.hr ? 1 : 0, hc: x.src.hc ? 1 : 0 };
+  else if (Array.isArray(x.ser)) {
+    ch.ser = x.ser.slice(0, 50).map(s => s && ref(s.v) ? { v: ref(s.v), ...(ref(s.nr) ? { nr: ref(s.nr) } : typeof s.n === 'string' ? { n: s.n.slice(0, 80) } : {}) } : null).filter(Boolean);
+    if (!ch.ser.length) return null;
+    if (ref(x.cats)) ch.cats = ref(x.cats);
+  } else return null;
+  return ch;
+}
+function chartOut(ch) {
+  const o = { id: ch.id, ck: ch.ck, at: A1(ch.at.r, ch.at.c), w: ch.w, h: ch.h };
+  if (ch.at.dx) o.dx = ch.at.dx;
+  if (ch.at.dy) o.dy = ch.at.dy;
+  if (ch.ti) o.ti = ch.ti;
+  if (!ch.leg) o.leg = false;
+  if (ch.lab) o.lab = true;
+  if (ch.pal !== 'office') o.pal = ch.pal;
+  if (ch.dir) o.dir = ch.dir;
+  if (ch.src) o.src = { ...ch.src };
+  else { o.ser = ch.ser.map(x => ({ ...x })); if (ch.cats) o.cats = ch.cats; }
+  return o;
+}
+/* 'B2:B9' on the chart's own sheet, or after a sheet's name ('Sheet 2'!B2:B9). Whole columns stop at the last row in use */
+function chartRef(s, ref) {
+  const t = String(ref || '').trim(), i = t.lastIndexOf('!');
+  let sh = s, part = t;
+  if (i > 0) {
+    let nm = t.slice(0, i).trim();
+    if (nm[0] === "'" && nm.endsWith("'")) nm = nm.slice(1, -1).replace(/''/g, "'");
+    const low = nm.toLowerCase();
+    sh = WB && WB.sheets.find(x => x.name.toLowerCase() === low);
+    part = t.slice(i + 1);
+  }
+  let g = sh && parseRange(part);
+  if (!g) return null;
+  if (wholeCols(g) || wholeRows(g)) { const u = usedEnd(sh); g = { r1: g.r1, c1: g.c1, r2: Math.min(g.r2, Math.max(g.r1, u.r - 1)), c2: Math.min(g.c2, Math.max(g.c1, u.c - 1)) }; }
+  return { s: sh, g };
+}
+const cellText = (sh, r, c) => { const x = sh.cells.get(KEY(r, c)); return x ? view(x).t : ''; };
+const cellNum = (sh, r, c) => { const x = sh.cells.get(KEY(r, c)); return x && typeof x.v === 'number' ? x.v : 0; };
+const shownR = (sh, r) => !sh.hr.has(r) && !(sh._fh && sh._fh.has(r)), shownC = (sh, c) => !sh.hc.has(c);
+const upTo = (a, b, ok, max = 1000) => { const out = []; for (let i = a; i <= b && out.length < max; i++) if (ok(i)) out.push(i); return out; };
+/* the numbers of a range, in reading order (it is one row or one column); hidden rows and columns aren't drawn, as in Excel */
+function refList(s, ref, num) {
+  const R = chartRef(s, ref);
+  if (!R) return [];
+  const { s: sh, g } = R, out = [];
+  for (const r of upTo(g.r1, g.r2, r => shownR(sh, r))) for (const c of upTo(g.c1, g.c2, c => shownC(sh, c))) out.push(num ? cellNum(sh, r, c) : cellText(sh, r, c));
+  return out;
+}
+function dataOfRange(s, src) {
+  const R = chartRef(s, src.ref);
+  if (!R) return { cats: [], ser: [] };
+  const { s: sh, g } = R, rows = upTo(g.r1 + src.hr, g.r2, r => shownR(sh, r)), cols = upTo(g.c1 + src.hc, g.c2, c => shownC(sh, c));
+  if (src.by === 'r') return {
+    cats: cols.map((c, i) => src.hr ? cellText(sh, g.r1, c) : fmt(i + 1)),
+    ser: rows.slice(0, 50).map((r, j) => ({ n: src.hc ? cellText(sh, r, g.c1) : T('סדרה {0}', fmt(j + 1)), v: cols.map(c => cellNum(sh, r, c)) })) };
+  return {
+    cats: rows.map((r, i) => src.hc ? cellText(sh, r, g.c1) : fmt(i + 1)),
+    ser: cols.slice(0, 50).map((c, j) => ({ n: src.hr ? cellText(sh, g.r1, c) : T('סדרה {0}', fmt(j + 1)), v: rows.map(r => cellNum(sh, r, c)) })) };
+}
+function dataOfSeries(s, ch) {
+  const ser = ch.ser.map((x, j) => ({ n: x.nr ? refList(s, x.nr).join(' ') : x.n != null ? x.n : T('סדרה {0}', fmt(j + 1)), v: refList(s, x.v, true) }));
+  const n = Math.max(0, ...ser.map(x => x.v.length)), cats = ch.cats ? refList(s, ch.cats) : [];
+  return { cats: Array.from({ length: n }, (_, i) => cats[i] != null && cats[i] !== '' ? String(cats[i]) : fmt(i + 1)), ser: ser.map(x => ({ n: x.n, v: Array.from({ length: n }, (_, i) => x.v[i] || 0) })) };
+}
+/* the chart's categories and series now */
+function chartData(s, ch) {
+  if (ch._v === CHV && ch._s === s) return ch._d;
+  let d = { cats: [], ser: [] };
+  try { d = ch.src ? dataOfRange(s, ch.src) : dataOfSeries(s, ch); } catch (e) { console.warn(e); }
+  ch._v = CHV; ch._s = s; ch._d = d;
+  return d;
+}
+/* Excel's guess for a new chart: the first row names the series when it holds words over numbers, the first column is the
+   categories when it holds words (or dates), and the series go down the columns when there are at least as many rows */
+function guessSrc(s, g) {
+  const x = (r, c) => s.cells.get(KEY(r, c));
+  const num = (r, c) => { const v = x(r, c); return !!v && typeof v.v === 'number' && !/^(date|ldate|time)$/.test(nfKind(v.st && v.st.nf)); };
+  const word = (r, c) => { const v = x(r, c); return !!v && hasVal(v) && !num(r, c); };
+  const words = (cells) => cells.some(([r, c]) => word(r, c)) && !cells.some(([r, c]) => num(r, c));
+  const hr = g.r2 > g.r1 && words(upTo(Math.min(g.c1 + 1, g.c2), g.c2, () => true).map(c => [g.r1, c])) ? 1 : 0;
+  const hc = g.c2 > g.c1 && words(upTo(g.r1 + hr, g.r2, () => true).map(r => [r, g.c1])) ? 1 : 0;
+  return { ref: rangeA1(g), by: g.r2 - g.r1 + 1 - hr >= g.c2 - g.c1 + 1 - hc ? 'c' : 'r', hr, hc };
+}
+/* the chart itself, into a box: drawn by the presentations' code, in Excel's colors */
+function paintChart(box, ch, d, w, hh, k = 1) {
+  box.textContent = '';
+  if (!d.cats.length || !d.ser.length || !d.ser.some(x => x.v.some(v => v))) { box.append(h('div', { class: 'sh-ch-none', text: ch.src || ch.ser ? T('אין עדיין מספרים לגרף הזה') : '' })); return; }
+  const el = { ck: ch.ck, cats: d.cats, ser: d.ser, leg: ch.leg, lab: ch.lab, pal: ch.pal === 'office' ? 'theme' : ch.pal, size: 9 * k, w, h: hh, font: DEF_FONT };
+  if (ch.ti) el.ti = ch.ti;
+  if (ch.dir) el.dir = ch.dir;
+  if (ch.pal === 'office') el.cols = OFFICE;
+  drawChart(box, el, SHEET_LOOK, WS ? WS.dir : UI_DIR);
+}
+const chartBox = ch => ({ x: colX(ch.at.c) + ch.at.dx * Z, y: rowY(ch.at.r) + ch.at.dy * Z, w: ch.w * Z, h: ch.h * Z });
+/* on the sheet: each chart where it sits, drawn again only when its numbers, look or size changed */
+function drawCharts() {
+  if (CH.id && !WS.charts.some(x => x.id === CH.id)) CH.id = null;
+  for (const ch of WS.charts) {
+    const p = DRAG && DRAG.kind === 'chart' && DRAG.id === ch.id && DRAG.box ? DRAG.box : chartBox(ch);
+    const e = part(V.body, 'chart:' + ch.id, 'sh-chart');
+    if (!e._in) {
+      e._in = h('div', { class: 'sh-ch-in' });
+      e.append(e._in, ...['ts', 't', 'te', 's', 'e', 'bs', 'b', 'be'].map(k => h('div', { class: 'sh-hd h-' + k, 'data-h': k })));
+    }
+    e.dataset.id = ch.id;
+    place(e, p.x, p.y, p.w, p.h);
+    const d = chartData(WS, ch), sig = [CHV, ch.ck, ch.ti, ch.leg, ch.lab, ch.pal, Math.round(p.w), Math.round(p.h), Z, WS.dir, JSON.stringify(ch.src || ch.ser)].join('|');
+    if (e._sig !== sig) { e._sig = sig; paintChart(e._in, ch, d, p.w, p.h, Z); }
+    e.classList.toggle('on', CH.id === ch.id);
+  }
+}
+/* the chart under the pointer. By its place, not the event's target: after a drag the sheet holds the pointer, and a
+   double click's target is the sheet */
+function chartAt(e) {
+  for (const el of V.body.querySelectorAll('.sh-chart')) { const r = el.getBoundingClientRect(); if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) return el; }
+  return null;
+}
+/* choosing, moving and resizing a chart with the pointer */
+function chartDown(e, ce) {
+  const ch = WS.charts.find(x => x.id === ce.dataset.id);
+  if (!ch) return;
+  e.preventDefault();
+  if (ED.on && !endEdit(true)) return;
+  closePopover();
+  if (CH.id !== ch.id) { CH.id = ch.id; renderSoon(); }
+  focusGrid();
+  if (e.button !== 0) return;
+  DRAG = { kind: 'chart', id: ch.id, h: e.target.dataset.h || null, x0: e.clientX, y0: e.clientY, b0: chartBox(ch), box: null };
+  V.scroll.setPointerCapture(e.pointerId);
+}
+function chartMove(e) {
+  const d = DRAG, dx = (e.clientX - d.x0) * (WS.dir === 'rtl' ? -1 : 1), dy = e.clientY - d.y0, min = 40;
+  if (!d.box && Math.hypot(dx, dy) < 3) return;
+  let { x, y, w, h: hh } = d.b0;
+  const k = d.h;
+  if (!k) { x += dx; y += dy; }
+  else {
+    const top = k[0] === 't', bot = k[0] === 'b', st = k === 's' || k.endsWith('s'), en = k === 'e' || k.endsWith('e');
+    if (top) { y += dy; hh -= dy; }
+    if (bot) hh += dy;
+    if (st) { x += dx; w -= dx; }
+    if (en) w += dx;
+    if (w < min) { if (st) x -= min - w; w = min; }
+    if (hh < min) { if (top) y -= min - hh; hh = min; }
+  }
+  d.box = { x: Math.max(RHW, x), y: Math.max(CHH, y), w, h: hh };
+  renderSoon();
+}
+function chartUp(d) {
+  const ch = WS.charts.find(x => x.id === d.id);
+  if (!ch || !d.box) { renderSoon(); return; }
+  const b = d.box, c = colAtX(b.x), r = rowAtY(b.y);
+  setChart(ch.id, { at: { r, c, dx: Math.max(0, Math.round((b.x - colX(c)) / Z)), dy: Math.max(0, Math.round((b.y - rowY(r)) / Z)) }, w: Math.round(b.w / Z), h: Math.round(b.h / Z) });
+}
+function chartKey(e) {
+  const k = e.key, mod = e.ctrlKey || e.metaKey;
+  if (k === 'Delete' || k === 'Backspace') { e.preventDefault(); deleteChart(CH.id); return true; }
+  if (k === 'Escape') { e.preventDefault(); CH.id = null; renderSoon(); return true; }
+  if ((k === 'Enter' || k === 'F2') && !mod) { e.preventDefault(); openChartDialog(CH.id); return true; }
+  if (/^Arrow/.test(k) && !mod) { e.preventDefault(); return true; }
+  if (k.length === 1 && !mod && !e.altKey) { e.preventDefault(); return true; }   // letters don't go into the cell under the chart
+  return false;
+}
+/* one step for undo */
+function setChart(id, patch, s = WS) { edit(() => setProp(s, 'charts', s.charts.map(x => x.id === id ? { ...bare(x), ...patch } : x))); }
+function deleteChart(id, s = WS) {
+  if (!s.charts.some(x => x.id === id)) return;
+  edit(() => setProp(s, 'charts', s.charts.filter(x => x.id !== id)));
+  if (CH.id === id) CH.id = null;
+  focusGrid();
+}
+/* a new chart from the chosen cells (or the block of filled cells around the active one), beside them */
+function insertChart(ck) {
+  if (ED.on && !endEdit(true)) return;
+  let g = selG();
+  if (wholeCols(g) || wholeRows(g)) g = usedPart(g);
+  if (g.r1 === g.r2 && g.c1 === g.c2) g = region(WS, SEL.r, SEL.c);
+  let any = false;
+  for (let r = g.r1; r <= g.r2 && !any; r++) for (let c = g.c1; c <= g.c2 && !any; c++) { const x = WS.cells.get(KEY(r, c)); if (x && typeof x.v === 'number') any = true; }
+  if (!any) { toast(T('כדי ליצור גרף, בוחרים קודם את התאים עם המספרים (ואפשר גם את הכותרות שלהם).'), { icon: 'bar_chart', ms: 6000 }); return; }
+  const src = guessSrc(WS, g);
+  // beside everything filled in those rows, so it covers no data, and below the frozen rows, which would hide its top
+  let end = g.c2;
+  for (const k of WS.cells.keys()) { const r = kr(k), c = kc(k); if (r >= g.r1 && r <= g.r2 && c > end && hasVal(WS.cells.get(k))) end = c; }
+  const ch = { id: sid(), ck: CKS.includes(ck) ? ck : 'col', src, at: { r: Math.max(g.r1, WS.fr), c: Math.max(end + 2, WS.fc), dx: 0, dy: 0 }, w: 480, h: 288, leg: true, pal: 'office' };
+  const d = dataOfRange(WS, src);
+  if (d.ser.length === 1 && src.hr + src.hc && d.ser[0].n) ch.ti = d.ser[0].n;   // one series: its name on top, as Excel does
+  edit(() => setProp(WS, 'charts', [...WS.charts, ch]));
+  CH.id = ch.id;
+  refresh();
+  const b = chartBox(ch), sc = V.scroll, sx = Math.abs(sc.scrollLeft);
+  if (b.x + b.w > sx + sc.clientWidth) { const to = Math.max(0, b.x + b.w - sc.clientWidth + 20); sc.scrollLeft = WS.dir === 'rtl' ? -to : to; }
+  if (b.y + b.h > sc.scrollTop + sc.clientHeight) sc.scrollTop = Math.max(0, b.y + b.h - sc.clientHeight + 20);
+  focusGrid();
+}
+function openChartMenu(x, y) {
+  const id = CH.id;
+  if (!id) return;
+  menuAtPoint(x, y, [
+    { ic: 'edit', label: T('עריכת הגרף…'), key: 'Enter', run: () => openChartDialog(id) },
+    '-',
+    ...CKS.map(k => ({ ic: CHARTS[k].ic, label: T(CHARTS[k].n), run: () => setChart(id, { ck: k }) })),
+    '-',
+    { ic: 'delete', label: T('מחיקת הגרף'), key: 'Delete', run: () => deleteChart(id), danger: true },
+  ]);
+}
+/* the chart's window: its kind, where its numbers are, its title, legend, numbers and colors, with a picture of the result */
+function openChartDialog(id) {
+  const ch0 = WS && WS.charts.find(x => x.id === id);
+  if (!ch0) return;
+  const st = bare(ch0);
+  const check = (text, on) => { const i = h('input', { type: 'checkbox' }); i.checked = !!on; return [h('label', { class: 'check' }, i, h('span', { text })), i]; };
+  const types = h('div', { class: 'sh-ch-types', role: 'radiogroup' });
+  const refIn = h('input', { class: 'field', dir: 'ltr', value: st.src ? st.src.ref : '', placeholder: 'A1:C7', spellcheck: 'false', 'aria-label': T('טווח הנתונים') });
+  const by = h('select', { class: 'field' }, [['c', T('סדרות בעמודות')], ['r', T('סדרות בשורות')]].map(([v, t]) => h('option', { value: v, text: t })));
+  by.value = st.src ? st.src.by : 'c';
+  const [hrL, hr] = check(T('בשורה הראשונה יש כותרות'), st.src ? st.src.hr : 1), [hcL, hc] = check(T('בעמודה הראשונה יש כותרות'), st.src ? st.src.hc : 1);
+  const ti = h('input', { class: 'field', maxlength: '150', value: st.ti || '', 'aria-label': T('כותרת') });
+  const [legL, leg] = check(T('מקרא'), st.leg), [labL, lab] = check(T('מספרים על הגרף'), st.lab);
+  const pal = h('select', { class: 'field', 'aria-label': T('צבעים') }, Object.entries(CH_PALS).map(([v, t]) => h('option', { value: v, text: T(t) })));
+  pal.value = st.pal;
+  const err = h('p', { class: 'sh-ch-err', role: 'alert', hidden: true }), note = h('p', { class: 'muted small', hidden: !!st.src, text: T('הגרף הזה הגיע מקובץ, והנתונים שלו באים מכמה מקומות. אפשר לכתוב כאן טווח אחד במקומם.') });
+  const prev = h('div', { class: 'sh-ch-prev' });
+  const read = () => {
+    err.hidden = true;
+    const t = refIn.value.trim();
+    if (t) {
+      if (!chartRef(WS, t)) { err.textContent = T('הטווח "{0}" לא נמצא. כותבים אותו כמו A1:C7, ואפשר גם עם שם של גיליון: \'גיליון2\'!A1:C7', t); err.hidden = false; return false; }
+      st.src = { ref: t, by: by.value, hr: hr.checked ? 1 : 0, hc: hc.checked ? 1 : 0 };
+      delete st.ser; delete st.cats;
+    } else if (!ch0.ser) { err.textContent = T('כותבים איפה המספרים של הגרף, למשל A1:C7'); err.hidden = false; return false; }
+    st.ti = ti.value.trim() || undefined;
+    st.leg = leg.checked; st.lab = lab.checked || undefined; st.pal = pal.value;
+    return true;
+  };
+  const draw = () => {
+    types.textContent = '';
+    for (const k of CKS) types.append(h('button', { type: 'button', class: 'sh-ch-type' + (st.ck === k ? ' on' : ''), role: 'radio', 'aria-checked': String(st.ck === k), onclick: () => { st.ck = k; draw(); } }, icon(CHARTS[k].ic), h('span', { text: T(CHARTS[k].n) })));
+    prev.textContent = '';
+    if (!read()) return;
+    const box = h('div', { class: 'sh-ch-in' });
+    prev.append(box);
+    paintChart(box, st, st.src ? dataOfRange(WS, st.src) : dataOfSeries(WS, st), 440, 260);
+  };
+  for (const x of [refIn, ti]) x.addEventListener('input', debounce(draw, 250));
+  for (const x of [by, hr, hc, leg, lab, pal]) x.addEventListener('change', draw);
+  const fld = (label, ...kids) => h('label', { class: 'fld' }, h('span', { text: label }), ...kids);
+  const body = h('div', { class: 'sh-ch-dlg' },
+    h('div', { class: 'sh-ch-side' }, types,
+      fld(T('טווח הנתונים'), refIn), note, err,
+      h('div', { class: 'sh-ch-row' }, by), hrL, hcL,
+      fld(T('כותרת'), ti), legL, labL, fld(T('צבעים'), pal)),
+    prev);
+  draw();
+  modal({ title: T('עריכת הגרף'), wide: true, body, actions: [
+    { label: T('אישור'), kind: 'primary', run: () => { if (!read()) return false; if (!WS.charts.some(x => x.id === id)) return; setChart(id, bare(st)); } },
+    { label: T('ביטול'), value: false },
+  ] });
+}
+/* rows or columns in or out: the charts' numbers follow their cells (fn changes a reference the way formulas change) */
+function eachChart(fn) {
+  for (const sh of WB.sheets) {
+    let any = false;
+    const f = r => { if (r == null) return r; const t = fn(r, sh.name); if (t !== r) any = true; return t; };
+    const next = sh.charts.map(ch => {
+      const c = bare(ch);
+      if (c.src) c.src = { ...c.src, ref: f(c.src.ref) };
+      if (c.ser) c.ser = c.ser.map(x => ({ ...x, v: f(x.v), ...(x.nr ? { nr: f(x.nr) } : {}) }));
+      if (c.cats) c.cats = f(c.cats);
+      return c;
+    });
+    if (any) setProp(sh, 'charts', next);
+  }
+}
+/* and the charts under or after the change move with their cells */
+function moveCharts(s, axis, at, n) {
+  const k = axis === 'r' ? 'r' : 'c';
+  let any = false;
+  const next = s.charts.map(ch => {
+    const p = ch.at[k];
+    if (p < at) return ch;
+    any = true;
+    return { ...bare(ch), at: { ...ch.at, [k]: n < 0 && p < at - n ? at : Math.max(0, p + n) } };
+  });
+  if (any) setProp(s, 'charts', next);
+}
+
+/* --- Excel files: charts in, and charts out. ExcelJS reads and writes neither, so the file's parts are read and
+   written here, with JSZip --- */
+const JSZIP = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+async function zipLib() { if (!window.JSZip) await loadScript(JSZIP); if (!window.JSZip) throw new Error('lib'); return window.JSZip; }
+const XK = { barChart: 'bar', bar3DChart: 'bar', lineChart: 'line', line3DChart: 'line', areaChart: 'line', area3DChart: 'line', pieChart: 'pie', pie3DChart: 'pie', doughnutChart: 'donut' };
+const EMU = 9525;
+const partPath = (base, target) => {   // a relationship's target, from the folder of the part that points to it
+  if (target[0] === '/') return target.slice(1);
+  const out = base.split('/').slice(0, -1);
+  for (const p of target.split('/')) { if (p === '..') out.pop(); else if (p !== '.') out.push(p); }
+  return out.join('/');
+};
+const relsOf = p => p.replace(/([^/]+)$/, '_rels/$1.rels');
+/* the charts in an Excel file, sheet by sheet (by the sheet's name in the file): each as a chart of ours, or null when its kind isn't here */
+async function readXlsxCharts(buf) {
+  const JSZip = await zipLib(), zip = await JSZip.loadAsync(buf), dp = new DOMParser();
+  const xml = async p => { const f = zip.file(p); return f ? dp.parseFromString(await f.async('string'), 'application/xml') : null; };
+  const rels = async p => { const d = await xml(relsOf(p)), m = new Map(); if (d) for (const r of xdesc(d, 'Relationship')) m.set(xat(r, 'Id'), { type: xat(r, 'Type') || '', target: partPath(p, xat(r, 'Target') || '') }); return m; };
+  const out = new Map(), wbx = await xml('xl/workbook.xml');
+  if (!wbx) return out;
+  const wrels = await rels('xl/workbook.xml');
+  for (const sh of xdesc(wbx, 'sheet')) {
+    const rid = [...sh.attributes].find(a => a.localName === 'id' && /relationships/.test(a.namespaceURI || ''));
+    const sp = rid && wrels.get(rid.value);
+    if (!sp) continue;
+    const list = [];
+    for (const r of (await rels(sp.target)).values()) {
+      if (!/\/drawing$/.test(r.type)) continue;
+      const dx = await xml(r.target); if (!dx) continue;
+      const drels = await rels(r.target);
+      for (const an of xkids(dx.documentElement).filter(e => /Anchor$/.test(e.localName))) {
+        const ce = xdesc(an, 'chart')[0], cr = ce && [...ce.attributes].find(a => a.localName === 'id');
+        const cp = cr && drels.get(cr.value);
+        if (!cp) continue;
+        const num = (e, k) => +((xkid(e, k) || {}).textContent || 0) || 0, pos = e => e && { c: num(e, 'col'), co: num(e, 'colOff'), r: num(e, 'row'), ro: num(e, 'rowOff') };
+        const from = pos(xkid(an, 'from')), to = pos(xkid(an, 'to')), ext = xkid(an, 'ext');
+        list.push({ chart: chartFromXml(await xml(cp.target)), from, to, ext: ext && { cx: +xat(ext, 'cx') || 0, cy: +xat(ext, 'cy') || 0 } });
+      }
+    }
+    if (list.length) out.set(xat(sh, 'name'), list);
+  }
+  return out;
+}
+function chartFromXml(doc) {
+  const plot = doc && xdesc(doc, 'plotArea')[0];
+  if (!plot) return null;
+  const ty = xkids(plot).find(e => XK[e.localName]);
+  if (!ty) return null;
+  let ck = XK[ty.localName];
+  if (ck === 'bar') ck = xat(xkid(ty, 'barDir'), 'val') === 'bar' ? 'bar' : 'col';
+  const fOf = e => { const f = e && xdesc(e, 'f')[0]; return f ? f.textContent.trim() : null; };
+  const ser = [];
+  for (const s of xkids(ty, 'ser')) {
+    const v = fOf(xkid(s, 'val'));
+    if (!v || /[(),]/.test(v)) return null;
+    const tx = xkid(s, 'tx'), nr = fOf(tx), lit = tx && xkid(tx, 'v');
+    ser.push({ v, ...(nr ? { nr } : lit ? { n: lit.textContent.slice(0, 80) } : {}) });
+  }
+  if (!ser.length) return null;
+  const s0 = xkids(ty, 'ser')[0], cats = fOf(xkid(s0, 'cat'));
+  const chart = xdesc(doc, 'chart')[0], title = xkid(chart, 'title'), auto = xat(xkid(chart, 'autoTitleDeleted'), 'val') === '1';
+  const ch = { ck, ser, leg: !!xkid(chart, 'legend'), pal: 'office' };
+  if (ck !== 'pie' && ck !== 'donut') { const ax = xkid(plot, ck === 'bar' ? 'valAx' : 'catAx'); ch.dir = xat(xkid(xkid(ax, 'scaling'), 'orientation'), 'val') === 'maxMin' ? 'rtl' : 'ltr'; }
+  if (cats && !/[(),]/.test(cats)) ch.cats = cats;
+  const rich = title ? xdesc(title, 't').map(t => t.textContent).join('').trim() : '';
+  const tcache = title && fOf(title) ? xdesc(title, 'v').map(t => t.textContent).join('').trim() : '';
+  if (rich || tcache) ch.ti = (rich || tcache).slice(0, 150);
+  else if (!auto && ser.length === 1) ch.tiSer = true;   // Excel's own title for one series: its name
+  if (xdesc(ty, 'showVal').some(e => xat(e, 'val') === '1') || xdesc(ty, 'showPercent').some(e => xat(e, 'val') === '1')) ch.lab = true;
+  return ch;
+}
+/* a chart from a file on sheet s: where it sits by its anchor, and its references as one range when they make one */
+function placeXlsxChart(s, x) {
+  const c = x.chart;
+  const wOf = i => s.hc.has(i) ? 0 : s.cw.get(i) ?? s.dw, hOf = i => s.hr.has(i) ? 0 : s.rh.get(i) ?? s.dh;
+  const f = x.from || { c: 0, co: 0, r: 0, ro: 0 };
+  let w = 480, hh = 288;
+  if (x.to) {
+    w = -f.co / EMU; for (let i = f.c; i < x.to.c && i < f.c + 500; i++) w += wOf(i); w += x.to.co / EMU;
+    hh = -f.ro / EMU; for (let i = f.r; i < x.to.r && i < f.r + 5000; i++) hh += hOf(i); hh += x.to.ro / EMU;
+  } else if (x.ext && x.ext.cx) { w = x.ext.cx / EMU; hh = x.ext.cy / EMU; }
+  const ch = normSheetChart({ ...c, id: sid(), at: A1(f.r, f.c), dx: f.co / EMU, dy: f.ro / EMU, w, h: hh });
+  if (!ch) return null;
+  if (c.tiSer) { const d = dataOfSeries(s, ch); if (d.ser[0] && d.ser[0].n) ch.ti = d.ser[0].n; }
+  const src = toSrc(s, ch);
+  if (src) { ch.src = src; delete ch.ser; delete ch.cats; }
+  return ch;
+}
+/* series that sit side by side, each one column (or one row), with their names above them and the categories beside
+   them, are one range: a chart made here keeps it that way, and its window can show it */
+function toSrc(s, ch) {
+  if (ch.ser.some(x => x.n != null && !x.nr)) return null;
+  const vs = ch.ser.map(x => chartRef(s, x.v));
+  if (vs.some(v => !v)) return null;
+  const sh = vs[0].s, g0 = vs[0].g;
+  if (vs.some(v => v.s !== sh)) return null;
+  const cat = ch.cats ? chartRef(s, ch.cats) : null, names = ch.ser.map(x => x.nr ? chartRef(s, x.nr) : null);
+  if (ch.cats && (!cat || cat.s !== sh)) return null;
+  const one = (x, r, c) => !!x && x.s === sh && x.g.r1 === r && x.g.r2 === r && x.g.c1 === c && x.g.c2 === c;
+  const pre = sh === s ? '' : "'" + sh.name.replace(/'/g, "''") + "'!";
+  if (vs.every((v, i) => v.g.c1 === v.g.c2 && v.g.c1 === g0.c1 + i && v.g.r1 === g0.r1 && v.g.r2 === g0.r2)) {
+    const hr = names.every(n => !n) ? 0 : names.every((n, i) => one(n, g0.r1 - 1, g0.c1 + i)) ? 1 : -1;
+    const hc = !cat ? 0 : cat.g.c1 === g0.c1 - 1 && cat.g.c2 === g0.c1 - 1 && cat.g.r1 === g0.r1 && cat.g.r2 === g0.r2 ? 1 : -1;
+    if (hr < 0 || hc < 0 || (hr && !hc && cat)) return null;
+    return { ref: pre + rangeA1({ r1: g0.r1 - hr, c1: g0.c1 - hc, r2: g0.r2, c2: g0.c1 + vs.length - 1 }), by: 'c', hr, hc };
+  }
+  if (vs.every((v, i) => v.g.r1 === v.g.r2 && v.g.r1 === g0.r1 + i && v.g.c1 === g0.c1 && v.g.c2 === g0.c2)) {
+    const hc = names.every(n => !n) ? 0 : names.every((n, i) => one(n, g0.r1 + i, g0.c1 - 1)) ? 1 : -1;
+    const hr = !cat ? 0 : cat.g.r1 === g0.r1 - 1 && cat.g.r2 === g0.r1 - 1 && cat.g.c1 === g0.c1 && cat.g.c2 === g0.c2 ? 1 : -1;
+    if (hr < 0 || hc < 0) return null;
+    return { ref: pre + rangeA1({ r1: g0.r1 - hr, c1: g0.c1 - hc, r2: g0.r1 + vs.length - 1, c2: g0.c2 }), by: 'r', hr, hc };
+  }
+  return null;
+}
+/* each series as references Excel reads: 'Sheet'!$B$2:$B$9, with the values they hold now */
+function xlSeries(s, ch) {
+  const q = sh => "'" + sh.name.replace(/'/g, "''") + "'!";
+  const abs = (sh, g) => q(sh) + (g.r1 === g.r2 && g.c1 === g.c2 ? '$' + colName(g.c1) + '$' + (g.r1 + 1) : '$' + colName(g.c1) + '$' + (g.r1 + 1) + ':$' + colName(g.c2) + '$' + (g.r2 + 1));
+  const vals = (sh, g, num) => { const out = []; for (let r = g.r1; r <= g.r2 && out.length < 4000; r++) for (let c = g.c1; c <= g.c2 && out.length < 4000; c++) out.push(num ? cellNum(sh, r, c) : cellText(sh, r, c)); return out; };
+  const one = ref => { const R = chartRef(s, ref); return R && { f: abs(R.s, R.g), sh: R.s, g: R.g }; };
+  const out = { cats: null, ser: [] };
+  if (ch.src) {
+    const R = chartRef(s, ch.src.ref); if (!R) return null;
+    const { s: sh, g } = R, { hr, hc } = ch.src;
+    if (ch.src.by === 'r') {
+      if (hr) { const cg = { r1: g.r1, c1: g.c1 + hc, r2: g.r1, c2: g.c2 }; out.cats = { f: abs(sh, cg), v: vals(sh, cg) }; }
+      for (let r = g.r1 + hr; r <= g.r2; r++) { const vg = { r1: r, c1: g.c1 + hc, r2: r, c2: g.c2 }; out.ser.push({ name: hc ? { f: abs(sh, { r1: r, c1: g.c1, r2: r, c2: g.c1 }), v: cellText(sh, r, g.c1) } : null, val: { f: abs(sh, vg), v: vals(sh, vg, true) } }); }
+    } else {
+      if (hc) { const cg = { r1: g.r1 + hr, c1: g.c1, r2: g.r2, c2: g.c1 }; out.cats = { f: abs(sh, cg), v: vals(sh, cg) }; }
+      for (let c = g.c1 + hc; c <= g.c2; c++) { const vg = { r1: g.r1 + hr, c1: c, r2: g.r2, c2: c }; out.ser.push({ name: hr ? { f: abs(sh, { r1: g.r1, c1: c, r2: g.r1, c2: c }), v: cellText(sh, g.r1, c) } : null, val: { f: abs(sh, vg), v: vals(sh, vg, true) } }); }
+    }
+  } else {
+    const cr = ch.cats && one(ch.cats);
+    if (cr) out.cats = { f: cr.f, v: vals(cr.sh, cr.g) };
+    for (const x of ch.ser) {
+      const vr = one(x.v); if (!vr) continue;
+      const nr = x.nr && one(x.nr);
+      out.ser.push({ name: nr ? { f: nr.f, v: vals(nr.sh, nr.g).join(' ') } : x.n != null ? { lit: x.n } : null, val: { f: vr.f, v: vals(vr.sh, vr.g, true) } });
+    }
+  }
+  return out.ser.length ? out : null;
+}
+/* one chart part, the way Excel writes it */
+function xlChartXml(s, ch) {
+  const S = xlSeries(s, ch);
+  if (!S) return null;
+  const x = t => esc(String(t)), round = ch.ck === 'pie' || ch.ck === 'donut';
+  const strRef = (r, one) => `<c:strRef><c:f>${x(r.f)}</c:f><c:strCache><c:ptCount val="${one ? 1 : r.v.length}"/>${(one ? [r.v] : r.v).map((v, i) => `<c:pt idx="${i}"><c:v>${x(v)}</c:v></c:pt>`).join('')}</c:strCache></c:strRef>`;
+  const numRef = r => `<c:numRef><c:f>${x(r.f)}</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="${r.v.length}"/>${r.v.map((v, i) => `<c:pt idx="${i}"><c:v>${+v || 0}</c:v></c:pt>`).join('')}</c:numCache></c:numRef>`;
+  const fill = c => `<c:spPr><a:solidFill><a:srgbClr val="${c.slice(1).toUpperCase()}"/></a:solidFill>${ch.ck === 'line' ? `<a:ln w="28575" cap="rnd"><a:solidFill><a:srgbClr val="${c.slice(1).toUpperCase()}"/></a:solidFill><a:round/></a:ln>` : round ? '<a:ln w="19050"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:ln>' : ''}</c:spPr>`;
+  const cols = ch.pal === 'bright' ? BRIGHT : OFFICE;
+  const labels = ch.lab ? `<c:dLbls><c:showLegendKey val="0"/><c:showVal val="${round ? 0 : 1}"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="${round ? 1 : 0}"/><c:showBubbleSize val="0"/></c:dLbls>` : '';
+  const ser = S.ser.map((sr, i) => {
+    const tx = sr.name ? sr.name.lit != null ? `<c:tx><c:v>${x(sr.name.lit)}</c:v></c:tx>` : `<c:tx>${strRef(sr.name, true)}</c:tx>` : '';
+    const pts = round ? sr.val.v.map((_, j) => `<c:dPt><c:idx val="${j}"/><c:bubble3D val="0"/>${fill(cols[j % cols.length])}</c:dPt>`).join('') : '';
+    const cat = S.cats ? `<c:cat>${strRef(S.cats)}</c:cat>` : '';
+    const c = cols[i % cols.length].slice(1).toUpperCase(), dot = `<c:marker><c:symbol val="circle"/><c:size val="5"/><c:spPr><a:solidFill><a:srgbClr val="${c}"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="${c}"/></a:solidFill></a:ln></c:spPr></c:marker>`;
+    return `<c:ser><c:idx val="${i}"/><c:order val="${i}"/>${tx}${round ? '' : fill(cols[i % cols.length])}${ch.ck === 'line' ? dot : ch.ck === 'col' || ch.ck === 'bar' ? '<c:invertIfNegative val="0"/>' : ''}${pts}${cat}<c:val>${numRef(sr.val)}</c:val>${ch.ck === 'line' ? '<c:smooth val="0"/>' : ''}</c:ser>`;
+  }).join('');
+  // a right-to-left sheet's chart runs right to left, as it does here: the categories (or, for bars, the values) reversed
+  const rtl = (ch.dir || s.dir) === 'rtl', cRev = rtl && ch.ck !== 'bar' ? 'maxMin' : 'minMax', vRev = rtl && ch.ck === 'bar' ? 'maxMin' : 'minMax';
+  const axes = `<c:catAx><c:axId val="500000001"/><c:scaling><c:orientation val="${cRev}"/></c:scaling><c:delete val="0"/><c:axPos val="${ch.ck === 'bar' ? 'l' : 'b'}"/><c:numFmt formatCode="General" sourceLinked="1"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="500000002"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/><c:noMultiLvlLbl val="0"/></c:catAx>`
+    + `<c:valAx><c:axId val="500000002"/><c:scaling><c:orientation val="${vRev}"/></c:scaling><c:delete val="0"/><c:axPos val="${ch.ck === 'bar' ? 'b' : 'l'}"/><c:majorGridlines><c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="D9D9D9"/></a:solidFill></a:ln></c:spPr></c:majorGridlines><c:numFmt formatCode="General" sourceLinked="1"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="500000001"/><c:crosses val="autoZero"/><c:crossBetween val="between"/></c:valAx>`;
+  const ax = '<c:axId val="500000001"/><c:axId val="500000002"/>';
+  const body = ch.ck === 'line' ? `<c:lineChart><c:grouping val="standard"/><c:varyColors val="0"/>${ser}${labels}<c:marker val="1"/>${ax}</c:lineChart>${axes}`
+    : ch.ck === 'pie' ? `<c:pieChart><c:varyColors val="1"/>${ser}${labels}<c:firstSliceAng val="0"/></c:pieChart>`
+    : ch.ck === 'donut' ? `<c:doughnutChart><c:varyColors val="1"/>${ser}${labels}<c:firstSliceAng val="0"/><c:holeSize val="50"/></c:doughnutChart>`
+    : `<c:barChart><c:barDir val="${ch.ck === 'bar' ? 'bar' : 'col'}"/><c:grouping val="clustered"/><c:varyColors val="0"/>${ser}${labels}<c:gapWidth val="150"/>${ax}</c:barChart>${axes}`;
+  const title = ch.ti ? `<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1400" b="0"/></a:pPr><a:r><a:rPr lang="he-IL" sz="1400" b="0"/><a:t>${x(ch.ti)}</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title>` : '';
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><c:roundedCorners val="0"/><c:chart>${title}<c:autoTitleDeleted val="${ch.ti ? 0 : 1}"/><c:plotArea><c:layout/>${body}</c:plotArea>${ch.leg ? '<c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend>' : ''}<c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"><a:latin typeface="${DEF_FONT}"/><a:cs typeface="${DEF_FONT}"/></a:defRPr></a:pPr><a:endParaRPr lang="he-IL"/></a:p></c:txPr></c:chartSpace>`;
+}
+/* where a chart sits, as Excel keeps it: from a cell to a cell, each with a distance in EMU */
+function xlAnchor(s, ch) {
+  const wOf = i => s.hc.has(i) ? 0 : s.cw.get(i) ?? s.dw, hOf = i => s.hr.has(i) ? 0 : s.rh.get(i) ?? s.dh;
+  const walk = (i, off, len, size) => { let left = off + len; while (left > size(i) && i < 20000) { left -= size(i); i++; } return [i, Math.round(left * EMU)]; };
+  const [c2, co2] = walk(ch.at.c, ch.at.dx, ch.w, wOf), [r2, ro2] = walk(ch.at.r, ch.at.dy, ch.h, hOf);
+  return `<xdr:from><xdr:col>${ch.at.c}</xdr:col><xdr:colOff>${Math.round(ch.at.dx * EMU)}</xdr:colOff><xdr:row>${ch.at.r}</xdr:row><xdr:rowOff>${Math.round(ch.at.dy * EMU)}</xdr:rowOff></xdr:from><xdr:to><xdr:col>${c2}</xdr:col><xdr:colOff>${co2}</xdr:colOff><xdr:row>${r2}</xdr:row><xdr:rowOff>${ro2}</xdr:rowOff></xdr:to>`;
+}
+/* the charts into a workbook ExcelJS wrote: a drawing for each sheet that has some, and a chart part for each chart */
+async function addXlsxCharts(buf) {
+  const JSZip = await zipLib(), zip = await JSZip.loadAsync(buf);
+  let ct = await zip.file('[Content_Types].xml').async('string'), dn = 0, cn = 0;
+  const used = p => !!zip.file(p);
+  for (let i = 0; i < WB.sheets.length; i++) {
+    const s = WB.sheets[i], charts = s.charts.map(ch => [ch, xlChartXml(s, ch)]).filter(x => x[1]);
+    if (!charts.length) continue;
+    const sp = `xl/worksheets/sheet${i + 1}.xml`, sf = zip.file(sp);
+    if (!sf) continue;
+    do dn++; while (used(`xl/drawings/drawing${dn}.xml`));
+    const anchors = [], drels = [];
+    charts.forEach(([ch, xml], j) => {
+      do cn++; while (used(`xl/charts/chart${cn}.xml`));
+      zip.file(`xl/charts/chart${cn}.xml`, xml);
+      ct = ct.replace('</Types>', `<Override PartName="/xl/charts/chart${cn}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/></Types>`);
+      drels.push(`<Relationship Id="rId${j + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart${cn}.xml"/>`);
+      anchors.push(`<xdr:twoCellAnchor editAs="oneCell">${xlAnchor(s, ch)}<xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="${j + 2}" name="${esc(T('גרף {0}', j + 1))}"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId${j + 1}"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor>`);
+    });
+    zip.file(`xl/drawings/drawing${dn}.xml`, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">${anchors.join('')}</xdr:wsDr>`);
+    zip.file(`xl/drawings/_rels/drawing${dn}.xml.rels`, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${drels.join('')}</Relationships>`);
+    ct = ct.replace('</Types>', `<Override PartName="/xl/drawings/drawing${dn}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>`);
+    // the sheet points to its drawing
+    const rp = relsOf(sp), rf = zip.file(rp);
+    let rx = rf ? await rf.async('string') : '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+    let k = 1; while (rx.includes(`Id="rId${k}"`)) k++;
+    rx = rx.replace('</Relationships>', `<Relationship Id="rId${k}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing${dn}.xml"/></Relationships>`);
+    zip.file(rp, rx);
+    let sx = await sf.async('string');
+    if (!/xmlns:r=/.test(sx.slice(0, 600))) sx = sx.replace('<worksheet ', '<worksheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ');
+    const at = ['<legacyDrawing', '<legacyDrawingHF', '<picture', '<oleObjects', '<controls', '<webPublishItems', '<tableParts', '<extLst', '</worksheet>'].map(t => sx.indexOf(t)).filter(p => p >= 0);
+    const pos = Math.min(...at);
+    sx = sx.slice(0, pos) + `<drawing r:id="rId${k}"/>` + sx.slice(pos);
+    zip.file(sp, sx);
+  }
+  zip.file('[Content_Types].xml', ct);
+  return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+}
+/* printing and PDF: the charts after the table, each at its size (or the page's width) */
+function chartEls(s, maxW) {
+  return s.charts.map(ch => {
+    const k = Math.min(1, maxW / ch.w), w = ch.w * k, hh = ch.h * k;
+    const box = h('div', { class: 'sh-ch-in sh-ch-print', style: { position: 'relative', width: w + 'px', height: hh + 'px', background: '#fff', border: '1px solid #d9d9d9', direction: 'ltr' } });
+    const keep = WS; WS = s;
+    try { paintChart(box, ch, chartData(s, ch), w, hh, k); } finally { WS = keep; }
+    return box;
+  });
 }
 
 /* =========================================================
@@ -4109,6 +4739,7 @@ function gOut(s) {
   if (s.hr.size) o.hr = [...s.hr].map(rid).filter(Boolean);
   if (s.merges.length) o.mg = s.merges.map(box).filter(Boolean);
   if (s.af) { const b = box(s.af); if (b) o.af = { g: b, hide: Object.entries(s.af.hide).map(([c, v]) => [cid(+c), v]).filter(p => p[0]) }; }
+  if (s.charts.length) o.ch = s.charts.map(ch => { const x = chartOut(ch), a = rid(ch.at.r), b = cid(ch.at.c); delete x.dx; delete x.dy; return a && b ? { ...x, at: [a, b, ch.at.dx, ch.at.dy] } : null; }).filter(Boolean);
   return o;
 }
 /* the same, checked, from someone else */
@@ -4131,6 +4762,13 @@ function gNorm(v) {
   const mg = (Array.isArray(v.mg) ? v.mg : []).map(box).filter(Boolean).slice(0, 5000); if (mg.length) o.mg = mg;
   const af = v.af && typeof v.af === 'object' && box(v.af.g);
   if (af) o.af = { g: af, hide: pairs(v.af.hide, x => Array.isArray(x) ? x.filter(t => typeof t === 'string').slice(0, 20000) : null) };
+  const ch = (Array.isArray(v.ch) ? v.ch : []).slice(0, 50).map(x => {
+    const a = x && Array.isArray(x.at) && x.at.length === 4 && okid(x.at[0]) && okid(x.at[1]) ? x.at : null, c = a && normSheetChart({ ...x, at: 'A1', dx: a[2], dy: a[3] });
+    if (!c) return null;
+    const o2 = chartOut(c); delete o2.dx; delete o2.dy;
+    return { ...o2, at: [a[0], a[1], c.at.dx, c.at.dy] };
+  }).filter(Boolean);
+  if (ch.length) o.ch = ch;
   return o;
 }
 /* into a sheet, by the ids it has now */
@@ -4151,6 +4789,7 @@ function gIn(s, g, taken) {
   const af = g.af && box(g.af.g);
   if (af) { const hide = {}; for (const [id, v] of g.af.hide || []) { const c = C_(id); if (c != null && c >= af.c1 && c <= af.c2) hide[c] = v; } s.af = { ...af, hide }; }
   else s.af = null;
+  s.charts = (g.ch || []).map(x => { const r = R_(x.at[0]), c = C_(x.at[1]); return r == null || c == null ? null : normSheetChart({ ...x, at: A1(r, c), dx: x.at[2], dy: x.at[3] }); }).filter(Boolean);
 }
 /* an entry from someone else, checked the way a workbook from storage is (undefined: not taken) */
 function roomNorm(k, v) {
@@ -4362,7 +5001,7 @@ function roomApply(acc, st) {
   if (whole || again.size) { HIST.list = []; HIST.at = 0; }   // rows moved under every step kept for undo
   if (!WB.sheets.includes(WS)) showSheet(WB.sheets[0], true);
   anchorBack(keep);
-  geoDirty(); recalc();
+  geoDirty(); recalc(); CHV++;
   for (const s of WB.sheets) filterRows(s);
   refresh();
   return stale;

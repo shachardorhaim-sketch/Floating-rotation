@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.7.0';
+const VERSION = '1.8.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -28,7 +28,7 @@ const INSTRUCTIONS = 'Floating Ink is a word processor open in the user\'s brows
   'It also makes presentations (slides, like PowerPoint): create_presentation builds one while the user watches, for example ' +
   'from a script or a document they wrote (read_document it first), and edit_presentation changes one. Keep slides short: ' +
   'a title and three to six brief points; what the presenter should say goes in the slide\'s notes. read_document reads a presentation slide by slide. ' +
-  'It also makes spreadsheets, like Excel: create_spreadsheet builds one with values, formulas and formatting (a budget, a table of grades, a list with totals), ' +
+  'It also makes spreadsheets, like Excel: create_spreadsheet builds one with values, formulas, formatting and charts (a budget, a table of grades, a list with totals, a chart of them), ' +
   'read_spreadsheet reads one, and write_cells changes cells in one. Formulas are written the way Excel writes them in English, with commas: =SUM(B2:B9). ' +
   'The chat panel inside Floating Ink is shared: send_message leaves a note there, and read_messages shows ' +
   'what the user or another connected assistant wrote. The user often keeps writing to you from that panel instead of ' +
@@ -80,6 +80,16 @@ const SHEET = {
   freeze_rows: { type: 'number', description: 'How many rows at the top stay in view when scrolling (1 for a header row).' },
   freeze_columns: { type: 'number' },
   direction: { type: 'string', enum: ['rtl', 'ltr'], description: 'rtl puts column A on the right, as Hebrew Excel does. Leave out to follow the language of the text.' },
+  charts: { type: 'array', description: 'Charts drawn from cells of this sheet, like Excel charts; they redraw by themselves when the cells change. Write the cells first (rows), then chart them.', items: { type: 'object', properties: {
+    type: { type: 'string', enum: ['column', 'bar', 'line', 'pie', 'donut'], description: 'column: upright bars; bar: bars across; line; pie; donut (a pie with a hole). pie and donut show the first series only.' },
+    range: { type: 'string', description: 'The cells to chart with their headers, like A1:C7. Words in the first row name the series and words in the first column are the categories, as in Excel.' },
+    title: { type: 'string' },
+    at: { type: 'string', description: 'The cell at the top corner of the chart, like F2. The default is beside the range.' },
+    width: { type: 'number', description: 'In pixels; 480 by default.' },
+    height: { type: 'number', description: 'In pixels; 288 by default.' },
+    series_in: { type: 'string', enum: ['columns', 'rows'], description: 'Leave out to let the sheet decide, as Excel does.' },
+    legend: { type: 'boolean', description: 'true by default.' },
+    labels: { type: 'boolean', description: 'The numbers on the bars or slices.' } }, required: ['type', 'range'] } },
 };
 const TOOLS = [
   { name: 'list_documents', description: 'List the documents, presentations and spreadsheets in Floating Ink: id, title, kind, word count, last change, and which one is open on screen.',

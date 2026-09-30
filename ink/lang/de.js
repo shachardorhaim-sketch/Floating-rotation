@@ -1821,7 +1821,25 @@ window.INK_I18N = {
 "כשסוגרים את החדר, כל מי שהיה בו נשאר עם עותק משלו של הגיליון.": "Wenn du den Raum schließt, behalten alle, die dabei waren, ihre eigene Kopie der Tabelle.",
 "מי שפתח את החדר סגר אותו. הגיליון נשאר אצלך במכשיר, ואפשר להמשיך לעבוד עליו לבד.": "Die Person, die den Raum geöffnet hat, hat ihn geschlossen. Die Tabelle bleibt auf deinem Gerät, du kannst allein weiterarbeiten.",
 "מקבל את הגיליון…": "Empfange Tabelle…",
-"עובדים ביחד על אותו מסמך, מצגת או גיליון, בזמן אמת: כל שינוי מופיע מיד אצל כולם.": "Gemeinsam am selben Dokument, an derselben Präsentation oder Tabelle arbeiten, in Echtzeit: Jede Änderung erscheint sofort bei allen."
+"עובדים ביחד על אותו מסמך, מצגת או גיליון, בזמן אמת: כל שינוי מופיע מיד אצל כולם.": "Gemeinsam am selben Dokument, an derselben Präsentation oder Tabelle arbeiten, in Echtzeit: Jede Änderung erscheint sofort bei allen.",
+"אין עדיין מספרים לגרף הזה": "Dieses Diagramm hat noch keine Zahlen",
+"בעמודה הראשונה יש כותרות": "Die erste Spalte enthält Überschriften",
+"גרף {0}": "Diagramm {0}",
+"גרף חדש מהתאים שבחרת": "Ein neues Diagramm aus den gewählten Zellen",
+"גרף מהתאים האלה": "Diagramm aus diesen Zellen",
+"גרפים": "Diagramme",
+"הגרף הזה הגיע מקובץ, והנתונים שלו באים מכמה מקומות. אפשר לכתוב כאן טווח אחד במקומם.": "Dieses Diagramm stammt aus einer Datei, und seine Zahlen kommen aus mehreren Stellen. Du kannst hier stattdessen einen Bereich angeben.",
+"הטווח \"{0}\" לא נמצא. כותבים אותו כמו A1:C7, ואפשר גם עם שם של גיליון: 'גיליון2'!A1:C7": "Der Bereich „{0}“ wurde nicht gefunden. Schreib ihn wie A1:C7 oder mit dem Namen eines Blatts: 'Tabelle2'!A1:C7",
+"טווח הנתונים": "Datenbereich",
+"כדי ליצור גרף, בוחרים קודם את התאים עם המספרים (ואפשר גם את הכותרות שלהם).": "Für ein Diagramm wählst du zuerst die Zellen mit den Zahlen aus (gern auch ihre Überschriften).",
+"כותבים איפה המספרים של הגרף, למשל A1:C7": "Gib an, wo die Zahlen des Diagramms stehen, zum Beispiel A1:C7",
+"כותרת": "Titel",
+"מחיקת הגרף": "Diagramm löschen",
+"סדרות בעמודות": "Datenreihen in Spalten",
+"סדרות בשורות": "Datenreihen in Zeilen",
+"עריכת הגרף": "Diagramm bearbeiten",
+"עריכת הגרף…": "Diagramm bearbeiten…",
+"צבעים רגילים": "Standardfarben"
 },
 "plurals": {
 "{n} מילים": {
@@ -1984,10 +2002,6 @@ window.INK_I18N = {
 "one": "{n} Zelle",
 "other": "{n} Zellen"
 },
-"{n} גרפים לא נפתחו (גרפים מתוך גיליון יגיעו בהמשך)": {
-"one": "{n} Diagramm wurde nicht geöffnet (Diagramme aus Blättern kommen später)",
-"other": "{n} Diagramme wurden nicht geöffnet (Diagramme aus Blättern kommen später)"
-},
 "{n} טבלאות ציר נפתחו כתאים רגילים": {
 "one": "{n} Pivot-Tabelle wurde als normale Zellen geöffnet",
 "other": "{n} Pivot-Tabellen wurden als normale Zellen geöffnet"
@@ -2023,6 +2037,10 @@ window.INK_I18N = {
 "{n} גיליונות@files": {
 "one": "{n} Tabelle",
 "other": "{n} Tabellen"
+},
+"{n} גרפים מסוג שעוד אין כאן לא נפתחו": {
+"one": "{n} Diagramm einer Art, die es hier noch nicht gibt, wurde nicht geöffnet",
+"other": "{n} Diagramme einer Art, die es hier noch nicht gibt, wurden nicht geöffnet"
 }
 },
 "welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Willkommen bei Floating Ink</h1><p>Das ist ein Beispieldokument, das zeigt, was du hier machen kannst. Du kannst es bearbeiten, löschen oder auf <b>Neues Dokument</b> klicken und mit einer leeren Seite beginnen.</p><div class=\"callout callout-note\"><p><b>Komplett privat.</b> Die Dokumente werden nur auf deinem Gerät gespeichert, und nichts wird an irgendeinen Server gesendet. Damit sie nie verloren gehen, schalte die automatische Sicherung ein: <b>Datei → Sicherung</b>.</p></div><h2>Was es hier gibt</h2><ul><li><b>Formatierung wie in Word:</b> Schriftarten, Farben, <span style=\"background-color: #ffe45c\">Textmarker</span>, Überschriften, Listen und Tabellen.</li><li><b>Einfügen:</b> Bilder, Zeichnungen von Hand, Mathesymbole, Emoji, Datum und Inhaltsverzeichnis.</li><li><b>Werkzeuge:</b> Suchen und Ersetzen, Wörter zählen, Wortziel, Vorlesen, Rechner und Tastaturlayout-Korrektur.</li><li><b>Dateien:</b> Speichern als Word und als PDF, Import aus Word, frühere Versionen und Papierkorb.</li></ul><h2>Beispielaufgaben</h2><ul class=\"checklist\"><li data-checked=\"true\">Floating Ink öffnen</li><li>Es auf dem Computer oder Handy installieren</li><li>Eine Tabelle oder Zeichnung hinzufügen</li></ul><h2>So installierst du es</h2><ul><li><b>Am Computer (Chrome oder Edge):</b> Der Button <b>Installieren</b> oben, oder das Installationssymbol neben der Adressleiste.</li><li><b>Auf Android:</b> Menü ⋮ → App installieren.</li><li><b>Auf dem iPhone:</b> In Safari: Teilen-Symbol → Zum Home-Bildschirm.</li></ul><p>Nach der Installation öffnet sich Floating Ink wie eine normale Software, auch ohne Internet.</p><h2>Tastenkombinationen</h2><table><tbody><tr><th>Tastenkombination</th><th>Was sie macht</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Fett / Kursiv / Unterstrichen</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Rückgängig / Wiederholen</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Suchen / Suchen und Ersetzen</td></tr><tr><td>Ctrl+K</td><td>Link einfügen</td></tr><tr><td>Ctrl+Shift+X</td><td>Tastaturlayout (Hebräisch/Englisch)</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Überschrift 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Speichern (Floating Ink speichert auch von selbst)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Tipp:</b> Du kannst dir ein Wortziel setzen. Deinen Fortschritt siehst du dann unten in der Statusleiste.</p></div><p style=\"text-align: center\"><small>Floating Ink ist Teil von <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",

@@ -1709,7 +1709,7 @@ const HE_ONE = {
   '{n} תמונות לא נפתחו': 'תמונה אחת לא נפתחה',
   '{n} סרטונים לא היו בגיבוי. במקומם תופיע התמונה שלהם.': 'סרטון אחד לא היה בגיבוי. במקומו תופיע התמונה שלו.',
   '{n} גיליונות': 'גיליון אחד', '{n} גיליונות@files': 'גיליון אחד', '{n} תאים': 'תא אחד',
-  '{n} גרפים לא נפתחו (גרפים מתוך גיליון יגיעו בהמשך)': 'גרף אחד לא נפתח (גרפים מתוך גיליון יגיעו בהמשך)',
+  '{n} גרפים מסוג שעוד אין כאן לא נפתחו': 'גרף אחד מסוג שעוד אין כאן לא נפתח',
   '{n} טבלאות ציר נפתחו כתאים רגילים': 'טבלת ציר אחת נפתחה כתאים רגילים',
   '{n} נוסחאות משתמשות בפונקציות שעוד אין כאן. הן מראות את הערך שנשמר בקובץ': 'נוסחה אחת משתמשת בפונקציה שעוד אין כאן. היא מראה את הערך שנשמר בקובץ',
   '{n} הערות על תאים לא נפתחו': 'הערה אחת על תא לא נפתחה',
@@ -6144,7 +6144,7 @@ const pdfaOpen = () => !!(S.cur && isPdfa(S.cur.meta));
    lives in sheet.js, loaded the first time one is opened (and kept by the service worker for working offline) */
 const isSheet = m => !!m && m.kind === 'sheet';
 const sheetOpen = () => !!(S.cur && isSheet(S.cur.meta));
-const SHEET_TABS = ['shome', 'sformula', 'sdata', 'sview'];
+const SHEET_TABS = ['shome', 'sinsert', 'sformula', 'sdata', 'sview'];
 let SK = null;
 const loadSheetKit = () => loadScript('sheet.js').then(() => { if (!window.INK_SHEET) throw new Error('lib'); return (SK = window.INK_SHEET); });
 /* a workbook's words, without sheet.js: every text in its cells, row by row (for the list, search and word counts) */
@@ -9593,7 +9593,8 @@ function drawChart(n, el, look, dir) {
       const x1 = rtl ? pad : pad + vw, x2 = rtl ? W - pad - vw : W - pad, y1 = top + fpx / 2, y2 = Math.max(y1 + 10, bottom - ch), pw = x2 - x1, ph = y2 - y1;
       const Y = v => y2 - (v - sc.lo) / (sc.hi - sc.lo) * ph, slot = pw / nC, cxOf = i => rtl ? x2 - (i + 0.5) * slot : x1 + (i + 0.5) * slot;
       for (const t of ticks) { svg.push(`<line x1="${f(x1)}" x2="${f(x2)}" y1="${f(Y(t))}" y2="${f(Y(t))}" stroke="${t === 0 ? axis : grid}" stroke-width="1"/>`); lab(chartNum(t), rtl ? x2 + 6 : x1 - 6, Y(t), rtl ? 0 : 1, 0.5, { color: ink }); }
-      el.cats.forEach((t, i) => lab(t, cxOf(i), y2 + 5, 0.5, 0, { color: ink, maxWidth: f(slot - 4) + 'px', whiteSpace: 'normal', textAlign: 'center', maxHeight: f(ch) + 'px', overflow: 'hidden' }));
+      const every = slot < 14 ? Math.ceil(28 / slot) : 1;   // many categories (a year of days): every few gets its name
+      el.cats.forEach((t, i) => { if (i % every === 0) lab(t, cxOf(i), y2 + 5, 0.5, 0, { color: ink, maxWidth: f(slot * every - 4) + 'px', whiteSpace: 'normal', textAlign: 'center', maxHeight: f(ch) + 'px', overflow: 'hidden' }); });
       if (el.ck === 'col') {
         const bw = slot / (nS + 1);
         el.ser.forEach((s, j) => s.v.forEach((v, i) => {
@@ -9605,7 +9606,7 @@ function drawChart(n, el, look, dir) {
         el.ser.forEach((s, j) => {
           const pts = s.v.map((v, i) => [cxOf(i), Y(v)]);
           svg.push(`<polyline points="${pts.map(p => f(p[0]) + ',' + f(p[1])).join(' ')}" fill="none" stroke="${colors[j]}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`);
-          for (const [x, y] of pts) svg.push(`<circle cx="${f(x)}" cy="${f(y)}" r="4" fill="${colors[j]}"/>`);
+          if (slot >= 10) for (const [x, y] of pts) svg.push(`<circle cx="${f(x)}" cy="${f(y)}" r="4" fill="${colors[j]}"/>`);
           if (el.lab) s.v.forEach((v, i) => lab(chartNum(v), pts[i][0], pts[i][1] - 7, 0.5, 1, { color: ink }));
         });
       }
@@ -9614,7 +9615,8 @@ function drawChart(n, el, look, dir) {
       const x1 = rtl ? pad : pad + cw, x2 = rtl ? W - pad - cw : W - pad, y1 = top, y2 = Math.max(y1 + 10, bottom - vh), pw = x2 - x1, ph = y2 - y1;
       const X = v => rtl ? x2 - (v - sc.lo) / (sc.hi - sc.lo) * pw : x1 + (v - sc.lo) / (sc.hi - sc.lo) * pw, slot = ph / nC, cyOf = i => y2 - (i + 0.5) * slot;
       for (const t of ticks) { svg.push(`<line y1="${f(y1)}" y2="${f(y2)}" x1="${f(X(t))}" x2="${f(X(t))}" stroke="${t === 0 ? axis : grid}" stroke-width="1"/>`); lab(chartNum(t), X(t), y2 + 5, 0.5, 0, { color: ink }); }
-      el.cats.forEach((t, i) => lab(t, rtl ? x2 + 6 : x1 - 6, cyOf(i), rtl ? 0 : 1, 0.5, { color: ink, maxWidth: f(cw - 6) + 'px', overflow: 'hidden', textOverflow: 'ellipsis' }));
+      const every = slot < fpx * 1.2 ? Math.ceil(fpx * 1.3 / slot) : 1;
+      el.cats.forEach((t, i) => { if (i % every === 0) lab(t, rtl ? x2 + 6 : x1 - 6, cyOf(i), rtl ? 0 : 1, 0.5, { color: ink, maxWidth: f(cw - 6) + 'px', overflow: 'hidden', textOverflow: 'ellipsis' }); });
       const bh = slot / (nS + 1);
       el.ser.forEach((s, j) => s.v.forEach((v, i) => {
         const y = cyOf(i) + nS * bh / 2 - (j + 1) * bh, xa = X(Math.max(0, Math.min(v, sc.hi))), xb = X(Math.min(0, Math.max(v, sc.lo)));

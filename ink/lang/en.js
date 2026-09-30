@@ -1821,7 +1821,25 @@ window.INK_I18N = {
 "כשסוגרים את החדר, כל מי שהיה בו נשאר עם עותק משלו של הגיליון.": "When you close the room, everyone who was in it keeps their own copy of the spreadsheet.",
 "מי שפתח את החדר סגר אותו. הגיליון נשאר אצלך במכשיר, ואפשר להמשיך לעבוד עליו לבד.": "Whoever opened the room closed it. The spreadsheet stays on your device, and you can keep working on it on your own.",
 "מקבל את הגיליון…": "Receiving the spreadsheet…",
-"עובדים ביחד על אותו מסמך, מצגת או גיליון, בזמן אמת: כל שינוי מופיע מיד אצל כולם.": "Work together on the same document, presentation or spreadsheet, in real time: every change appears instantly for everyone."
+"עובדים ביחד על אותו מסמך, מצגת או גיליון, בזמן אמת: כל שינוי מופיע מיד אצל כולם.": "Work together on the same document, presentation or spreadsheet, in real time: every change appears instantly for everyone.",
+"אין עדיין מספרים לגרף הזה": "This chart has no numbers yet",
+"בעמודה הראשונה יש כותרות": "The first column has headers",
+"גרף {0}": "Chart {0}",
+"גרף חדש מהתאים שבחרת": "A new chart from the cells you chose",
+"גרף מהתאים האלה": "Chart these cells",
+"גרפים": "Charts",
+"הגרף הזה הגיע מקובץ, והנתונים שלו באים מכמה מקומות. אפשר לכתוב כאן טווח אחד במקומם.": "This chart came from a file, and its numbers come from several places. You can write one range here instead.",
+"הטווח \"{0}\" לא נמצא. כותבים אותו כמו A1:C7, ואפשר גם עם שם של גיליון: 'גיליון2'!A1:C7": "The range \"{0}\" wasn't found. Write it like A1:C7, or with a sheet's name: 'Sheet2'!A1:C7",
+"טווח הנתונים": "Data range",
+"כדי ליצור גרף, בוחרים קודם את התאים עם המספרים (ואפשר גם את הכותרות שלהם).": "To make a chart, first choose the cells with the numbers (their headers too, if you like).",
+"כותבים איפה המספרים של הגרף, למשל A1:C7": "Write where the chart's numbers are, like A1:C7",
+"כותרת": "Title",
+"מחיקת הגרף": "Delete chart",
+"סדרות בעמודות": "Series in columns",
+"סדרות בשורות": "Series in rows",
+"עריכת הגרף": "Edit chart",
+"עריכת הגרף…": "Edit chart…",
+"צבעים רגילים": "Standard colors"
 },
 "plurals": {
 "{n} מילים": {
@@ -1984,10 +2002,6 @@ window.INK_I18N = {
 "one": "{n} cell",
 "other": "{n} cells"
 },
-"{n} גרפים לא נפתחו (גרפים מתוך גיליון יגיעו בהמשך)": {
-"one": "{n} chart didn't open (charts from sheets are coming later)",
-"other": "{n} charts didn't open (charts from sheets are coming later)"
-},
 "{n} טבלאות ציר נפתחו כתאים רגילים": {
 "one": "{n} pivot table opened as plain cells",
 "other": "{n} pivot tables opened as plain cells"
@@ -2023,6 +2037,10 @@ window.INK_I18N = {
 "{n} גיליונות@files": {
 "one": "{n} spreadsheet",
 "other": "{n} spreadsheets"
+},
+"{n} גרפים מסוג שעוד אין כאן לא נפתחו": {
+"one": "{n} chart of a kind that isn't here yet didn't open",
+"other": "{n} charts of a kind that isn't here yet didn't open"
 }
 },
 "welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Welcome to Floating Ink</h1><p>This is a sample document that shows what you can do here. You can edit it, delete it, or click <b>New Document</b> to start from a blank page.</p><div class=\"callout callout-note\"><p><b>Completely private.</b> Your documents are saved only on your device, and nothing is sent to any server. So they're never lost, turn on automatic backup: <b>File → Backup</b>.</p></div><h2>What's here</h2><ul><li><b>Word-like formatting:</b> fonts, colors, <span style=\"background-color: #ffe45c\">highlighter</span>, headings, lists, and tables.</li><li><b>Insert:</b> images, freehand drawing, math symbols, emoji, the date, and a table of contents.</li><li><b>Tools:</b> find and replace, word count, word goal, read aloud, calculator, and Hebrew/English keyboard fix.</li><li><b>Files:</b> save as Word and PDF, import from Word, previous versions, and Recycle Bin.</li></ul><h2>Sample tasks</h2><ul class=\"checklist\"><li data-checked=\"true\">Open Floating Ink</li><li>Install it on your computer or phone</li><li>Add a table or a drawing</li></ul><h2>How to install</h2><ul><li><b>On a computer (Chrome or Edge):</b> the <b>Install</b> button at the top, or the install icon next to the address bar.</li><li><b>On Android:</b> Menu ⋮ → Install App.</li><li><b>On iPhone:</b> In Safari, Share button → Add to Home Screen.</li></ul><p>After installing, Floating Ink opens like a regular program, even without internet.</p><h2>Keyboard shortcuts</h2><table><tbody><tr><th>Shortcut</th><th>What it does</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Bold / Italic / Underline</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Undo / Redo</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Find / Find and Replace</td></tr><tr><td>Ctrl+K</td><td>Insert Link</td></tr><tr><td>Ctrl+Shift+X</td><td>Hebrew/English Keyboard Fix</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Heading 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Save (Floating Ink also saves by itself)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Tip:</b> You can set a word-count goal in the Tools tab to track your progress as you write.</p></div><p style=\"text-align: center\"><small>Floating Ink is part of <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",
