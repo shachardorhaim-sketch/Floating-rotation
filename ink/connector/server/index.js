@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.9.0';
+const VERSION = '1.10.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -28,7 +28,7 @@ const INSTRUCTIONS = 'Floating Ink is a word processor open in the user\'s brows
   'It also makes presentations (slides, like PowerPoint): create_presentation builds one while the user watches, for example ' +
   'from a script or a document they wrote (read_document it first), and edit_presentation changes one. Keep slides short: ' +
   'a title and three to six brief points; what the presenter should say goes in the slide\'s notes. read_document reads a presentation slide by slide. ' +
-  'It also makes spreadsheets, like Excel: create_spreadsheet builds one with values, formulas, formatting, conditional formatting and charts (a budget, a table of grades, a list with totals, a chart of them), ' +
+  'It also makes spreadsheets, like Excel: create_spreadsheet builds one with values, formulas, formatting, conditional formatting, drop-down lists (data validation) and charts (a budget, a table of grades, a list with totals, a chart of them), ' +
   'read_spreadsheet reads one, and write_cells changes cells in one. Formulas are written the way Excel writes them in English, with commas: =SUM(B2:B9). ' +
   'The chat panel inside Floating Ink is shared: send_message leaves a note there, and read_messages shows ' +
   'what the user or another connected assistant wrote. The user often keeps writing to you from that panel instead of ' +
@@ -106,6 +106,21 @@ const SHEET = {
     icons: { type: 'string', enum: ['arrows', 'triangles', 'traffic_lights', 'signs', 'symbols', 'flags', 'stars', 'ratings', 'quarters'], description: 'For icon_set.' },
     reverse: { type: 'boolean', description: 'For icon_set: the icons the other way around.' }, hide_values: { type: 'boolean', description: 'For data_bar and icon_set: show only the bar or the icon.' },
     stop_if_true: { type: 'boolean' } }, required: ['range', 'type'] } },
+  validations: { type: 'array', description: 'Data validation, as in Excel: a drop-down list in cells, or a limit on what a person may type into them (it follows the cells when they move, and is saved in Excel files). ' +
+      'A rule takes the place of any rule its cells had. It checks only what a person types: values you write are not stopped, and write_cells tells you which of them a rule does not allow.', items: { type: 'object', properties: {
+    range: { type: 'string', description: 'The cells, like B2:B50 (several ranges with spaces between them; B:B is a whole column).' },
+    type: { type: 'string', enum: ['list', 'whole_number', 'decimal', 'date', 'time', 'text_length', 'custom', 'any', 'none'], description: 'list: a drop-down list. whole_number, decimal, date, time and text_length compare with operator and value. custom: a formula that must be true. any: no limit, only the input message. none: takes the rules of these cells away.' },
+    values: { type: 'array', items: {}, description: 'For list: the items written out, like ["Yes", "No", "Maybe"] (no commas inside an item, up to 255 characters in all; for a longer list write the items in cells and give source).' },
+    source: { type: 'string', description: 'For list, instead of values: the cells that hold the items, one row or one column, like "H2:H20" or "Lists!A1:A30". The list follows those cells as they change.' },
+    dropdown: { type: 'boolean', description: 'For list: false hides the arrow in the cell (true by default).' },
+    operator: { type: 'string', enum: ['between', 'not_between', 'equal', 'not_equal', 'greater_than', 'less_than', 'greater_or_equal', 'less_or_equal'] },
+    value: { description: 'A number, a date as "2026-01-31", a time as "8:30", or a formula like "=$E$1". With between and not_between it is the smaller end.' }, value2: { description: 'The larger end, for between and not_between.' },
+    formula: { type: 'string', description: 'For custom: what is typed is accepted when this is true. Written for the first cell of the range and moved for each cell like a copied formula: "=ISNUMBER(B2)", "=COUNTIF($B$2:$B$50,B2)=1" (no duplicates).' },
+    allow_blank: { type: 'boolean', description: 'false makes an empty cell not valid (true by default).' },
+    input_title: { type: 'string', description: 'Up to 32 characters.' }, input_message: { type: 'string', description: 'A note shown beside the cell while it is selected, saying what to type (up to 255 characters).' },
+    error_style: { type: 'string', enum: ['stop', 'warning', 'information'], description: 'What happens when a person types a value that is not valid. stop (the default): the value is refused. warning: they are asked whether to keep it. information: they are told, and the value goes in.' },
+    error_title: { type: 'string', description: 'Up to 32 characters.' }, error_message: { type: 'string', description: 'The alert\'s text (up to 225 characters); a short default is used without it.' },
+    show_error: { type: 'boolean', description: 'false: no alert at all, anything can be typed (true by default).' } }, required: ['range', 'type'] } },
 };
 const TOOLS = [
   { name: 'list_documents', description: 'List the documents, presentations and spreadsheets in Floating Ink: id, title, kind, word count, last change, and which one is open on screen.',
@@ -125,7 +140,7 @@ const TOOLS = [
   { name: 'create_spreadsheet', description: 'Create a new spreadsheet (like Excel) and open it on the user\'s screen: one or more sheets of cells with values, formulas and formatting. ' +
       'Use it for tables, budgets, schedules, lists with totals and anything the user wants to calculate. Put a header row on top (bold, with a fill, frozen), give numbers a number_format, and total with formulas. Returns its id.',
     inputSchema: { type: 'object', properties: { title: { type: 'string' }, direction: SHEET.direction, sheets: { type: 'array', items: { type: 'object', properties: SHEET } } }, required: ['title', 'sheets'] } },
-  { name: 'read_spreadsheet', description: 'Read a spreadsheet: the names of its sheets, and for one sheet (the one on screen, or `sheet`) what each cell shows and the formulas in it. Without a range, reads the part that is used.',
+  { name: 'read_spreadsheet', description: 'Read a spreadsheet: the names of its sheets, and for one sheet (the one on screen, or `sheet`) what each cell shows, the formulas in it, and its charts, conditional formatting and data validation (drop-down lists and limits on what may be typed). Without a range, reads the part that is used.',
     inputSchema: { type: 'object', properties: { id: DOC_ID, sheet: { type: 'string' }, range: { type: 'string', description: 'Like A1:F40.' } } }, annotations: { readOnlyHint: true } },
   { name: 'write_cells', description: 'Write values, formulas and formatting into a spreadsheet (it opens on screen, and the user can undo it with Ctrl+Z). The fields are the same as a sheet in create_spreadsheet. ' +
       '`sheet` picks a sheet by name (a new sheet is added if none has that name; leave out for the sheet on screen), and `clear` empties a range first.',

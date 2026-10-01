@@ -65,7 +65,7 @@ const DEF_FONT = 'Arial', DEF_FS = 10, DEF_W = 100, DEF_H = 21;
 const sid = () => { let s = ''; while (s.length < 8) s += Math.random().toString(36).slice(2); return s.slice(0, 8); };
 function newSheet(name, dir) {
   return { id: sid(), name, dir, cells: new Map(), cw: new Map(), rh: new Map(), hc: new Set(), hr: new Set(), cs: new Map(), rs: new Map(), ds: null,
-    fr: 0, fc: 0, merges: [], af: null, gl: true, tab: null, dw: DEF_W, dh: DEF_H, ac: { r: 0, c: 0 }, zoom: 100, charts: [], cf: [] };
+    fr: 0, fc: 0, merges: [], af: null, gl: true, tab: null, dw: DEF_W, dh: DEF_H, ac: { r: 0, c: 0 }, zoom: 100, charts: [], cf: [], dv: [] };
 }
 const sheetWord = n => T('גיליון{0}', n);
 /* Excel's rules for a sheet's name: up to 31 letters, none of : \ / ? * [ ], no ' at either end */
@@ -139,6 +139,7 @@ function normSheet(x, dir, taken) {
   if (+x.zoom >= 25 && +x.zoom <= 400) s.zoom = Math.round(+x.zoom);
   s.charts = (Array.isArray(x.charts) ? x.charts : []).slice(0, 50).map(normSheetChart).filter(Boolean);
   s.cf = (Array.isArray(x.cf) ? x.cf : []).slice(0, 500).map(normCf).filter(Boolean);
+  s.dv = (Array.isArray(x.dv) ? x.dv : []).slice(0, DV_MAX).map(normDv).filter(Boolean);
   // in a shared room: the ids of its rows and columns (see the rooms, at the end)
   const ri = x.ri && unpackIds(x.ri, s.id + '/ri', RMAX), ci = x.ci && unpackIds(x.ci, s.id + '/ci', CMAX);
   if (ri) s.ri = ri;
@@ -188,6 +189,7 @@ function sheetOut(s) {
   if (s.zoom !== 100) o.zoom = s.zoom;
   if (s.charts.length) o.charts = s.charts.map(chartOut);
   if (s.cf.length) o.cf = s.cf.map(cfOut);
+  if (s.dv.length) o.dv = s.dv.map(cfOut);
   if (s.ri && s.ri.length) o.ri = packIds(s.ri, s.id + '/ri');
   if (s.ci && s.ci.length) o.ci = packIds(s.ci, s.id + '/ci');
   return o;
@@ -802,15 +804,17 @@ function ev(n) {
   }
   return E_VAL;
 }
+/* a row or column number moved by d inside a rule's formula: past the sheet's edge it comes round the other side, as
+   Excel has it for conditional formatting and data validation (a part fixed with $ stays) */
+const wrapAt = (v, d, fixed, max) => fixed ? v : ((v + d) % max + max) % max;
 /* a reference's value: one cell's value, or the range itself (keep: even for one cell, the way SUM and its family want it) */
 function refVal(n, keep) {
   const s = sheetNamed(n.sheet);
   if (!s) return E_REF;
   let g = n.g;
-  if (OFF) {   // conditional formatting: the parts without $ move with the cell being checked
-    const a = n.ab, m = { r1: n.r1 + (a[0] ? 0 : OFF.dr), c1: n.c1 + (a[1] ? 0 : OFF.dc), r2: n.r2 + (a[2] ? 0 : OFF.dr), c2: n.c2 + (a[3] ? 0 : OFF.dc) };
-    if (offSheet(m)) return E_REF;
-    g = G4(m.r1, m.c1, m.r2, m.c2);
+  if (OFF) {   // conditional formatting and data validation: the parts without $ move with the cell being checked
+    const a = n.ab;
+    g = G4(wrapAt(n.r1, OFF.dr, a[0], MAXR), wrapAt(n.c1, OFF.dc, a[1], MAXC), wrapAt(n.r2, OFF.dr, a[2], MAXR), wrapAt(n.c2, OFF.dc, a[3], MAXC));
   }
   if (n.sp) {   // B2#: the cells B2's formula spills into
     const k = KEY(g.r1, g.c1), x = s.cells.get(k);
@@ -2389,9 +2393,11 @@ function render() {
   if (WS.fr && WS.fc) { place(part(V.corner, 'frzh', 'sh-frz'), 0, CHH + FH - 1, RHW + FW, 1); place(part(V.corner, 'frzv', 'sh-frz'), RHW + FW - 1, 0, 1, CHH + FH); }
   drawCharts();
   for (const [L, rr, cc] of layers) drawSel(L, rr, cc, g);
+  if (WS._rings && WS.dv.length) for (const [L, rr, cc] of layers) if (rr[1] >= rr[0] && cc[1] >= cc[0]) drawRings(L, rr, cc);
   if (RM.peers.length) for (const [L, rr, cc] of layers) drawPeers(L, rr, cc);
   for (const L of [V.body, V.top, V.side, V.corner]) sweep(L);
   placeEditor();
+  dvTip();
 }
 /* gridlines: each column's end and each row's bottom, as lines across the part of the sheet in view */
 function gridLines(L, rr, cc) {
@@ -2582,6 +2588,12 @@ function drawSel(L, rr, cc, g) {
   if (CLIP && CLIP.sid === WS.id && CLIP.ants) box('clip', CLIP.g, 'sh-clip', true);
   const sa = !ED.on && spillArea(WS, SEL.r, SEL.c);
   if (sa) box('spa', sa, 'sh-spa', true);
+  const dva = dvArrow();   // the arrow of the active cell's list
+  if (dva && dva.m.r2 >= lo.r && dva.m.r2 <= hi.r && dva.m.c2 >= lo.c && dva.m.c2 <= hi.c) {
+    const b = part(L, 'dvb', 'sh-dvb');
+    place(b, dva.x, dva.y, dva.size, dva.size);
+    if (!b.firstChild) b.append(icon('arrow_drop_down'));
+  }
   if (ED.on && ED.refs) ED.refs.forEach((x, i) => { if (x.sid !== WS.id) return; const b = box('ref' + i, x.g, 'sh-ref', true); if (b) b.e.style.setProperty('--rc', REF_COLORS[x.n % REF_COLORS.length]); });
 }
 const REF_COLORS = ['#2f6fdf', '#d9383a', '#7a3fc9', '#1d8249', '#c2388a', '#d9701a', '#0e8a8c', '#8a5a1e'];
@@ -2592,7 +2604,7 @@ const REF_COLORS = ['#2f6fdf', '#d9383a', '#7a3fc9', '#1d8249', '#c2388a', '#d97
    ========================================================= */
 /* mode 'enter' (started by typing: arrows finish the entry, or point at cells in a formula) or 'edit' (F2, a double
    click, the formula bar: arrows move in the text). point: the reference being pointed at, as text positions */
-const ED = { on: false, mode: 'enter', r: 0, c: 0, sid: '', from: 'cell', orig: '', refs: null, point: null, all: false };
+const ED = { on: false, mode: 'enter', r: 0, c: 0, sid: '', from: 'cell', orig: '', refs: null, point: null, all: false, dv: null };
 let TOUCHY = false;     // the last pointer was a finger: no keyboard pops up until a cell is opened for writing
 const taOf = () => ED.from === 'bar' ? V.bar : V.ed;
 function focusGrid() {
@@ -2625,7 +2637,7 @@ function startEdit(mode, text, from = 'cell') {
   const m = mergeAt(WS, SEL.r, SEL.c), r = m ? m.r1 : SEL.r, c = m ? m.c1 : SEL.c;
   const p = RM.on && RM.peers.find(x => x.pr && x.pr.ed && x.pr.ed.s === WS.id && x.pr.ed.r === r && x.pr.ed.c === c);
   if (p) { V.ed.value = ''; toast(T('התא הזה בעריכה אצל {0}', p.name), { icon: 'edit' }); return; }
-  Object.assign(ED, { on: true, mode, r, c, sid: WS.id, from, point: null, refs: null, all: false });
+  Object.assign(ED, { on: true, mode, r, c, sid: WS.id, from, point: null, refs: null, all: false, dv: dvChoices(WS, r, c) });
   ED.orig = editText(cellAt(WS, r, c));
   const t = text == null ? ED.orig : text;
   if (V.ed.value !== t) V.ed.value = t;
@@ -2650,8 +2662,9 @@ function formulaProblem(f) {
   walk(a, n => { if (!bad && n.t === 'fn' && FUNCS[n.n] && (n.args.length < FUNCS[n.n].n[0] || n.args.length > FUNCS[n.n].n[1])) bad = n.n; });
   return bad ? T('לפונקציה {0} יש מספר לא נכון של ערכים בסוגריים.', bad) : null;
 }
-function endEdit(commit, move) {
+function endEdit(commit, move, force) {
   if (!ED.on) return true;
+  if (DVA.open) return false;   // an alert about what was typed is waiting for its answer
   let text = taOf().value;
   if (commit && text !== ED.orig) {
     if (text[0] === '=' && text.length > 1) {
@@ -2660,8 +2673,20 @@ function endEdit(commit, move) {
       if (why) { toast(why, { icon: 'error', ms: 6000 }); taOf().focus(); return false; }
     }
     const s = WB.sheets.find(x => x.id === ED.sid) || WS, g = ED.all ? selG() : null, r = ED.r, c = ED.c;
+    const rule = force ? null : dvAt(s, r, c);
     ED.on = false;
-    edit(() => writeInput(s, r, c, text, g));
+    const did = edit(() => writeInput(s, r, c, text, g));
+    if (did && rule && rule.t !== 'any' && !rule.ne && !dvOk(s, rule, r, c)) {
+      // the cell's rule doesn't take this (a formula is judged by its answer, once everything is worked out): it
+      // comes out again, and the alert asks what to do with it
+      applyStep(HIST.list[--HIST.at], true);
+      HIST.list.length = HIST.at;
+      ED.on = true;
+      V.ed.value = V.bar.value = text;
+      edChanged();
+      dvAlert(rule, move);
+      return false;
+    }
   }
   ED.on = false; ED.refs = null; ED.point = null;
   V.over.classList.remove('editing');
@@ -2884,6 +2909,8 @@ function hit(e, loose) {
     }
     const g = selG();
     if (!ED.on && !wholeCols(g) && !wholeRows(g) && Math.abs(x - colX(g.c2 + 1)) <= 6 && Math.abs(y - rowY(g.r2 + 1)) <= 6) return { kind: 'fill' };
+    const dva = dvArrow();
+    if (dva && x >= dva.x - 1 && x <= dva.x + dva.size + 1 && y >= dva.y - 1 && y <= dva.y + dva.size + 1) return { kind: 'dv' };
     const f = WS.af;
     if (f && r === f.r1 && c >= f.c1 && c <= f.c2) {
       const size = Math.min(rowH(f.r1) - 3, 17 * Z), bx = colX(c + 1) - size - 3, by = rowY(f.r1 + 1) - size - 3;
@@ -2901,9 +2928,16 @@ function onDown(e) {
   TOUCHY = e.pointerType === 'touch';
   const hh = hit(e);
   if (!hh) return;
+  const listOpen = !!document.querySelector('#pop .sh-dvl');
   closePopover();
   if (e.button === 2) {   // a right click in the selection keeps it; outside it, it chooses that cell first
     if (hh.kind === 'cell' && !inG(selG(), hh.r, hh.c)) { if (ED.on && !endEdit(true)) return; selectCell(hh.m ? hh.m.r1 : hh.r, hh.m ? hh.m.c1 : hh.c); }
+    return;
+  }
+  if (hh.kind === 'dv') {   // the arrow of the cell's list opens it, and closes it again; what was being typed is dropped
+    e.preventDefault();
+    if (ED.on) endEdit(false);
+    if (!listOpen) openDvList();
     return;
   }
   if (TOUCHY && hh.kind === 'cell' && !ED.on) { DRAG = { kind: 'tap', x: e.clientX, y: e.clientY, hh }; return; }
@@ -2937,7 +2971,7 @@ function onDown(e) {
 function onMove(e) {
   if (!WS) return;
   if (!DRAG) {   // the pointer shows where a column or row can be resized, the fill handle and the filter buttons
-    const hh = hit(e), cur = hh ? { colb: 'col-resize', rowb: 'row-resize', fill: 'crosshair', filt: 'pointer' }[hh.kind] || '' : '';
+    const hh = hit(e), cur = hh ? { colb: 'col-resize', rowb: 'row-resize', fill: 'crosshair', filt: 'pointer', dv: 'pointer' }[hh.kind] || '' : '';
     if (V.scroll.style.cursor !== cur) V.scroll.style.cursor = cur;
     return;
   }
@@ -3095,6 +3129,7 @@ function editKey(e) {
 function gridKey(e) {
   const mod = e.ctrlKey || e.metaKey, k = e.key, c = e.code, d = arrowStep(k);
   if (d && !e.altKey) { e.preventDefault(); moveSel(d[0], d[1], e.shiftKey, mod); return true; }
+  if (e.altKey && !mod && (k === 'ArrowDown' || k === 'ArrowUp') && openDvList()) { e.preventDefault(); return true; }   // Alt+↓ opens the cell's list, as in Excel
   if (k === 'Enter' && !mod) { e.preventDefault(); stepInSel(e.shiftKey ? -1 : 1, 0); return true; }
   if (k === 'Tab' && !mod) { e.preventDefault(); stepInSel(0, e.shiftKey ? -1 : 1); return true; }
   if (k === 'Home') { e.preventDefault(); if (mod) { SEL = { r: 0, c: 0, er: 0, ec: 0 }; scrollToSel(); after(); } else moveSel(0, -SEL.c, e.shiftKey); return true; }
@@ -3139,15 +3174,21 @@ function onEsc() {
 
 /* --- the formula helper: the functions whose names start with what is typed, and the arguments of the function the
    caret is in, with the current one in bold --- */
-const AC = { on: false, list: [], i: 0, from: 0, box: null, hint: null };
+const AC = { on: false, list: [], i: 0, from: 0, box: null, hint: null, dv: false };
 function acUpdate() {
-  const ta = taOf(), v = ta.value, pos = ta.selectionStart;
-  AC.on = false; AC.list = []; AC.hint = null;
-  if (ED.on && v[0] === '=' && pos === ta.selectionEnd) {
+  const ta = taOf(), v = ta.value, pos = ta.selectionStart, was = AC.on ? AC.list[AC.i] : undefined;
+  AC.on = false; AC.list = []; AC.hint = null; AC.dv = false;
+  if (ED.on && ED.dv && v[0] !== '=') {
+    // a cell with a list: the items that hold what was typed, those that start with it first. None is marked until an
+    // arrow goes into them, so Enter still enters what was typed
+    const t = v.trim().toLowerCase(), has = t ? ED.dv.filter(it => it.t.toLowerCase().includes(t)) : [];
+    AC.list = [...has.filter(it => it.t.toLowerCase().startsWith(t)), ...has.filter(it => !it.t.toLowerCase().startsWith(t))].slice(0, 10);
+    AC.dv = true; AC.i = AC.list.indexOf(was); AC.on = AC.list.length > 0 && !(AC.list.length === 1 && AC.list[0].t === v.trim());
+  } else if (ED.on && v[0] === '=' && pos === ta.selectionEnd) {
     const before = v.slice(0, pos), m = /(?:^=|[=(,;+\-*/^&<>\s])([A-Za-z][A-Za-z0-9.]*)$/.exec(before);
     if (m && !/^[A-Za-z]{1,3}\d+$/.test(m[1])) {
       AC.list = FN_LIST.filter(n => n.startsWith(m[1].toUpperCase()) && n !== m[1].toUpperCase());
-      AC.from = pos - m[1].length; AC.i = 0; AC.on = AC.list.length > 0;
+      AC.from = pos - m[1].length; AC.i = Math.max(0, AC.list.indexOf(was)); AC.on = AC.list.length > 0;   // the marked name stays marked (a key going up asks again)
     }
     const stack = [];
     for (const k of tokenize(before.slice(1))) {
@@ -3165,7 +3206,8 @@ function acShow() {
   const box = AC.box;
   box.textContent = '';
   if (!ED.on || (!AC.on && !AC.hint)) { box.hidden = true; return; }
-  if (AC.on) AC.list.forEach((n, i) => box.append(h('div', { class: 'sh-aci' + (i === AC.i ? ' on' : ''), role: 'option', onpointerdown: ev => { ev.preventDefault(); AC.i = i; acTake(); } }, h('b', { text: n, dir: 'ltr' }), h('span', { text: fnDesc(n) }))));
+  if (AC.on) AC.list.forEach((n, i) => box.append(h('div', { class: 'sh-aci' + (AC.dv ? ' dv' : '') + (i === AC.i ? ' on' : ''), role: 'option', onpointerdown: ev => { ev.preventDefault(); AC.i = i; acTake(); } },
+    AC.dv ? h('span', { text: n.t, dir: 'auto' }) : [h('b', { text: n, dir: 'ltr' }), h('span', { text: fnDesc(n) })])));
   else {
     const parts = fnArgs(AC.hint.fn), on = Math.min(AC.hint.arg, parts.length - 1);
     box.append(h('div', { class: 'sh-hint' }, h('b', { text: AC.hint.fn + '(', dir: 'ltr' }), ...parts.flatMap((p, i) => [i ? ', ' : '', h('span', { class: i === on ? 'on' : null, dir: 'auto', text: p })]), ')'), h('div', { class: 'sh-hint-t', text: fnDesc(AC.hint.fn) }));
@@ -3176,17 +3218,26 @@ function acShow() {
   box.style.right = box.style.left = '';
   if (WS.dir === 'rtl') box.style.right = px(clamp(o.right - r.right, 0, Math.max(0, o.width - box.offsetWidth))); else box.style.left = px(clamp(r.left - o.left, 0, Math.max(0, o.width - box.offsetWidth)));
 }
-function acHide() { AC.on = false; AC.list = []; AC.hint = null; if (AC.box) AC.box.hidden = true; }
+function acHide() { AC.on = false; AC.list = []; AC.hint = null; AC.dv = false; if (AC.box) AC.box.hidden = true; }
 function acTake() {
   const ta = taOf(), n = AC.list[AC.i];
   if (!n) return;
+  if (AC.dv) { const r = ED.r, c = ED.c; endEdit(false); dvPut(r, c, n); return; }   // an item of the cell's list, in place of what was typed
   ta.setRangeText(n + '(', AC.from, ta.selectionStart, 'end');
   ED.point = null;
   edChanged();
 }
 function acKey(e) {
-  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); AC.i = (AC.i + (e.key === 'ArrowDown' ? 1 : -1) + AC.list.length) % AC.list.length; acShow(); return true; }
-  if (e.key === 'Tab' || (e.key === 'Enter' && !e.altKey && !e.ctrlKey)) { e.preventDefault(); acTake(); return true; }
+  const n = AC.list.length, step = e.key === 'ArrowDown' ? 1 : -1;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); AC.i = AC.dv ? clamp(AC.i + step, -1, n - 1) : (AC.i + step + n) % n; acShow(); return true; }
+  if (e.key === 'Tab' || (e.key === 'Enter' && !e.altKey && !e.ctrlKey)) {
+    if (AC.dv && AC.i < 0) return false;
+    e.preventDefault();
+    const go = AC.dv ? (e.key === 'Tab' ? [0, e.shiftKey ? -1 : 1] : [e.shiftKey ? -1 : 1, 0]) : null;
+    acTake();
+    if (go) moveSel(go[0], go[1], false, false);   // and on to the next cell, as the key does after typing
+    return true;
+  }
   if (e.key === 'Escape') { e.preventDefault(); acHide(); return true; }
   return false;
 }
@@ -3269,7 +3320,8 @@ function clearSel(what) {
       else setCell(WS, r, c, null);
     }
     if (what !== 'v') {
-      cfCut(WS, g);
+      cutRules(WS, 'cf', g);
+      if (what === 'a') cutRules(WS, 'dv', g);   // Excel's Clear All takes data validation away; Clear Formats leaves it
       const inside = m => m.r1 >= g.r1 && m.r2 <= g.r2 && m.c1 >= g.c1 && m.c2 <= g.c2;
       if (WS.merges.some(inside)) setProp(WS, 'merges', WS.merges.filter(m => !inside(m)));
       if (wholeCols(g) && wholeRows(g)) setProp(WS, 'ds', null);
@@ -3356,8 +3408,10 @@ function spliceSheet(axis, at, n) {
     eachFormula((f, self) => spliceFormula(f, self, s.name, axis, at, n));
     eachChart((f, self) => spliceFormula(f, self, s.name, axis, at, n));
     moveCharts(s, axis, at, n);
-    spliceCf(s, axis, at, n);
-    for (const sh of WB.sheets) if (sh !== s) eachCfOf(sh, f => spliceFormula(f, sh.name, s.name, axis, at, n));
+    for (const key of RULE_KEYS) {
+      spliceRules(s, key, axis, at, n);
+      for (const sh of WB.sheets) if (sh !== s) eachRuleOf(sh, key, f => spliceFormula(f, sh.name, s.name, axis, at, n));
+    }
   });
 }
 function insertRows(where) {
@@ -3469,6 +3523,7 @@ function fillRange(g, to) {
         setCell(WS, r, c, cell);
       });
     }
+    for (const key of RULE_KEYS) fillRules(WS, key, g, to);
   });
   const all = { r1: Math.min(g.r1, to.r1), c1: Math.min(g.c1, to.c1), r2: Math.max(g.r2, to.r2), c2: Math.max(g.c2, to.c2) };
   SEL = { r: all.r1, c: all.c1, er: all.r2, ec: all.c2 };
@@ -3482,6 +3537,8 @@ function fillDir(d) {
   edit(() => {
     if (vert) for (let r = Math.max(g.r1, src + 1); r <= g.r2; r++) for (let c = g.c1; c <= g.c2; c++) { const x = cellAt(WS, src, c); setCell(WS, r, c, x ? (x.f != null ? { ...x, f: shiftFormula(x.f, r - src, 0) } : { ...x }) : null); }
     else for (let c = Math.max(g.c1, src + 1); c <= g.c2; c++) for (let r = g.r1; r <= g.r2; r++) { const x = cellAt(WS, r, src); setCell(WS, r, c, x ? (x.f != null ? { ...x, f: shiftFormula(x.f, 0, c - src) } : { ...x }) : null); }
+    const from = vert ? { ...g, r1: src, r2: src } : { ...g, c1: src, c2: src };
+    for (const key of RULE_KEYS) fillRules(WS, key, from, vert ? { ...g, r1: src } : { ...g, c1: src });
   });
 }
 /* a double click on the fill handle fills down as far as the column beside it goes */
@@ -3750,7 +3807,7 @@ async function renameSheet(s = WS) {
   if (takenNames(s).has(n.toLowerCase())) { toast(T('כבר יש גיליון בשם הזה')); return; }
   if (n === s.name) return;
   const old = s.name;
-  edit(() => { setProp(s, 'name', n); eachFormula(f => renameInFormula(f, old, n)); eachChart(f => renameInFormula(f, old, n)); for (const sh of WB.sheets) eachCfOf(sh, f => renameInFormula(f, old, n)); });
+  edit(() => { setProp(s, 'name', n); eachFormula(f => renameInFormula(f, old, n)); eachChart(f => renameInFormula(f, old, n)); for (const sh of WB.sheets) for (const key of RULE_KEYS) eachRuleOf(sh, key, f => renameInFormula(f, old, n)); });
 }
 async function deleteSheet(s = WS) {
   if (WB.sheets.length < 2) { toast(T('בחוברת צריך להישאר לפחות גיליון אחד')); return; }
@@ -3760,7 +3817,7 @@ async function deleteSheet(s = WS) {
     bookStep(() => { WB.sheets.splice(i, 1); });
     eachFormula(f => dropSheetInFormula(f, s.name));
     eachChart(f => dropSheetInFormula(f, s.name));
-    for (const sh of WB.sheets) eachCfOf(sh, f => dropSheetInFormula(f, s.name));
+    for (const sh of WB.sheets) for (const key of RULE_KEYS) eachRuleOf(sh, key, f => dropSheetInFormula(f, s.name));
     if (s === WS) showSheet(next, true);
   });
   WB.active = WB.sheets.indexOf(WS);
@@ -3816,7 +3873,7 @@ function packRange(s, g) {
   }
   const merges = s.merges.filter(m => m.r1 >= g.r1 && m.r2 <= g.r2 && m.c1 >= g.c1 && m.c2 <= g.c2).map(m => [m.r1 - g.r1, m.c1 - g.c1, m.r2 - g.r1, m.c2 - g.c1]);
   return { text: lines.join('\r\n') + '\r\n', html: '<meta charset="utf-8">' + tableEl(s, g, { clip: true }).outerHTML,
-    json: { app: 'floating-ink', v: 1, stamp: uid(), sheet: s.name, r: g.r1, c: g.c1, h: g.r2 - g.r1 + 1, w: g.c2 - g.c1 + 1, cells, merges, cf: cfPack(s, g) } };
+    json: { app: 'floating-ink', v: 1, stamp: uid(), sheet: s.name, r: g.r1, c: g.c1, h: g.r2 - g.r1 + 1, w: g.c2 - g.c1 + 1, cells, merges, cf: packRules(s, 'cf', g), dv: packRules(s, 'dv', g) } };
 }
 function copyNow(cut) {
   const g = usedPart(selG());
@@ -3883,7 +3940,7 @@ function pastePack(p, what) {
   // a cut from here, pasted once: the cells move, and every formula pointing at them follows
   if (CLIP && CLIP.cut && CLIP.pack && CLIP.pack.stamp === p.stamp && what === 'all') { moveCut(); return; }
   const cells = (Array.isArray(p.cells) ? p.cells : []).map(([r, c, j]) => ({ r, c, x: normCell(j) })).filter(q => q.x);
-  pasteCells({ h: p.h, w: p.w, merges: p.merges || [], cf: Array.isArray(p.cf) ? p.cf : [], r: p.r | 0, c: p.c | 0 }, cells, what, (q, r, c) => q.x.f != null ? { f: shiftFormula(q.x.f, r - (p.r + q.r), c - (p.c + q.c)) } : null);
+  pasteCells({ h: p.h, w: p.w, merges: p.merges || [], cf: Array.isArray(p.cf) ? p.cf : [], dv: Array.isArray(p.dv) ? p.dv : [], r: p.r | 0, c: p.c | 0 }, cells, what, (q, r, c) => q.x.f != null ? { f: shiftFormula(q.x.f, r - (p.r + q.r), c - (p.c + q.c)) } : null);
 }
 function pasteGrid(grid, what) {
   const cells = grid.cells.map(q => {
@@ -3926,9 +3983,15 @@ function pasteCells(src, cells, what, formulaAt) {
     }
     // cells copied here bring their conditional formatting, in place of what the target had
     if (what !== 'v' && src.cf) {
-      cfCut(WS, target);
-      const add = tiles.flatMap(([tr, tc]) => cfUnpack(src.cf, tr, tc, src.r, src.c));
+      cutRules(WS, 'cf', target);
+      const add = tiles.flatMap(([tr, tc]) => unpackRules('cf', src.cf, tr, tc, src.r, src.c));
       if (add.length) setProp(WS, 'cf', [...WS.cf, ...add].slice(0, 500));
+    }
+    // and their data validation, when everything is pasted (not values alone, nor formats alone), as in Excel
+    if (what === 'all' && src.dv) {
+      cutRules(WS, 'dv', target);
+      const add = tiles.flatMap(([tr, tc]) => unpackRules('dv', src.dv, tr, tc, src.r, src.c));
+      if (add.length) setProp(WS, 'dv', [...WS.dv, ...add].slice(0, DV_MAX));
     }
   });
   if (CLIP && !CLIP.cut) CLIP.ants = CLIP.ants && CLIP.sid === WS.id;
@@ -3953,11 +4016,16 @@ function moveCut() {
     setProp(from, 'merges', from.merges.filter(m => !inside(m)));
     setProp(to, 'merges', [...to.merges.filter(m => !meets(m, target)), ...moved.map(m => ({ r1: m.r1 + dr, c1: m.c1 + dc, r2: m.r2 + dr, c2: m.c2 + dc }))]);
     eachFormula((f, self) => moveFormula(f, self, from.name, g, dr, dc, to.name));
-    const rules = cfPack(from, g);
-    cfCut(from, g);
-    cfCut(to, target);
-    const back = cfUnpack(rules, target.r1, target.c1, g.r1, g.c1);
-    if (back.length) setProp(to, 'cf', [...to.cf, ...back]);
+    // the cells' rules go with them; a rule anywhere that pointed at the cells (a list's source) points at their new place
+    const follow = f => mapRefs(to === from ? f : anchorFormula(f, from.name), t => t.a.every(Boolean) ? moveFormula(t.s, to.name, from.name, g, dr, dc, to.name) : null);
+    for (const key of RULE_KEYS) {
+      const rules = packRules(from, key, g);
+      cutRules(from, key, g);
+      cutRules(to, key, target);
+      for (const sh of WB.sheets) eachRuleOf(sh, key, f => moveFormula(f, sh.name, from.name, g, dr, dc, to.name));
+      const back = unpackRules(key, rules, target.r1, target.c1, g.r1, g.c1).map(rule => cfFormulas(rule, follow));
+      if (back.length) setProp(to, key, [...to[key], ...back]);
+    }
   });
   CLIP = null;
   SEL = { r: target.r1, c: target.c1, er: target.r2, ec: target.c2 };
@@ -4258,6 +4326,26 @@ const CSS = `
 .sh-sel.nt{border-top-color:transparent}.sh-sel.nb{border-bottom-color:transparent}.sh-sel.ns{border-inline-start-color:transparent}.sh-sel.ne{border-inline-end-color:transparent}
 .sh-sel.pt{border-style:dashed}
 .sh-spa{z-index:5;border:1px solid #4f8ef7;pointer-events:none}
+.sh-dvb{z-index:6;display:grid;place-items:center;border:1px solid #8b93a5;border-radius:2px;background:#f3f4f7;color:#3d4556}
+.sh-dvb .ms{font-size:18px;width:auto}
+.sh-dvr{z-index:5;border:2px solid #e03131;border-radius:50%;pointer-events:none}
+.sh-dvtip{position:absolute;z-index:8;max-width:250px;padding:6px 10px;background:#fffbe6;color:#1b1f2a;border:1px solid #c9b458;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.14);font:12.5px/1.45 var(--ui);pointer-events:none;white-space:pre-wrap;overflow-wrap:anywhere;text-align:start}
+.sh-dvtip b,.sh-dvtip span{display:block}
+.sh-dvl{max-height:252px;overflow:auto;outline:none;font:13px var(--ui)}
+.sh-dvl p{margin:4px 6px;max-width:260px}
+.sh-dvi{padding:6px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:min(420px,80vw);text-align:start}
+.sh-dvi:hover,.sh-dvi.on{background:var(--accent-soft)}
+.sh-aci.dv span{font-size:13px;color:var(--text)}
+.sh-dva{display:flex;gap:12px;align-items:flex-start}
+.sh-dva .ms{font-size:34px;width:auto;flex:none}
+.sh-dva .ms.stop{color:#e03131}.sh-dva .ms.warn{color:#e8a100}.sh-dva .ms.info{color:#2743d8}
+.sh-dva p{margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.sh-dvd{display:flex;flex-direction:column;min-width:min(520px,82vw);min-height:min(350px,60vh)}
+.sh-dvd .seg{align-self:flex-start;margin-bottom:12px}
+.sh-dvd textarea.field{height:84px;padding:8px 10px;resize:vertical}
+.sh-dvd .check{margin-bottom:10px}
+.sh-dvd p{margin:0 0 8px}
+.sh-dvd code{font:600 12.5px var(--mono);unicode-bidi:isolate;background:var(--surface-2);border-radius:5px;padding:1px 6px}
 .sh-fh{z-index:6;background:#2743d8;border:1px solid #fff}
 .sh-clip{z-index:6;background:linear-gradient(90deg,#2743d8 50%,transparent 0) repeat-x 0 0/8px 2px,linear-gradient(90deg,#2743d8 50%,transparent 0) repeat-x 0 100%/8px 2px,linear-gradient(0deg,#2743d8 50%,transparent 0) repeat-y 0 0/2px 8px,linear-gradient(0deg,#2743d8 50%,transparent 0) repeat-y 100% 0/2px 8px;animation:shants .5s linear infinite}
 @keyframes shants{to{background-position:8px 0,-8px 100%,0 -8px,100% 8px}}
@@ -4415,7 +4503,9 @@ function ribbonPanels() {
     group(T('נוסחאות'), '', rbtn('shShowF', 'function', T('הצגת נוסחאות'), { big: true, title: T('הצגת הנוסחאות עצמן בתאים (Ctrl+`)') }), rbtn('shFxHelp', 'school', T('איך כותבים נוסחה'), { big: true })));
   const data = h('div', { class: 'panel sheet-only', 'data-panel': 'sdata', hidden: true },
     group(T('מיון'), '', rbtn('shSort', 'arrow_upward', T('מהקטן לגדול'), { big: true, arg: 'a', title: T('מיון מהקטן לגדול (א עד ת)') }), rbtn('shSort', 'arrow_downward', T('מהגדול לקטן'), { big: true, arg: 'd', title: T('מיון מהגדול לקטן (ת עד א)') }), rbtn('shSortDlg', 'sort', T('מיון מותאם'), { big: true })),
-    group(T('סינון'), '', rbtn('shFilter', 'filter_alt', T('סינון'), { big: true, id: 'shFilterBtn', title: T('כפתורי סינון בשורת הכותרות (Ctrl+Shift+L)') }), rbtn('shFilterClear', 'filter_alt_off', T('ניקוי הסינון'), { big: true })));
+    group(T('סינון'), '', rbtn('shFilter', 'filter_alt', T('סינון'), { big: true, id: 'shFilterBtn', title: T('כפתורי סינון בשורת הכותרות (Ctrl+Shift+L)') }), rbtn('shFilterClear', 'filter_alt_off', T('ניקוי הסינון'), { big: true })),
+    group(T('כלי נתונים'), '', rbtn('shDvList', 'arrow_drop_down', T('רשימה נפתחת'), { big: true, title: T('רשימה של ערכים לבחירה בתוך התא') }),
+      rbtn('shDvMenu', UI_DIR === 'rtl' ? 'checklist_rtl' : 'checklist', T('אימות נתונים'), { big: true, title: T('מה מותר להקליד בתאים, הודעות, וסימון של ערכים לא תקינים') })));
   const viewP = h('div', { class: 'panel sheet-only', 'data-panel': 'sview', hidden: true },
     group(T('חלון'), '', rbtn('shFreezeMenu', 'ac_unit', T('הקפאה'), { big: true, title: T('השורות והעמודות הראשונות נשארות במקום בגלילה') })),
     group(T('תצוגה@view'), '', rbtn('shGrid', 'grid_on', T('קווי רשת'), { big: true, id: 'shGridBtn' }), rbtn('shDir', 'format_textdirection_r_to_l', T('גיליון מימין לשמאל'), { big: true, id: 'shDirBtn' })),
@@ -4776,6 +4866,7 @@ const COMMANDS = {
   shSum: () => autoSum('SUM'), shSumMenu: (a, b) => sumMenu(b),
   shSortMenu: (a, b) => sortMenu(b), shClearMenu: (a, b) => clearMenu(b), shFind: () => openFind(false),
   shSort: a => quickSort(a === 'd'), shSortDlg: () => sortDialog(), shFilter: () => toggleFilter(), shFilterClear: () => clearFilter(),
+  shDvList: () => dvDialog('list'), shDvMenu: (a, b) => dvMenu(b),
   shShowF: () => toggleFormulas(), shFxHelp: () => formulaHelp(), shFnDlg: () => fnDialog(), shFnCat: (a, b) => fnCatMenu(a, b), shCfMenu: (a, b) => cfMenu(b),
   shFreezeMenu: (a, b) => freezeMenu(b), shGrid: () => edit(() => setProp(WS, 'gl', !WS.gl)), shDir: () => edit(() => setProp(WS, 'dir', WS.dir === 'rtl' ? 'ltr' : 'rtl')),
   shZoom: a => setZoom(+a === 0 ? 100 : WS.zoom + (+a > 0 ? 10 : -10)),
@@ -4908,7 +4999,11 @@ async function readXlsx(buf) {
   const rep = new Map([['pivot', count(/xl\/pivotTables\/pivotTable\d+\.xml/g) / 2 | 0]]), hasCharts = count(/xl\/charts\/chart\d+\.xml/g) > 0;
   const add = (k, n = 1) => rep.set(k, (rep.get(k) || 0) + n);
   const ExcelJS = await excelLib(), wb = new ExcelJS.Workbook();
-  await wb.xlsx.load(buf);
+  // ExcelJS lists a data validation under every one of its cells, a million for a whole column. The rules are read
+  // from the file's own XML (importDv), so here each of their ranges counts as one cell
+  const dims = new ExcelJS.Workbook().addWorksheet('a').dimensions, RP = dims && Object.getPrototypeOf(dims), each = RP && RP.forEachAddress;
+  if (each) RP.forEachAddress = function (cb) { cb(this.tl); };
+  try { await wb.xlsx.load(buf); } finally { if (each) RP.forEachAddress = each; }
   const theme = themeOf(wb), VT = ExcelJS.ValueType, taken = new Set(), book = { v: 1, dir: UI_DIR, active: 0, sheets: [] }, xlNames = [];
   let hasCf = false;
   let anyRtl = null;
@@ -4983,8 +5078,6 @@ async function readXlsx(buf) {
     if (ws.getImages && ws.getImages().length) add('img', ws.getImages().length);
     const cf = ws.conditionalFormattings || (ws.model && ws.model.conditionalFormattings);
     if (cf && cf.length) hasCf = true;
-    const dv = ws.dataValidations && ws.dataValidations.model;
-    if (dv && Object.keys(dv).length) add('valid');
     if (ws.tables && Object.keys(ws.tables).length) add('table');
     book.sheets.push(sheetOut(s));
     xlNames.push(ws.name);
@@ -4996,6 +5089,7 @@ async function readXlsx(buf) {
   const nb = normBook(book);
   if (hasCharts) await importCharts(buf, nb, xlNames, rep);
   if (hasCf) await importCf(buf, nb, xlNames, rep, theme);
+  await importDv(buf, nb, xlNames, rep);
   return { book: bookOut(nb), rep };
 }
 /* the file's charts onto its sheets (by the sheet's name in the file); kinds that aren't here are counted for the report */
@@ -5145,6 +5239,7 @@ async function writeXlsx() {
   let buf = await wb.xlsx.writeBuffer();
   if (WB.sheets.some(s => s.charts.length)) buf = await addXlsxCharts(buf);
   if (dyn) buf = await addDynamic(buf);
+  if (WB.sheets.some(s => s.dv.length)) buf = await addXlsxDv(buf);
   if (WB.sheets.some(s => s.cf.length)) buf = await addXlsxCf(buf);
   return new Blob([buf], { type: XLSX_MIME });
 }
@@ -5219,7 +5314,7 @@ async function readFile(f) {
 const REP = {
   chart: N_('{n} גרפים מסוג שעוד אין כאן לא נפתחו'), pivot: N_('{n} טבלאות ציר נפתחו כתאים רגילים'), img: N_('{n} תמונות לא נפתחו'),
   fn: N_('{n} נוסחאות משתמשות בפונקציות שעוד אין כאן. הן מראות את הערך שנשמר בקובץ'), note: N_('{n} הערות על תאים לא נפתחו'), link: N_('{n} קישורים נפתחו כטקסט רגיל'),
-  cond: N_('{n} כללים של עיצוב מותנה מסוג שעוד אין כאן לא נפתחו'), valid: N_('{n} גיליונות עם רשימות נפתחות נפתחו בלי הרשימות'), table: N_('{n} גיליונות עם טבלאות מעוצבות נפתחו כתאים רגילים'),
+  cond: N_('{n} כללים של עיצוב מותנה מסוג שעוד אין כאן לא נפתחו'), valid: N_('{n} כללים של אימות נתונים לא נפתחו'), dvfn: N_('{n} כללים של אימות נתונים משתמשים בפונקציה או בשם שעוד אין כאן, ולכן לא נבדקים'), table: N_('{n} גיליונות עם טבלאות מעוצבות נפתחו כתאים רגילים'),
   hidden: N_('{n} גיליונות מוסתרים נפתחו כגיליונות רגילים'),
 };
 const repLines = rep => [...rep].filter(([k, n]) => REP[k] && n > 0).map(([k, n]) => TN(REP[k], n));
@@ -5296,9 +5391,10 @@ async function sheetPrint() {
    ========================================================= */
 const NF_NAMES = () => ({ general: null, number: NUM_NF, integer: '#,##0', currency: curNf(CUR), currency_ils: curNf('₪'), currency_usd: curNf('$'), currency_eur: curNf('€'), percent: PCT_NF, percent2: '0.00%', date: DATE_NF, long_date: LDATE_NF, time: TIME_NF, text: '@' });
 /* one sheet's part of a description: rows from a start cell, single cells, formats, column widths, freezing */
-function applySpec(book, s, spec) {
+function applySpec(book, s, spec, log) {
   const put = (r, c, v) => {
     if (r >= MAXR || c >= MAXC) return 0;
+    if (log && log.length < 5000) log.push([r, c]);
     const cur = cellAt(s, r, c), st0 = cur ? cur.st : emptyLook(s, r, c);
     if (v == null || v === '') { setCell(s, r, c, st0 ? { st: st0 } : null); return 1; }
     const p = typeof v === 'number' ? (Number.isFinite(v) ? { v } : null) : typeof v === 'boolean' ? { v } : parseInput(String(v), st0 && st0.nf);
@@ -5363,6 +5459,17 @@ function applySpec(book, s, spec) {
   const add = [];
   for (const c of Array.isArray(spec.conditional_formats) ? spec.conditional_formats.slice(0, 100) : []) { const r = cfFromSpec(c); if (r) add.push(r); }
   if (add.length) { setProp(s, 'cf', [...s.cf, ...add].slice(0, 500)); n += add.length; }
+  // data validation: each rule takes the place of what its cells had; type "none" only takes rules away
+  let dv = s.dv;
+  for (const c of Array.isArray(spec.validations) ? spec.validations.slice(0, 200) : []) {
+    const g = c && typeof c === 'object' ? String(c.range || '').split(/[\s,;]+/).filter(Boolean).map(t => parseRange(t)) : [];
+    const rule = g.length && g.every(Boolean) && c.type !== 'none' ? dvFromSpec(c, g, book) : null;
+    if (!g.length || !g.every(Boolean) || (!rule && c.type !== 'none')) continue;
+    for (const x of g) dv = cutList(dv, x);
+    if (rule) dv = [...dv, rule];
+    n++;
+  }
+  if (dv !== s.dv) setProp(s, 'dv', dv.slice(-DV_MAX));
   if (spec.freeze_rows != null) setProp(s, 'fr', clamp(Math.round(+spec.freeze_rows) || 0, 0, 200));
   if (spec.freeze_columns != null) setProp(s, 'fc', clamp(Math.round(+spec.freeze_columns) || 0, 0, 60));
   if (spec.direction === 'rtl' || spec.direction === 'ltr') setProp(s, 'dir', spec.direction);
@@ -5421,6 +5528,7 @@ function forAI(args = {}) {
   const out = { sheets: WB.sheets.map(x => { const u = usedRange(x); return { name: x.name, used_range: u ? rangeA1(u) : null }; }), sheet: s.name, direction: s.dir };
   if (s.charts.length) out.charts = s.charts.map(ch => ({ type: Object.keys(CK_API).find(k => CK_API[k] === ch.ck), ...(ch.ti ? { title: ch.ti } : {}), data: ch.src ? ch.src.ref : ch.ser.map(x => x.v).join(', '), at: A1(ch.at.r, ch.at.c) }));
   if (s.cf.length) out.conditional_formats = s.cf.map(r => ({ range: r.g.map(rangeA1).join(' '), rule: cfDesc(r).replace(/[\u2066-\u2069]/g, '') }));
+  if (s.dv.length) out.validations = s.dv.map(dvToSpec);
   if (!g) return { ...out, range: null, rows: [], note: 'This sheet is empty.' };
   g = { r1: g.r1, c1: g.c1, r2: Math.min(g.r2, used ? used.r2 : g.r2, g.r1 + 399), c2: Math.min(g.c2, used ? used.c2 : g.c2, g.c1 + 59) };
   const rows = [], formulas = {};
@@ -5447,15 +5555,19 @@ function writeCells(args = {}) {
     if (!s) { s = newSheet(freeName(n || sheetWord(WB.sheets.length + 1), takenNames()), WB.dir); made = true; }
   }
   let n = 0;
+  const log = [];
   edit(() => {
     if (made) bookStep(() => WB.sheets.push(s));
     if (s !== WS) showSheet(s, true);
-    n = applySpec(WB, s, args);
+    n = applySpec(WB, s, args, log);
   });
   WB.active = WB.sheets.indexOf(WS);
   refresh();
+  // Excel checks only what a person types, and so does this app: Claude's values go in, and it is told which of them their cells' rules don't allow
+  const bad = s.dv.length ? [...new Set(log.filter(([r, c]) => { const rule = dvAt(s, r, c); return !!rule && !dvOk(s, rule, r, c); }).map(([r, c]) => A1(r, c)))].slice(0, 30) : [];
   const u = usedRange(s);
-  return { sheet: s.name, cells_written: n, used_range: u ? rangeA1(u) : null, ...(made ? { new_sheet: true } : {}) };
+  return { sheet: s.name, cells_written: n, used_range: u ? rangeA1(u) : null, ...(made ? { new_sheet: true } : {}),
+    ...(bad.length ? { not_allowed: bad, note: 'These cells now hold values that their data validation does not allow (read_spreadsheet lists the validations). The values were written anyway, because validation only stops what a person types. Fix them if that was not intended.' } : {}) };
 }
 
 /* =========================================================
@@ -6159,7 +6271,7 @@ function gOut(s) {
   if (s.merges.length) o.mg = s.merges.map(box).filter(Boolean);
   if (s.af) { const b = box(s.af); if (b) o.af = { g: b, hide: Object.entries(s.af.hide).map(([c, v]) => [cid(+c), v]).filter(p => p[0]) }; }
   if (s.charts.length) o.ch = s.charts.map(ch => { const x = chartOut(ch), a = rid(ch.at.r), b = cid(ch.at.c); delete x.dx; delete x.dy; return a && b ? { ...x, at: [a, b, ch.at.dx, ch.at.dy] } : null; }).filter(Boolean);
-  if (s.cf.length) o.cf = s.cf.map(rule => { const x = cfOut(rule), b = rule.g.map(box); delete x.ref; return b.every(Boolean) ? { ...x, g: b } : null; }).filter(Boolean);
+  for (const key of RULE_KEYS) if (s[key].length) o[key] = s[key].map(rule => { const x = cfOut(rule), b = rule.g.map(box); delete x.ref; return b.every(Boolean) ? { ...x, g: b } : null; }).filter(Boolean);
   return o;
 }
 /* the same, checked, from someone else */
@@ -6189,14 +6301,16 @@ function gNorm(v) {
     return { ...o2, at: [a[0], a[1], c.at.dx, c.at.dy] };
   }).filter(Boolean);
   if (ch.length) o.ch = ch;
-  const cf = (Array.isArray(v.cf) ? v.cf : []).slice(0, 500).map(x => {
-    const g = x && Array.isArray(x.g) ? x.g.map(box).filter(Boolean).slice(0, 50) : [], r = g.length && normCf({ ...x, g: null, ref: 'A1' });
-    if (!r) return null;
-    const o2 = cfOut(r);
-    delete o2.ref;
-    return { ...o2, g };
-  }).filter(Boolean);
-  if (cf.length) o.cf = cf;
+  for (const key of RULE_KEYS) {
+    const rules = (Array.isArray(v[key]) ? v[key] : []).slice(0, key === 'dv' ? DV_MAX : 500).map(x => {
+      const g = x && Array.isArray(x.g) ? x.g.map(box).filter(Boolean).slice(0, 50) : [], r = g.length && ruleNorm(key)({ ...x, g: null, ref: 'A1' });
+      if (!r) return null;
+      const o2 = cfOut(r);
+      delete o2.ref;
+      return { ...o2, g };
+    }).filter(Boolean);
+    if (rules.length) o[key] = rules;
+  }
   return o;
 }
 /* into a sheet, by the ids it has now */
@@ -6218,7 +6332,7 @@ function gIn(s, g, taken) {
   if (af) { const hide = {}; for (const [id, v] of g.af.hide || []) { const c = C_(id); if (c != null && c >= af.c1 && c <= af.c2) hide[c] = v; } s.af = { ...af, hide }; }
   else s.af = null;
   s.charts = (g.ch || []).map(x => { const r = R_(x.at[0]), c = C_(x.at[1]); return r == null || c == null ? null : normSheetChart({ ...x, at: A1(r, c), dx: x.at[2], dy: x.at[3] }); }).filter(Boolean);
-  s.cf = (g.cf || []).map(x => { const gg = x.g.map(box).filter(Boolean); return gg.length ? normCf({ ...x, g: gg }) : null; }).filter(Boolean);
+  for (const key of RULE_KEYS) s[key] = (g[key] || []).map(x => { const gg = x.g.map(box).filter(Boolean); return gg.length ? ruleNorm(key)({ ...x, g: gg }) : null; }).filter(Boolean);
 }
 /* an entry from someone else, checked the way a workbook from storage is (undefined: not taken) */
 function roomNorm(k, v) {
@@ -6746,13 +6860,21 @@ const ICONS = {
 };
 const iconSvg = (set, i, size = 16) => `<svg viewBox="0 0 16 16" width="${size}" height="${size}" aria-hidden="true">${(ICONS[set] || ICONS['3TrafficLights1'])[i] || ''}</svg>`;
 
-/* --- the rules when the sheet changes around them --- */
+/* --- a sheet's rules when it changes around them: conditional formatting's (s.cf) and data validation's (s.dv), both
+   kept as ranges with formulas written for the first range's corner --- */
+const RULE_KEYS = ['cf', 'dv'];
+const ruleNorm = key => key === 'dv' ? normDv : normCf;
+/* a rule on other ranges: its formulas are written again for the corner the first range has now */
+function onRanges(rule, g) {
+  const a = cfAnchor(rule);
+  return { ...cfFormulas(rule, f => shiftFormula(f, g[0].r1 - a.r, g[0].c1 - a.c)), g };
+}
 /* rows or columns in or out: each range moves and grows with its cells, and the formulas follow, written again for the
    corner the first range has after it */
-function spliceCf(s, axis, at, n) {
-  if (!s.cf.length) return;
+function spliceRules(s, key, axis, at, n) {
+  if (!s[key].length) return;
   const R = axis === 'r', next = [];
-  for (const rule of s.cf) {
+  for (const rule of s[key]) {
     const g = rule.g.map(x => shiftRange(x, axis, at, n)).filter(Boolean);
     if (!g.length) continue;
     // the old cell that becomes the new corner: the old corner, or the first cell after what was taken out
@@ -6761,7 +6883,7 @@ function spliceCf(s, axis, at, n) {
     const a = cfAnchor(rule), dr = p.r - a.r, dc = p.c - a.c;
     next.push({ ...cfFormulas(rule, f => spliceFormula(shiftFormula(f, dr, dc), s.name, s.name, axis, at, n)), g });
   }
-  setProp(s, 'cf', next);
+  setProp(s, key, next);
 }
 /* a range without the cells of another: up to four pieces, the top one first */
 function minusG(a, b) {
@@ -6773,47 +6895,85 @@ function minusG(a, b) {
   if (a.r2 > b.r2) out.push({ r1: b.r2 + 1, c1: a.c1, r2: a.r2, c2: a.c2 });
   return out;
 }
-/* the rules without the cells in g (clearing formats, or pasting over them) */
-function cfCut(s, g) {
-  if (!s.cf.some(rule => rule.g.some(x => meets(x, g)))) return;
+/* ranges that touch along a whole side become one (A2 and A3:A9 are A2:A9), the top one first */
+function joinG(list) {
+  let out = list.map(g => ({ ...g }));
+  for (let n = -1; n !== out.length;) {
+    n = out.length;
+    for (const [k1, k2, a1, a2] of [['c1', 'c2', 'r1', 'r2'], ['r1', 'r2', 'c1', 'c2']]) {
+      out.sort((x, y) => x[k1] - y[k1] || x[k2] - y[k2] || x[a1] - y[a1]);
+      const next = [];
+      for (const g of out) { const p = next[next.length - 1]; if (p && p[k1] === g[k1] && p[k2] === g[k2] && g[a1] <= p[a2] + 1) p[a2] = Math.max(p[a2], g[a2]); else next.push(g); }
+      out = next;
+    }
+  }
+  return out.sort((x, y) => x.r1 - y.r1 || x.c1 - y.c1);
+}
+/* a list of rules without the cells in g; the same list when none of them is there */
+function cutList(list, g) {
+  if (!list.some(rule => rule.g.some(x => meets(x, g)))) return list;
   const next = [];
-  for (const rule of s.cf) {
+  for (const rule of list) {
     if (!rule.g.some(x => meets(x, g))) { next.push(rule); continue; }
     const parts = rule.g.flatMap(x => minusG(x, g)).slice(0, 50);
-    if (!parts.length) continue;
-    const a = cfAnchor(rule);
-    next.push({ ...cfFormulas(rule, f => shiftFormula(f, parts[0].r1 - a.r, parts[0].c1 - a.c)), g: parts });
+    if (parts.length) next.push(onRanges(rule, parts));
   }
-  setProp(s, 'cf', next);
+  return next;
+}
+/* a sheet's rules without the cells in g (clearing them, or pasting over them) */
+function cutRules(s, key, g) {
+  const next = cutList(s[key], g);
+  if (next !== s[key]) setProp(s, key, next);
 }
 /* each formula in one sheet's rules through fn (rows moved, sheets renamed or deleted elsewhere) */
-function eachCfOf(sh, fn) {
-  if (!sh.cf.length) return;
+function eachRuleOf(sh, key, fn) {
+  if (!sh[key].length) return;
   let any = false;
-  const next = sh.cf.map(rule => ({ ...cfFormulas(rule, f => { const t = fn(f); if (t !== f) any = true; return t; }), g: rule.g }));
-  if (any) setProp(sh, 'cf', next);
+  const next = sh[key].map(rule => ({ ...cfFormulas(rule, f => { const t = fn(f); if (t !== f) any = true; return t; }), g: rule.g }));
+  if (any) setProp(sh, key, next);
 }
 /* the rules of copied cells g, cut to them, with their ranges from g's corner (rel) */
-function cfPack(s, g) {
+function packRules(s, key, g) {
   const out = [];
-  for (const rule of s.cf) {
+  for (const rule of s[key]) {
     const parts = rule.g.filter(x => meets(x, g)).map(x => ({ r1: Math.max(x.r1, g.r1), c1: Math.max(x.c1, g.c1), r2: Math.min(x.r2, g.r2), c2: Math.min(x.c2, g.c2) }));
-    if (!parts.length) continue;
-    const a = cfAnchor(rule);
-    out.push({ ...cfOut({ ...cfFormulas(rule, f => shiftFormula(f, parts[0].r1 - a.r, parts[0].c1 - a.c)), g: parts }), rel: parts.map(p => [p.r1 - g.r1, p.c1 - g.c1, p.r2 - g.r1, p.c2 - g.c1]) });
+    if (parts.length) out.push({ ...cfOut(onRanges(rule, parts)), rel: parts.map(p => [p.r1 - g.r1, p.c1 - g.c1, p.r2 - g.r1, p.c2 - g.c1]) });
   }
   return out;
 }
 /* and pasted at (r0, c0), where the copy's corner was (sr, sc) */
-function cfUnpack(list, r0, c0, sr, sc) {
-  const out = [];
+function unpackRules(key, list, r0, c0, sr, sc) {
+  const out = [], norm = ruleNorm(key);
   for (const x of Array.isArray(list) ? list : []) {
     if (!Array.isArray(x.rel)) continue;
     const g = x.rel.map(([a, b, c, d]) => ({ r1: r0 + a, c1: c0 + b, r2: Math.min(MAXR - 1, r0 + c), c2: Math.min(MAXC - 1, c0 + d) })).filter(y => y.r1 < MAXR && y.c1 < MAXC);
-    const rule = normCf({ ...x, id: null, g });
+    const rule = norm({ ...x, id: null, g });
     if (rule) out.push(cfFormulas(rule, f => shiftFormula(f, r0 - sr, c0 - sc)));
   }
   return out;
+}
+/* the fill handle (and Ctrl+D, Ctrl+R) over the cells of `to` beyond g: each takes the rules of the cell it is filled
+   from, as in Excel. Conditional formatting is added to what the cells have; data validation takes its place */
+function fillRules(s, key, g, to) {
+  const vert = to.r1 < g.r1 || to.r2 > g.r2, a1 = vert ? 'r1' : 'c1', a2 = vert ? 'r2' : 'c2';
+  const T = to[a2] > g[a2] ? { ...to, [a1]: g[a2] + 1 } : { ...to, [a2]: g[a1] - 1 }, per = g[a2] - g[a1] + 1, add = new Map();
+  if (T[a1] > T[a2]) return;
+  for (const rule of s[key]) {
+    const rects = [];
+    for (const x of rule.g) {
+      if (!meets(x, g)) continue;
+      const I = { r1: Math.max(x.r1, g.r1), c1: Math.max(x.c1, g.c1), r2: Math.min(x.r2, g.r2), c2: Math.min(x.c2, g.c2) };
+      if (I[a1] === g[a1] && I[a2] === g[a2]) { rects.push({ ...I, [a1]: T[a1], [a2]: T[a2] }); continue; }
+      // a part of g: the same part of every copy of g that the fill lays down
+      for (let k = Math.floor((T[a1] - I[a2]) / per); k <= Math.ceil((T[a2] - I[a1]) / per) && rects.length < 200; k++) {
+        const lo = Math.max(I[a1] + k * per, T[a1]), hi = Math.min(I[a2] + k * per, T[a2]);
+        if (k && lo <= hi) rects.push({ ...I, [a1]: lo, [a2]: hi });
+      }
+    }
+    if (rects.length) add.set(rule.id, rects);
+  }
+  if (key === 'dv') cutRules(s, key, T);
+  if (add.size) setProp(s, key, s[key].map(rule => add.has(rule.id) ? onRanges(rule, joinG([...rule.g, ...add.get(rule.id)]).slice(0, 50)) : rule));
 }
 
 /* --- conditional formatting in Excel files. ExcelJS reads and writes only part of it, so the rules are written into
@@ -6821,6 +6981,18 @@ function cfUnpack(list, r0, c0, sr, sc) {
    triangle and box icons), and read from there --- */
 const X14 = 'http://schemas.microsoft.com/office/spreadsheetml/2009/9/main', XM = 'http://schemas.microsoft.com/office/excel/2006/main';
 const XL_OPS = { gt: 'greaterThan', ge: 'greaterThanOrEqual', lt: 'lessThan', le: 'lessThanOrEqual', eq: 'equal', ne: 'notEqual', bw: 'between', nb: 'notBetween' };
+/* a file keeps a rule's formulas for the corner of the box around all its ranges (a cell that needn't be in any of
+   them); here they are kept for the first range's corner. out: a rule as a file wants it; else a rule read from one */
+function fileRule(rule, out) {
+  const a = cfAnchor(rule), dr = Math.min(...rule.g.map(g => g.r1)) - a.r, dc = Math.min(...rule.g.map(g => g.c1)) - a.c;
+  return dr || dc ? cfFormulas(rule, f => wrapShift(f, out ? dr : -dr, out ? dc : -dc)) : rule;
+}
+function wrapShift(f, dr, dc) {
+  return !dr && !dc ? f : mapRefs(f, t => refText(t, { r1: wrapAt(t.r1, dr, t.a[0], MAXR), c1: wrapAt(t.c1, dc, t.a[1], MAXC), r2: wrapAt(t.r2, dr, t.a[2], MAXR), c2: wrapAt(t.c2, dc, t.a[3], MAXC) }));
+}
+/* the parts of a sheet that come after its conditional formatting and data validation, in the order a file keeps them */
+const XL_AFTER_DV = ['<hyperlinks', '<printOptions', '<pageMargins', '<pageSetup', '<headerFooter', '<rowBreaks', '<colBreaks', '<customProperties', '<cellWatches', '<ignoredErrors',
+  '<smartTags', '<drawing', '<legacyDrawing', '<picture', '<oleObjects', '<controls', '<webPublishItems', '<tableParts', '<extLst', '</worksheet>'];
 const XL_TEXT = { has: ['containsText', 'containsText'], not: ['notContainsText', 'notContains'], begins: ['beginsWith', 'beginsWith'], ends: ['endsWith', 'endsWith'] };
 const XL_DATES = { yesterday: 'yesterday', today: 'today', tomorrow: 'tomorrow', last7: 'last7Days', lastweek: 'lastWeek', thisweek: 'thisWeek', nextweek: 'nextWeek', lastmonth: 'lastMonth', thismonth: 'thisMonth', nextmonth: 'nextMonth' };
 const XL_VO = { min: 'min', max: 'max', num: 'num', pct: 'percent', pctl: 'percentile', formula: 'formula' };
@@ -6889,7 +7061,8 @@ async function addXlsxCf(buf) {
     if (!s.cf.length || !sf) continue;
     const main = [], ext = [];
     for (const rule of s.cf) {
-      const sq = rule.g.map(rangeA1).join(' '), x = cfRuleXml(rule, ++prio, A1(rule.g[0].r1, rule.g[0].c1), dxfOf);
+      // tl: the cell the file's formulas are written for (see fileRule)
+      const sq = sqrefOf(rule), tl = A1(Math.min(...rule.g.map(g => g.r1)), Math.min(...rule.g.map(g => g.c1))), x = cfRuleXml(fileRule(rule, true), ++prio, tl, dxfOf);
       if (x.main) main.push(`<conditionalFormatting sqref="${sq}">${x.main}</conditionalFormatting>`);
       if (x.ext) ext.push(`<x14:conditionalFormatting xmlns:xm="${XM}">${x.ext}<xm:sqref>${sq}</xm:sqref></x14:conditionalFormatting>`);
     }
@@ -6900,9 +7073,7 @@ async function addXlsxCf(buf) {
       sx = own >= 0 ? sx.slice(0, own + 8) + block + sx.slice(own + 8) : sx.replace('</worksheet>', `<extLst>${block}</extLst></worksheet>`);
     }
     // the rules come after the merged cells and before dataValidations and all that follows it
-    const at = ['<dataValidations', '<hyperlinks', '<printOptions', '<pageMargins', '<pageSetup', '<headerFooter', '<rowBreaks', '<colBreaks', '<customProperties', '<cellWatches', '<ignoredErrors',
-      '<smartTags', '<drawing', '<legacyDrawing', '<picture', '<oleObjects', '<controls', '<webPublishItems', '<tableParts', '<extLst', '</worksheet>'].map(t => sx.indexOf(t)).filter(p => p >= 0);
-    const pos = Math.min(...at);
+    const pos = Math.min(...['<dataValidations', ...XL_AFTER_DV].map(t => sx.indexOf(t)).filter(p => p >= 0));
     sx = sx.slice(0, pos) + main.join('') + sx.slice(pos);
     zip.file(sp, sx);
   }
@@ -7010,7 +7181,7 @@ async function importCf(buf, nb, xlNames, rep, theme) {
   for (const [name, list] of got.out) {
     const s = nb.sheets[xlNames.indexOf(name)];
     if (!s) continue;
-    for (const x of list) { const r = normCf(x); if (r && s.cf.length < 500) s.cf.push(r); else got.lost++; }
+    for (const x of list) { const r = normCf(x); if (r && s.cf.length < 500) s.cf.push(fileRule(r, false)); else got.lost++; }
   }
   if (got.lost) rep.set('cond', (rep.get('cond') || 0) + got.lost);
 }
@@ -7103,7 +7274,7 @@ function cfMenu(anchor) {
     { ic: 'star', label: T('ערכות סמלים'), run: () => cfIconGallery(anchor), keep: true, key: MORE },
     '-',
     { ic: 'add', label: T('כלל חדש…'), run: () => cfEditor(null), keep: true },
-    { ic: 'ink_eraser', label: T('ניקוי הכללים מהתאים שנבחרו'), run: () => edit(() => cfCut(WS, selG())), off: !WS.cf.some(r => r.g.some(x => meets(x, selG()))) },
+    { ic: 'ink_eraser', label: T('ניקוי הכללים מהתאים שנבחרו'), run: () => edit(() => cutRules(WS, 'cf', selG())), off: !WS.cf.some(r => r.g.some(x => meets(x, selG()))) },
     { ic: 'delete_sweep', label: T('ניקוי הכללים מכל הגיליון'), run: () => edit(() => setProp(WS, 'cf', [])), off: !WS.cf.length },
     { ic: 'edit', label: T('ניהול כללים…'), run: () => cfManager(), keep: true },
   ]);
@@ -7436,6 +7607,525 @@ function cfManager() {
   modal({ title: T('ניהול כללים של עיצוב מותנה'), wide: true, body, actions: [
     { label: T('אישור'), kind: 'primary', run: () => { const next = rules.map(r => normCf(cfOut(r))).filter(Boolean); if (JSON.stringify(next.map(cfOut)) !== JSON.stringify(WS.cf.map(cfOut))) edit(() => setProp(WS, 'cf', next)); } },
     { label: T('ביטול'), value: false }], onClose: () => focusGrid() });
+}
+
+/* =========================================================
+   data validation, as Excel's (Data > Data Validation): what may be typed into cells, the list that drops down in a
+   cell, the message a chosen cell shows, and the alert for a value that doesn't fit. A rule is { id, g: [ranges],
+   t: any, whole, decimal, list, date, time, len (the length of the text) or custom; op (for numbers, dates, times and
+   lengths); a and b: its formulas (a list written out is one text in quotes, "כן,לא,אולי"; a list from cells is a
+   reference; custom is a formula that must come out TRUE); nb: an empty cell doesn't pass; nd: a list without its
+   arrow; pt pm: the title and text of the message shown when a cell is chosen (np: kept, not shown); es: how strict
+   the alert is (stop when missing; warn; info); et em: its title and text; ne: no alert, so anything goes in }.
+   A cell is in one rule at most. The formulas are written for the first range's corner and move with each cell, like
+   conditional formatting's. What passes is what Excel passes: measured there, value by value
+   ========================================================= */
+const DV_KINDS = ['any', 'whole', 'decimal', 'list', 'date', 'time', 'len', 'custom'];
+const DV_NUM = ['whole', 'decimal', 'date', 'time', 'len'];   // the kinds that compare a number (len: the text's length)
+const DV_MAX = 2000;
+const quoted = t => '"' + t.replace(/"/g, '""') + '"';
+const dvText = (v, max) => typeof v === 'string' ? v.replace(/\r\n?/g, '\n').replace(/[\x00-\x08\x0b-\x1f]/g, '').slice(0, max) : '';
+/* Excel takes a written-out list of up to 255 letters: a longer one keeps the items that fit */
+function dvCap(f) {
+  const a = astOf(f);
+  if (!a || a.t !== 'str' || a.v.length <= 255) return f;
+  const t = a.v.slice(0, 256), i = t.lastIndexOf(',');
+  return quoted(i > 0 ? t.slice(0, i) : t.slice(0, 255));
+}
+function normDv(x) {
+  if (!x || typeof x !== 'object' || !DV_KINDS.includes(x.t)) return null;
+  const g = (Array.isArray(x.g) ? x.g : String(x.ref || '').split(/[\s,]+/).map(parseRange)).filter(y => y && y.r1 >= 0 && y.c1 >= 0 && y.r2 < MAXR && y.c2 < MAXC).slice(0, 50);
+  if (!g.length) return null;
+  const r = { id: typeof x.id === 'string' && /^[a-z0-9]{4,24}$/.test(x.id) ? x.id : sid(), t: x.t, g };
+  if (DV_NUM.includes(x.t)) { r.op = CF_OPS.includes(x.op) ? x.op : 'bw'; r.a = cfFormula(x.a) || '0'; if (r.op === 'bw' || r.op === 'nb') r.b = cfFormula(x.b) || r.a; }
+  else if (x.t !== 'any') { r.a = cfFormula(x.a); if (!r.a) return null; if (x.t === 'list') r.a = dvCap(r.a); }
+  if (x.t !== 'any' && x.nb) r.nb = true;
+  if (x.t === 'list' && x.nd) r.nd = true;
+  const pt = dvText(x.pt, 32), pm = dvText(x.pm, 255), et = dvText(x.et, 32), em = dvText(x.em, 225);
+  if (pt) r.pt = pt;
+  if (pm) r.pm = pm;
+  if ((pt || pm) && x.np) r.np = true;
+  if (x.t !== 'any') { if (x.es === 'warn' || x.es === 'info') r.es = x.es; if (et) r.et = et; if (em) r.em = em; if (x.ne) r.ne = true; }
+  return x.t === 'any' && !pt && !pm ? null : r;
+}
+/* the rule a cell is in */
+function dvAt(s, r, c) {
+  for (const rule of s.dv) for (const g of rule.g) if (inG(g, r, c)) return rule;
+  return null;
+}
+/* what a list rule's formula gives for cell (r, c): the text of a list written out, the cells of a list kept in cells,
+   or an error */
+function dvSource(s, rule, r, c) {
+  const ast = astOf(rule.a);
+  if (!ast) return E_NAME;
+  if (ast.t === 'str') return ast.v;
+  const a = cfAnchor(rule), keep = [CTX, AX, OFF];
+  CTX = { si: WB.sheets.indexOf(s), r, c, dyn: false }; AX = true; OFF = { dr: r - a.r, dc: c - a.c };
+  try { return ast.t === 'ref' ? refVal(ast, true) : ev(ast); } catch (e) { return e instanceof Err ? e : E_VAL; } finally { [CTX, AX, OFF] = keep; }
+}
+/* a list rule's items for cell (r, c), each with its value, the text the list shows for it, and its number format.
+   lit: the list is written out in the rule. null: the source can't be worked out here (it uses a function or a name
+   this app doesn't have), and then nothing is checked against it */
+function dvList(s, rule, r, c) {
+  const src = dvSource(s, rule, r, c), items = [];
+  if (typeof src === 'string') return { lit: true, items: src.split(',').map(t => t.trim()).filter(Boolean).map(t => { const p = parseInput(t), ok = !!p && p.f == null && !isErr(p.v); return { t, v: ok ? p.v : t, nf: (ok && p.nf) || null }; }) };
+  if (src == null || isErr(src)) return unknownIn(rule.a) ? null : { lit: false, items };
+  const keep = SHOWF;
+  SHOWF = false;   // the items as their cells show them, also while the sheet shows its formulas
+  try {
+    if (src.rng) {
+      const { s: ss, g } = src, u = usedEnd(ss), r2 = Math.min(g.r2, Math.max(g.r1, u.r - 1)), c2 = Math.min(g.c2, Math.max(g.c1, u.c - 1));
+      for (let rr = g.r1; rr <= r2 && items.length < 5000; rr++) for (let cc = g.c1; cc <= c2 && items.length < 5000; cc++) {
+        const x = cellSp(ss, rr, cc);
+        if (x && x.v != null && !isErr(x.v)) items.push({ v: x.v, t: view(x).t ?? '', nf: (x.st && x.st.nf) || null });
+      }
+    } else for (const v of src.arr ? src.d : [src]) if (v != null && !isErr(v) && items.length < 5000) items.push({ v, t: toStr(v), nf: null });
+  } finally { SHOWF = keep; }
+  return { lit: false, items };
+}
+/* the same, kept until the workbook changes: once for all of a rule's cells when its source is the same for all of them */
+const DVC = { v: -1, m: new Map() };
+function dvItems(s, rule, r, c) {
+  if (DVC.v !== CHV) { DVC.v = CHV; DVC.m.clear(); }
+  if (rule._fx === undefined) rule._fx = !tokenize(rule.a).some(t => t.t === 'ref' && !t.a.every(Boolean));
+  const key = s.id + '|' + rule.id + (rule._fx ? '' : '|' + r + ',' + c);
+  let L = DVC.m.get(key);
+  if (L === undefined) { if (DVC.m.size > 5000) DVC.m.clear(); DVC.m.set(key, L = dvList(s, rule, r, c)); }
+  return L;
+}
+/* whether a value is one of a list's items. A list written out in the rule goes by the text, big and small letters
+   apart, spaces around the value aside, and numbers by what they are worth ("1.50" is 1.5). A list from cells goes by
+   the value itself: text in letters of either size, a number only as a number. (One thing isn't Excel's: there an
+   item written with a space after it, "a,b ,c", passes nothing, not even itself; here it is the item without the space) */
+function dvInList(L, v) {
+  if (isErr(v)) return false;
+  if (!L.lit) { if (!L.keys) L.keys = new Set(L.items.map(it => valKey(it.v))); return L.keys.has(valKey(v)); }
+  const t = toStr(v).trim(), n = typeof v === 'number' ? v : typeof v === 'string' ? numLike(v) : null;
+  return L.items.some(it => n != null && typeof it.v === 'number' ? it.v === n : it.t === t);
+}
+/* the items a cell's list shows, when the cell has a list with its arrow */
+function dvChoices(s, r, c) {
+  const rule = s.dv.length ? dvAt(s, r, c) : null, L = rule && rule.t === 'list' && !rule.nd ? dvItems(s, rule, r, c) : null;
+  return L ? L.items.filter(it => it.t !== '') : null;
+}
+/* whether a rule's formula, as it is for cell (r, c), points at an empty cell by itself (not as part of a range) */
+function dvBlankRef(f, s, r, c, a) {
+  let hit = false;
+  walk(astOf(f), n => {
+    if (hit || n.t !== 'ref' || n.k !== 'c' || n.sp) return;
+    const sh = n.sheet == null ? s : WB.sheets.find(x => x.name.toLowerCase() === n.sheet.toLowerCase());
+    if (sh && valAt(sh, wrapAt(n.r1, r - a.r, n.ab[0], MAXR), wrapAt(n.c1, c - a.c, n.ab[1], MAXC)) == null) hit = true;
+  });
+  return hit;
+}
+/* whether what cell (r, c) holds passes its rule. As in Excel: only a number is a number (not text that reads as one,
+   nor TRUE); dates and times are numbers; an empty cell passes unless the rule says otherwise; and while empty cells
+   pass, a formula that points at an empty cell lets any value of the right kind through */
+function dvOk(s, rule, r, c) {
+  const v = valAt(s, r, c);
+  if (rule.t === 'any' || (v == null && !rule.nb)) return true;
+  if (rule.t === 'list') { const L = dvItems(s, rule, r, c); return !L || (v != null && dvInList(L, v)); }
+  const a = cfAnchor(rule), val = f => cfEval(f, s, r, c, a), lost = (x, f) => x === E_NAME && !!unknownIn(f);   // a function that isn't here: nothing is checked
+  let n = v;
+  if (rule.t === 'len') { if (isErr(v)) return false; n = toStr(v).length; }
+  else if (rule.t !== 'custom' && (typeof v !== 'number' || (rule.t === 'whole' && !Number.isInteger(v)))) return false;
+  if (!rule.nb && [rule.a, rule.b].some(f => f != null && dvBlankRef(f, s, r, c, a))) return true;
+  const x = val(rule.a);
+  if (rule.t === 'custom') return lost(x, rule.a) || (typeof x === 'number' ? x !== 0 : typeof x === 'string' ? x.toLowerCase() === 'true' : x === true);
+  const y = rule.b != null ? val(rule.b) : x;
+  if (isErr(x) || isErr(y)) return lost(x, rule.a) || lost(y, rule.b);
+  const inside = compare('>=', n, x) && compare('<=', n, y);
+  switch (rule.op) {
+    case 'bw': return inside;
+    case 'nb': return !inside;
+    case 'eq': return compare('=', n, x);
+    case 'ne': return compare('<>', n, x);
+    case 'gt': return compare('>', n, x);
+    case 'lt': return compare('<', n, x);
+    case 'ge': return compare('>=', n, x);
+    default: return compare('<=', n, x);
+  }
+}
+
+/* --- on the sheet: the arrow of a list beside the active cell, the list itself, the message of the chosen cell, and
+   red rings around values that don't pass --- */
+const dvCell = () => { const m = mergeAt(WS, SEL.r, SEL.c); return m ? { r: m.r1, c: m.c1, r2: m.r2, c2: m.c2 } : { r: SEL.r, c: SEL.c, r2: SEL.r, c2: SEL.c }; };
+/* the arrow of the active cell's list: after the cell on its end side, or inside it where there is no room for that
+   (the edge of the view, or the last frozen column) */
+function dvArrow() {
+  if (!WS.dv.length || !V.vis) return null;
+  const m = dvCell(), rule = dvAt(WS, m.r, m.c);
+  if (!rule || rule.t !== 'list' || rule.nd) return null;
+  const size = Math.round(Math.min(spanH(m.r, m.r2), 20 * Z)), end = colX(m.c2 + 1);
+  const out = m.c2 + 1 < EXT.cols && (m.c2 < WS.fc ? m.c2 + 1 < WS.fc : end - V.vis.sx + size <= V.vis.vw);
+  return { rule, m, size, out, x: out ? end : end - size - 1, y: rowY(m.r2 + 1) - size - 1 };
+}
+/* an item chosen from a list goes into the cell: its value as the list has it, with its number format when the cell has none */
+function dvPut(r, c, it) {
+  edit(() => {
+    const x = cellAt(WS, r, c), st0 = x ? x.st : emptyLook(WS, r, c), st = it.nf && !(st0 && st0.nf) ? { ...(st0 || {}), nf: it.nf } : st0;
+    setCell(WS, r, c, st ? { v: it.v, st } : { v: it.v });
+  });
+}
+/* the list under its cell: a click takes an item, and so do the arrows with Enter; a letter goes to the next item that starts with it */
+function openDvList() {
+  const d = dvArrow();
+  if (!d) return false;
+  const { rule, m } = d, L = dvItems(WS, rule, m.r, m.c), cur = valAt(WS, m.r, m.c), items = L ? L.items.filter(it => it.t !== '').slice(0, 2000) : [];
+  const box = h('div', { class: 'sh-dvl', role: 'listbox', tabindex: '-1', 'aria-label': T('רשימה נפתחת') });
+  let at = L && cur != null ? items.findIndex(it => dvInList({ lit: L.lit, items: [it] }, cur)) : -1;
+  const take = i => { closePopover(); dvPut(m.r, m.c, items[i]); focusGrid(); };
+  const els = items.map((it, i) => h('div', { class: 'sh-dvi', role: 'option', dir: 'auto', text: it.t, onclick: () => take(i) }));
+  const mark = () => els.forEach((e, i) => { e.classList.toggle('on', i === at); e.setAttribute('aria-selected', String(i === at)); if (i === at) e.scrollIntoView({ block: 'nearest' }); });
+  if (!L) box.append(h('p', { class: 'muted small', text: T('אי אפשר להציג כאן את הרשימה הזאת: המקור שלה משתמש בפונקציה או בשם שעוד אין כאן.') }));
+  else if (!items.length) box.append(h('p', { class: 'muted small', text: T('הרשימה ריקה') }));
+  else box.append(...els);
+  box.addEventListener('keydown', e => {
+    const k = e.key, step = { ArrowDown: 1, ArrowUp: -1, PageDown: 8, PageUp: -8 }[k];
+    if (step || k === 'Home' || k === 'End') { at = k === 'Home' ? 0 : k === 'End' ? items.length - 1 : clamp(at + step, 0, items.length - 1); mark(); }
+    else if (k === 'Enter' || k === 'Tab') { if (at >= 0 && items[at]) take(at); else { closePopover(); focusGrid(); } }
+    else if (k === 'Escape') { closePopover(); focusGrid(); }
+    else if (k.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const low = k.toLowerCase(), from = at + 1, i = [...items.slice(from), ...items.slice(0, from)].findIndex(it => it.t.toLowerCase().startsWith(low));
+      if (i >= 0) { at = (i + from) % items.length; mark(); }
+    } else return;
+    e.preventDefault(); e.stopPropagation();
+  });
+  // under the cell, at least as wide as the cell with its arrow
+  const sc = V.scroll.getBoundingClientRect(), vis = V.vis, x = colX(m.c) - (m.c >= WS.fc ? vis.sx : 0), y = rowY(m.r) - (m.r >= WS.fr ? vis.sy : 0), w = spanW(m.c, m.c2) + (d.out ? d.size : 0);
+  Object.assign(V.anchor.style, { left: (WS.dir === 'rtl' ? sc.right - x - w : sc.left + x) + 'px', top: sc.top + y + 'px', width: w + 'px', height: spanH(m.r, m.r2) + 'px' });
+  box.style.minWidth = Math.max(w - 12, 90) + 'px';
+  openPop(V.anchor, box);
+  Object.assign(V.anchor.style, { width: '1px', height: '1px' });
+  mark();
+  box.focus({ preventScroll: true });
+  return true;
+}
+/* the message of the chosen cell's rule, in a small box under the cell */
+function dvTip() {
+  const m = WS.dv.length && V.vis ? dvCell() : null, rule = m && dvAt(WS, m.r, m.c), vis = V.vis;
+  if (!rule || rule.np || !(rule.pt || rule.pm)) { if (V.tip) V.tip.hidden = true; return; }
+  if (!V.tip) { V.tip = h('div', { class: 'sh-dvtip', role: 'note' }); V.over.append(V.tip); }
+  const tip = V.tip, sig = (rule.pt || '') + '\n' + (rule.pm || '');
+  if (tip._s !== sig) { tip._s = sig; tip.textContent = ''; tip.append(rule.pt ? h('b', { dir: 'auto', text: rule.pt }) : '', rule.pm ? h('span', { dir: 'auto', text: rule.pm }) : ''); }
+  const x = colX(m.c) - (m.c >= WS.fc ? vis.sx : 0), y = rowY(m.r2 + 1) - (m.r2 >= WS.fr ? vis.sy : 0);
+  tip.hidden = (m.r2 >= WS.fr && y < CHH + vis.FH) || (m.c >= WS.fc && x < RHW + vis.FW) || y > vis.vh - 20 || x > vis.vw - 20;
+  tip.style.right = tip.style.left = '';
+  tip.style[SIDE] = px(x + Math.min(20, spanW(m.c, m.c2) / 2));
+  tip.style.top = px(y + 6);
+}
+/* red rings around the cells in view whose values don't pass their rules (Excel's Circle Invalid Data), worked out
+   again after each change */
+function drawRings(L, rr, cc) {
+  const s = WS;
+  if (!s._ringv || s._ringv.v !== CHV) s._ringv = { v: CHV, m: new Map() };
+  const memo = s._ringv.m;
+  for (let r = rr[0]; r <= rr[1]; r++) {
+    if (!rowH(r)) continue;
+    for (let c = cc[0]; c <= cc[1]; c++) {
+      if (!colW(c)) continue;
+      const m = s.merges.length ? mergeAt(s, r, c) : null, k = KEY(r, c);
+      if (m && (m.r1 !== r || m.c1 !== c)) continue;
+      let bad = memo.get(k);
+      if (bad === undefined) { const rule = dvAt(s, r, c); memo.set(k, bad = !!rule && !dvOk(s, rule, r, c)); }
+      if (bad) place(part(L, 'dvr' + r + ',' + c, 'sh-dvr'), colX(c) - 4, rowY(r) - 3, (m ? spanW(m.c1, m.c2) : colW(c)) + 7, (m ? spanH(m.r1, m.r2) : rowH(r)) + 5);
+    }
+  }
+}
+function dvRings() {
+  if (!WS.dv.length) { toast(T('אין בגיליון הזה כללים של אימות נתונים')); return; }
+  const u = usedRange(WS);
+  let n = 0;
+  if (u) for (const rule of WS.dv) for (const g of rule.g) for (let r = g.r1; r <= Math.min(g.r2, u.r2) && n < 1000; r++) for (let c = g.c1; c <= Math.min(g.c2, u.c2) && n < 1000; c++) {
+    const m = WS.merges.length ? mergeAt(WS, r, c) : null;
+    if (!(m && (m.r1 !== r || m.c1 !== c)) && !dvOk(WS, rule, r, c)) n++;
+  }
+  WS._rings = true;
+  toast(n ? TN('{n} ערכים לא תקינים סומנו בעיגול אדום', n) : T('כל הערכים תקינים'), { icon: n ? 'error' : 'check_circle' });
+  render();
+}
+/* the alert for a value its cell's rule doesn't take, in Excel's three styles: stop (try again, or give up), warning
+   (keep it anyway?) and information (it goes in, unless cancelled). The value is out of the cell while it asks */
+const DVA = { open: false };
+function dvAlert(rule, move) {
+  const style = rule.es || 'stop', ta = taOf();
+  DVA.open = true;
+  const body = h('div', { class: 'sh-dva' }, icon(style === 'stop' ? 'error' : style === 'warn' ? 'warning' : 'info', style),
+    h('div', {}, h('p', { dir: 'auto', text: rule.em || T('הערך הזה לא מתאים למה שמותר בתא הזה.') }), style === 'warn' ? h('p', { text: T('להשאיר אותו בכל זאת?') }) : null));
+  const actions = style === 'stop' ? [{ label: T('לנסות שוב'), kind: 'primary', value: 'retry' }, { label: T('ביטול'), value: 'drop' }]
+    : style === 'warn' ? [{ label: T('כן'), value: 'keep' }, { label: T('לא'), kind: 'primary', value: 'retry' }, { label: T('ביטול'), value: 'drop' }]
+    : [{ label: T('אישור'), kind: 'primary', value: 'keep' }, { label: T('ביטול'), value: 'drop' }];
+  const m = modal({ title: rule.et || T('ערך לא תקין'), body, actions, onClose: v => {
+    DVA.open = false;
+    if (!ED.on) return;
+    if (v === 'keep') endEdit(true, move, true);
+    else if (v === 'retry') { ta.focus({ preventScroll: true }); ta.select(); }
+    else endEdit(false);
+  } });
+  setTimeout(() => { const b = m.body.parentNode.querySelector('footer .btn.primary'); if (b) b.focus(); }, 40);
+}
+
+/* --- the Data tab's menu, and the Data Validation dialog: what may be typed (Settings), the message of a chosen cell
+   (Input Message) and the alert for a value that doesn't fit (Error Alert). The dialog opens with the rule of the
+   active cell, its formulas as they are for that cell, and OK puts the rule on all the chosen cells --- */
+const DV_KIND_NAMES = { any: N_('כל ערך'), whole: N_('מספר שלם'), decimal: N_('מספר עשרוני'), list: N_('רשימה'), date: N_('תאריך'), time: N_('שעה'), len: N_('אורך הטקסט'), custom: N_('נוסחה משלך') };
+const DV_OPS = ['bw', 'nb', 'eq', 'ne', 'gt', 'lt', 'ge', 'le'];   // in Excel's order
+const DV_ES_NAMES = { stop: N_('עצירה: אי אפשר להכניס את הערך'), warn: N_('אזהרה: שואלים אם להשאיר אותו'), info: N_('מידע: מודיעים, והערך נכנס') };
+const DV_VAL_NAMES = { date: [N_('תאריך התחלה'), N_('תאריך סיום'), N_('תאריך')], time: [N_('שעת התחלה'), N_('שעת סיום'), N_('שעה')], len: [N_('אורך מינימלי'), N_('אורך מקסימלי'), N_('אורך')], num: [N_('מינימום'), N_('מקסימום'), N_('ערך')] };
+const DV_NEED = { whole: N_('צריך לכתוב מספר שלם, או = ונוסחה'), len: N_('צריך לכתוב מספר שלם, או = ונוסחה'), date: N_('צריך לכתוב תאריך, או = ונוסחה'), time: N_('צריך לכתוב שעה (למשל 8:30), או = ונוסחה'), decimal: N_('צריך לכתוב מספר, או = ונוסחה') };
+function dvMenu(anchor) {
+  if (ED.on && !endEdit(true)) return;
+  const g = selG();
+  menuAt(anchor, T('אימות נתונים'), [
+    { ic: UI_DIR === 'rtl' ? 'checklist_rtl' : 'checklist', label: T('אימות נתונים…'), run: () => dvDialog(), keep: true },
+    { ic: 'arrow_drop_down', label: T('רשימה נפתחת…'), run: () => dvDialog('list'), keep: true },
+    '-',
+    { ic: 'circle', label: T('סימון ערכים לא תקינים בעיגול'), run: dvRings },
+    { ic: 'visibility_off', label: T('הסרת העיגולים'), run: () => { WS._rings = false; render(); }, off: !WS._rings },
+    '-',
+    { ic: 'ink_eraser', label: T('ניקוי האימות מהתאים שנבחרו'), run: () => edit(() => cutRules(WS, 'dv', g)), off: !WS.dv.some(r => r.g.some(x => meets(x, g))) },
+  ]);
+}
+/* a rule's value when it is a plain number (as dates and times are too), else null */
+function dvPlain(f) {
+  const a = f == null ? null : astOf(f);
+  return a && a.t === 'num' ? a.v : a && a.t === 'neg' && a.neg && a.a.t === 'num' ? -a.a.v : null;
+}
+/* what was typed as a rule's value: a formula (=B2), or a number, a date or a time, kept as its number */
+function dvValIn(t) {
+  t = String(t ?? '').trim();
+  if (t[0] === '=') { const f = closeBrackets(t.slice(1)); return f && astOf(f) ? tidyFormula(f) : null; }
+  const p = t ? parseInput(t) : null;
+  return p && p.f == null && typeof p.v === 'number' ? String(p.v) : null;
+}
+/* and a rule's value shown in the dialog: a date as a date, a time as a time */
+function dvValOut(f, t) {
+  const n = dvPlain(f);
+  if (n == null) return f == null ? '' : '=' + f;
+  const nf = t === 'date' ? (n % 1 ? DATE_NF + ' hh:mm' : DATE_NF) : t === 'time' ? (Math.round(n * 86400) % 60 ? 'hh:mm:ss' : 'hh:mm') : null;
+  return (nf && fmtNumber(n, nf).t) || genText(n, 15);
+}
+/* a list's source as typed: its values with commas between them, or = and the cells that hold them (one row or one
+   column, in this sheet or another) */
+function dvListIn(t, book) {
+  t = String(t ?? '').trim();
+  if (!t) return { err: T('צריך לכתוב את הערכים של הרשימה') };
+  if (t[0] !== '=') {   // kept without spaces around the items: Excel never passes an item that ends with one
+    const items = t.split(',').map(x => x.trim()).filter(Boolean).join(',');
+    return !items ? { err: T('צריך לכתוב את הערכים של הרשימה') } : items.length > 255 ? { err: T('הרשימה ארוכה מדי (עד 255 תווים). אפשר לכתוב אותה בתאים, ולבחור אותם כמקור.') } : { a: quoted(items) };
+  }
+  const f = closeBrackets(t.slice(1)), ast = f && astOf(f), toks = ast ? tokenize(f).filter(k => k.t !== 'ws') : [];
+  if (!ast) return { err: T('לא הבנתי את המקור של הרשימה. אחרי ה-= כותבים טווח של תאים.') };
+  if (ast.t !== 'ref') return { a: tidyFormula(f, book) };
+  if (ast.g.r1 !== ast.g.r2 && ast.g.c1 !== ast.g.c2) return { err: T('המקור של רשימה הוא שורה אחת או עמודה אחת של תאים') };
+  // a range typed without $ would slide along with each cell of the rule; a list's cells stay where they are
+  return { a: tidyFormula(toks.length === 1 && !toks[0].a.some(Boolean) ? refText({ ...toks[0], a: [true, true, true, true] }, toks[0]) : f, book) };
+}
+const dvListOut = f => { const a = f == null ? null : astOf(f); return a && a.t === 'str' ? a.v.split(',').map(t => t.trim()).filter(Boolean).join(', ') : f == null ? '' : '=' + f; };
+function dvDialog(kind0) {
+  if (ED.on && !endEdit(true)) return;
+  const g = selG(), ac = dvCell(), base = dvAt(WS, ac.r, ac.c) || WS.dv.find(rule => rule.g.some(x => meets(x, g))) || null;
+  const b0 = base ? cfFormulas(base, f => shiftFormula(f, ac.r - base.g[0].r1, ac.c - base.g[0].c1)) : { t: 'any' };   // its formulas as they are for the active cell
+  const fld = (label, ...kids) => h('label', { class: 'fld' }, h('span', { text: label }), ...kids);
+  const inp = (v, label, o = {}) => h('input', { class: 'field', value: v ?? '', dir: o.ltr ? 'ltr' : 'auto', spellcheck: 'false', autocomplete: 'off', 'aria-label': label, maxlength: o.max, placeholder: o.ph, autofocus: o.focus });
+  const text = (v, label, max) => h('textarea', { class: 'field', dir: 'auto', 'aria-label': label, maxlength: max }, v || '');
+  const check = (label, on) => { const i = h('input', { type: 'checkbox' }); i.checked = !!on; return [h('label', { class: 'check' }, i, h('span', { text: label })), i]; };
+  const pick = (pairs, v, label) => { const s = h('select', { class: 'field', 'aria-label': label }, pairs.map(([k, n]) => h('option', { value: k, text: T(n) }))); s.value = v; return s; };
+  const eg = (words, code) => h('p', { class: 'muted small' }, words, ' ', h('code', { dir: 'auto', text: code }));
+  // Settings
+  const kind = pick(Object.entries(DV_KIND_NAMES), kind0 || b0.t, T('מה מותר בתא')), [blankL, blank] = check(T('תא ריק מותר'), !b0.nb);
+  const [allL, all] = check(T('להחיל את השינויים על כל התאים שיש להם אותן הגדרות'), false);
+  const area = h('div'), err = h('p', { class: 'sh-ch-err', role: 'alert', hidden: true });
+  allL.hidden = !base || !base.g.some(x => minusG(x, g).length);
+  let read = () => ({});   // what the fields say: the rule's own part, or { err }
+  const draw = () => {
+    const t = kind.value, mine = b0.t === t;
+    area.textContent = ''; err.hidden = true; blankL.hidden = t === 'any';
+    if (t === 'any') { area.append(h('p', { class: 'muted small', text: T('אפשר להקליד בתאים כל ערך.') })); read = () => ({}); }
+    else if (t === 'list') {
+      const src = inp(mine ? dvListOut(b0.a) : '', T('מקור הרשימה'), { ph: T('ערכים עם פסיקים ביניהם, או = וטווח של תאים'), focus: kind0 === 'list' }), [ddL, dd] = check(T('רשימה נפתחת בתוך התא'), !(mine && b0.nd));
+      area.append(fld(T('מקור הרשימה'), src), eg(T('כותבים את הערכים עם פסיקים ביניהם, למשל:'), T('כן, לא, אולי')), eg(T('רשימה שכתובה בתאים: = והטווח שלהם, למשל:'), '=F2:F10'), ddL);
+      read = () => { const x = dvListIn(src.value); return x.err ? x : { a: x.a, nd: !dd.checked }; };
+    } else if (t === 'custom') {
+      const here = A1(ac.r, ac.c), f = inp(mine ? '=' + b0.a : '=', T('נוסחה'), { ltr: true });
+      area.append(fld(T('נוסחה'), f), eg(T('מה שמקלידים בתא מתקבל כשהנוסחה יוצאת נכונה (TRUE). כותבים אותה בשביל התא {0}, והיא נבדקת לכל תא כמו נוסחה שהועתקה אליו. למשל:', here), '=ISNUMBER(' + here + ')'));
+      read = () => { const x = closeBrackets(String(f.value).trim().replace(/^=/, '')); return x && astOf(x) ? { a: tidyFormula(x) } : { err: T('לא הבנתי את הנוסחה. היא מתחילה ב-= , כמו נוסחה בתא.') }; };
+    } else {
+      const names = DV_VAL_NAMES[t] || DV_VAL_NAMES.num, op = pick(DV_OPS.map(k => [k, CF_OP_NAMES[k]]), mine ? b0.op : 'bw', T('תנאי'));
+      const a = inp(mine ? dvValOut(b0.a, t) : '', T(names[0]), { ltr: true }), b = inp(mine ? dvValOut(b0.b, t) : '', T(names[1]), { ltr: true }), la = h('span'), fb = fld(T(names[1]), b);
+      const two = () => op.value === 'bw' || op.value === 'nb', sync = () => { fb.hidden = !two(); la.textContent = T(names[two() ? 0 : 2]); };
+      op.addEventListener('change', sync); sync();
+      area.append(fld(T('תנאי@title'), op), h('label', { class: 'fld' }, la, a), fb, eg(T('אפשר לכתוב גם = וכתובת של תא או נוסחה, למשל:'), '=B1'));
+      read = () => {
+        const x = dvValIn(a.value), y = two() ? dvValIn(b.value) : null, nx = dvPlain(x), ny = dvPlain(y);
+        if (x == null || (two() && y == null)) return { err: T(DV_NEED[t]) };
+        if ((t === 'whole' || t === 'len') && [nx, ny].some(n => n != null && !Number.isInteger(n))) return { err: T(DV_NEED.whole) };
+        if (nx != null && ny != null && nx > ny) return { err: T('הערך הראשון צריך להיות קטן מהשני, או שווה לו') };
+        return { op: op.value, a: x, b: two() ? y : undefined };
+      };
+    }
+  };
+  kind.addEventListener('change', draw);
+  draw();
+  // Input Message, Error Alert
+  const [seeL, see] = check(T('להציג את ההודעה כשבוחרים את התא'), !b0.np), pt = inp(b0.pt, T('כותרת'), { max: 32 }), pm = text(b0.pm, T('הודעה'), 255);
+  const [warnL, warn] = check(T('להציג התראה כשמקלידים ערך לא תקין'), !b0.ne), es = pick(Object.entries(DV_ES_NAMES), b0.es || 'stop', T('סגנון')), et = inp(b0.et, T('כותרת'), { max: 32 }), em = text(b0.em, T('הודעה'), 225);
+  const panes = { set: h('div', {}, fld(T('מה מותר בתא'), kind), area, blankL, allL, err), msg: h('div', { hidden: true }, seeL, fld(T('כותרת'), pt), fld(T('הודעה'), pm), h('p', { class: 'muted small', text: T('ההודעה מופיעה ליד התא כשבוחרים אותו, ומסבירה מה להקליד בו.') })),
+    alert: h('div', { hidden: true }, warnL, fld(T('סגנון'), es), fld(T('כותרת'), et), fld(T('הודעה'), em), h('p', { class: 'muted small', text: T('בלי התראה אפשר להקליד בתא כל ערך. הסימון בעיגול עדיין מראה את הערכים הלא תקינים.') })) };
+  const tabs = h('div', { class: 'seg', role: 'tablist' }, [['set', T('הגדרות')], ['msg', T('הודעת קלט')], ['alert', T('התראת שגיאה')]].map(([k, n]) => h('button', { type: 'button', role: 'tab', 'data-k': k, 'aria-selected': String(k === 'set'), onclick: () => show(k) }, n)));
+  const show = k => { for (const b of tabs.children) b.setAttribute('aria-selected', String(b.dataset.k === k)); for (const [n, p] of Object.entries(panes)) p.hidden = n !== k; };
+  const clear = () => { kind.value = 'any'; b0.t = 'any'; blank.checked = see.checked = warn.checked = true; pt.value = pm.value = et.value = em.value = ''; es.value = 'stop'; show('set'); draw(); return false; };
+  const apply = () => {
+    const x = read();
+    if (x.err) { show('set'); err.textContent = x.err; err.hidden = false; return false; }
+    // on the chosen cells; or, when asked, on every cell of the rule that was opened too
+    const targets = all.checked && base ? joinG([...base.g.flatMap(y => minusG(y, g)), g]).slice(0, 50) : [g];
+    const move = f => f == null ? f : shiftFormula(f, targets[0].r1 - ac.r, targets[0].c1 - ac.c);
+    const rule = normDv({ ...x, t: kind.value, a: move(x.a), b: move(x.b), g: targets, id: all.checked && base ? base.id : null, nb: !blank.checked,
+      pt: pt.value, pm: pm.value, np: !see.checked, es: es.value, et: et.value, em: em.value, ne: !warn.checked });
+    let next = WS.dv;
+    for (const y of targets) next = cutList(next, y);
+    if (rule) next = [...next, rule].slice(-DV_MAX);
+    const flat = l => JSON.stringify(l.map(r => ({ ...cfOut(r), id: 0 })));
+    if (flat(next) !== flat(WS.dv)) edit(() => setProp(WS, 'dv', next));
+  };
+  modal({ title: T('אימות נתונים'), wide: true, body: h('div', { class: 'sh-dvd' }, tabs, panes.set, panes.msg, panes.alert), actions: [
+    { label: T('ניקוי הכל'), run: clear }, { label: T('אישור'), kind: 'primary', run: apply }, { label: T('ביטול'), value: false }], onClose: () => focusGrid() });
+}
+
+/* --- data validation in Excel files. ExcelJS reads each rule cell by cell and changes its formulas, so the rules are
+   written into each sheet's own part here, and read from it. A rule that points at another sheet goes into Excel
+   2010's part of the sheet (extLst), where Excel itself keeps such rules --- */
+const XL_DV = { whole: 'whole', decimal: 'decimal', list: 'list', date: 'date', time: 'time', len: 'textLength', custom: 'custom' };
+const XL_ES = { warn: 'warning', info: 'information' };
+const xlAttr = t => esc(t).replace(/\n/g, '&#10;');
+const sqrefOf = rule => rule.g.map(g => A1(g.r1, g.c1) + (g.r1 === g.r2 && g.c1 === g.c2 ? '' : ':' + A1(g.r2, g.c2))).join(' ');
+function dvXml(rule) {
+  rule = fileRule(rule, true);
+  const far = [rule.a, rule.b].some(f => f != null && tokenize(f).some(t => t.t === 'ref' && t.sheet != null)), ns = far ? 'x14:' : '', sq = sqrefOf(rule);
+  let at = rule.t === 'any' ? '' : ` type="${XL_DV[rule.t]}"`;
+  if (rule.es) at += ` errorStyle="${XL_ES[rule.es]}"`;
+  if (rule.op && rule.op !== 'bw') at += ` operator="${XL_OPS[rule.op]}"`;
+  if (!rule.nb) at += ' allowBlank="1"';
+  if (rule.nd) at += ' showDropDown="1"';   // Excel's name for it says the opposite: 1 hides the arrow
+  if (!rule.np) at += ' showInputMessage="1"';
+  if (!rule.ne) at += ' showErrorMessage="1"';
+  for (const [k, n] of [['et', 'errorTitle'], ['em', 'error'], ['pt', 'promptTitle'], ['pm', 'prompt']]) if (rule[k]) at += ` ${n}="${xlAttr(rule[k])}"`;
+  const f = (n, v) => v == null ? '' : far ? `<x14:formula${n}><xm:f>${esc(xlFormula(v))}</xm:f></x14:formula${n}>` : `<formula${n}>${esc(xlFormula(v))}</formula${n}>`;
+  return { far, xml: `<${ns}dataValidation${at}${far ? '' : ` sqref="${sq}"`}>${f(1, rule.a)}${f(2, rule.b)}${far ? `<xm:sqref>${sq}</xm:sqref>` : ''}</${ns}dataValidation>` };
+}
+async function addXlsxDv(buf) {
+  const JSZip = await zipLib(), zip = await JSZip.loadAsync(buf);
+  for (let i = 0; i < WB.sheets.length; i++) {
+    const s = WB.sheets[i], sp = `xl/worksheets/sheet${i + 1}.xml`, sf = zip.file(sp);
+    if (!s.dv.length || !sf) continue;
+    const parts = s.dv.map(dvXml), main = parts.filter(p => !p.far), ext = parts.filter(p => p.far);
+    let sx = await sf.async('string');
+    if (ext.length) {   // into the sheet's own extLst (its last element), or a new one
+      const block = `<ext uri="{CCE6A557-97BC-4b89-ADB6-D9C93CAAB3DF}" xmlns:x14="${X14}"><x14:dataValidations count="${ext.length}" xmlns:xm="${XM}">${ext.map(p => p.xml).join('')}</x14:dataValidations></ext>`;
+      const own = /<\/extLst>\s*<\/worksheet>\s*$/.test(sx) ? sx.lastIndexOf('<extLst>') : -1;
+      sx = own >= 0 ? sx.slice(0, own + 8) + block + sx.slice(own + 8) : sx.replace(/<\/worksheet>\s*$/, `<extLst>${block}</extLst></worksheet>`);
+    }
+    if (main.length) {
+      const pos = Math.min(...XL_AFTER_DV.map(t => sx.indexOf(t)).filter(p => p >= 0));
+      sx = sx.slice(0, pos) + `<dataValidations count="${main.length}">${main.map(p => p.xml).join('')}</dataValidations>` + sx.slice(pos);
+    }
+    zip.file(sp, sx);
+  }
+  return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+}
+/* the rules of an Excel file, sheet by sheet (by the sheet's name in the file); null for a rule of a kind that isn't
+   here. A name that stands for cells (a list's source is often one) becomes the cells it names */
+async function readXlsxDv(buf) {
+  const JSZip = await zipLib(), zip = await JSZip.loadAsync(buf), dp = new DOMParser(), out = new Map();
+  const text = async p => { const f = zip.file(p); return f ? f.async('string') : null; };
+  const wbt = await text('xl/workbook.xml'), wrt = await text(relsOf('xl/workbook.xml'));
+  if (!wbt || !wrt) return out;
+  const wbx = dp.parseFromString(wbt, 'application/xml'), rels = new Map(xdesc(dp.parseFromString(wrt, 'application/xml'), 'Relationship').map(r => [xat(r, 'Id'), partPath('xl/workbook.xml', xat(r, 'Target') || '')]));
+  const names = new Map();
+  for (const n of xdesc(wbx, 'definedName')) { const f = n.textContent.trim(), a = astOf(f), k = (xat(n, 'name') || '').toLowerCase(); if (a && a.t === 'ref' && !names.has(k)) names.set(k, f); }
+  const named = f => names.size ? tokenize(f).map(t => (t.t === 'name' && names.get(t.s.toLowerCase())) || t.s).join('') : f;
+  const on = (e, a) => { const v = xat(e, a); return v === '1' || v === 'true'; };
+  for (const sh of xdesc(wbx, 'sheet')) {
+    const rid = [...sh.attributes].find(a => a.localName === 'id' && /relationships/.test(a.namespaceURI || '')), path = rid && rels.get(rid.value), src = path && await text(path);
+    if (!src || !src.includes('dataValidation')) continue;
+    const list = [];
+    for (const e of xdesc(dp.parseFromString(src, 'application/xml'), 'dataValidation')) {
+      const x14 = e.namespaceURI === X14, type = xat(e, 'type') || 'none', t = type === 'none' ? 'any' : Object.keys(XL_DV).find(k => XL_DV[k] === type);
+      const f = n => { const k = xkid(e, 'formula' + n), v = k && (x14 ? (xkid(k, 'f') || k).textContent : k.textContent).trim().replace(/^=/, ''); return v ? named(fromXl(v)) : null; };
+      list.push(t ? { t, op: Object.keys(XL_OPS).find(k => XL_OPS[k] === (xat(e, 'operator') || 'between')), a: f(1), b: f(2), ref: (x14 ? (xkid(e, 'sqref') || e).textContent : xat(e, 'sqref')) || '',
+        nb: !on(e, 'allowBlank'), nd: on(e, 'showDropDown'), np: !on(e, 'showInputMessage'), ne: !on(e, 'showErrorMessage'), es: Object.keys(XL_ES).find(k => XL_ES[k] === xat(e, 'errorStyle')),
+        pt: xat(e, 'promptTitle'), pm: xat(e, 'prompt'), et: xat(e, 'errorTitle'), em: xat(e, 'error') } : null);
+    }
+    out.set(xat(sh, 'name'), list);
+  }
+  return out;
+}
+/* the file's rules onto its sheets. The ones that couldn't come are counted for the report, and so are the ones whose
+   formulas use what isn't here: they stay, and are written back to a file, but nothing is checked by them */
+async function importDv(buf, nb, xlNames, rep) {
+  let got;
+  try { got = await readXlsxDv(buf); } catch (e) { console.warn(e); return; }
+  const add = k => rep.set(k, (rep.get(k) || 0) + 1);
+  for (const [name, list] of got) {
+    const s = nb.sheets[xlNames.indexOf(name)];
+    if (!s) continue;
+    for (const x of list) {
+      const raw = x ? x.ref.trim().split(/\s+/).map(parseRange).filter(Boolean) : [];
+      if (x && x.t === 'any' && !x.pt && !x.pm) continue;
+      // Excel lists a rule's cells one by one; here they are ranges, 50 to a rule. The file's formulas are for the
+      // corner of the box around all of them (see fileRule), and each rule's are written again for its own corner
+      const all = raw.length ? joinG(raw) : [], before = s.dv.length, br = Math.min(...raw.map(g => g.r1)), bc = Math.min(...raw.map(g => g.c1));
+      for (let i = 0; i < all.length && s.dv.length < DV_MAX; i += 50) {
+        const g = all.slice(i, i + 50), rule = normDv(cfFormulas({ ...x, g }, f => wrapShift(f, g[0].r1 - br, g[0].c1 - bc)));
+        if (rule) s.dv.push(rule);
+      }
+      if (s.dv.length === before) add('valid');
+      else if ([x.a, x.b].some(f => f != null && unknownIn(f))) add('dvfn');
+    }
+  }
+}
+
+/* --- for Claude: a rule from its description { range, type (list, whole_number, decimal, date, time, text_length,
+   custom, any; none takes rules away), values or source for a list, operator with value and value2, formula, and the
+   messages }, and a rule read back in the same words --- */
+const DV_API = { list: 'list', whole_number: 'whole', decimal: 'decimal', date: 'date', time: 'time', text_length: 'len', custom: 'custom', any: 'any' };
+const DV_API_OPS = { between: 'bw', not_between: 'nb', equal: 'eq', not_equal: 'ne', greater_than: 'gt', less_than: 'lt', greater_or_equal: 'ge', less_or_equal: 'le' };
+function dvFromSpec(c, g, book) {
+  const t = DV_API[c.type] || (Array.isArray(c.values) || c.source ? 'list' : null), val = v => v == null ? null : typeof v === 'number' ? String(v) : dvValIn(String(v));
+  if (!t) return null;
+  const x = { g, t, nb: c.allow_blank === false, pt: c.input_title, pm: c.input_message, es: { warning: 'warn', information: 'info' }[c.error_style], et: c.error_title, em: c.error_message, ne: c.show_error === false };
+  if (t === 'list') {
+    const src = Array.isArray(c.values) && c.values.length ? { a: quoted(c.values.map(v => String(v).replace(/,/g, ' ').trim()).filter(Boolean).join(',')) } : c.source ? dvListIn('=' + String(c.source).replace(/^=/, ''), book) : {};
+    if (!src.a) return null;
+    Object.assign(x, { a: src.a, nd: c.dropdown === false });
+  } else if (t === 'custom') {
+    const f = closeBrackets(String(c.formula || c.value || '').trim().replace(/^=/, ''));
+    if (!f || !astOf(f)) return null;
+    x.a = tidyFormula(f, book);
+  } else if (t !== 'any') {
+    Object.assign(x, { a: val(c.value ?? c.min), b: val(c.value2 ?? c.max) });
+    x.op = DV_API_OPS[c.operator] || (x.b != null ? 'bw' : 'eq');
+    if (x.a == null || ((x.op === 'bw' || x.op === 'nb') && x.b == null)) return null;
+  }
+  return normDv(x);
+}
+function dvToSpec(rule) {
+  const o = { range: rule.g.map(rangeA1).join(' '), type: Object.keys(DV_API).find(k => DV_API[k] === rule.t) }, lit = rule.t === 'list' ? astOf(rule.a) : null;
+  const val = f => { const n = dvPlain(f); return n == null ? '=' + f : rule.t === 'date' ? fmtNumber(n, n % 1 ? 'yyyy-mm-dd hh:mm' : 'yyyy-mm-dd').t : rule.t === 'time' ? fmtNumber(n, 'hh:mm:ss').t : n; };
+  if (lit && lit.t === 'str') o.values = lit.v.split(',').map(t => t.trim()).filter(Boolean);
+  else if (rule.t === 'list') o.source = '=' + rule.a;
+  else if (rule.t === 'custom') o.formula = '=' + rule.a;
+  else if (rule.t !== 'any') { o.operator = Object.keys(DV_API_OPS).find(k => DV_API_OPS[k] === rule.op); o.value = val(rule.a); if (rule.b != null) o.value2 = val(rule.b); }
+  if (rule.nd) o.dropdown = false;
+  if (rule.nb) o.allow_blank = false;
+  if (rule.pt) o.input_title = rule.pt;
+  if (rule.pm) o.input_message = rule.pm;
+  if (rule.es) o.error_style = rule.es === 'warn' ? 'warning' : 'information';
+  if (rule.et) o.error_title = rule.et;
+  if (rule.em) o.error_message = rule.em;
+  if (rule.ne) o.show_error = false;
+  return o;
 }
 
 window.INK_SHEET = {

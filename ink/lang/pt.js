@@ -2250,7 +2250,75 @@ window.INK_I18N = {
 "{0} העליונים": "{0} primeiros",
 "{0}% העליונים": "{0}% primeiros",
 "{0} התחתונים": "{0} últimos",
-"{0}% התחתונים": "{0}% últimos"
+"{0}% התחתונים": "{0}% últimos",
+"כלי נתונים": "Ferramentas de dados",
+"רשימה נפתחת": "Lista suspensa",
+"רשימה של ערכים לבחירה בתוך התא": "Uma lista de valores para escolher dentro da célula",
+"אימות נתונים": "Validação de dados",
+"מה מותר להקליד בתאים, הודעות, וסימון של ערכים לא תקינים": "O que pode ser digitado nas células, mensagens e marcação de valores inválidos",
+"אימות נתונים…": "Validação de dados…",
+"רשימה נפתחת…": "Lista suspensa…",
+"סימון ערכים לא תקינים בעיגול": "Circular dados inválidos",
+"הסרת העיגולים": "Limpar círculos de validação",
+"ניקוי האימות מהתאים שנבחרו": "Limpar a validação das células selecionadas",
+"אי אפשר להציג כאן את הרשימה הזאת: המקור שלה משתמש בפונקציה או בשם שעוד אין כאן.": "Esta lista não pode ser mostrada aqui: a fonte dela usa uma função ou um nome que ainda não existe aqui.",
+"הרשימה ריקה": "A lista está vazia",
+"אין בגיליון הזה כללים של אימות נתונים": "Esta planilha não tem regras de validação de dados",
+"כל הערכים תקינים": "Todos os valores são válidos",
+"הערך הזה לא מתאים למה שמותר בתא הזה.": "Este valor não corresponde ao que é permitido nesta célula.",
+"להשאיר אותו בכל זאת?": "Manter mesmo assim?",
+"כן": "Sim",
+"לא": "Não",
+"ערך לא תקין": "Valor inválido",
+"כל ערך": "Qualquer valor",
+"מספר שלם": "Número inteiro",
+"מספר עשרוני": "Decimal",
+"רשימה": "Lista",
+"אורך הטקסט": "Comprimento do texto",
+"נוסחה משלך": "Fórmula personalizada",
+"עצירה: אי אפשר להכניס את הערך": "Parar: o valor não pode ser inserido",
+"אזהרה: שואלים אם להשאיר אותו": "Aviso: pergunta se o valor deve ser mantido",
+"מידע: מודיעים, והערך נכנס": "Informações: avisa, e o valor é inserido",
+"תאריך התחלה": "Data de início",
+"תאריך סיום": "Data de término",
+"שעת התחלה": "Hora de início",
+"שעת סיום": "Hora de término",
+"אורך מינימלי": "Comprimento mínimo",
+"אורך מקסימלי": "Comprimento máximo",
+"אורך": "Comprimento",
+"מינימום": "Mínimo",
+"מקסימום": "Máximo",
+"צריך לכתוב מספר שלם, או = ונוסחה": "Digite um número inteiro, ou = e uma fórmula",
+"צריך לכתוב תאריך, או = ונוסחה": "Digite uma data, ou = e uma fórmula",
+"צריך לכתוב שעה (למשל 8:30), או = ונוסחה": "Digite uma hora (por exemplo 8:30), ou = e uma fórmula",
+"צריך לכתוב מספר, או = ונוסחה": "Digite um número, ou = e uma fórmula",
+"צריך לכתוב את הערכים של הרשימה": "Digite os valores da lista",
+"הרשימה ארוכה מדי (עד 255 תווים). אפשר לכתוב אותה בתאים, ולבחור אותם כמקור.": "A lista é longa demais (até 255 caracteres). Você pode digitá-la em células e escolhê-las como fonte.",
+"לא הבנתי את המקור של הרשימה. אחרי ה-= כותבים טווח של תאים.": "Não entendi a fonte da lista. Depois do = vem um intervalo de células.",
+"המקור של רשימה הוא שורה אחת או עמודה אחת של תאים": "A fonte de uma lista é uma única linha ou uma única coluna de células",
+"מה מותר בתא": "Permitir",
+"תא ריק מותר": "Ignorar em branco (uma célula vazia é permitida)",
+"להחיל את השינויים על כל התאים שיש להם אותן הגדרות": "Aplicar estas alterações a todas as outras células com as mesmas configurações",
+"אפשר להקליד בתאים כל ערך.": "Qualquer valor pode ser digitado nas células.",
+"מקור הרשימה": "Fonte",
+"ערכים עם פסיקים ביניהם, או = וטווח של תאים": "Valores separados por vírgulas, ou = e um intervalo de células",
+"רשימה נפתחת בתוך התא": "Menu suspenso na célula",
+"כותבים את הערכים עם פסיקים ביניהם, למשל:": "Digite os valores separados por vírgulas, por exemplo:",
+"כן, לא, אולי": "Sim, Não, Talvez",
+"רשימה שכתובה בתאים: = והטווח שלהם, למשל:": "Uma lista escrita em células: = e o intervalo delas, por exemplo:",
+"מה שמקלידים בתא מתקבל כשהנוסחה יוצאת נכונה (TRUE). כותבים אותה בשביל התא {0}, והיא נבדקת לכל תא כמו נוסחה שהועתקה אליו. למשל:": "O que é digitado na célula é aceito quando a fórmula dá VERDADEIRO (TRUE). Ela é escrita para a célula {0} e verificada em cada célula como uma fórmula copiada para lá. Por exemplo:",
+"לא הבנתי את הנוסחה. היא מתחילה ב-= , כמו נוסחה בתא.": "Não entendi a fórmula. Ela começa com = , como uma fórmula em uma célula.",
+"אפשר לכתוב גם = וכתובת של תא או נוסחה, למשל:": "Também dá para digitar = e o endereço de uma célula ou uma fórmula, por exemplo:",
+"הערך הראשון צריך להיות קטן מהשני, או שווה לו": "O primeiro valor deve ser menor que o segundo, ou igual a ele",
+"להציג את ההודעה כשבוחרים את התא": "Mostrar a mensagem ao selecionar a célula",
+"הודעה": "Mensagem",
+"ההודעה מופיעה ליד התא כשבוחרים אותו, ומסבירה מה להקליד בו.": "A mensagem aparece ao lado da célula quando ela é selecionada e explica o que digitar nela.",
+"להציג התראה כשמקלידים ערך לא תקין": "Mostrar um alerta ao digitar um valor inválido",
+"בלי התראה אפשר להקליד בתא כל ערך. הסימון בעיגול עדיין מראה את הערכים הלא תקינים.": "Sem alerta, qualquer valor pode ser digitado na célula. Os círculos ainda mostram os valores inválidos.",
+"הגדרות": "Configurações",
+"הודעת קלט": "Mensagem de entrada",
+"התראת שגיאה": "Alerta de erro",
+"תנאי@title": "Condição"
 },
 "plurals": {
 "{n} מילים": {
@@ -2429,10 +2497,6 @@ window.INK_I18N = {
 "one": "{n} link aberto como texto comum",
 "other": "{n} links abertos como texto comum"
 },
-"{n} גיליונות עם רשימות נפתחות נפתחו בלי הרשימות": {
-"one": "{n} planilha com listas suspensas abriu sem elas",
-"other": "{n} planilhas com listas suspensas abriram sem elas"
-},
 "{n} גיליונות עם טבלאות מעוצבות נפתחו כתאים רגילים": {
 "one": "{n} planilha com tabelas formatadas abriu como células comuns",
 "other": "{n} planilhas com tabelas formatadas abriram como células comuns"
@@ -2452,6 +2516,18 @@ window.INK_I18N = {
 "{n} כללים של עיצוב מותנה מסוג שעוד אין כאן לא נפתחו": {
 "one": "{n} regra de formatação condicional de um tipo que ainda não existe aqui não abriu",
 "other": "{n} regras de formatação condicional de um tipo que ainda não existe aqui não abriram"
+},
+"{n} כללים של אימות נתונים לא נפתחו": {
+"one": "{n} regra de validação de dados não abriu",
+"other": "{n} regras de validação de dados não abriram"
+},
+"{n} כללים של אימות נתונים משתמשים בפונקציה או בשם שעוד אין כאן, ולכן לא נבדקים": {
+"one": "{n} regra de validação de dados usa uma função ou um nome que ainda não existe aqui, por isso não é verificada",
+"other": "{n} regras de validação de dados usam uma função ou um nome que ainda não existe aqui, por isso não são verificadas"
+},
+"{n} ערכים לא תקינים סומנו בעיגול אדום": {
+"one": "{n} valor inválido foi circulado em vermelho",
+"other": "{n} valores inválidos foram circulados em vermelho"
 }
 },
 "welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Bem-vindo ao Floating Ink</h1><p>Este é um documento de exemplo que mostra o que dá para fazer aqui. Você pode editá-lo, excluí-lo, ou clicar em <b>Novo documento</b> e começar com uma página em branco.</p><div class=\"callout callout-note\"><p><b>Totalmente privado.</b> Os documentos são salvos apenas no seu dispositivo, e nada é enviado para nenhum servidor. Para nunca perdê-los, ative o backup automático: <b>Arquivo → Backup</b>.</p></div><h2>O que tem aqui</h2><ul><li><b>Formatação como no Word:</b> fontes, cores, <span style=\"background-color: #ffe45c\">marca-texto</span>, títulos, listas e tabelas.</li><li><b>Inserir:</b> imagens, desenho à mão, símbolos de matemática, emoji, data e sumário.</li><li><b>Ferramentas:</b> localizar e substituir, contagem de palavras, meta de palavras, leitura em voz alta, calculadora e correção de layout de teclado.</li><li><b>Arquivos:</b> salvar como Word e como PDF, importar do Word, versões anteriores e lixeira.</li></ul><h2>Tarefas de exemplo</h2><ul class=\"checklist\"><li data-checked=\"true\">Abrir o Floating Ink</li><li>Instalá-lo no computador ou no celular</li><li>Inserir uma tabela ou um desenho</li></ul><h2>Como instalar</h2><ul><li><b>No computador (Chrome ou Edge):</b> botão <b>Instalar</b> no topo, ou o ícone de instalação ao lado da barra de endereço.</li><li><b>No Android:</b> menu ⋮ → Instalar aplicativo.</li><li><b>No iPhone:</b> no Safari, botão de compartilhar → Adicionar à Tela de Início.</li></ul><p>Depois de instalado, o Floating Ink abre como um programa comum, mesmo sem internet.</p><h2>Atalhos de teclado</h2><table><tbody><tr><th>Atalho</th><th>O que ele faz</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Negrito / itálico / sublinhado</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Desfazer / refazer</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Localizar / localizar e substituir</td></tr><tr><td>Ctrl+K</td><td>Inserir link</td></tr><tr><td>Ctrl+Shift+X</td><td>Correção de layout de teclado</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Título 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Salvar (o Floating Ink também salva sozinho)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Dica:</b> o Floating Ink salva sozinho enquanto você escreve, então você nunca perde o que fez.</p></div><p style=\"text-align: center\"><small>Floating Ink faz parte da <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",

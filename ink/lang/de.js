@@ -2250,7 +2250,75 @@ window.INK_I18N = {
 "{0} העליונים": "Obere {0}",
 "{0}% העליונים": "Obere {0} %",
 "{0} התחתונים": "Untere {0}",
-"{0}% התחתונים": "Untere {0} %"
+"{0}% התחתונים": "Untere {0} %",
+"כלי נתונים": "Datentools",
+"רשימה נפתחת": "Dropdownliste",
+"רשימה של ערכים לבחירה בתוך התא": "Eine Liste von Werten zur Auswahl in der Zelle",
+"אימות נתונים": "Datenüberprüfung",
+"מה מותר להקליד בתאים, הודעות, וסימון של ערכים לא תקינים": "Was in Zellen eingegeben werden darf, Meldungen und das Markieren ungültiger Werte",
+"אימות נתונים…": "Datenüberprüfung…",
+"רשימה נפתחת…": "Dropdownliste…",
+"סימון ערכים לא תקינים בעיגול": "Ungültige Daten einkreisen",
+"הסרת העיגולים": "Gültigkeitskreise löschen",
+"ניקוי האימות מהתאים שנבחרו": "Überprüfung aus den markierten Zellen entfernen",
+"אי אפשר להציג כאן את הרשימה הזאת: המקור שלה משתמש בפונקציה או בשם שעוד אין כאן.": "Diese Liste kann hier nicht angezeigt werden: Ihre Quelle verwendet eine Funktion oder einen Namen, die es hier noch nicht gibt.",
+"הרשימה ריקה": "Die Liste ist leer",
+"אין בגיליון הזה כללים של אימות נתונים": "Dieses Blatt hat keine Regeln zur Datenüberprüfung",
+"כל הערכים תקינים": "Alle Werte sind gültig",
+"הערך הזה לא מתאים למה שמותר בתא הזה.": "Dieser Wert passt nicht zu dem, was in dieser Zelle erlaubt ist.",
+"להשאיר אותו בכל זאת?": "Trotzdem behalten?",
+"כן": "Ja",
+"לא": "Nein",
+"ערך לא תקין": "Ungültiger Wert",
+"כל ערך": "Jeden Wert",
+"מספר שלם": "Ganze Zahl",
+"מספר עשרוני": "Dezimal",
+"רשימה": "Liste",
+"אורך הטקסט": "Textlänge",
+"נוסחה משלך": "Eigene Formel",
+"עצירה: אי אפשר להכניס את הערך": "Stopp: Der Wert kann nicht eingegeben werden",
+"אזהרה: שואלים אם להשאיר אותו": "Warnung: fragt, ob der Wert bleiben soll",
+"מידע: מודיעים, והערך נכנס": "Information: weist darauf hin, und der Wert wird eingegeben",
+"תאריך התחלה": "Anfangsdatum",
+"תאריך סיום": "Enddatum",
+"שעת התחלה": "Anfangszeit",
+"שעת סיום": "Endzeit",
+"אורך מינימלי": "Mindestlänge",
+"אורך מקסימלי": "Höchstlänge",
+"אורך": "Länge",
+"מינימום": "Minimum",
+"מקסימום": "Maximum",
+"צריך לכתוב מספר שלם, או = ונוסחה": "Geben Sie eine ganze Zahl ein, oder = und eine Formel",
+"צריך לכתוב תאריך, או = ונוסחה": "Geben Sie ein Datum ein, oder = und eine Formel",
+"צריך לכתוב שעה (למשל 8:30), או = ונוסחה": "Geben Sie eine Uhrzeit ein (z. B. 8:30), oder = und eine Formel",
+"צריך לכתוב מספר, או = ונוסחה": "Geben Sie eine Zahl ein, oder = und eine Formel",
+"צריך לכתוב את הערכים של הרשימה": "Geben Sie die Werte der Liste ein",
+"הרשימה ארוכה מדי (עד 255 תווים). אפשר לכתוב אותה בתאים, ולבחור אותם כמקור.": "Die Liste ist zu lang (höchstens 255 Zeichen). Sie können sie in Zellen schreiben und diese als Quelle wählen.",
+"לא הבנתי את המקור של הרשימה. אחרי ה-= כותבים טווח של תאים.": "Die Quelle der Liste war nicht zu verstehen. Nach dem = steht ein Zellbereich.",
+"המקור של רשימה הוא שורה אחת או עמודה אחת של תאים": "Die Quelle einer Liste ist eine einzelne Zeile oder Spalte von Zellen",
+"מה מותר בתא": "Zulassen",
+"תא ריק מותר": "Leere Zellen ignorieren (eine leere Zelle ist erlaubt)",
+"להחיל את השינויים על כל התאים שיש להם אותן הגדרות": "Diese Änderungen auf alle Zellen mit den gleichen Einstellungen anwenden",
+"אפשר להקליד בתאים כל ערך.": "In die Zellen kann jeder Wert eingegeben werden.",
+"מקור הרשימה": "Quelle",
+"ערכים עם פסיקים ביניהם, או = וטווח של תאים": "Werte mit Kommas dazwischen, oder = und ein Zellbereich",
+"רשימה נפתחת בתוך התא": "Zellendropdown",
+"כותבים את הערכים עם פסיקים ביניהם, למשל:": "Geben Sie die Werte mit Kommas dazwischen ein, zum Beispiel:",
+"כן, לא, אולי": "Ja, Nein, Vielleicht",
+"רשימה שכתובה בתאים: = והטווח שלהם, למשל:": "Eine Liste, die in Zellen steht: = und deren Bereich, zum Beispiel:",
+"מה שמקלידים בתא מתקבל כשהנוסחה יוצאת נכונה (TRUE). כותבים אותה בשביל התא {0}, והיא נבדקת לכל תא כמו נוסחה שהועתקה אליו. למשל:": "Was in eine Zelle eingegeben wird, wird angenommen, wenn die Formel WAHR (TRUE) ergibt. Sie wird für die Zelle {0} geschrieben und für jede Zelle wie eine dorthin kopierte Formel geprüft. Zum Beispiel:",
+"לא הבנתי את הנוסחה. היא מתחילה ב-= , כמו נוסחה בתא.": "Die Formel war nicht zu verstehen. Sie beginnt mit = , wie eine Formel in einer Zelle.",
+"אפשר לכתוב גם = וכתובת של תא או נוסחה, למשל:": "Sie können auch = und die Adresse einer Zelle oder eine Formel eingeben, zum Beispiel:",
+"הערך הראשון צריך להיות קטן מהשני, או שווה לו": "Der erste Wert muss kleiner als der zweite oder gleich groß sein",
+"להציג את ההודעה כשבוחרים את התא": "Meldung anzeigen, wenn die Zelle ausgewählt wird",
+"הודעה": "Meldung",
+"ההודעה מופיעה ליד התא כשבוחרים אותו, ומסבירה מה להקליד בו.": "Die Meldung erscheint neben der Zelle, wenn sie ausgewählt wird, und erklärt, was einzugeben ist.",
+"להציג התראה כשמקלידים ערך לא תקין": "Meldung anzeigen, wenn ein ungültiger Wert eingegeben wird",
+"בלי התראה אפשר להקליד בתא כל ערך. הסימון בעיגול עדיין מראה את הערכים הלא תקינים.": "Ohne Meldung kann jeder Wert in die Zelle eingegeben werden. Das Einkreisen zeigt die ungültigen Werte trotzdem.",
+"הגדרות": "Einstellungen",
+"הודעת קלט": "Eingabemeldung",
+"התראת שגיאה": "Fehlermeldung",
+"תנאי@title": "Bedingung"
 },
 "plurals": {
 "{n} מילים": {
@@ -2429,10 +2497,6 @@ window.INK_I18N = {
 "one": "{n} Link wurde als normaler Text geöffnet",
 "other": "{n} Links wurden als normaler Text geöffnet"
 },
-"{n} גיליונות עם רשימות נפתחות נפתחו בלי הרשימות": {
-"one": "{n} Blatt mit Auswahllisten wurde ohne sie geöffnet",
-"other": "{n} Blätter mit Auswahllisten wurden ohne sie geöffnet"
-},
 "{n} גיליונות עם טבלאות מעוצבות נפתחו כתאים רגילים": {
 "one": "{n} Blatt mit formatierten Tabellen wurde als normale Zellen geöffnet",
 "other": "{n} Blätter mit formatierten Tabellen wurden als normale Zellen geöffnet"
@@ -2452,6 +2516,18 @@ window.INK_I18N = {
 "{n} כללים של עיצוב מותנה מסוג שעוד אין כאן לא נפתחו": {
 "one": "{n} Regel für bedingte Formatierung einer Art, die es hier noch nicht gibt, wurde nicht geöffnet",
 "other": "{n} Regeln für bedingte Formatierung einer Art, die es hier noch nicht gibt, wurden nicht geöffnet"
+},
+"{n} כללים של אימות נתונים לא נפתחו": {
+"one": "{n} Regel zur Datenüberprüfung wurde nicht geöffnet",
+"other": "{n} Regeln zur Datenüberprüfung wurden nicht geöffnet"
+},
+"{n} כללים של אימות נתונים משתמשים בפונקציה או בשם שעוד אין כאן, ולכן לא נבדקים": {
+"one": "{n} Regel zur Datenüberprüfung verwendet eine Funktion oder einen Namen, die es hier noch nicht gibt, und wird deshalb nicht geprüft",
+"other": "{n} Regeln zur Datenüberprüfung verwenden eine Funktion oder einen Namen, die es hier noch nicht gibt, und werden deshalb nicht geprüft"
+},
+"{n} ערכים לא תקינים סומנו בעיגול אדום": {
+"one": "{n} ungültiger Wert wurde rot eingekreist",
+"other": "{n} ungültige Werte wurden rot eingekreist"
 }
 },
 "welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Willkommen bei Floating Ink</h1><p>Das ist ein Beispieldokument, das zeigt, was du hier machen kannst. Du kannst es bearbeiten, löschen oder auf <b>Neues Dokument</b> klicken und mit einer leeren Seite beginnen.</p><div class=\"callout callout-note\"><p><b>Komplett privat.</b> Die Dokumente werden nur auf deinem Gerät gespeichert, und nichts wird an irgendeinen Server gesendet. Damit sie nie verloren gehen, schalte die automatische Sicherung ein: <b>Datei → Sicherung</b>.</p></div><h2>Was es hier gibt</h2><ul><li><b>Formatierung wie in Word:</b> Schriftarten, Farben, <span style=\"background-color: #ffe45c\">Textmarker</span>, Überschriften, Listen und Tabellen.</li><li><b>Einfügen:</b> Bilder, Zeichnungen von Hand, Mathesymbole, Emoji, Datum und Inhaltsverzeichnis.</li><li><b>Werkzeuge:</b> Suchen und Ersetzen, Wörter zählen, Wortziel, Vorlesen, Rechner und Tastaturlayout-Korrektur.</li><li><b>Dateien:</b> Speichern als Word und als PDF, Import aus Word, frühere Versionen und Papierkorb.</li></ul><h2>Beispielaufgaben</h2><ul class=\"checklist\"><li data-checked=\"true\">Floating Ink öffnen</li><li>Es auf dem Computer oder Handy installieren</li><li>Eine Tabelle oder Zeichnung hinzufügen</li></ul><h2>So installierst du es</h2><ul><li><b>Am Computer (Chrome oder Edge):</b> Der Button <b>Installieren</b> oben, oder das Installationssymbol neben der Adressleiste.</li><li><b>Auf Android:</b> Menü ⋮ → App installieren.</li><li><b>Auf dem iPhone:</b> In Safari: Teilen-Symbol → Zum Home-Bildschirm.</li></ul><p>Nach der Installation öffnet sich Floating Ink wie eine normale Software, auch ohne Internet.</p><h2>Tastenkombinationen</h2><table><tbody><tr><th>Tastenkombination</th><th>Was sie macht</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Fett / Kursiv / Unterstrichen</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Rückgängig / Wiederholen</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Suchen / Suchen und Ersetzen</td></tr><tr><td>Ctrl+K</td><td>Link einfügen</td></tr><tr><td>Ctrl+Shift+X</td><td>Tastaturlayout (Hebräisch/Englisch)</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Überschrift 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Speichern (Floating Ink speichert auch von selbst)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Tipp:</b> Du kannst dir ein Wortziel setzen. Deinen Fortschritt siehst du dann unten in der Statusleiste.</p></div><p style=\"text-align: center\"><small>Floating Ink ist Teil von <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",

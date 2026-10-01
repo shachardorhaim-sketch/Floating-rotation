@@ -2250,7 +2250,75 @@ window.INK_I18N = {
 "{0} העליונים": "Top {0}",
 "{0}% העליונים": "Top {0}%",
 "{0} התחתונים": "Bottom {0}",
-"{0}% התחתונים": "Bottom {0}%"
+"{0}% התחתונים": "Bottom {0}%",
+"כלי נתונים": "Data tools",
+"רשימה נפתחת": "Drop-down list",
+"רשימה של ערכים לבחירה בתוך התא": "A list of values to pick from, inside the cell",
+"אימות נתונים": "Data validation",
+"מה מותר להקליד בתאים, הודעות, וסימון של ערכים לא תקינים": "What can be typed into cells, messages, and marking values that are not valid",
+"אימות נתונים…": "Data validation…",
+"רשימה נפתחת…": "Drop-down list…",
+"סימון ערכים לא תקינים בעיגול": "Circle invalid data",
+"הסרת העיגולים": "Clear validation circles",
+"ניקוי האימות מהתאים שנבחרו": "Clear validation from the selected cells",
+"אי אפשר להציג כאן את הרשימה הזאת: המקור שלה משתמש בפונקציה או בשם שעוד אין כאן.": "This list can’t be shown here: its source uses a function or a name that isn’t here yet.",
+"הרשימה ריקה": "The list is empty",
+"אין בגיליון הזה כללים של אימות נתונים": "This sheet has no data validation rules",
+"כל הערכים תקינים": "All the values are valid",
+"הערך הזה לא מתאים למה שמותר בתא הזה.": "This value doesn’t match what is allowed in this cell.",
+"להשאיר אותו בכל זאת?": "Keep it anyway?",
+"כן": "Yes",
+"לא": "No",
+"ערך לא תקין": "Invalid value",
+"כל ערך": "Any value",
+"מספר שלם": "Whole number",
+"מספר עשרוני": "Decimal",
+"רשימה": "List",
+"אורך הטקסט": "Text length",
+"נוסחה משלך": "Custom formula",
+"עצירה: אי אפשר להכניס את הערך": "Stop: the value can’t be entered",
+"אזהרה: שואלים אם להשאיר אותו": "Warning: asks whether to keep it",
+"מידע: מודיעים, והערך נכנס": "Information: tells you, and the value goes in",
+"תאריך התחלה": "Start date",
+"תאריך סיום": "End date",
+"שעת התחלה": "Start time",
+"שעת סיום": "End time",
+"אורך מינימלי": "Minimum length",
+"אורך מקסימלי": "Maximum length",
+"אורך": "Length",
+"מינימום": "Minimum",
+"מקסימום": "Maximum",
+"צריך לכתוב מספר שלם, או = ונוסחה": "Type a whole number, or = and a formula",
+"צריך לכתוב תאריך, או = ונוסחה": "Type a date, or = and a formula",
+"צריך לכתוב שעה (למשל 8:30), או = ונוסחה": "Type a time (like 8:30), or = and a formula",
+"צריך לכתוב מספר, או = ונוסחה": "Type a number, or = and a formula",
+"צריך לכתוב את הערכים של הרשימה": "Type the values of the list",
+"הרשימה ארוכה מדי (עד 255 תווים). אפשר לכתוב אותה בתאים, ולבחור אותם כמקור.": "The list is too long (up to 255 characters). You can type it into cells and choose them as the source.",
+"לא הבנתי את המקור של הרשימה. אחרי ה-= כותבים טווח של תאים.": "I couldn’t understand the source of the list. After the = comes a range of cells.",
+"המקור של רשימה הוא שורה אחת או עמודה אחת של תאים": "The source of a list is one row or one column of cells",
+"מה מותר בתא": "Allow",
+"תא ריק מותר": "Ignore blank (an empty cell is allowed)",
+"להחיל את השינויים על כל התאים שיש להם אותן הגדרות": "Apply these changes to all other cells with the same settings",
+"אפשר להקליד בתאים כל ערך.": "Any value can be typed into the cells.",
+"מקור הרשימה": "Source",
+"ערכים עם פסיקים ביניהם, או = וטווח של תאים": "Values with commas between them, or = and a range of cells",
+"רשימה נפתחת בתוך התא": "In-cell drop-down",
+"כותבים את הערכים עם פסיקים ביניהם, למשל:": "Type the values with commas between them, for example:",
+"כן, לא, אולי": "Yes, No, Maybe",
+"רשימה שכתובה בתאים: = והטווח שלהם, למשל:": "A list kept in cells: = and their range, for example:",
+"מה שמקלידים בתא מתקבל כשהנוסחה יוצאת נכונה (TRUE). כותבים אותה בשביל התא {0}, והיא נבדקת לכל תא כמו נוסחה שהועתקה אליו. למשל:": "What is typed into a cell is accepted when the formula comes out TRUE. Write it for cell {0}; it is checked for each cell like a formula copied there. For example:",
+"לא הבנתי את הנוסחה. היא מתחילה ב-= , כמו נוסחה בתא.": "I couldn’t understand the formula. It starts with = , like a formula in a cell.",
+"אפשר לכתוב גם = וכתובת של תא או נוסחה, למשל:": "You can also type = and a cell’s address or a formula, for example:",
+"הערך הראשון צריך להיות קטן מהשני, או שווה לו": "The first value must be smaller than the second, or equal to it",
+"להציג את ההודעה כשבוחרים את התא": "Show the message when the cell is selected",
+"הודעה": "Message",
+"ההודעה מופיעה ליד התא כשבוחרים אותו, ומסבירה מה להקליד בו.": "The message appears next to the cell when it is selected, and explains what to type in it.",
+"להציג התראה כשמקלידים ערך לא תקין": "Show an alert when an invalid value is typed",
+"בלי התראה אפשר להקליד בתא כל ערך. הסימון בעיגול עדיין מראה את הערכים הלא תקינים.": "Without an alert, any value can be typed into the cell. Circling still shows the values that are not valid.",
+"הגדרות": "Settings",
+"הודעת קלט": "Input message",
+"התראת שגיאה": "Error alert",
+"תנאי@title": "Condition"
 },
 "plurals": {
 "{n} מילים": {
@@ -2429,10 +2497,6 @@ window.INK_I18N = {
 "one": "{n} link opened as plain text",
 "other": "{n} links opened as plain text"
 },
-"{n} גיליונות עם רשימות נפתחות נפתחו בלי הרשימות": {
-"one": "{n} sheet with drop-down lists opened without them",
-"other": "{n} sheets with drop-down lists opened without them"
-},
 "{n} גיליונות עם טבלאות מעוצבות נפתחו כתאים רגילים": {
 "one": "{n} sheet with formatted tables opened as plain cells",
 "other": "{n} sheets with formatted tables opened as plain cells"
@@ -2452,6 +2516,18 @@ window.INK_I18N = {
 "{n} כללים של עיצוב מותנה מסוג שעוד אין כאן לא נפתחו": {
 "one": "{n} conditional formatting rule of a kind that isn't here yet didn't open",
 "other": "{n} conditional formatting rules of a kind that isn't here yet didn't open"
+},
+"{n} כללים של אימות נתונים לא נפתחו": {
+"one": "{n} data validation rule didn’t open",
+"other": "{n} data validation rules didn’t open"
+},
+"{n} כללים של אימות נתונים משתמשים בפונקציה או בשם שעוד אין כאן, ולכן לא נבדקים": {
+"one": "{n} data validation rule uses a function or a name that isn’t here yet, so it is not checked",
+"other": "{n} data validation rules use a function or a name that isn’t here yet, so they are not checked"
+},
+"{n} ערכים לא תקינים סומנו בעיגול אדום": {
+"one": "{n} invalid value was circled in red",
+"other": "{n} invalid values were circled in red"
 }
 },
 "welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Welcome to Floating Ink</h1><p>This is a sample document that shows what you can do here. You can edit it, delete it, or click <b>New Document</b> to start from a blank page.</p><div class=\"callout callout-note\"><p><b>Completely private.</b> Your documents are saved only on your device, and nothing is sent to any server. So they're never lost, turn on automatic backup: <b>File → Backup</b>.</p></div><h2>What's here</h2><ul><li><b>Word-like formatting:</b> fonts, colors, <span style=\"background-color: #ffe45c\">highlighter</span>, headings, lists, and tables.</li><li><b>Insert:</b> images, freehand drawing, math symbols, emoji, the date, and a table of contents.</li><li><b>Tools:</b> find and replace, word count, word goal, read aloud, calculator, and Hebrew/English keyboard fix.</li><li><b>Files:</b> save as Word and PDF, import from Word, previous versions, and Recycle Bin.</li></ul><h2>Sample tasks</h2><ul class=\"checklist\"><li data-checked=\"true\">Open Floating Ink</li><li>Install it on your computer or phone</li><li>Add a table or a drawing</li></ul><h2>How to install</h2><ul><li><b>On a computer (Chrome or Edge):</b> the <b>Install</b> button at the top, or the install icon next to the address bar.</li><li><b>On Android:</b> Menu ⋮ → Install App.</li><li><b>On iPhone:</b> In Safari, Share button → Add to Home Screen.</li></ul><p>After installing, Floating Ink opens like a regular program, even without internet.</p><h2>Keyboard shortcuts</h2><table><tbody><tr><th>Shortcut</th><th>What it does</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Bold / Italic / Underline</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Undo / Redo</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Find / Find and Replace</td></tr><tr><td>Ctrl+K</td><td>Insert Link</td></tr><tr><td>Ctrl+Shift+X</td><td>Hebrew/English Keyboard Fix</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Heading 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Save (Floating Ink also saves by itself)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Tip:</b> You can set a word-count goal in the Tools tab to track your progress as you write.</p></div><p style=\"text-align: center\"><small>Floating Ink is part of <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",
