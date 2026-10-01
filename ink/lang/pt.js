@@ -2366,7 +2366,22 @@ window.INK_I18N = {
 "שם מתחיל באות או בקו תחתון, ויש בו רק אותיות, ספרות, נקודות וקווים תחתונים": "Um nome começa com uma letra ou um sublinhado, e só tem letras, algarismos, pontos e sublinhados",
 "שם מתייחס לטווח של תאים, למספר או לנוסחה. אחר כך כותבים אותו בנוסחאות במקום הכתובת, או כמקור של רשימה נפתחת.": "Um nome se refere a um intervalo de células, a um número ou a uma fórmula. Depois ele é escrito nas fórmulas no lugar do endereço, ou como fonte de uma lista suspensa.",
 "שם של כל חוברת העבודה פועל בכל הגיליונות. אחרי מחיקה של שם, הנוסחאות שהשתמשו בו מראות שגיאה. אפשר לבטל את המחיקה עם Ctrl+Z.": "Um nome de toda a pasta de trabalho funciona em todas as planilhas. Depois que um nome é excluído, as fórmulas que o usavam mostram um erro. Ctrl+Z desfaz a exclusão.",
-"שמות מוגדרים": "Nomes definidos"
+"שמות מוגדרים": "Nomes definidos",
+"יצירה מהבחירה": "Criar da seleção",
+"שמות לתאים שבחרת, לפי הכותרות שלידם (Ctrl+Shift+F3)": "Nomes para as células que você selecionou, a partir dos cabeçalhos ao lado delas (Ctrl+Shift+F3)",
+"יצירת שמות מהבחירה": "Criar nomes a partir da seleção",
+"כל כותרת נותנת שם לתאים שלידה. איפה הכותרות?": "Cada cabeçalho dá o seu nome às células ao lado dele. Onde estão os cabeçalhos?",
+"בשורה העליונה": "Na linha de cima",
+"בשורה התחתונה": "Na linha de baixo",
+"בעמודה הימנית": "Na coluna da direita",
+"בעמודה השמאלית": "Na coluna da esquerda",
+"השמות שייווצרו:": "Os nomes que serão criados:",
+"מחליף שם קיים": "substitui um que já existe",
+"מסמנים איפה הכותרות, והשמות יופיעו כאן.": "Marque onde estão os cabeçalhos, e os nomes vão aparecer aqui.",
+"במקום הזה אין כותרות. כותרת היא תא עם טקסט, ולידו התאים שיקבלו את השם.": "Não há cabeçalhos nesse lugar. Um cabeçalho é uma célula com texto, e ao lado dela ficam as células que recebem o nome.",
+"יצירת השמות": "Criar os nomes",
+"בוחרים קודם את הכותרות יחד עם התאים שלידן, ואז יוצרים מהן שמות": "Primeiro selecione os cabeçalhos junto com as células ao lado deles, e depois crie nomes a partir deles",
+"אלה יותר מדי שמות: בחוברת עבודה יש מקום ל-{0} שמות": "São nomes demais: uma pasta de trabalho tem lugar para {0} nomes"
 },
 "plurals": {
 "{n} מילים": {
@@ -2576,6 +2591,10 @@ window.INK_I18N = {
 "{n} ערכים לא תקינים סומנו בעיגול אדום": {
 "one": "{n} valor inválido foi circulado em vermelho",
 "other": "{n} valores inválidos foram circulados em vermelho"
+},
+"{n} שמות הוגדרו": {
+"one": "{n} nome foi definido",
+"other": "{n} nomes foram definidos"
 }
 },
 "welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Bem-vindo ao Floating Ink</h1><p>Este é um documento de exemplo que mostra o que dá para fazer aqui. Você pode editá-lo, excluí-lo, ou clicar em <b>Novo documento</b> e começar com uma página em branco.</p><div class=\"callout callout-note\"><p><b>Totalmente privado.</b> Os documentos são salvos apenas no seu dispositivo, e nada é enviado para nenhum servidor. Para nunca perdê-los, ative o backup automático: <b>Arquivo → Backup</b>.</p></div><h2>O que tem aqui</h2><ul><li><b>Formatação como no Word:</b> fontes, cores, <span style=\"background-color: #ffe45c\">marca-texto</span>, títulos, listas e tabelas.</li><li><b>Inserir:</b> imagens, desenho à mão, símbolos de matemática, emoji, data e sumário.</li><li><b>Ferramentas:</b> localizar e substituir, contagem de palavras, meta de palavras, leitura em voz alta, calculadora e correção de layout de teclado.</li><li><b>Arquivos:</b> salvar como Word e como PDF, importar do Word, versões anteriores e lixeira.</li></ul><h2>Tarefas de exemplo</h2><ul class=\"checklist\"><li data-checked=\"true\">Abrir o Floating Ink</li><li>Instalá-lo no computador ou no celular</li><li>Inserir uma tabela ou um desenho</li></ul><h2>Como instalar</h2><ul><li><b>No computador (Chrome ou Edge):</b> botão <b>Instalar</b> no topo, ou o ícone de instalação ao lado da barra de endereço.</li><li><b>No Android:</b> menu ⋮ → Instalar aplicativo.</li><li><b>No iPhone:</b> no Safari, botão de compartilhar → Adicionar à Tela de Início.</li></ul><p>Depois de instalado, o Floating Ink abre como um programa comum, mesmo sem internet.</p><h2>Atalhos de teclado</h2><table><tbody><tr><th>Atalho</th><th>O que ele faz</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Negrito / itálico / sublinhado</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Desfazer / refazer</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Localizar / localizar e substituir</td></tr><tr><td>Ctrl+K</td><td>Inserir link</td></tr><tr><td>Ctrl+Shift+X</td><td>Correção de layout de teclado</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Título 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Salvar (o Floating Ink também salva sozinho)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Dica:</b> o Floating Ink salva sozinho enquanto você escreve, então você nunca perde o que fez.</p></div><p style=\"text-align: center\"><small>Floating Ink faz parte da <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",

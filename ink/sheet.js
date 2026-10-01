@@ -2280,7 +2280,7 @@ const dropSheetInFormula = (f, name) => mapRefs(f, t => t.sheet != null && t.she
    A reference in f without $ is written for cell A1 and moves with the cell that uses the name, as Excel's files keep
    relative names
    ========================================================= */
-const NO_NAMES = [];
+const NO_NAMES = [], MAX_NAMES = 5000;
 const NAME_RE = /^[\p{L}_\\][\p{L}\p{N}_.?\\]*$/u;
 const nameKey = x => (x.s || '') + '|' + x.n.toLowerCase();
 const sortNames = list => list.sort((a, b) => { const x = a.n.toLowerCase(), y = b.n.toLowerCase(); return x < y ? -1 : x > y ? 1 : (a.s || '') < (b.s || '') ? -1 : (a.s || '') > (b.s || '') ? 1 : 0; });
@@ -2303,7 +2303,7 @@ function normNames(list, sheets) {
     const o = normName(x, sheets), k = o && nameKey(o);
     if (!o || seen.has(k)) continue;
     seen.add(k); out.push(o);
-    if (out.length >= 5000) break;
+    if (out.length >= MAX_NAMES) break;
   }
   return sortNames(out);
 }
@@ -2325,6 +2325,10 @@ function nameOf(n, s, book = WB) {
   if (n.sheet != null) { const q = n.sheet.toLowerCase(), sh = book.sheets.find(x => x.name.toLowerCase() === q); return sh ? m.get(sh.id + '|' + low) || m.get('|' + low) || null : null; }
   return (s && m.get(s.id + '|' + low)) || m.get('|' + low) || null;
 }
+/* what Excel reads as an address and not as a name: a cell (B2), and whatever starts as an R1C1 one (R1, C3PO, RC2) */
+const a1Like = n => { const m = /^([A-Za-z]{1,3})(\d+)$/.exec(n); return !!m && colNum(m[1]) < MAXC && +m[2] >= 1 && +m[2] <= MAXR; };
+const rcLike = n => { const m = /^(rc|r|c)(\d+)/i.exec(n); return !!m && +m[2] >= 1 && +m[2] <= (m[1].toLowerCase() === 'r' ? MAXR : MAXC); };
+const NAME_WORD = /^(true|false|r|c|rc)$/i;
 /* why a new name can't be used, in words; null when it can. Excel's rules, as measured there: letters, digits, _ . ?
    and \ after a first letter or _; no spaces; not TRUE or FALSE; and nothing Excel could read as an address (B2, R1C1) */
 function nameProblem(n) {
@@ -2332,8 +2336,7 @@ function nameProblem(n) {
   if (n.length > 255) return T('השם ארוך מדי (עד 255 תווים)');
   if (/\s/.test(n)) return T('בשם אין רווחים. אפשר לכתוב קו תחתון במקומם: {0}', n.trim().replace(/\s+/g, '_'));
   if (!/^[\p{L}_][\p{L}\p{N}_.?\\]*$/u.test(n)) return T('שם מתחיל באות או בקו תחתון, ויש בו רק אותיות, ספרות, נקודות וקווים תחתונים');
-  const m = /^([A-Za-z]{1,3})(\d+)$/.exec(n);
-  if ((m && colNum(m[1]) < MAXC && +m[2] >= 1 && +m[2] <= MAXR) || /^(true|false|r|c|rc)$/i.test(n) || /^(r|c|rc)\d/i.test(n)) return T('אי אפשר להשתמש בשם {0}, כי בנוסחאות הוא כבר אומר משהו אחר (כתובת של תא, או TRUE ו-FALSE)', n);
+  if (a1Like(n) || rcLike(n) || NAME_WORD.test(n)) return T('אי אפשר להשתמש בשם {0}, כי בנוסחאות הוא כבר אומר משהו אחר (כתובת של תא, או TRUE ו-FALSE)', n);
   return null;
 }
 /* the workbook's names take a new list, inside edit() so undo takes it back */
@@ -2374,6 +2377,65 @@ function nameFormulaIn(text, s, book = WB) {
   if (!astOf(t)) return { err: T('לא הבנתי למה השם מתייחס. כותבים טווח כמו {0}, מספר או נוסחה.', '=' + nameRefText(s, { r1: 1, c1: 0, r2: 9, c2: 0 })) };
   const toks = tokenize(t).filter(k => k.t !== 'ws'), lone = toks.length === 1 && toks[0].t === 'ref' && !toks[0].a.some(Boolean);
   return { f: tidyFormula(mapRefs(t, k => { const a = lone ? [true, true, true, true] : k.a; return refText({ ...k, a }, k, k.sheet ?? s.name); }), book) };
+}
+/* --- names from the labels around a selection, as Excel's Create from Selection (each rule here was measured there) --- */
+/* a label cell's text: a text, or a date the way it shows. No other number is a label, nor TRUE, FALSE or an error */
+function labelText(s, r, c) {
+  const x = cellSp(s, r, c), v = x ? x.v : null;
+  if (typeof v === 'string') return v;
+  const nf = typeof v === 'number' && x.st ? x.st.nf : null, k = nf ? nfKind(nf) : '';
+  return k === 'date' || k === 'ldate' ? fmtNumber(v, nf).t || '' : '';
+}
+/* a label as a name, the way Excel writes it: what a name can't have goes from the ends and becomes _ inside; a digit,
+   a dot or a ? at the start gets _ before it; what reads as an address gets _ after it (A1_), or before it when it
+   reads as an R1C1 one (_R1C1); TRUE and FALSE get _ after. '' when no name comes out (%, or a lone _) */
+const NAME_JUNK = /[^\p{L}\p{N}_.?\\]/gu, NAME_ENDS = /^[^\p{L}\p{N}_.?\\]+|[^\p{L}\p{N}_.?\\]+$/gu;
+function labelName(text) {
+  let n = String(text).replace(/[\p{M}\p{Cf}]/gu, '').replace(NAME_ENDS, '').replace(NAME_JUNK, '_');
+  if (!n || n === '_' || n[0] === '\\') return '';
+  if (/^[\p{N}.?]/u.test(n) || rcLike(n)) n = '_' + n;
+  else if (a1Like(n) || NAME_WORD.test(n)) n += '_';
+  n = n.slice(0, 255);
+  return nameProblem(n) ? '' : n;
+}
+/* the names the labels on the chosen sides of range g of sheet s make: [{ n, g: the cells it names }]. side: t the top
+   row, l the first column, b the bottom row, e the last column. A label names the cells of its column (or row) that
+   are inside the other sides' labels, and a corner between two chosen sides names all of them. Excel's order, so that
+   a later label with an earlier one's name takes its place: top, first column, bottom, last column, and the corners
+   last */
+function labelNames(s, g, side) {
+  const d = { r1: g.r1 + (side.t ? 1 : 0), c1: g.c1 + (side.l ? 1 : 0), r2: g.r2 - (side.b ? 1 : 0), c2: g.c2 - (side.e ? 1 : 0) };
+  if (d.r1 > d.r2 || d.c1 > d.c2) return [];
+  const u = usedEnd(s), out = new Map(), corners = [];
+  const add = (r, c, cells) => { const n = labelName(labelText(s, r, c)); if (n) out.set(n.toLowerCase(), { n, g: cells }); };
+  const row = r => { for (let c = g.c1; c <= g.c2 && c < u.c; c++) if ((side.l && c === g.c1) || (side.e && c === g.c2)) corners.push([r, c]); else add(r, c, { r1: d.r1, c1: c, r2: d.r2, c2: c }); };
+  const col = c => { for (let r = g.r1; r <= g.r2 && r < u.r; r++) if (!((side.t && r === g.r1) || (side.b && r === g.r2))) add(r, c, { r1: r, c1: d.c1, r2: r, c2: d.c2 }); };
+  if (side.t) row(g.r1);
+  if (side.l) col(g.c1);
+  if (side.b) row(g.r2);
+  if (side.e) col(g.c2);
+  for (const [r, c] of corners) add(r, c, d);
+  return [...out.values()];
+}
+/* the sides Excel looks at when it isn't told which: the row whose second cell is a label (the top one, or else the
+   bottom one) and the column whose second cell is (the first, or else the last); in one row or one column, the end
+   that is a label */
+function labelSides(s, g) {
+  const is = (r, c) => labelText(s, r, c).trim() !== '', rows = g.r2 > g.r1, cols = g.c2 > g.c1;
+  if (!rows || !cols) { const a = is(g.r1, g.c1), z = !a && is(g.r2, g.c2); return rows ? { t: a, l: false, b: z, e: false } : { t: false, l: cols && a, b: false, e: cols && z }; }
+  const t = is(g.r1, g.c1 + 1), l = is(g.r1 + 1, g.c1);
+  return { t, l, b: !t && is(g.r2, g.c1 + 1), e: !l && is(g.r1 + 1, g.c2) };
+}
+/* the workbook's names with those of list (labelNames) for sheet s: a name the sheet has of its own, or else the
+   workbook's, takes the new cells and the label's capitals, and a name that isn't there is added to the workbook */
+function withLabelNames(s, list) {
+  const names = (WB.names || NO_NAMES).slice(), at = new Map();
+  names.forEach((y, i) => { if (!y.s || y.s === s.id) at.set((y.s ? '1' : '0') + y.n.toLowerCase(), i); });
+  for (const x of list) {
+    const low = x.n.toLowerCase(), f = nameRefText(s, x.g), i = at.get('1' + low) ?? at.get('0' + low);
+    if (i == null) names.push({ n: x.n, f }); else names[i] = { ...names[i], n: x.n, f };
+  }
+  return names;
 }
 /* a name changed its letters: every formula that meant it says the new ones */
 function renameName(old, to) {
@@ -3455,7 +3517,7 @@ function gridKey(e) {
   }
   if (k === 'F2') { e.preventDefault(); startEdit('edit'); return true; }
   if (k === 'F3' && e.shiftKey && !mod) { e.preventDefault(); fnDialog(); return true; }
-  if (k === 'F3' && mod && !e.shiftKey) { e.preventDefault(); nameManager(); return true; }
+  if (k === 'F3' && mod) { e.preventDefault(); if (e.shiftKey) namesFromSelection(); else nameManager(); return true; }
   if (k === 'Delete' && !mod) { e.preventDefault(); clearSel('v'); return true; }
   if (k === 'Backspace' && !mod) { e.preventDefault(); startEdit('enter', ''); return true; }
   if (k === 'Escape') return onEsc();
@@ -4586,7 +4648,15 @@ const CSS = `
 .sh-nmm-row>*{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:start}
 .sh-nmm-row b{font-weight:600}
 .sh-nmm-note{font-size:12.5px;color:var(--text-2);min-height:18px;overflow-wrap:anywhere}
-.sh-nmd{display:flex;flex-direction:column;min-width:min(440px,82vw)}
+.sh-nmd{display:flex;flex-direction:column;min-width:min(440px,100%)}
+.sh-nfs{display:flex;flex-direction:column}
+.sh-nfs>p{margin:0 0 10px}
+.sh-nfs-t{font-size:12px;color:var(--text-2);margin:8px 0 4px}
+.sh-nfs .sh-nmm-list{height:min(178px,30vh);margin-bottom:8px}
+.sh-nfs .sh-ch-err{min-height:20px}
+.sh-nfs-row{display:grid;grid-template-columns:minmax(80px,1fr) minmax(60px,.6fr) minmax(0,1.25fr);gap:8px;padding:4px 6px;font-size:13px}
+.sh-nfs-row>*{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:start}
+.sh-nfs-row b{font-weight:600}
 .sh-fxb{flex:none;height:28px;min-width:32px;border:0;border-radius:6px;background:none;color:var(--text-2);font:italic 700 14px Georgia,"Times New Roman",serif}
 .sh-fxb:hover{background:var(--surface-3);color:var(--accent)}
 .sh-bar{flex:1;min-width:0;height:28px;max-height:140px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);padding:4px 8px;font:13px/1.45 var(--ui);resize:none;color:var(--text);overflow:hidden;white-space:pre-wrap}
@@ -4684,7 +4754,7 @@ const CSS = `
 .sh-dva .ms{font-size:34px;width:auto;flex:none}
 .sh-dva .ms.stop{color:#e03131}.sh-dva .ms.warn{color:#e8a100}.sh-dva .ms.info{color:#2743d8}
 .sh-dva p{margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}
-.sh-dvd{display:flex;flex-direction:column;min-width:min(520px,82vw);min-height:min(350px,60vh)}
+.sh-dvd{display:flex;flex-direction:column;min-width:min(520px,100%);min-height:min(350px,60vh)}
 .sh-dvd .seg{align-self:flex-start;margin-bottom:12px}
 .sh-dvd textarea.field{height:84px;padding:8px 10px;resize:vertical}
 .sh-dvd .check{margin-bottom:10px}
@@ -4772,10 +4842,10 @@ const CSS = `
 .sh-sel-size{width:58px}
 .sh-cur{font:600 15px var(--ui);min-width:30px}
 .sh-num{font:600 12px var(--ui);direction:ltr}
-.panel.fit1 .sh-edit>.gb,.panel.fit2 .sh-cells>.gb{display:grid;grid-template-rows:repeat(2,30px);grid-auto-flow:column;align-content:center;gap:4px 3px}
-.panel.fit1 .sh-edit .rb.big,.panel.fit2 .sh-cells .rb.big{flex-direction:row;height:30px;min-width:30px;padding:0 5px}
-.panel.fit1 .sh-edit .rb.big>span:not(.ms),.panel.fit2 .sh-cells .rb.big>span:not(.ms){display:none}
-.panel.fit1 .sh-edit .rb.big .ms,.panel.fit2 .sh-cells .rb.big .ms{font-size:20px}
+.panel.fit1 .fit-a>.gb,.panel.fit2 .fit-b>.gb{display:grid;grid-template-rows:repeat(2,30px);grid-auto-flow:column;align-content:center;gap:4px 3px}
+.panel.fit1 .fit-a .rb.big,.panel.fit2 .fit-b .rb.big{flex-direction:row;height:30px;min-width:30px;padding:0 5px}
+.panel.fit1 .fit-a .rb.big>span:not(.ms),.panel.fit2 .fit-b .rb.big>span:not(.ms){display:none}
+.panel.fit1 .fit-a .rb.big .ms,.panel.fit2 .fit-b .rb.big .ms{font-size:20px}
 .mi .sh-sample{margin-inline-start:auto;color:var(--text-3);font-size:12px;padding-inline-start:16px;direction:ltr}
 .sh-bdrow{display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
 .sh-bdrow .opt{min-width:36px;height:28px}
@@ -4806,12 +4876,15 @@ const split = (cmd, menu, ic, label, o = {}) => h('span', { class: 'split' }, rb
 const group = (name, cls, ...kids) => h('div', { class: 'grp' }, h('div', { class: 'gb' + (cls ? ' ' + cls : '') }, kids), h('div', { class: 'gn', text: name }));
 const row = (...kids) => h('div', { class: 'row' }, kids);
 const tag = (el, cls) => (el.classList.add(cls), el);
-/* a window too narrow for the home tab shrinks it as Excel does: first the editing buttons, then the cells buttons, become small icons */
+/* a window too narrow for a tab shrinks it as Excel does: the buttons of one group (fit-a), and then of another (fit-b),
+   become small icons. On the home tab those are the editing and the cells buttons, on the formulas tab its last two groups */
 function fitRibbon() {
-  const p = V.home, r = p && p.parentNode;
-  if (!r || p.hidden) return;
-  p.classList.remove('fit1', 'fit2');
-  for (const c of ['fit1', 'fit2']) { if (r.scrollWidth <= r.clientWidth) break; p.classList.add(c); }
+  for (const p of [V.home, V.fxTab]) {
+    const r = p && p.parentNode;
+    if (!r || p.hidden) continue;
+    p.classList.remove('fit1', 'fit2');
+    for (const c of ['fit1', 'fit2']) { if (r.scrollWidth <= r.clientWidth) break; p.classList.add(c); }
+  }
 }
 function ribbonPanels() {
   const rtl = UI_DIR === 'rtl';
@@ -4837,17 +4910,18 @@ function ribbonPanels() {
       row(split('shCur', 'shCurMenu', h('span', { class: 'sh-cur', text: CUR }), T('מטבע'), { menuTitle: T('בחירת מטבע') }), rbtn('shPct', 'percent', T('אחוזים')), rbtn('shComma', h('span', { class: 'sh-num', text: '000' }), T('מפריד אלפים')),
         rbtn('shDec', 'decimal_increase', T('עוד ספרות אחרי הנקודה'), { arg: '1' }), rbtn('shDec', 'decimal_decrease', T('פחות ספרות אחרי הנקודה'), { arg: '-1' }))),
     tag(group(T('סגנונות'), '', rbtn('shCfMenu', 'palette', T('עיצוב מותנה'), { big: true, title: T('צביעת תאים לפי הערכים שלהם, פסי נתונים, סולמות צבעים וסמלים') })), 'sh-styles'),
-    tag(group(T('תאים'), '', rbtn('shInsMenu', 'add_row_above', T('הוספה'), { big: true, title: T('הוספת שורות או עמודות') }), rbtn('shDelMenu', 'delete', T('מחיקה'), { big: true, title: T('מחיקת שורות או עמודות') }), rbtn('shCellMenu', 'width', T('גודל'), { big: true, title: T('רוחב עמודות, גובה שורות, הסתרה') })), 'sh-cells'),
+    tag(group(T('תאים'), '', rbtn('shInsMenu', 'add_row_above', T('הוספה'), { big: true, title: T('הוספת שורות או עמודות') }), rbtn('shDelMenu', 'delete', T('מחיקה'), { big: true, title: T('מחיקת שורות או עמודות') }), rbtn('shCellMenu', 'width', T('גודל'), { big: true, title: T('רוחב עמודות, גובה שורות, הסתרה') })), 'fit-b'),
     tag(group(T('עריכה'), '', split('shSum', 'shSumMenu', 'functions', T('סכום אוטומטי (Alt+=)'), { menuTitle: T('פונקציות נוספות'), big: false }),
-      rbtn('shSortMenu', 'sort', T('מיון וסינון'), { big: true }), rbtn('shClearMenu', 'ink_eraser', T('ניקוי'), { big: true }), rbtn('shFind', 'search', T('חיפוש'), { big: true, title: T('חיפוש והחלפה (Ctrl+F)') })), 'sh-edit'));
-  const formulas = h('div', { class: 'panel sheet-only', 'data-panel': 'sformula', hidden: true },
+      rbtn('shSortMenu', 'sort', T('מיון וסינון'), { big: true }), rbtn('shClearMenu', 'ink_eraser', T('ניקוי'), { big: true }), rbtn('shFind', 'search', T('חיפוש'), { big: true, title: T('חיפוש והחלפה (Ctrl+F)') })), 'fit-a'));
+  const formulas = V.fxTab = h('div', { class: 'panel sheet-only', 'data-panel': 'sformula', hidden: true },
     group(T('ספריית פונקציות'), '', rbtn('shFnDlg', 'function', T('הוספת פונקציה'), { big: true, title: T('כל הפונקציות, עם חיפוש (Shift+F3)') }),
       rbtn('shSumMenu', 'functions', T('סכום אוטומטי'), { big: true, title: T('סכום, ממוצע, ספירה, הכי גדול, הכי קטן') }),
       ...FN_CATS.map(([k, name, ic]) => rbtn('shFnCat', ic, T(name), { big: true, arg: k }))),
-    group(T('שמות מוגדרים'), '', rbtn('shNames', 'sell', T('מנהל השמות'), { big: true, title: T('כל השמות המוגדרים: חדש, עריכה ומחיקה (Ctrl+F3)') }),
+    tag(group(T('שמות מוגדרים'), '', rbtn('shNames', 'sell', T('מנהל השמות'), { big: true, title: T('כל השמות המוגדרים: חדש, עריכה ומחיקה (Ctrl+F3)') }),
       rbtn('shNameNew', 'new_label', T('הגדרת שם'), { big: true, title: T('שם לתאים שבחרת, לשימוש בנוסחאות וברשימות נפתחות') }),
-      rbtn('shNameUse', 'label', T('שימוש בנוסחה'), { big: true, title: T('הוספת שם מוגדר לנוסחה') })),
-    group(T('נוסחאות'), '', rbtn('shShowF', 'function', T('הצגת נוסחאות'), { big: true, title: T('הצגת הנוסחאות עצמן בתאים (Ctrl+`)') }), rbtn('shFxHelp', 'school', T('איך כותבים נוסחה'), { big: true })));
+      rbtn('shNameUse', 'label', T('שימוש בנוסחה'), { big: true, title: T('הוספת שם מוגדר לנוסחה') }),
+      rbtn('shNameCreate', 'style', T('יצירה מהבחירה'), { big: true, title: T('שמות לתאים שבחרת, לפי הכותרות שלידם (Ctrl+Shift+F3)') })), 'fit-b'),
+    tag(group(T('נוסחאות'), '', rbtn('shShowF', 'function', T('הצגת נוסחאות'), { big: true, title: T('הצגת הנוסחאות עצמן בתאים (Ctrl+`)') }), rbtn('shFxHelp', 'school', T('איך כותבים נוסחה'), { big: true })), 'fit-a'));
   const data = h('div', { class: 'panel sheet-only', 'data-panel': 'sdata', hidden: true },
     group(T('מיון'), '', rbtn('shSort', 'arrow_upward', T('מהקטן לגדול'), { big: true, arg: 'a', title: T('מיון מהקטן לגדול (א עד ת)') }), rbtn('shSort', 'arrow_downward', T('מהגדול לקטן'), { big: true, arg: 'd', title: T('מיון מהגדול לקטן (ת עד א)') }), rbtn('shSortDlg', 'sort', T('מיון מותאם'), { big: true })),
     group(T('סינון'), '', rbtn('shFilter', 'filter_alt', T('סינון'), { big: true, id: 'shFilterBtn', title: T('כפתורי סינון בשורת הכותרות (Ctrl+Shift+L)') }), rbtn('shFilterClear', 'filter_alt_off', T('ניקוי הסינון'), { big: true })),
@@ -4869,7 +4943,7 @@ function mount() {
   for (const [k, label] of SHEET_TAB_LIST()) tabs.append(h('button', { class: 'tab sheet-only', role: 'tab', 'data-tab': k, 'aria-selected': 'false' }, label));
   const ribbon = $('#ribbon');
   for (const p of ribbonPanels()) ribbon.append(p);
-  if (window.ResizeObserver) new ResizeObserver(fitRibbon).observe(V.home);   // it changes size when shown, and with the window
+  if (window.ResizeObserver) { const ro = new ResizeObserver(fitRibbon); ro.observe(V.home); ro.observe(V.fxTab); }   // they change size when shown, and with the window
   // only the waiting line goes: the app's banner may already live here
   const view = $('#sheetView');
   view.querySelectorAll('.sh-wait').forEach(n => n.remove());
@@ -5244,7 +5318,8 @@ function nameBoxMenu(anchor) {
   if (ED.on && !endEdit(true)) return;
   const names = namesFor(WS);
   menuAt(anchor, T('שמות מוגדרים'), [...names.map(x => ({ ic: 'label', label: x.n, sample: nameCells(x) ? rangeA1(nameCells(x).g) : '', run: () => goToName(x), keep: true })), names.length ? '-' : null,
-    { ic: 'new_label', label: T('שם לתאים שנבחרו…'), run: () => nameDialog(null), keep: true }, { ic: 'sell', label: T('מנהל השמות…'), key: 'Ctrl+F3', run: () => nameManager(), keep: true }]);
+    { ic: 'new_label', label: T('שם לתאים שנבחרו…'), run: () => nameDialog(null), keep: true }, { ic: 'style', label: T('יצירת שמות מהבחירה') + '…', key: 'Ctrl+Shift+F3', run: () => namesFromSelection(), keep: true },
+    { ic: 'sell', label: T('מנהל השמות…'), key: 'Ctrl+F3', run: () => nameManager(), keep: true }]);
 }
 /* a name into the formula being written (or a new formula) */
 function insertName(n) {
@@ -5316,6 +5391,44 @@ function nameDialog(x0, done) {
     actions: [{ label: T('אישור'), kind: 'primary', run: apply }, { label: T('ביטול'), value: false }], onClose: () => { if (!MODALS.length) focusGrid(); } });
   for (const i of [name, note, ref]) i.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); if (apply()) m.close(true); } });
 }
+/* names for the chosen cells from the labels at their sides (Formulas tab, Ctrl+Shift+F3), as Excel's Create from
+   Selection. The window opens with the sides Excel would pick by itself, and shows the names before it makes them */
+function namesFromSelection() {
+  if (ED.on && !endEdit(true)) return;
+  const g = selG(), rtl = WS.dir === 'rtl';
+  if (g.r1 === g.r2 && g.c1 === g.c2) { toast(T('בוחרים קודם את הכותרות יחד עם התאים שלידן, ואז יוצרים מהן שמות'), { icon: 'info', ms: 6000 }); return; }
+  const first = labelSides(WS, g);
+  const check = (text, on) => { const i = h('input', { type: 'checkbox' }); i.checked = !!on; return [h('label', { class: 'check' }, i, h('span', { text })), i]; };
+  const [tL, t] = check(T('בשורה העליונה'), first.t), [lL, l] = check(rtl ? T('בעמודה הימנית') : T('בעמודה השמאלית'), first.l);
+  const [bL, b] = check(T('בשורה התחתונה'), first.b), [eL, e] = check(rtl ? T('בעמודה השמאלית') : T('בעמודה הימנית'), first.e);
+  const list = h('div', { class: 'sh-nmm-list', 'aria-label': T('השמות שייווצרו:') }), err = h('p', { class: 'sh-ch-err', role: 'alert' });
+  let found = [];
+  const draw = () => {
+    const any = t.checked || l.checked || b.checked || e.checked;
+    found = labelNames(WS, g, { t: t.checked, l: l.checked, b: b.checked, e: e.checked });
+    err.textContent = '';
+    list.textContent = '';
+    if (!found.length) list.append(h('p', { class: 'muted small', style: { padding: '8px' }, text: any ? T('במקום הזה אין כותרות. כותרת היא תא עם טקסט, ולידו התאים שיקבלו את השם.') : T('מסמנים איפה הכותרות, והשמות יופיעו כאן.') }));
+    for (const x of found.slice(0, 300)) {
+      const had = nameOf({ n: x.n, sheet: null }, WS), swap = !!had && had.f !== nameRefText(WS, x.g);
+      list.append(h('div', { class: 'sh-nfs-row' }, h('b', {}, h('bdi', { text: x.n })), h('span', {}, h('bdi', { dir: 'ltr', text: rangeA1(x.g) })), h('span', { class: 'muted', title: swap ? T('מחליף שם קיים') : null, text: swap ? T('מחליף שם קיים') : '' })));
+    }
+    if (found.length > 300) list.append(h('div', { class: 'sh-nfs-row' }, h('b', { text: '…' })));
+  };
+  const apply = () => {
+    if (!found.length) return false;
+    const next = withLabelNames(WS, found);
+    if (next.length > MAX_NAMES) { err.textContent = T('אלה יותר מדי שמות: בחוברת עבודה יש מקום ל-{0} שמות', fmt(MAX_NAMES)); return false; }
+    edit(() => setNames(next));
+    toast(TN('{n} שמות הוגדרו', found.length), { icon: 'style' });
+    return true;
+  };
+  for (const i of [t, l, b, e]) i.addEventListener('change', draw);
+  draw();
+  modal({ title: T('יצירת שמות מהבחירה'), body: h('div', { class: 'sh-nfs' }, h('p', { text: T('כל כותרת נותנת שם לתאים שלידה. איפה הכותרות?') }), tL, lL, bL, eL,
+    h('div', { class: 'sh-nfs-t', text: T('השמות שייווצרו:') }), list, err),
+    actions: [{ label: T('יצירת השמות'), kind: 'primary', run: apply }, { label: T('ביטול'), value: false }], onClose: () => focusGrid() });
+}
 function nameManager() {
   if (ED.on && !endEdit(true)) return;
   let pick = null;
@@ -5358,7 +5471,7 @@ function nameManager() {
 }
 /* the commands the ribbon's buttons call (data-cmd), added to the app's own list */
 const COMMANDS = {
-  shNames: () => nameManager(), shNameNew: () => nameDialog(null), shNameUse: (a, b) => nameUseMenu(b),
+  shNames: () => nameManager(), shNameNew: () => nameDialog(null), shNameUse: (a, b) => nameUseMenu(b), shNameCreate: () => namesFromSelection(),
   shUndo: () => undo(), shRedo: () => redo(), shChart: a => insertChart(a),
   shCut: () => copyButton(true), shCopy: () => copyButton(false), shPaste: () => pasteButton('all'),
   shLook: a => toggleLook(a),

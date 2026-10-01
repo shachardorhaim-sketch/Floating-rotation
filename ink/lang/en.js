@@ -2366,7 +2366,22 @@ window.INK_I18N = {
 "שם מתחיל באות או בקו תחתון, ויש בו רק אותיות, ספרות, נקודות וקווים תחתונים": "A name starts with a letter or an underscore, and holds only letters, digits, periods and underscores",
 "שם מתייחס לטווח של תאים, למספר או לנוסחה. אחר כך כותבים אותו בנוסחאות במקום הכתובת, או כמקור של רשימה נפתחת.": "A name refers to a range of cells, a number or a formula. Then you write it in formulas instead of the address, or as the source of a drop-down list.",
 "שם של כל חוברת העבודה פועל בכל הגיליונות. אחרי מחיקה של שם, הנוסחאות שהשתמשו בו מראות שגיאה. אפשר לבטל את המחיקה עם Ctrl+Z.": "A name of the whole workbook works on every sheet. After a name is deleted, the formulas that used it show an error. Ctrl+Z undoes the delete.",
-"שמות מוגדרים": "Defined names"
+"שמות מוגדרים": "Defined names",
+"יצירה מהבחירה": "Create from Selection",
+"שמות לתאים שבחרת, לפי הכותרות שלידם (Ctrl+Shift+F3)": "Names for the cells you selected, taken from the headers beside them (Ctrl+Shift+F3)",
+"יצירת שמות מהבחירה": "Create Names from Selection",
+"כל כותרת נותנת שם לתאים שלידה. איפה הכותרות?": "Each header gives its name to the cells beside it. Where are the headers?",
+"בשורה העליונה": "In the top row",
+"בשורה התחתונה": "In the bottom row",
+"בעמודה הימנית": "In the right column",
+"בעמודה השמאלית": "In the left column",
+"השמות שייווצרו:": "The names that will be created:",
+"מחליף שם קיים": "replaces an existing name",
+"מסמנים איפה הכותרות, והשמות יופיעו כאן.": "Check where the headers are, and the names will show up here.",
+"במקום הזה אין כותרות. כותרת היא תא עם טקסט, ולידו התאים שיקבלו את השם.": "There are no headers in that place. A header is a cell with text, and beside it are the cells that get the name.",
+"יצירת השמות": "Create the names",
+"בוחרים קודם את הכותרות יחד עם התאים שלידן, ואז יוצרים מהן שמות": "First select the headers together with the cells beside them, and then create names from them",
+"אלה יותר מדי שמות: בחוברת עבודה יש מקום ל-{0} שמות": "These are too many names: a workbook has room for {0} names"
 },
 "plurals": {
 "{n} מילים": {
@@ -2576,6 +2591,10 @@ window.INK_I18N = {
 "{n} ערכים לא תקינים סומנו בעיגול אדום": {
 "one": "{n} invalid value was circled in red",
 "other": "{n} invalid values were circled in red"
+},
+"{n} שמות הוגדרו": {
+"one": "{n} name was defined",
+"other": "{n} names were defined"
 }
 },
 "welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Welcome to Floating Ink</h1><p>This is a sample document that shows what you can do here. You can edit it, delete it, or click <b>New Document</b> to start from a blank page.</p><div class=\"callout callout-note\"><p><b>Completely private.</b> Your documents are saved only on your device, and nothing is sent to any server. So they're never lost, turn on automatic backup: <b>File → Backup</b>.</p></div><h2>What's here</h2><ul><li><b>Word-like formatting:</b> fonts, colors, <span style=\"background-color: #ffe45c\">highlighter</span>, headings, lists, and tables.</li><li><b>Insert:</b> images, freehand drawing, math symbols, emoji, the date, and a table of contents.</li><li><b>Tools:</b> find and replace, word count, word goal, read aloud, calculator, and Hebrew/English keyboard fix.</li><li><b>Files:</b> save as Word and PDF, import from Word, previous versions, and Recycle Bin.</li></ul><h2>Sample tasks</h2><ul class=\"checklist\"><li data-checked=\"true\">Open Floating Ink</li><li>Install it on your computer or phone</li><li>Add a table or a drawing</li></ul><h2>How to install</h2><ul><li><b>On a computer (Chrome or Edge):</b> the <b>Install</b> button at the top, or the install icon next to the address bar.</li><li><b>On Android:</b> Menu ⋮ → Install App.</li><li><b>On iPhone:</b> In Safari, Share button → Add to Home Screen.</li></ul><p>After installing, Floating Ink opens like a regular program, even without internet.</p><h2>Keyboard shortcuts</h2><table><tbody><tr><th>Shortcut</th><th>What it does</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Bold / Italic / Underline</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Undo / Redo</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Find / Find and Replace</td></tr><tr><td>Ctrl+K</td><td>Insert Link</td></tr><tr><td>Ctrl+Shift+X</td><td>Hebrew/English Keyboard Fix</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Heading 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Save (Floating Ink also saves by itself)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Tip:</b> You can set a word-count goal in the Tools tab to track your progress as you write.</p></div><p style=\"text-align: center\"><small>Floating Ink is part of <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",

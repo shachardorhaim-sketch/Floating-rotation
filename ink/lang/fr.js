@@ -2366,7 +2366,22 @@ window.INK_I18N = {
 "שם מתחיל באות או בקו תחתון, ויש בו רק אותיות, ספרות, נקודות וקווים תחתונים": "Un nom commence par une lettre ou un tiret bas, et ne contient que des lettres, des chiffres, des points et des tirets bas",
 "שם מתייחס לטווח של תאים, למספר או לנוסחה. אחר כך כותבים אותו בנוסחאות במקום הכתובת, או כמקור של רשימה נפתחת.": "Un nom fait référence à une plage de cellules, à un nombre ou à une formule. Ensuite on l'écrit dans les formules à la place de l'adresse, ou comme source d'une liste déroulante.",
 "שם של כל חוברת העבודה פועל בכל הגיליונות. אחרי מחיקה של שם, הנוסחאות שהשתמשו בו מראות שגיאה. אפשר לבטל את המחיקה עם Ctrl+Z.": "Un nom de tout le classeur fonctionne dans toutes les feuilles. Après la suppression d'un nom, les formules qui l'utilisaient affichent une erreur. Ctrl+Z annule la suppression.",
-"שמות מוגדרים": "Noms définis"
+"שמות מוגדרים": "Noms définis",
+"יצירה מהבחירה": "Créer depuis la sélection",
+"שמות לתאים שבחרת, לפי הכותרות שלידם (Ctrl+Shift+F3)": "Des noms pour les cellules que tu as sélectionnées, d'après les en-têtes à côté d'elles (Ctrl+Maj+F3)",
+"יצירת שמות מהבחירה": "Créer des noms à partir de la sélection",
+"כל כותרת נותנת שם לתאים שלידה. איפה הכותרות?": "Chaque en-tête donne son nom aux cellules à côté de lui. Où sont les en-têtes ?",
+"בשורה העליונה": "Dans la ligne du haut",
+"בשורה התחתונה": "Dans la ligne du bas",
+"בעמודה הימנית": "Dans la colonne de droite",
+"בעמודה השמאלית": "Dans la colonne de gauche",
+"השמות שייווצרו:": "Les noms qui seront créés :",
+"מחליף שם קיים": "remplace un nom existant",
+"מסמנים איפה הכותרות, והשמות יופיעו כאן.": "Coche l'endroit où sont les en-têtes, et les noms apparaîtront ici.",
+"במקום הזה אין כותרות. כותרת היא תא עם טקסט, ולידו התאים שיקבלו את השם.": "Il n'y a pas d'en-têtes à cet endroit. Un en-tête est une cellule avec du texte, et à côté se trouvent les cellules qui reçoivent le nom.",
+"יצירת השמות": "Créer les noms",
+"בוחרים קודם את הכותרות יחד עם התאים שלידן, ואז יוצרים מהן שמות": "Sélectionne d'abord les en-têtes avec les cellules à côté d'eux, puis crée des noms à partir d'eux",
+"אלה יותר מדי שמות: בחוברת עבודה יש מקום ל-{0} שמות": "Cela fait trop de noms : un classeur a de la place pour {0} noms"
 },
 "plurals": {
 "{n} מילים": {
@@ -2576,6 +2591,10 @@ window.INK_I18N = {
 "{n} ערכים לא תקינים סומנו בעיגול אדום": {
 "one": "{n} valeur non valide a été entourée en rouge",
 "other": "{n} valeurs non valides ont été entourées en rouge"
+},
+"{n} שמות הוגדרו": {
+"one": "{n} nom a été défini",
+"other": "{n} noms ont été définis"
 }
 },
 "welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Bienvenue dans Floating Ink</h1><p>C'est un document d'exemple qui montre ce qu'on peut faire ici. Tu peux le modifier, le supprimer, ou cliquer sur <b>Nouveau document</b> pour commencer sur une page vierge.</p><div class=\"callout callout-note\"><p><b>Totalement privé.</b> Les documents sont enregistrés uniquement sur ton appareil, rien n'est envoyé à un serveur. Pour ne jamais les perdre, active la sauvegarde automatique : <b>Fichier → Sauvegarde</b>.</p></div><h2>Ce qu'on trouve ici</h2><ul><li><b>Mise en forme comme dans Word :</b> polices, couleurs, <span style=\"background-color: #ffe45c\">surligneur</span>, titres, listes et tableaux.</li><li><b>Insertion :</b> images, dessin à main levée, symboles mathématiques, emoji, date et table des matières.</li><li><b>Outils :</b> rechercher et remplacer, nombre de mots, objectif de mots, lecture à voix haute, calculatrice et correction du clavier hébreu-anglais.</li><li><b>Fichiers :</b> enregistrement au format Word et PDF, importation depuis Word, versions précédentes et corbeille.</li></ul><h2>Tâches d'exemple</h2><ul class=\"checklist\"><li data-checked=\"true\">Ouvrir Floating Ink</li><li>L'installer sur l'ordinateur ou le téléphone</li><li>Ajouter un tableau ou un dessin</li></ul><h2>Comment installer</h2><ul><li><b>Sur ordinateur (Chrome ou Edge) :</b> bouton <b>Installer</b> en haut, ou l'icône d'installation à côté de la barre d'adresse.</li><li><b>Sur Android :</b> menu ⋮ → Installer l'application.</li><li><b>Sur iPhone :</b> dans Safari, bouton de partage → Sur l'écran d'accueil.</li></ul><p>Une fois installé, Floating Ink s'ouvre comme un logiciel classique, même sans internet.</p><h2>Raccourcis clavier</h2><table><tbody><tr><th>Raccourci</th><th>Ce qu'il fait</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Gras / Italique / Souligné</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Annuler / Rétablir</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Rechercher / Rechercher et remplacer</td></tr><tr><td>Ctrl+K</td><td>Insérer un lien</td></tr><tr><td>Ctrl+Shift+X</td><td>Correction clavier hébreu-anglais</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Titre 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Enregistrer (Floating Ink enregistre aussi tout seul)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Astuce :</b> Floating Ink enregistre tout seul au fur et à mesure, tu n'as rien à faire.</p></div><p style=\"text-align: center\"><small>Floating Ink fait partie de <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",
