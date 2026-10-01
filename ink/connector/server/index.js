@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.10.0';
+const VERSION = '1.11.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -28,7 +28,7 @@ const INSTRUCTIONS = 'Floating Ink is a word processor open in the user\'s brows
   'It also makes presentations (slides, like PowerPoint): create_presentation builds one while the user watches, for example ' +
   'from a script or a document they wrote (read_document it first), and edit_presentation changes one. Keep slides short: ' +
   'a title and three to six brief points; what the presenter should say goes in the slide\'s notes. read_document reads a presentation slide by slide. ' +
-  'It also makes spreadsheets, like Excel: create_spreadsheet builds one with values, formulas, formatting, conditional formatting, drop-down lists (data validation) and charts (a budget, a table of grades, a list with totals, a chart of them), ' +
+  'It also makes spreadsheets, like Excel: create_spreadsheet builds one with values, formulas, formatting, conditional formatting, drop-down lists (data validation), defined names and charts (a budget, a table of grades, a list with totals, a chart of them), ' +
   'read_spreadsheet reads one, and write_cells changes cells in one. Formulas are written the way Excel writes them in English, with commas: =SUM(B2:B9). ' +
   'The chat panel inside Floating Ink is shared: send_message leaves a note there, and read_messages shows ' +
   'what the user or another connected assistant wrote. The user often keeps writing to you from that panel instead of ' +
@@ -67,7 +67,7 @@ const SHEET = {
   rows: { type: 'array', items: { type: 'array', items: {} }, description: 'Rows of cells from start, the first row first, the first column first. Each value is a number, text, true/false, or null for an empty cell. ' +
     'Text that starts with = is a formula, in English with commas as in Excel: =SUM(B2:B9), =AVERAGE(B2:D2), =IF(E2>=55,"pass","fail"), =B2*C2, =\'Sheet 2\'!B7. ' +
     'About 150 Excel functions work: SUM, SUMIF(S), SUMPRODUCT, ROUND, AVERAGE, COUNTIF(S), MAXIFS, MEDIAN, RANK, IF, IFS, AND, OR, IFERROR, SWITCH, TEXT, LEFT, MID, TEXTJOIN, SUBSTITUTE, TODAY, DATE, EDATE, DATEDIF, NETWORKDAYS, XLOOKUP, VLOOKUP, INDEX, MATCH and more, with + - * / ^ %, & (joining text), comparisons, cells and ranges. ' +
-    'As in Excel 365, a formula whose answer is several values spills them into the cells below and beside it: =SORT(A2:B20,2,-1), =FILTER(A2:C20,C2:C20>50), =UNIQUE(A2:A20), =SEQUENCE(10); leave those cells empty, and refer to the whole spill as A2#. INDIRECT, OFFSET, LET and financial functions are not there yet (they show #NAME?). Write plain numbers (1200), and set their look with formats. ' +
+    'As in Excel 365, a formula whose answer is several values spills them into the cells below and beside it: =SORT(A2:B20,2,-1), =FILTER(A2:C20,C2:C20>50), =UNIQUE(A2:A20), =SEQUENCE(10); leave those cells empty, and refer to the whole spill as A2#. INDIRECT and OFFSET work, and so do defined names (see names): =SUM(Prices). LET, LAMBDA and financial functions are not there yet (they show #NAME?). Write plain numbers (1200), and set their look with formats. ' +
     'One call takes up to 5,000 rows of up to 500 cells; for more, call write_cells again with a later start.' },
   cells: { type: 'object', additionalProperties: {}, description: 'Single cells by address, like {"B2": 1200, "C2": "=B2*2"}; the same values as rows.' },
   formats: { type: 'array', description: 'Formatting for ranges, applied in order (up to 500, each range up to 100,000 cells).', items: { type: 'object', properties: {
@@ -111,7 +111,8 @@ const SHEET = {
     range: { type: 'string', description: 'The cells, like B2:B50 (several ranges with spaces between them; B:B is a whole column).' },
     type: { type: 'string', enum: ['list', 'whole_number', 'decimal', 'date', 'time', 'text_length', 'custom', 'any', 'none'], description: 'list: a drop-down list. whole_number, decimal, date, time and text_length compare with operator and value. custom: a formula that must be true. any: no limit, only the input message. none: takes the rules of these cells away.' },
     values: { type: 'array', items: {}, description: 'For list: the items written out, like ["Yes", "No", "Maybe"] (no commas inside an item, up to 255 characters in all; for a longer list write the items in cells and give source).' },
-    source: { type: 'string', description: 'For list, instead of values: the cells that hold the items, one row or one column, like "H2:H20" or "Lists!A1:A30". The list follows those cells as they change.' },
+    source: { type: 'string', description: 'For list, instead of values: the cells that hold the items, one row or one column, like "H2:H20" or "Lists!A1:A30", or a defined name for them ("Fruits"). The list follows those cells as they change. ' +
+      'For a list that depends on another cell, "=INDIRECT(A2)": A2 holds the name of a defined name (or an address as text), and each cell of the rule looks at the cell beside it, like a copied formula.' },
     dropdown: { type: 'boolean', description: 'For list: false hides the arrow in the cell (true by default).' },
     operator: { type: 'string', enum: ['between', 'not_between', 'equal', 'not_equal', 'greater_than', 'less_than', 'greater_or_equal', 'less_or_equal'] },
     value: { description: 'A number, a date as "2026-01-31", a time as "8:30", or a formula like "=$E$1". With between and not_between it is the smaller end.' }, value2: { description: 'The larger end, for between and not_between.' },
@@ -122,6 +123,15 @@ const SHEET = {
     error_title: { type: 'string', description: 'Up to 32 characters.' }, error_message: { type: 'string', description: 'The alert\'s text (up to 225 characters); a short default is used without it.' },
     show_error: { type: 'boolean', description: 'false: no alert at all, anything can be typed (true by default).' } }, required: ['range', 'type'] } },
 };
+const NAMES = { type: 'array', description: 'Defined names, as in Excel: a name for a range of cells, a number or a formula, to write in formulas (=SUM(Prices)), as a list\'s source and in conditional formatting. ' +
+    'They follow their cells when rows, columns or sheets change, and are saved in Excel files. A name that is already there takes the new meaning. ' +
+    'For a drop-down list that depends on another one: name each list\'s cells after an item of the first list, and give the second list the source =INDIRECT(A2).',
+  items: { type: 'object', properties: {
+    name: { type: 'string', description: 'Letters, digits, _ and . after a first letter or _ (Hebrew letters too). No spaces, and nothing that reads as a cell address (B2, R1C1) or as TRUE or FALSE.' },
+    refers_to: { type: 'string', description: 'A range with its sheet, like "=Lists!$A$2:$A$9" (one range written without $ is taken as fixed), a number like "=0.17", or a formula like "=OFFSET(Lists!$A$2,0,0,COUNTA(Lists!$A:$A)-1,1)".' },
+    sheet: { type: 'string', description: 'Leave out for a name of the whole workbook (the usual). A sheet\'s name makes it that sheet\'s own name, known only there.' },
+    comment: { type: 'string' },
+    delete: { type: 'boolean', description: 'write_cells only: true takes the name away.' } }, required: ['name'] } };
 const TOOLS = [
   { name: 'list_documents', description: 'List the documents, presentations and spreadsheets in Floating Ink: id, title, kind, word count, last change, and which one is open on screen.',
     inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true } },
@@ -139,12 +149,12 @@ const TOOLS = [
       ...SLIDE }, required: ['action'] } } } } },
   { name: 'create_spreadsheet', description: 'Create a new spreadsheet (like Excel) and open it on the user\'s screen: one or more sheets of cells with values, formulas and formatting. ' +
       'Use it for tables, budgets, schedules, lists with totals and anything the user wants to calculate. Put a header row on top (bold, with a fill, frozen), give numbers a number_format, and total with formulas. Returns its id.',
-    inputSchema: { type: 'object', properties: { title: { type: 'string' }, direction: SHEET.direction, sheets: { type: 'array', items: { type: 'object', properties: SHEET } } }, required: ['title', 'sheets'] } },
-  { name: 'read_spreadsheet', description: 'Read a spreadsheet: the names of its sheets, and for one sheet (the one on screen, or `sheet`) what each cell shows, the formulas in it, and its charts, conditional formatting and data validation (drop-down lists and limits on what may be typed). Without a range, reads the part that is used.',
+    inputSchema: { type: 'object', properties: { title: { type: 'string' }, direction: SHEET.direction, sheets: { type: 'array', items: { type: 'object', properties: SHEET } }, names: NAMES }, required: ['title', 'sheets'] } },
+  { name: 'read_spreadsheet', description: 'Read a spreadsheet: the names of its sheets, its defined names, and for one sheet (the one on screen, or `sheet`) what each cell shows, the formulas in it, and its charts, conditional formatting and data validation (drop-down lists and limits on what may be typed). Without a range, reads the part that is used.',
     inputSchema: { type: 'object', properties: { id: DOC_ID, sheet: { type: 'string' }, range: { type: 'string', description: 'Like A1:F40.' } } }, annotations: { readOnlyHint: true } },
   { name: 'write_cells', description: 'Write values, formulas and formatting into a spreadsheet (it opens on screen, and the user can undo it with Ctrl+Z). The fields are the same as a sheet in create_spreadsheet. ' +
-      '`sheet` picks a sheet by name (a new sheet is added if none has that name; leave out for the sheet on screen), and `clear` empties a range first.',
-    inputSchema: { type: 'object', properties: { id: DOC_ID, sheet: { type: 'string' }, clear: { type: 'string', description: 'A range to empty before writing, like A1:H50.' }, ...Object.fromEntries(Object.entries(SHEET).filter(([k]) => k !== 'name')) } } },
+      '`sheet` picks a sheet by name (a new sheet is added if none has that name; leave out for the sheet on screen), `clear` empties a range first, and `names` defines, changes or deletes defined names.',
+    inputSchema: { type: 'object', properties: { id: DOC_ID, sheet: { type: 'string' }, clear: { type: 'string', description: 'A range to empty before writing, like A1:H50.' }, ...Object.fromEntries(Object.entries(SHEET).filter(([k]) => k !== 'name')), names: NAMES } } },
   { name: 'create_document', description: 'Create a new document from Markdown and open it on the user\'s screen. Returns its id.',
     inputSchema: { type: 'object', properties: { title: { type: 'string' }, content: { type: 'string', description: 'Markdown' } }, required: ['title', 'content'] } },
   { name: 'write_in_document', description: 'Add Markdown content to a document (it opens on screen). where: "end" (default), "start", "after_selection" or "replace_selection" (the text the user selected).',

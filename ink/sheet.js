@@ -3,7 +3,7 @@
    A spreadsheet is a document in the same list, store, versions, trash and backup, whose meta.kind is
    'sheet' and whose body is JSON (README "גיליונות"):
    { v: 1, dir, active, sheets: [{ id, name, dir, cells: { A1: { v | e, f, x, st } }, cw, rh, hc, hr, cs, rs, ds,
-     fr, fc, merges, af, gl, tab, dw, dh, ac, zoom }] }
+     fr, fc, merges, af, gl, tab, dw, dh, ac, zoom }], names: [{ n, f, s, c }] }
    It works with the app's own helpers from index.html: h, T, toast, modal, openPop, markDirty, S, PREFS... */
 (() => {
 'use strict';
@@ -154,6 +154,10 @@ function normBook(j) {
   for (const x of Array.isArray(o.sheets) ? o.sheets : []) { const s = normSheet(x, dir, taken); if (s) book.sheets.push(s); if (book.sheets.length >= 250) break; }
   if (!book.sheets.length) book.sheets.push(newSheet(sheetWord(1), dir));
   book.active = clamp(Math.round(+o.active || 0), 0, book.sheets.length - 1);
+  book.names = normNames(o.names, book.sheets);
+  // a formula kept as the file had it, because it used what wasn't here then (INDIRECT, a name): worked out from now on,
+  // the way a plain formula of an Excel file is
+  for (const s of book.sheets) for (const c of s.cells.values()) if (c.x && !missingIn(c.f, s, book)) { delete c.x; c.l = true; }
   return book;
 }
 function parseBook(body) { let j = null; try { j = JSON.parse(body); } catch {} return normBook(j); }
@@ -194,7 +198,8 @@ function sheetOut(s) {
   if (s.ci && s.ci.length) o.ci = packIds(s.ci, s.id + '/ci');
   return o;
 }
-const bookOut = b => ({ v: 1, dir: b.dir, active: b.sheets.includes(WS) ? b.sheets.indexOf(WS) : clamp(b.active | 0, 0, b.sheets.length - 1), sheets: b.sheets.map(sheetOut) });
+const bookOut = b => ({ v: 1, dir: b.dir, active: b.sheets.includes(WS) ? b.sheets.indexOf(WS) : clamp(b.active | 0, 0, b.sheets.length - 1), sheets: b.sheets.map(sheetOut),
+  ...(b.names && b.names.length ? { names: b.names.map(nameOut) } : {}) });
 
 /* =========================================================
    numbers and dates the way this language writes them, and Excel's number formats
@@ -553,6 +558,7 @@ const RX = {
   fn: /(?:_xl(?:fn|ws)\.)*[A-Za-z_][A-Za-z0-9_.]*(?=\s*\()/y,
   name: /[\p{L}_\\][\p{L}\p{N}_.?\\]*/uy,
   op: /<>|<=|>=|[-+*/^&=<>%@]/y,
+  open: /\s*\(/y,
 };
 const execAt = (re, s, i) => { re.lastIndex = i; return re.exec(s); };
 /* a reference at position j: one cell (k 'c'), an area (k 'a'), whole columns (k 'C') or whole rows (k 'R').
@@ -595,9 +601,11 @@ function tokenize(src) {
       toks.push({ t: 'ref', s: src.slice(i, end), sheet, q, p: i, ...r, end, sp }); i = end; continue;
     }
     if (sheet != null && (m = execAt(RX.err, src, j)) && m[0].toUpperCase() === '#REF!') { toks.push({ t: 'err', s: src.slice(i, j + 5), v: '#REF!', p: i }); i = j + 5; continue; }
+    // a defined name that belongs to one sheet, written with the sheet before it: Sales!Total
+    if (sheet != null && (m = execAt(RX.name, src, j)) && !execAt(RX.open, src, j + m[0].length)) { const end = j + m[0].length; toks.push({ t: 'name', s: src.slice(i, end), n: m[0], sheet, q, p: i }); i = end; continue; }
     if ((m = execAt(RX.num, src, i))) { toks.push({ t: 'num', s: m[0], v: +m[0], p: i }); i += m[0].length; continue; }
     if ((m = execAt(RX.fn, src, i))) { toks.push({ t: 'fn', s: m[0], n: m[0].replace(/^(?:_xl(?:fn|ws)\.)+/i, '').toUpperCase(), p: i }); i += m[0].length; continue; }
-    if ((m = execAt(RX.name, src, i))) { const u = m[0].toUpperCase(); toks.push(u === 'TRUE' || u === 'FALSE' ? { t: 'bool', s: m[0], v: u === 'TRUE', p: i } : { t: 'name', s: m[0], p: i }); i += m[0].length; continue; }
+    if ((m = execAt(RX.name, src, i))) { const u = m[0].toUpperCase(); toks.push(u === 'TRUE' || u === 'FALSE' ? { t: 'bool', s: m[0], v: u === 'TRUE', p: i } : { t: 'name', s: m[0], n: m[0], sheet: null, p: i }); i += m[0].length; continue; }
     if ((m = execAt(RX.op, src, i))) { toks.push({ t: 'op', s: m[0], p: i }); i += m[0].length; continue; }
     if (ch === '{' || ch === '}') { brace = Math.max(0, brace + (ch === '{' ? 1 : -1)); toks.push({ t: ch, s: ch, p: i }); i++; continue; }
     if (ch === ';') { toks.push({ t: brace ? ';' : ',', s: ch, p: i }); i++; continue; }
@@ -635,7 +643,7 @@ function parseFormula(src) {
       case 'bool': return { t: 'bool', v: t.v };
       case 'err': return { t: 'err', v: ERR[t.v] || E_REF };
       case 'ref': return { t: 'ref', sheet: t.sheet, k: t.k, g: G4(t.r1, t.c1, t.r2, t.c2), r1: t.r1, c1: t.c1, r2: t.r2, c2: t.c2, ab: t.a, sp: t.sp };
-      case 'name': return { t: 'name', n: t.s };
+      case 'name': return { t: 'name', n: t.n, sheet: t.sheet };
       case 'fn': {
         expect('(');
         const args = [];
@@ -784,7 +792,7 @@ function ev(n) {
   switch (n.t) {
     case 'num': case 'str': case 'bool': case 'err': case 'arr': return n.v;
     case 'miss': return null;
-    case 'name': return E_NAME;
+    case 'name': return nameVal(n);
     case 'ref': return refVal(n);
     case 'fn': {
       const f = FUNCS[n.n];
@@ -795,9 +803,9 @@ function ev(n) {
       try { return f.f(n.args); } catch (e) { if (e instanceof Err) return e; throw e; }
     }
     case 'at': return scal(ev(n.a));
-    case 'neg': case 'pct': { let v = ev(n.a); if (!AX) v = scalR(v); return isA(v) ? mapArr([v], x => unop(n, x[0])) : unop(n, v); }
+    case 'neg': case 'pct': { let v = one(ev(n.a)); if (!AX) v = scalR(v); return isA(v) ? mapArr([v], x => unop(n, x[0])) : unop(n, v); }
     case 'bin': {
-      let a = ev(n.a), b = ev(n.b);
+      let a = one(ev(n.a)), b = one(ev(n.b));
       if (!AX) { a = scalR(a); b = scalR(b); }
       return isA(a) || isA(b) ? mapArr([a, b], x => binop(n.op, x[0], x[1])) : binop(n.op, a, b);
     }
@@ -823,6 +831,83 @@ function refVal(n, keep) {
   }
   return n.k === 'c' && !keep ? valAt(s, g.r1, g.c1) : { rng: true, s, g };
 }
+/* a range of one cell is that cell's value: what INDIRECT, OFFSET, INDEX or a name give back for a single cell works
+   like the cell's own address */
+const one = v => v && v.rng && v.g.r1 === v.g.r2 && v.g.c1 === v.g.c2 ? valAt(v.s, v.g.r1, v.g.c1) : v;
+/* a defined name's value: what its formula gives. A name for cells is those cells (keep: even one cell stays a
+   reference, for SUM, ROW and their like). The parts of its references without $ are written for cell A1, and move to
+   the cell that uses the name, the way Excel keeps relative names. A name that uses itself is #NAME?, as in Excel */
+const NAMING = [];
+function nameVal(n, keep) {
+  const nm = nameOf(n, WB.sheets[CTX.si]), ast = nm ? astOf(nm.f) : null;
+  if (!ast || NAMING.includes(nm)) return E_NAME;
+  const was = [OFF, AX];
+  NAMING.push(nm);
+  OFF = { dr: CTX.r, dc: CTX.c };
+  try {
+    if (ast.t === 'ref') return refVal(ast, keep);
+    if (ast.t === 'name') return nameVal(ast, keep);
+    AX = true;   // a name's formula works on whole ranges, as Excel's do
+    return ev(ast);
+  } finally { NAMING.pop(); [OFF, AX] = was; }
+}
+/* INDIRECT and OFFSET point at cells their formula doesn't name. While a cell's formula is worked out, each range they
+   gave is kept (DD), so the next pass works out those cells first (see recalc) */
+let DDON = false, DD = null;
+function pointsAt(rv) {
+  if (!DDON) return;
+  if (!DD) DD = [];
+  if (DD.length < 200 && !DD.some(d => d.s === rv.s && sameG(d.g, rv.g))) DD.push({ s: rv.s, g: rv.g });
+}
+/* the reference a text names, for INDIRECT: an address the way Excel writes it (B2, $B$2:$C$9, A:A, 2:5, Sheet2!B2,
+   'My sheet'!B2), R1C1 style when a1 is off (R2C3, R[-1]C, C4), or a defined name that stands for cells. null when it
+   is none of these. Measured in Excel: spaces may follow the text, the ! and the colon, but not come first */
+function refOfText(text, a1) {
+  let t = text.replace(/\s+$/, ''), s = WB.sheets[CTX.si], sheet = null;
+  if (!t || /^\s/.test(t)) return null;
+  const m = execAt(RX.sheet, t, 0);
+  if (m) { sheet = m[1] != null ? m[1].replace(/''/g, "'") : m[2]; s = sheetNamed(sheet); t = t.slice(m[0].length).replace(/^\s+/, ''); }
+  if (!s) return null;
+  const sp = a1 && t.endsWith('#');
+  const parts = (sp ? t.slice(0, -1) : t).split(/\s*:\s*/), P = parts.length <= 2 ? parts.map(a1 ? partA1 : partRC) : [null];
+  if (P.every(Boolean) && P.every(p => p.k === P[0].k) && (P.length === 2 || P[0].k === 'c' || !a1)) {
+    const a = P[0], b = P[P.length - 1], g = a.k === 'c' ? G4(a.r, a.c, b.r, b.c) : a.k === 'C' ? G4(0, a.c, MAXR - 1, b.c) : G4(a.r, 0, b.r, MAXC - 1);
+    if (!sp) return { rng: true, s, g };
+    const k = KEY(g.r1, g.c1), x = P.length === 1 ? s.cells.get(k) : null;
+    return x && x.f != null ? { rng: true, s, g: (s._sa && s._sa.get(k)) || g } : null;
+  }
+  // a name: only one that is a reference itself (Excel takes no name for a number, a formula, or another name)
+  const nm = execAt(RX.name, t, 0);
+  if (!nm || nm[0].length !== t.length) return null;
+  const def = nameOf({ n: t, sheet }, WB.sheets[CTX.si]), ast = def ? astOf(def.f) : null;
+  if (!ast || ast.t !== 'ref') return null;
+  const was = OFF;
+  OFF = null;   // its parts without $ stay where they are written: for A1 (measured in Excel)
+  try { const rv = refVal(ast, true); return rv && rv.rng ? rv : null; } finally { OFF = was; }
+}
+function partA1(p) {
+  let m;
+  if ((m = /^\$?([A-Za-z]{1,3})\$?0*([1-9]\d{0,6})$/.exec(p))) { const c = colNum(m[1]), r = +m[2] - 1; return c < MAXC && r < MAXR ? { k: 'c', r, c } : null; }
+  if ((m = /^\$?([A-Za-z]{1,3})$/.exec(p))) { const c = colNum(m[1]); return c < MAXC ? { k: 'C', c } : null; }
+  if ((m = /^\$?0*([1-9]\d{0,6})$/.exec(p))) { const r = +m[1] - 1; return r < MAXR ? { k: 'R', r } : null; }
+  return null;
+}
+/* R1C1 style: a number is the row or column itself, [n] is n away from the formula's own (round the sheet's edge), and
+   nothing is the formula's own */
+function partRC(p) {
+  const at = (t, cur, max) => {
+    if (t === '') return cur;
+    if (t[0] !== '[') { const n = +t; return n >= 1 && n <= max ? n - 1 : null; }
+    const d = +t.slice(1, -1);
+    return Math.abs(d) < max ? ((cur + d) % max + max) % max : null;
+  };
+  let m;
+  if ((m = RC_CELL.exec(p))) { const r = at(m[1], CTX.r, MAXR), c = at(m[2], CTX.c, MAXC); return r == null || c == null ? null : { k: 'c', r, c }; }
+  if ((m = RC_ROW.exec(p))) { const r = at(m[1], CTX.r, MAXR); return r == null ? null : { k: 'R', r }; }
+  if ((m = RC_COL.exec(p))) { const c = at(m[1], CTX.c, MAXC); return c == null ? null : { k: 'C', c }; }
+  return null;
+}
+const RC_CELL = /^R(\[[+-]?\d+\]|\d*)C(\[[+-]?\d+\]|\d*)$/i, RC_ROW = /^R(\[[+-]?\d+\]|\d*)$/i, RC_COL = /^C(\[[+-]?\d+\]|\d*)$/i;
 /* each value in a range: fn(value, r, c) for every cell that holds one; a value fn returns stops it */
 function eachIn(rv, fn) {
   const { s, g } = rv, area = (g.r2 - g.r1 + 1) * (g.c2 - g.c1 + 1), sp = s._sp && s._sp.size ? s._sp : null;
@@ -889,10 +974,11 @@ const bool = v => { const x = toBool(v); if (isErr(x)) throw x; return x; };
 const int = v => Math.trunc(num(v));
 const opt = (v, d) => v === undefined ? d : v;
 /* an argument as one value: a range there is the cell in the formula's own row or column (outside arrays) */
-function argS(n) { const v = ev(n); return !AX && v && v.rng ? scal(v) : v; }
+function argS(n) { const v = one(ev(n)); return !AX && v && v.rng ? scal(v) : v; }
 /* an argument that takes arrays: a reference stays a reference (even to one cell), and math in it is done cell by cell */
 function argA(n) {
   if (n.t === 'ref') return refVal(n, true);
+  if (n.t === 'name') return nameVal(n, true);
   const k = AX;
   AX = true;
   try { return ev(n); } finally { AX = k; }
@@ -1525,6 +1611,44 @@ const FUNCS = {
       : (k === 1 || k === 3 ? '$' : '') + colName(C - 1) + (k === 1 || k === 2 ? '$' : '') + R;
     return sh == null ? t : sheetPrefix(str(sh)) + t;
   }),
+  // the cells a text names. They aren't written in the formula, so each range is kept for the order of the next pass (pointsAt)
+  INDIRECT: { n: [1, 2], f: a => {
+    const t = argS(a[0]), mode = a.length < 2 ? true : a[1].t === 'miss' ? false : argS(a[1]);
+    const at = (x, m) => {
+      if (isErr(x)) return x;
+      const a1 = toBool(m);
+      if (isErr(a1)) return a1;
+      const rv = refOfText(toStr(x), a1);
+      if (!rv) return E_REF;
+      pointsAt(rv);
+      return rv;
+    };
+    if (isA(t) || isA(mode)) return mapArr([t, mode], ([x, m]) => { const rv = at(x, m); return rv && rv.rng ? (rv.g.r1 === rv.g.r2 && rv.g.c1 === rv.g.c2 ? zero(one(rv)) : E_VAL) : rv; });
+    return at(t, mode);
+  } },
+  // a range some rows and columns away from a reference, of its own size or of the height and width given (a minus
+  // size grows up or back from that cell). Whole numbers, as Excel cuts them; off the sheet, or of no size, is #REF!
+  OFFSET: { n: [3, 5], f: a => {
+    const ref = argA(a[0]);
+    if (isErr(ref)) return ref;
+    if (!ref || !ref.rng) return E_VAL;
+    const g = ref.g, n = [0, 0, g.r2 - g.r1 + 1, g.c2 - g.c1 + 1];
+    for (let i = 1; i < a.length; i++) {
+      if (a[i].t === 'miss') continue;
+      const v = argS(a[i]);
+      if (isA(v)) return E_VAL;
+      const x = toNum(v);
+      if (isErr(x)) return x;
+      n[i - 1] = Math.trunc(x);
+    }
+    const [dr, dc, h, w] = n;
+    if (!h || !w) return E_REF;
+    const r0 = g.r1 + dr, c0 = g.c1 + dc, out = { r1: h > 0 ? r0 : r0 + h + 1, c1: w > 0 ? c0 : c0 + w + 1, r2: h > 0 ? r0 + h - 1 : r0, c2: w > 0 ? c0 + w - 1 : c0 };
+    if (offSheet(out)) return E_REF;
+    const rv = { rng: true, s: ref.s, g: out };
+    pointsAt(rv);
+    return rv;
+  } },
   TRANSPOSE: fx(1, 1, 'a', v => { const A = arrOf(v); return mkArr(A.w, A.h, Array.from({ length: A.h * A.w }, (_, k) => zero(A.d[(k % A.h) * A.w + Math.floor(k / A.h)]))); }, { dyn: true }),
   FILTER: fx(2, 3, 'aaa', (arr, inc, empty) => {
     const A = arrOf(arr), I = arrOf(inc), keep = [];
@@ -1659,7 +1783,7 @@ const ARGN = {
   lookup_array: N_('מערך_חיפוש'), return_array: N_('מערך_תוצאה'), if_not_found: N_('אם_לא_נמצא'), match_mode: N_('סוג_התאמה'), search_mode: N_('כיוון_חיפוש'),
   match_type: N_('סוג_התאמה'), array: N_('מערך'), row_num: N_('מספר_שורה'), column_num: N_('מספר_עמודה'), reference: N_('הפניה'), index_num: N_('מספר_בחירה'),
   num_digits: N_('ספרות'), significance: N_('כפולה'), divisor: N_('מחלק'), power: N_('חזקה'), base: N_('בסיס'), k: N_('מקום'), order: N_('סדר'),
-  ref: N_('טווח'), bottom: N_('מספר_נמוך'), top: N_('מספר_גבוה'), rows: N_('שורות'), columns: N_('עמודות'), start: N_('התחלה'), step: N_('קפיצה'),
+  ref: N_('טווח'), bottom: N_('מספר_נמוך'), top: N_('מספר_גבוה'), rows: N_('שורות@arg'), columns: N_('עמודות@arg'), start: N_('התחלה'), step: N_('קפיצה'),
   include: N_('תנאי_הכללה'), if_empty: N_('אם_ריק'), sort_index: N_('עמודת_מיון'), sort_order: N_('סדר_מיון'), by_col: N_('לפי_עמודות'), by_array: N_('מערך_מיון'),
   exactly_once: N_('רק_פעם_אחת'), delimiter: N_('מפריד'), ignore_empty: N_('לדלג_על_ריקים'), start_num: N_('מיקום_התחלה'), num_chars: N_('מספר_תווים'),
   old_text: N_('טקסט_ישן'), new_text: N_('טקסט_חדש'), instance_num: N_('מופע'), find_text: N_('טקסט_לחיפוש'), within_text: N_('בתוך_טקסט'),
@@ -1671,6 +1795,7 @@ const ARGN = {
   x_num: N_('x'), y_num: N_('y'), angle: N_('זווית'), quart: N_('רבעון'), function_num: N_('מספר_פונקציה'), number_chosen: N_('מספר_נבחרים'),
   col_delimiter: N_('מפריד_עמודות'), row_delimiter: N_('מפריד_שורות'), pad_with: N_('מילוי'), match_end: N_('סוף_כמפריד'), mode: N_('כיוון'),
   row: N_('שורה'), column: N_('עמודה'), abs_num: N_('סוג_כתובת'), a1: N_('סגנון_A1'), sheet_text: N_('שם_גיליון'), error_val: N_('שגיאה'), times: N_('פעמים'),
+  ref_text: N_('כתובת_כטקסט'), cols: N_('עמודות@arg'), height: N_('גובה@arg'), width: N_('רוחב@arg'),
 };
 const FN_INFO = {
   // math
@@ -1833,6 +1958,8 @@ const FN_INFO = {
   ROWS: ['look', N_('כמה שורות יש בטווח'), 'array', 'ROWS(A2:A10)'],
   COLUMNS: ['look', N_('כמה עמודות יש בטווח'), 'array', 'COLUMNS(A1:D1)'],
   ADDRESS: ['look', N_('הכתובת של תא כטקסט'), 'row, column, [abs_num], [a1], [sheet_text]', 'ADDRESS(2,3)'],
+  INDIRECT: ['look', N_('הופך טקסט של כתובת או של שם מוגדר לתאים עצמם'), 'ref_text, [a1]', 'INDIRECT(A2)'],
+  OFFSET: ['look', N_('טווח שנמצא כמה שורות ועמודות מתא, בגודל שבוחרים'), 'reference, rows, cols, [height], [width]', 'OFFSET(A1,2,1)'],
   TRANSPOSE: ['look', N_('הופך שורות לעמודות ועמודות לשורות'), 'array', 'TRANSPOSE(A1:C3)'],
   FILTER: ['look', N_('רק השורות שעומדות בתנאי, שנשפכות לתאים'), 'array, include, [if_empty]', 'FILTER(A2:C20,C2:C20>50)'],
   SORT: ['look', N_('טווח ממוין, שנשפך לתאים'), 'array, [sort_index], [sort_order], [by_col]', 'SORT(A2:B20,2,-1)'],
@@ -1861,14 +1988,23 @@ const fnArgs = fn => !FN_INFO[fn] || !FN_INFO[fn][2] ? [] : FN_INFO[fn][2].split
   const id = p.replace(/[[\]]/g, ''), wrap = t => p[0] === '[' ? '[' + t + ']' : t, m = /^([a-z_]+?)(\d+)$/.exec(id);
   return ARGN[id] ? wrap(T(ARGN[id])) : m && ARGN[m[1]] ? wrap(T(ARGN[m[1]]) + m[2]) : p;
 });
-/* a formula that can't be worked out here: which function (or name) it uses that this app doesn't have */
-function unknownIn(f) {
+/* what a formula on sheet s needs that isn't here: { fn } a function this app doesn't have (also inside a name the
+   formula uses), so nothing can be worked out; { name } a name nobody defined, which is #NAME? as in Excel */
+function missingIn(f, s, book = WB, used) {
   const a = astOf(f);
-  if (!a) return '?';
+  if (!a) return { fn: '?' };
   let bad = null;
-  walk(a, n => { if (!bad && n.t === 'fn' && !FUNCS[n.n]) bad = n.n; else if (!bad && n.t === 'name') bad = n.n; });
+  walk(a, n => {
+    if (bad) return;
+    if (n.t === 'fn') { if (!FUNCS[n.n]) bad = { fn: n.n }; return; }
+    if (n.t !== 'name') return;
+    const nm = book ? nameOf(n, s, book) : null;
+    if (!nm) bad = { name: n.n };
+    else if (!(used && used.has(nm))) bad = missingIn(nm.f, s, book, new Set(used || []).add(nm));
+  });
   return bad;
 }
+const lacksFn = (f, s) => { const m = missingIn(f, s); return !!m && !!m.fn; };
 
 /* --- recalculating: every formula, in an order where each comes after the formulas it reads. Formulas that read
    each other in a loop show 0, as in Excel, and the status line names the first of them. A formula whose answer is an
@@ -1881,14 +2017,46 @@ function rowsIn(rows, lo, hi, fn) {
   while (a < b) { const m = (a + b) >> 1; if (rows[m] < lo) a = m + 1; else b = m; }
   for (let i = a; i < rows.length && rows[i] <= hi; i++) fn(rows[i]);
 }
-function recalc(pass = 0) {
+/* Where INDIRECT and OFFSET pointed last time (s._dd, by formula) is part of the order too, and a pass that found them
+   pointing elsewhere is followed by another. A loop that runs through such a formula may be an old story (it pointed
+   there before this change): the formulas in it are worked out once without that part of the order (st.doubt), and
+   only if they point there still is it a loop (st.sure), as Excel calls it */
+function recalc() {
   if (!WB) return;
-  const sheets = WB.sheets, nodes = [], at = new Map(), cols = sheets.map(() => new Map());
+  const st = { doubt: null, sure: new Set() };
+  for (let pass = 0; pass < 16 && calcPass(pass, st); pass++);
+}
+/* the references a formula reads, each through fn(sheet number, range): the ones written in it, and the ones in the
+   names it uses (their parts without $ are for A1, and move to the formula's cell). The cell OFFSET starts from is
+   not read, nor the cells ROW, COLUMN, ROWS and COLUMNS ask about: =SUM(OFFSET(B9,-3,0,3,1)) in B9 is no loop */
+const ASKS = new Set(['OFFSET', 'ROW', 'COLUMN', 'ROWS', 'COLUMNS']);
+function walkRead(n, fn) {
+  if (!n) return;
+  fn(n);
+  if (n.t === 'fn') n.args.forEach((x, i) => { if (i || !ASKS.has(n.n) || x.t !== 'ref' || x.sp) walkRead(x, fn); });
+  else if (n.a) { walkRead(n.a, fn); if (n.b) walkRead(n.b, fn); }
+}
+function readsOf(ast, si, r, c, byName, fn, used) {
+  walkRead(ast, x => {
+    if (x.t === 'ref') {
+      const ti = x.sheet == null ? si : byName.get(x.sheet.toLowerCase());
+      if (ti != null) fn(ti, used ? G4(wrapAt(x.r1, r, x.ab[0], MAXR), wrapAt(x.c1, c, x.ab[1], MAXC), wrapAt(x.r2, r, x.ab[2], MAXR), wrapAt(x.c2, c, x.ab[3], MAXC)) : x.g);
+    } else if (x.t === 'name') {
+      const nm = nameOf(x, WB.sheets[si]), a = nm && !(used && used.has(nm)) ? astOf(nm.f) : null;
+      if (a) readsOf(a, si, r, c, byName, fn, new Set(used || []).add(nm));
+    }
+  });
+}
+const NO_DD = new Map();
+/* one pass over every formula; true when another is needed */
+function calcPass(pass, st) {
+  const sheets = WB.sheets, nodes = [], at = new Map(), cols = sheets.map(() => new Map()), num = new Map(sheets.map((s, i) => [s, i]));
   LIMR = 1; LIMC = 1; SUBT = false;
   sheets.forEach((s, si) => {
     const u = usedEnd(s);
     LIMR = Math.max(LIMR, u.r); LIMC = Math.max(LIMC, u.c);
     s._sa0 = s._sa || new Map(); s._sa = new Map(); s._sp = new Map();
+    s._dd0 = s._dd || NO_DD; s._dd = new Map();
     for (const [k, c] of s.cells) {
       if (!c.f) continue;
       at.set(si * 4e10 + k, nodes.length);
@@ -1903,16 +2071,16 @@ function recalc(pass = 0) {
     const ast = !n.c.x && astOf(n.c.f);
     if (!ast) return;
     const seen = new Set();
-    walk(ast, x => {
-      if (x.t !== 'ref') return;
-      const si = x.sheet == null ? n.si : byName.get(x.sheet.toLowerCase());
-      if (si == null) return;
-      const g = x.g, fc = cols[si];
-      const dep = (r, c) => { const j = at.get(si * 4e10 + KEY(r, c)); if (j != null && !seen.has(j)) { seen.add(j); (out[j] || (out[j] = [])).push(i); indeg[i]++; } };
-      if (g.c2 - g.c1 + 1 > fc.size) { for (const [c, rows] of fc) if (c >= g.c1 && c <= g.c2) rowsIn(rows, g.r1, g.r2, r => dep(r, c)); }
-      else for (let c = g.c1; c <= g.c2; c++) { const rows = fc.get(c); if (rows) rowsIn(rows, g.r1, g.r2, r => dep(r, c)); }
-      for (const [k, area] of sheets[si]._sa0) if (meets(area, g)) dep(kr(k), kc(k));   // it reads cells another formula spills into
-    });
+    const dep = (si, r, c) => { const j = at.get(si * 4e10 + KEY(r, c)); if (j != null && !seen.has(j)) { seen.add(j); (out[j] || (out[j] = [])).push(i); indeg[i]++; } };
+    const reads = (si, g) => {
+      const fc = cols[si];
+      if (g.c2 - g.c1 + 1 > fc.size) { for (const [c, rows] of fc) if (c >= g.c1 && c <= g.c2) rowsIn(rows, g.r1, g.r2, r => dep(si, r, c)); }
+      else for (let c = g.c1; c <= g.c2; c++) { const rows = fc.get(c); if (rows) rowsIn(rows, g.r1, g.r2, r => dep(si, r, c)); }
+      for (const [k, area] of sheets[si]._sa0) if (meets(area, g)) dep(si, kr(k), kc(k));   // it reads cells another formula spills into
+    };
+    readsOf(ast, n.si, kr(n.k), kc(n.k), byName, reads);
+    const dd = sheets[n.si]._dd0.get(n.k);
+    if (dd && !(st.doubt && st.doubt.has(n.c))) { n.dd = true; for (const d of dd) { const si = num.get(d.s); if (si != null) reads(si, d.g); } }
   });
   const run = (list, deg) => {
     const q = list.filter(i => !deg[i]);
@@ -1925,14 +2093,30 @@ function recalc(pass = 0) {
     // the formulas left read each other in a loop, or read one that does: the loops show 0, and what reads them is worked out after
     const left = []; for (let i = 0; i < nodes.length; i++) if (indeg[i] > 0) left.push(i);
     const loop = loopsIn(left, out);
-    for (const i of loop) { nodes[i].c.v = 0; if (!CIRC) CIRC = nodes[i]; }
+    const doubt = pass < 12 ? [...loop].filter(i => nodes[i].dd && !st.sure.has(nodes[i].c)) : [];
+    if (doubt.length) {
+      // this pass is dropped, and the next looks again at where these formulas point
+      for (const s of sheets) { s._sa = s._sa0; s._dd = s._dd0; }
+      if (!st.doubt) st.doubt = new Map();
+      for (const i of doubt) st.doubt.set(nodes[i].c, nodes[i]);
+      return true;
+    }
+    for (const i of loop) { const n = nodes[i], dd = sheets[n.si]._dd0.get(n.k); n.c.v = 0; if (dd) sheets[n.si]._dd.set(n.k, dd); if (!CIRC) CIRC = n; }
     const rest = left.filter(i => !loop.has(i)), inRest = new Set(rest), deg = new Int32Array(nodes.length);
     for (const i of rest) for (const j of out[i] || []) if (inRest.has(j)) deg[j]++;
     run(rest, deg);
   }
-  if (pass < 2 && sheets.some(s => !sameSpills(s._sa, s._sa0))) recalc(pass + 1);
+  if (st.doubt) {
+    // the formulas in doubt were worked out without their part of the order: the ones that still point where they did are in a real loop
+    for (const [c, n] of st.doubt) if (sameDeps(sheets[n.si]._dd.get(n.k), sheets[n.si]._dd0.get(n.k))) st.sure.add(c);
+    st.doubt = null;
+    return true;
+  }
+  return (pass < 2 && sheets.some(s => !sameSpills(s._sa, s._sa0))) || (pass < 12 && sheets.some(s => !sameMap(s._dd, s._dd0, sameDeps)));
 }
-const sameSpills = (a, b) => { if (a.size !== b.size) return false; for (const [k, g] of a) if (!sameG(g, b.get(k))) return false; return true; };
+const sameMap = (a, b, eq) => { if (a.size !== b.size) return false; for (const [k, g] of a) if (!eq(g, b.get(k))) return false; return true; };
+const sameSpills = (a, b) => sameMap(a, b, sameG);
+const sameDeps = (a, b) => a === b || (!!a && !!b && a.length === b.length && a.every((d, i) => d.s === b[i].s && sameG(d.g, b[i].g)));
 /* the formulas that are part of a loop (Tarjan's strongly connected parts, without recursion) */
 function loopsIn(ids, out) {
   const inSet = new Set(ids), index = new Map(), low = new Map(), on = new Set(), st = [], loop = new Set();
@@ -1970,9 +2154,11 @@ function evalCell(n) {
   const r = kr(n.k), col = kc(n.k);
   CTX = { si: n.si, r, c: col, dyn: false };
   AX = !c.l;
+  DDON = true; DD = null;
   let v;
   try { v = ev(ast); } catch (e) { v = e instanceof Err ? e : E_VAL; }
-  AX = false;
+  AX = false; DDON = false;
+  if (DD) { WB.sheets[n.si]._dd.set(n.k, DD); DD = null; }
   // an array (or a range) as the answer spills into the cells below and beside, as in Excel 365; a formula from an
   // older file takes the one cell in its own row or column instead
   if (c.l) v = scal(v);
@@ -2015,17 +2201,23 @@ function refText(t, g, sheet = t.sheet) {
   if (t.k === 'C') return p + (a[1] ? '$' : '') + colName(g.c1) + ':' + (a[3] ? '$' : '') + colName(g.c2);
   return p + (a[0] ? '$' : '') + (g.r1 + 1) + ':' + (a[2] ? '$' : '') + (g.r2 + 1);
 }
-function mapRefs(f, fn) {
+/* a formula with each reference changed by fn (null: as it is); names: fn gets the defined names in it too */
+function mapRefs(f, fn, names) {
   const toks = tokenize(f);
   let changed = false;
-  const out = toks.map(t => { if (t.t !== 'ref') return t.s; const n = fn(t); if (n == null || n === t.s) return t.s; changed = true; return n; });
+  const out = toks.map(t => { if (t.t !== 'ref' && !(names && t.t === 'name')) return t.s; const n = fn(t); if (n == null || n === t.s) return t.s; changed = true; return n; });
   return changed ? out.join('') : f;
 }
-/* the way Excel keeps a typed formula: names and references in capitals, a sheet's name the way it is written */
+/* the way Excel keeps a typed formula: functions and references in capitals, a sheet's name and a defined name the way
+   they are written where they were made */
 function tidyFormula(f, book = WB) {
   return tokenize(f).map(t => {
     if (t.t === 'fn') return t.s.replace(/^(_xl(?:fn|ws)\.)?(.*)$/i, (m, p, n) => (p ? p.toLowerCase() : '') + n.toUpperCase());
     if (t.t === 'ref') { const s = t.sheet == null || !book ? null : book.sheets.find(x => x.name.toLowerCase() === t.sheet.toLowerCase()); return refText(t, t, s ? s.name : t.sheet); }
+    if (t.t === 'name') {
+      const s = t.sheet == null || !book ? null : book.sheets.find(x => x.name.toLowerCase() === t.sheet.toLowerCase()), nm = book ? nameIndex(book).any.get(t.n.toLowerCase()) : null;
+      return sheetPrefix(s ? s.name : t.sheet) + (nm ? nm.n : t.n);
+    }
     if (t.t === 'bool' || t.t === 'err') return t.s.toUpperCase();
     if (t.t === ',') return ',';
     return t.s;
@@ -2076,8 +2268,122 @@ function moveFormula(f, selfName, from, g, dr, dc, to) {
 }
 /* a formula that moved to another sheet keeps pointing at the sheet it came from */
 const anchorFormula = (f, from) => mapRefs(f, t => t.sheet == null ? refText(t, t, from) : null);
-const renameInFormula = (f, oldName, newName) => mapRefs(f, t => t.sheet != null && t.sheet.toLowerCase() === oldName.toLowerCase() ? refText(t, t, newName) : null);
-const dropSheetInFormula = (f, name) => mapRefs(f, t => t.sheet != null && t.sheet.toLowerCase() === name.toLowerCase() ? '#REF!' : null);
+const renameInFormula = (f, oldName, newName) => mapRefs(f, t => t.sheet == null || t.sheet.toLowerCase() !== oldName.toLowerCase() ? null : t.t === 'name' ? sheetPrefix(newName) + t.n : refText(t, t, newName), true);
+const dropSheetInFormula = (f, name) => mapRefs(f, t => t.sheet != null && t.sheet.toLowerCase() === name.toLowerCase() ? '#REF!' : null, true);
+
+/* =========================================================
+   defined names, as Excel's: a name for cells (Fruits is Lists!$A$2:$A$9), for a number or for a formula, to use in
+   formulas, as a list's source and in conditional formatting. The workbook's names are WB.names, each { n the name,
+   f what it stands for (a formula without its =, its sheets written out), s the id of the sheet it belongs to (none:
+   the whole workbook, as most do), c a note, h hidden (from a file) }. The list is never changed in place, so undo
+   can keep the old one. On a sheet, that sheet's own name comes before the workbook's of the same name.
+   A reference in f without $ is written for cell A1 and moves with the cell that uses the name, as Excel's files keep
+   relative names
+   ========================================================= */
+const NO_NAMES = [];
+const NAME_RE = /^[\p{L}_\\][\p{L}\p{N}_.?\\]*$/u;
+const nameKey = x => (x.s || '') + '|' + x.n.toLowerCase();
+const sortNames = list => list.sort((a, b) => { const x = a.n.toLowerCase(), y = b.n.toLowerCase(); return x < y ? -1 : x > y ? 1 : (a.s || '') < (b.s || '') ? -1 : (a.s || '') > (b.s || '') ? 1 : 0; });
+/* a name from storage, a file, a room or Claude: anything that reads as one name in a formula (so not B2, nor TRUE).
+   Its sheet has to be one of sheets (from a room, where the sheet may still be on its way: any id) */
+function normName(x, sheets) {
+  if (!x || typeof x !== 'object' || typeof x.n !== 'string' || typeof x.f !== 'string') return null;
+  const n = x.n.trim(), f = x.f.trim().replace(/^=/, '').slice(0, 8000), toks = n.length <= 255 && NAME_RE.test(n) ? tokenize(n) : [];
+  if (!f || toks.length !== 1 || toks[0].t !== 'name') return null;
+  const o = { n, f };
+  if (x.s != null) { if (sheets ? !sheets.some(s => s.id === x.s) : !okId(x.s)) return null; o.s = x.s; }
+  const c = typeof x.c === 'string' ? x.c.replace(/[\x00-\x1f]+/g, ' ').trim().slice(0, 255) : '';
+  if (c) o.c = c;
+  if (x.h === true) o.h = true;
+  return o;
+}
+function normNames(list, sheets) {
+  const out = [], seen = new Set();
+  for (const x of Array.isArray(list) ? list : []) {
+    const o = normName(x, sheets), k = o && nameKey(o);
+    if (!o || seen.has(k)) continue;
+    seen.add(k); out.push(o);
+    if (out.length >= 5000) break;
+  }
+  return sortNames(out);
+}
+const nameOut = x => ({ n: x.n, f: x.f, ...(x.s ? { s: x.s } : {}), ...(x.c ? { c: x.c } : {}), ...(x.h ? { h: true } : {}) });
+const sameNames = (a, b) => a.length === b.length && a.every((x, i) => x === b[i] || (x.n === b[i].n && x.f === b[i].f && (x.s || '') === (b[i].s || '') && (x.c || '') === (b[i].c || '') && !x.h === !b[i].h));
+/* the names by scope and name, made again when the list changes; any: a name by its letters alone, whatever its scope */
+const NIX = { a: null, m: null, any: null };
+function nameIndex(book) {
+  const a = book.names || NO_NAMES;
+  if (NIX.a !== a) {
+    NIX.a = a; NIX.m = new Map(); NIX.any = new Map();
+    for (const x of a) { NIX.m.set(nameKey(x), x); const low = x.n.toLowerCase(); if (!x.s || !NIX.any.has(low)) NIX.any.set(low, x); }
+  }
+  return NIX;
+}
+/* the name a formula on sheet s means by n ({ n, sheet: the sheet written before it, if any }) */
+function nameOf(n, s, book = WB) {
+  const m = nameIndex(book).m, low = n.n.toLowerCase();
+  if (n.sheet != null) { const q = n.sheet.toLowerCase(), sh = book.sheets.find(x => x.name.toLowerCase() === q); return sh ? m.get(sh.id + '|' + low) || m.get('|' + low) || null : null; }
+  return (s && m.get(s.id + '|' + low)) || m.get('|' + low) || null;
+}
+/* why a new name can't be used, in words; null when it can. Excel's rules, as measured there: letters, digits, _ . ?
+   and \ after a first letter or _; no spaces; not TRUE or FALSE; and nothing Excel could read as an address (B2, R1C1) */
+function nameProblem(n) {
+  if (!n) return T('צריך לכתוב שם');
+  if (n.length > 255) return T('השם ארוך מדי (עד 255 תווים)');
+  if (/\s/.test(n)) return T('בשם אין רווחים. אפשר לכתוב קו תחתון במקומם: {0}', n.trim().replace(/\s+/g, '_'));
+  if (!/^[\p{L}_][\p{L}\p{N}_.?\\]*$/u.test(n)) return T('שם מתחיל באות או בקו תחתון, ויש בו רק אותיות, ספרות, נקודות וקווים תחתונים');
+  const m = /^([A-Za-z]{1,3})(\d+)$/.exec(n);
+  if ((m && colNum(m[1]) < MAXC && +m[2] >= 1 && +m[2] <= MAXR) || /^(true|false|r|c|rc)$/i.test(n) || /^(r|c|rc)\d/i.test(n)) return T('אי אפשר להשתמש בשם {0}, כי בנוסחאות הוא כבר אומר משהו אחר (כתובת של תא, או TRUE ו-FALSE)', n);
+  return null;
+}
+/* the workbook's names take a new list, inside edit() so undo takes it back */
+function setNames(list) {
+  const next = sortNames(list.slice());
+  if (sameNames(next, WB.names || NO_NAMES)) return;
+  if (TX && TX.names === undefined) TX.names = WB.names || NO_NAMES;
+  if (RM.on) RM.names = true;
+  WB.names = next;
+  // a formula kept as its file had it, because its name wasn't here, is worked out now that the name is
+  for (const s of WB.sheets) {
+    const back = [];
+    for (const [k, x] of s.cells) if (x.x && !missingIn(x.f, s)) back.push([k, x]);
+    for (const [k, x] of back) { const y = { ...x, l: true }; delete y.x; setCell(s, kr(k), kc(k), y); }
+  }
+}
+/* each name's formula through fn(formula, name) */
+function eachName(fn) {
+  const cur = WB.names || NO_NAMES;
+  if (cur.length) setNames(cur.map(x => { const f = fn(x.f, x); return f === x.f ? x : { ...x, f }; }));
+}
+/* a range the way a name keeps it: every part fixed with $, and its sheet written out */
+const absA1 = g => wholeCols(g) && !wholeRows(g) ? '$' + colName(g.c1) + ':$' + colName(g.c2) : wholeRows(g) && !wholeCols(g) ? '$' + (g.r1 + 1) + ':$' + (g.r2 + 1)
+  : '$' + colName(g.c1) + '$' + (g.r1 + 1) + (g.r1 === g.r2 && g.c1 === g.c2 ? '' : ':$' + colName(g.c2) + '$' + (g.r2 + 1));
+const nameRefText = (s, g) => sheetPrefix(s.name) + absA1(g);
+/* the cells a name stands for, when it is a plain reference to cells: { s, g, fixed: every part has its $ } */
+function nameCells(x, book = WB) {
+  const a = astOf(x.f);
+  if (!a || a.t !== 'ref' || a.sp || a.sheet == null) return null;
+  const q = a.sheet.toLowerCase(), s = book.sheets.find(y => y.name.toLowerCase() === q);
+  return s ? { s, g: a.g, fixed: a.ab.every(Boolean) } : null;
+}
+/* what was typed as a name's "refers to": a formula (the = may be left out), tidied. A single address typed without $
+   gets them, because a name's cells stay where they are; an address without a sheet gets sheet s. { f } or { err } */
+function nameFormulaIn(text, s, book = WB) {
+  const t = closeBrackets(String(text ?? '').trim().replace(/^=/, '').trim());
+  if (!t) return { err: T('צריך לכתוב למה השם מתייחס: טווח של תאים, מספר או נוסחה') };
+  if (!astOf(t)) return { err: T('לא הבנתי למה השם מתייחס. כותבים טווח כמו {0}, מספר או נוסחה.', '=' + nameRefText(s, { r1: 1, c1: 0, r2: 9, c2: 0 })) };
+  const toks = tokenize(t).filter(k => k.t !== 'ws'), lone = toks.length === 1 && toks[0].t === 'ref' && !toks[0].a.some(Boolean);
+  return { f: tidyFormula(mapRefs(t, k => { const a = lone ? [true, true, true, true] : k.a; return refText({ ...k, a }, k, k.sheet ?? s.name); }), book) };
+}
+/* a name changed its letters: every formula that meant it says the new ones */
+function renameName(old, to) {
+  const swap = (f, s) => mapRefs(f, t => t.t === 'name' && nameOf(t, s) === old ? sheetPrefix(t.sheet) + to : null, true);
+  for (const s of WB.sheets) {
+    for (const [k, x] of [...s.cells]) if (x.f != null) { const f = swap(x.f, s); if (f !== x.f) setCell(s, kr(k), kc(k), { ...x, f }); }
+    for (const key of RULE_KEYS) eachRuleOf(s, key, f => swap(f, s));
+  }
+  return (WB.names || NO_NAMES).map(x => { if (x === old) return x; const f = swap(x.f, x.s ? WB.sheets.find(s => s.id === x.s) : null); return f === x.f ? x : { ...x, f }; });
+}
 
 /* =========================================================
    the sheet on screen: what is chosen, the sizes of rows and columns, and every change as one step undo takes back
@@ -2216,16 +2522,17 @@ let TX = null;
 const selSnap = () => ({ sid: WS.id, ...SEL });
 function edit(fn) {
   if (TX) { fn(); return true; }
-  const tx = TX = { cells: new Map(), props: new Map(), book: null, sel0: selSnap() };
+  const tx = TX = { cells: new Map(), props: new Map(), book: null, names: undefined, sel0: selSnap() };
   try { fn(); } finally { TX = null; }
   const cells = [], props = [];
   for (const x of tx.cells.values()) { const after = x.s.cells.get(x.k) || null; if (after !== x.before) cells.push({ ...x, after }); }
   for (const x of tx.props.values()) { const after = x.s[x.name]; if (after !== x.before) props.push({ ...x, after }); }
   let book = null;
   if (tx.book) { const a = { sheets: [...WB.sheets], dir: WB.dir }, b = tx.book; if (a.dir !== b.dir || a.sheets.length !== b.sheets.length || a.sheets.some((s, i) => s !== b.sheets[i])) book = { before: b, after: a }; }
-  if (!cells.length && !props.length && !book) { refresh(); return false; }
+  const names = tx.names !== undefined && tx.names !== WB.names ? { before: tx.names, after: WB.names } : null;
+  if (!cells.length && !props.length && !book && !names) { refresh(); return false; }
   HIST.list.length = HIST.at;
-  HIST.list.push({ cells, props, book, sel0: tx.sel0, sel1: selSnap() });
+  HIST.list.push({ cells, props, book, names, sel0: tx.sel0, sel1: selSnap() });
   if (HIST.list.length > 300) HIST.list.shift();
   HIST.at = HIST.list.length;
   changed();
@@ -2251,6 +2558,7 @@ function applyStep(st, back) {
   for (const x of st.cells) { const v = back ? x.before : x.after; if (v) x.s.cells.set(x.k, v); else x.s.cells.delete(x.k); if (RM.on) RM.cells.add(x.s.id + '|' + x.k); }
   for (const x of st.props) { x.s[x.name] = back ? x.before : x.after; if (RM.on) (x.name === 'ri' || x.name === 'ci' ? RM.lists : RM.props).add(x.s.id); }
   if (st.book) { const b = back ? st.book.before : st.book.after; WB.sheets = [...b.sheets]; WB.dir = b.dir; if (RM.on) RM.book = true; }
+  if (st.names) { WB.names = back ? st.names.before : st.names.after; if (RM.on) RM.names = true; }
   const snap = back ? st.sel0 : st.sel1, s = WB.sheets.find(x => x.id === snap.sid) || WB.sheets[0];
   if (s !== WS) showSheet(s, true);
   SEL = { r: snap.r, c: snap.c, er: snap.er, ec: snap.ec };
@@ -2731,11 +3039,15 @@ function scanRefs() {
   const t = taOf().value;
   if (t[0] !== '=') { ED.refs = null; return; }
   const out = [], seen = new Map();
+  const here = WB.sheets.find(x => x.id === ED.sid);
   for (const k of tokenize(t.slice(1))) {
-    if (k.t !== 'ref') continue;
-    const s = k.sheet == null ? WB.sheets.find(x => x.id === ED.sid) : WB.sheets.find(x => x.name.toLowerCase() === k.sheet.toLowerCase());
+    if (k.t !== 'ref' && k.t !== 'name') continue;
+    // a defined name for cells is shown like the address it stands for
+    const nm = k.t === 'name' ? nameOf(k, here) : null, cells = nm ? nameCells(nm) : null;
+    if (k.t === 'name' && !(cells && cells.fixed)) continue;
+    const s = cells ? cells.s : k.sheet == null ? here : WB.sheets.find(x => x.name.toLowerCase() === k.sheet.toLowerCase());
     if (!s) continue;
-    const g = G4(k.r1, k.c1, k.r2, k.c2), key = s.id + rangeA1(g);
+    const g = cells ? cells.g : G4(k.r1, k.c1, k.r2, k.c2), key = s.id + rangeA1(g);
     if (!seen.has(key)) seen.set(key, seen.size);
     out.push({ sid: s.id, g, n: seen.get(key) });
   }
@@ -3143,6 +3455,7 @@ function gridKey(e) {
   }
   if (k === 'F2') { e.preventDefault(); startEdit('edit'); return true; }
   if (k === 'F3' && e.shiftKey && !mod) { e.preventDefault(); fnDialog(); return true; }
+  if (k === 'F3' && mod && !e.shiftKey) { e.preventDefault(); nameManager(); return true; }
   if (k === 'Delete' && !mod) { e.preventDefault(); clearSel('v'); return true; }
   if (k === 'Backspace' && !mod) { e.preventDefault(); startEdit('enter', ''); return true; }
   if (k === 'Escape') return onEsc();
@@ -3185,10 +3498,13 @@ function acUpdate() {
     AC.list = [...has.filter(it => it.t.toLowerCase().startsWith(t)), ...has.filter(it => !it.t.toLowerCase().startsWith(t))].slice(0, 10);
     AC.dv = true; AC.i = AC.list.indexOf(was); AC.on = AC.list.length > 0 && !(AC.list.length === 1 && AC.list[0].t === v.trim());
   } else if (ED.on && v[0] === '=' && pos === ta.selectionEnd) {
-    const before = v.slice(0, pos), m = /(?:^=|[=(,;+\-*/^&<>\s])([A-Za-z][A-Za-z0-9.]*)$/.exec(before);
+    const before = v.slice(0, pos), m = /(?:^=|[=(,;+\-*/^&<>\s])([\p{L}_][\p{L}\p{N}_.]*)$/u.exec(before);
     if (m && !/^[A-Za-z]{1,3}\d+$/.test(m[1])) {
-      AC.list = FN_LIST.filter(n => n.startsWith(m[1].toUpperCase()) && n !== m[1].toUpperCase());
-      AC.from = pos - m[1].length; AC.i = Math.max(0, AC.list.indexOf(was)); AC.on = AC.list.length > 0;   // the marked name stays marked (a key going up asks again)
+      // the functions and the defined names that start with what was typed, in one list by the alphabet (a name is { nm })
+      const up = m[1].toUpperCase(), low = m[1].toLowerCase(), sheet = WB.sheets.find(x => x.id === ED.sid) || WS;
+      const names = namesFor(sheet).filter(x => x.n.toLowerCase().startsWith(low) && x.n.toLowerCase() !== low).map(x => ({ nm: x }));
+      AC.list = [...FN_LIST.filter(n => n.startsWith(up) && n !== up), ...names].sort((a, b) => COLL.compare(a.nm ? a.nm.n : a, b.nm ? b.nm.n : b));
+      AC.from = pos - m[1].length; AC.i = Math.max(0, AC.list.findIndex(it => it === was || (!!it.nm && !!was && it.nm === was.nm))); AC.on = AC.list.length > 0;   // the marked name stays marked (a key going up asks again)
     }
     const stack = [];
     for (const k of tokenize(before.slice(1))) {
@@ -3207,7 +3523,8 @@ function acShow() {
   box.textContent = '';
   if (!ED.on || (!AC.on && !AC.hint)) { box.hidden = true; return; }
   if (AC.on) AC.list.forEach((n, i) => box.append(h('div', { class: 'sh-aci' + (AC.dv ? ' dv' : '') + (i === AC.i ? ' on' : ''), role: 'option', onpointerdown: ev => { ev.preventDefault(); AC.i = i; acTake(); } },
-    AC.dv ? h('span', { text: n.t, dir: 'auto' }) : [h('b', { text: n, dir: 'ltr' }), h('span', { text: fnDesc(n) })])));
+    AC.dv ? h('span', { text: n.t, dir: 'auto' }) : n.nm ? [h('b', { text: n.nm.n, dir: 'auto' }), h('span', {}, T('שם מוגדר') + ' · ', h('bdi', { dir: 'ltr', text: '=' + (n.nm.f.length > 40 ? n.nm.f.slice(0, 39) + '…' : n.nm.f) }))]
+      : [h('b', { text: n, dir: 'ltr' }), h('span', { text: fnDesc(n) })])));
   else {
     const parts = fnArgs(AC.hint.fn), on = Math.min(AC.hint.arg, parts.length - 1);
     box.append(h('div', { class: 'sh-hint' }, h('b', { text: AC.hint.fn + '(', dir: 'ltr' }), ...parts.flatMap((p, i) => [i ? ', ' : '', h('span', { class: i === on ? 'on' : null, dir: 'auto', text: p })]), ')'), h('div', { class: 'sh-hint-t', text: fnDesc(AC.hint.fn) }));
@@ -3223,7 +3540,7 @@ function acTake() {
   const ta = taOf(), n = AC.list[AC.i];
   if (!n) return;
   if (AC.dv) { const r = ED.r, c = ED.c; endEdit(false); dvPut(r, c, n); return; }   // an item of the cell's list, in place of what was typed
-  ta.setRangeText(n + '(', AC.from, ta.selectionStart, 'end');
+  ta.setRangeText(n.nm ? n.nm.n : n + '(', AC.from, ta.selectionStart, 'end');
   ED.point = null;
   edChanged();
 }
@@ -3407,6 +3724,8 @@ function spliceSheet(axis, at, n) {
     }
     eachFormula((f, self) => spliceFormula(f, self, s.name, axis, at, n));
     eachChart((f, self) => spliceFormula(f, self, s.name, axis, at, n));
+    // a name follows its cells too; a part of it without $ is a distance from the cell that uses the name, and stays
+    eachName(f => mapRefs(f, t => (R ? t.a[0] && t.a[2] : t.a[1] && t.a[3]) ? spliceFormula(t.s, '', s.name, axis, at, n) : null));
     moveCharts(s, axis, at, n);
     for (const key of RULE_KEYS) {
       spliceRules(s, key, axis, at, n);
@@ -3807,7 +4126,7 @@ async function renameSheet(s = WS) {
   if (takenNames(s).has(n.toLowerCase())) { toast(T('כבר יש גיליון בשם הזה')); return; }
   if (n === s.name) return;
   const old = s.name;
-  edit(() => { setProp(s, 'name', n); eachFormula(f => renameInFormula(f, old, n)); eachChart(f => renameInFormula(f, old, n)); for (const sh of WB.sheets) for (const key of RULE_KEYS) eachRuleOf(sh, key, f => renameInFormula(f, old, n)); });
+  edit(() => { setProp(s, 'name', n); eachFormula(f => renameInFormula(f, old, n)); eachChart(f => renameInFormula(f, old, n)); eachName(f => renameInFormula(f, old, n)); for (const sh of WB.sheets) for (const key of RULE_KEYS) eachRuleOf(sh, key, f => renameInFormula(f, old, n)); });
 }
 async function deleteSheet(s = WS) {
   if (WB.sheets.length < 2) { toast(T('בחוברת צריך להישאר לפחות גיליון אחד')); return; }
@@ -3818,14 +4137,23 @@ async function deleteSheet(s = WS) {
     eachFormula(f => dropSheetInFormula(f, s.name));
     eachChart(f => dropSheetInFormula(f, s.name));
     for (const sh of WB.sheets) for (const key of RULE_KEYS) eachRuleOf(sh, key, f => dropSheetInFormula(f, s.name));
+    // the sheet's own names go with it, as in Excel; a name that pointed at it says #REF!
+    setNames((WB.names || NO_NAMES).filter(x => x.s !== s.id).map(x => { const f = dropSheetInFormula(x.f, s.name); return f === x.f ? x : { ...x, f }; }));
     if (s === WS) showSheet(next, true);
   });
   WB.active = WB.sheets.indexOf(WS);
   refresh(); focusGrid();
 }
 function dupSheet(s = WS) {
-  const c = { ...s, id: sid(), name: freeName(s.name.slice(0, 26) + ' (2)', takenNames()), cells: new Map(s.cells), cw: new Map(s.cw), rh: new Map(s.rh), hc: new Set(s.hc), hr: new Set(s.hr), cs: new Map(s.cs), rs: new Map(s.rs), merges: s.merges.map(m => ({ ...m })), af: s.af ? { ...s.af, hide: { ...s.af.hide } } : null, ac: { ...s.ac }, _sc: null, _fh: null, ri: undefined, ci: undefined, _ri: null, _ci: null, charts: s.charts.map(ch => ({ ...bare(ch), id: sid() })) };
-  edit(() => { bookStep(() => { WB.sheets.splice(WB.sheets.indexOf(s) + 1, 0, c); }); showSheet(c, true); });
+  // each formula's cell is its own in the copy: its answer is written onto it, and the copy's answer may differ
+  const c = { ...s, id: sid(), name: freeName(s.name.slice(0, 26) + ' (2)', takenNames()), cells: new Map([...s.cells].map(([k, x]) => [k, x.f != null ? { ...x } : x])), cw: new Map(s.cw), rh: new Map(s.rh), hc: new Set(s.hc), hr: new Set(s.hr), cs: new Map(s.cs), rs: new Map(s.rs), merges: s.merges.map(m => ({ ...m })), af: s.af ? { ...s.af, hide: { ...s.af.hide } } : null, ac: { ...s.ac }, _sc: null, _fh: null, ri: undefined, ci: undefined, _ri: null, _ci: null, charts: s.charts.map(ch => ({ ...bare(ch), id: sid() })) };
+  edit(() => {
+    bookStep(() => { WB.sheets.splice(WB.sheets.indexOf(s) + 1, 0, c); });
+    // as Excel does: the copy gets its own names, for the sheet's own and for every name that points at the sheet
+    const own = (WB.names || NO_NAMES).filter(x => x.s === s.id || (!x.s && renameInFormula(x.f, s.name, c.name) !== x.f)).map(x => ({ ...x, s: c.id, f: renameInFormula(x.f, s.name, c.name) }));
+    if (own.length) setNames([...(WB.names || NO_NAMES), ...own]);
+    showSheet(c, true);
+  });
   WB.active = WB.sheets.indexOf(c);
   refresh(); focusGrid();
 }
@@ -4016,6 +4344,7 @@ function moveCut() {
     setProp(from, 'merges', from.merges.filter(m => !inside(m)));
     setProp(to, 'merges', [...to.merges.filter(m => !meets(m, target)), ...moved.map(m => ({ r1: m.r1 + dr, c1: m.c1 + dc, r2: m.r2 + dr, c2: m.c2 + dc }))]);
     eachFormula((f, self) => moveFormula(f, self, from.name, g, dr, dc, to.name));
+    eachName(f => mapRefs(f, t => t.a.every(Boolean) ? moveFormula(t.s, '', from.name, g, dr, dc, to.name) : null));
     // the cells' rules go with them; a rule anywhere that pointed at the cells (a list's source) points at their new place
     const follow = f => mapRefs(to === from ? f : anchorFormula(f, from.name), t => t.a.every(Boolean) ? moveFormula(t.s, to.name, from.name, g, dr, dc, to.name) : null);
     for (const key of RULE_KEYS) {
@@ -4241,8 +4570,23 @@ const CSS = `
 #sheetView{position:relative}
 #sheetView>#banner{margin:10px auto 6px}
 .sh-fbar{flex:none;display:flex;align-items:flex-start;gap:6px;padding:5px 8px;border-bottom:1px solid var(--line);background:var(--surface)}
-.sh-name{flex:none;width:92px;height:28px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);padding:0 8px;font:500 12.5px var(--ui);text-align:center;direction:ltr;color:var(--text)}
-.sh-name:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+.sh-nbox{flex:none;display:flex;align-items:stretch;height:28px;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);overflow:hidden}
+.sh-nbox:focus-within{border-color:var(--accent);background:var(--surface)}
+.sh-name{flex:none;width:92px;min-width:0;border:0;background:none;padding:0 8px;font:500 12.5px var(--ui);text-align:center;direction:ltr;color:var(--text);text-overflow:ellipsis}
+.sh-name:focus{outline:none}
+.sh-nmb{flex:none;width:20px;border:0;border-inline-start:1px solid var(--line);background:none;color:var(--text-2);display:grid;place-items:center;padding:0}
+.sh-nmb:hover{background:var(--surface-3);color:var(--text)}
+.sh-nmb .ms{font-size:18px;width:auto}
+.sh-nmm{display:flex;flex-direction:column;gap:8px;min-width:min(720px,88vw)}
+.sh-nmm-head,.sh-nmm-row{display:grid;grid-template-columns:minmax(80px,1.1fr) minmax(70px,1fr) minmax(110px,1.7fr) minmax(70px,.8fr);gap:8px;align-items:center}
+.sh-nmm-head{font-size:12px;color:var(--text-2);padding:0 10px}
+.sh-nmm-list{border:1px solid var(--line);border-radius:8px;height:min(280px,40vh);overflow:auto;padding:4px;background:var(--surface);outline:none}
+.sh-nmm-row{padding:6px;border-radius:6px;cursor:pointer;font-size:13px}
+.sh-nmm-row.on{background:var(--accent-soft)}
+.sh-nmm-row>*{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:start}
+.sh-nmm-row b{font-weight:600}
+.sh-nmm-note{font-size:12.5px;color:var(--text-2);min-height:18px;overflow-wrap:anywhere}
+.sh-nmd{display:flex;flex-direction:column;min-width:min(440px,82vw)}
 .sh-fxb{flex:none;height:28px;min-width:32px;border:0;border-radius:6px;background:none;color:var(--text-2);font:italic 700 14px Georgia,"Times New Roman",serif}
 .sh-fxb:hover{background:var(--surface-3);color:var(--accent)}
 .sh-bar{flex:1;min-width:0;height:28px;max-height:140px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);padding:4px 8px;font:13px/1.45 var(--ui);resize:none;color:var(--text);overflow:hidden;white-space:pre-wrap}
@@ -4500,6 +4844,9 @@ function ribbonPanels() {
     group(T('ספריית פונקציות'), '', rbtn('shFnDlg', 'function', T('הוספת פונקציה'), { big: true, title: T('כל הפונקציות, עם חיפוש (Shift+F3)') }),
       rbtn('shSumMenu', 'functions', T('סכום אוטומטי'), { big: true, title: T('סכום, ממוצע, ספירה, הכי גדול, הכי קטן') }),
       ...FN_CATS.map(([k, name, ic]) => rbtn('shFnCat', ic, T(name), { big: true, arg: k }))),
+    group(T('שמות מוגדרים'), '', rbtn('shNames', 'sell', T('מנהל השמות'), { big: true, title: T('כל השמות המוגדרים: חדש, עריכה ומחיקה (Ctrl+F3)') }),
+      rbtn('shNameNew', 'new_label', T('הגדרת שם'), { big: true, title: T('שם לתאים שבחרת, לשימוש בנוסחאות וברשימות נפתחות') }),
+      rbtn('shNameUse', 'label', T('שימוש בנוסחה'), { big: true, title: T('הוספת שם מוגדר לנוסחה') })),
     group(T('נוסחאות'), '', rbtn('shShowF', 'function', T('הצגת נוסחאות'), { big: true, title: T('הצגת הנוסחאות עצמן בתאים (Ctrl+`)') }), rbtn('shFxHelp', 'school', T('איך כותבים נוסחה'), { big: true })));
   const data = h('div', { class: 'panel sheet-only', 'data-panel': 'sdata', hidden: true },
     group(T('מיון'), '', rbtn('shSort', 'arrow_upward', T('מהקטן לגדול'), { big: true, arg: 'a', title: T('מיון מהקטן לגדול (א עד ת)') }), rbtn('shSort', 'arrow_downward', T('מהגדול לקטן'), { big: true, arg: 'd', title: T('מיון מהגדול לקטן (ת עד א)') }), rbtn('shSortDlg', 'sort', T('מיון מותאם'), { big: true })),
@@ -4527,7 +4874,8 @@ function mount() {
   const view = $('#sheetView');
   view.querySelectorAll('.sh-wait').forEach(n => n.remove());
   V.view = view;
-  V.name = h('input', { class: 'sh-name', type: 'text', 'aria-label': T('שם התא'), title: T('התא הפעיל. אפשר להקליד כאן כתובת (כמו B7) וללחוץ Enter'), spellcheck: 'false', autocomplete: 'off' });
+  V.name = h('input', { class: 'sh-name', type: 'text', 'aria-label': T('שם התא'), title: T('התא הפעיל. כתובת (כמו B7) ו-Enter עוברים אליה; שם חדש ו-Enter נותנים שם לתאים שנבחרו'), spellcheck: 'false', autocomplete: 'off' });
+  V.nameBtn = h('button', { class: 'sh-nmb', type: 'button', title: T('שמות מוגדרים'), 'aria-label': T('שמות מוגדרים') }, icon('arrow_drop_down'));
   V.fx = h('button', { class: 'sh-fxb', type: 'button', title: T('הוספת פונקציה'), 'aria-label': T('הוספת פונקציה') }, 'fx');
   V.bar = h('textarea', { class: 'sh-bar', rows: '1', spellcheck: 'false', 'aria-label': T('התוכן של התא'), dir: 'auto' });
   V.body = h('div', { class: 'sh-l sh-body' }); V.side = h('div', { class: 'sh-l sh-side' }); V.top = h('div', { class: 'sh-l sh-top' }); V.corner = h('div', { class: 'sh-l sh-corner' });
@@ -4538,7 +4886,7 @@ function mount() {
   V.add = h('button', { class: 'sh-add', type: 'button', title: T('גיליון חדש'), 'aria-label': T('גיליון חדש') }, icon('add'));
   V.tabs = h('div', { class: 'sh-tabs', role: 'tablist', 'aria-label': T('גיליונות') });
   V.anchor = h('div', { style: { position: 'fixed', width: '1px', height: '1px', pointerEvents: 'none' } });
-  view.append(h('div', { class: 'sh-fbar' }, V.name, V.fx, V.bar), h('div', { class: 'sh-wrap' }, V.scroll, V.over), h('div', { class: 'sh-bottom' }, V.add, V.tabs));
+  view.append(h('div', { class: 'sh-fbar' }, h('div', { class: 'sh-nbox' }, V.name, V.nameBtn), V.fx, V.bar), h('div', { class: 'sh-wrap' }, V.scroll, V.over), h('div', { class: 'sh-bottom' }, V.add, V.tabs));
   document.body.append(V.anchor, V.print = h('div', { id: 'sheetPrint', 'aria-hidden': 'true' }));
   // the sheet
   const sc = V.scroll;
@@ -4562,22 +4910,17 @@ function mount() {
   V.bar.addEventListener('input', () => { if (!ED.on) startEdit('edit', V.bar.value, 'bar'); else { ED.point = null; edChanged(); } });
   V.bar.addEventListener('keyup', () => { if (ED.on) acUpdate(); });
   V.bar.addEventListener('blur', () => setTimeout(() => { const a = document.activeElement; if (ED.on && ED.from === 'bar' && a !== V.bar && a !== V.ed && !(a && a.closest && a.closest('#pop,.modal,.sh-ac'))) endEdit(true); }, 0));
-  // the name box: an address (B7, A1:C9, or a sheet's name with one) takes you there
+  // the name box: an address (B7, A1:C9, or a sheet's name with one) takes you there, and so does a defined name; a
+  // new name names the chosen cells
   V.name.addEventListener('focus', () => V.name.select());
   V.name.addEventListener('keydown', e => {
     if (e.key === 'Escape') { e.preventDefault(); selInfo(); focusGrid(); return; }
-    if (e.key !== 'Enter') return;
+    if (e.key !== 'Enter' || e.isComposing) return;
     e.preventDefault();
-    let t = V.name.value.trim(), s = WS;
-    const m = /^(?:'((?:[^']|'')+)'|([^!]+))!(.+)$/.exec(t);
-    if (m) { const n = (m[1] ?? m[2]).replace(/''/g, "'").toLowerCase(); s = WB.sheets.find(x => x.name.toLowerCase() === n); t = m[3]; }
-    const g = s && parseRange(t);
-    if (!g) { toast(T('זו לא כתובת של תא. למשל: B7 או A1:C9')); return; }
-    if (s !== WS) showSheet(s);
-    selectRange(g);
-    scrollToCell(g.r1, g.c1);
-    focusGrid();
+    nameBoxEnter();
   });
+  V.name.addEventListener('blur', () => setTimeout(() => { if (WB && document.activeElement !== V.name) selInfo(); }, 0));
+  V.nameBtn.addEventListener('click', () => nameBoxMenu(V.nameBtn));
   V.fx.addEventListener('click', () => fnDialog());
   // the sheet tabs: a click shows one, a double click renames it, dragging moves it, a right click has the rest
   V.add.addEventListener('click', () => addSheet(WB.sheets[WB.sheets.length - 1]));
@@ -4845,13 +5188,177 @@ function formulaHelp() {
     h('h4', { text: T('פונקציות') }), ...['SUM', 'AVERAGE', 'IF', 'COUNTIF', 'SUMIF', 'IFERROR', 'XLOOKUP', 'VLOOKUP', 'ROUND', 'TODAY', 'TEXT'].map(fn => ex('=' + FN_INFO[fn][3], fnDesc(fn))),
     h('p', { text: T('יש כאן עוד הרבה פונקציות, כמו באקסל. הכפתור fx שליד שורת הנוסחאות מציג את כולן, עם חיפוש ועם דוגמה לכל אחת.') }),
     h('h4', { text: T('תוצאות שנשפכות לתאים') }), ex('=SORT(A2:B20,2,-1)', T('פונקציות כמו SORT, FILTER ו-UNIQUE מחזירות כמה ערכים, והם ממלאים לבד את התאים שמתחת ולצד הנוסחה. אם יש שם כבר משהו, מופיע #SPILL!')),
+    h('h4', { text: T('שמות מוגדרים') }), ex('=SUM(' + T('מחירים@name') + ')', T('אפשר לתת שם לטווח של תאים: בוחרים אותו, כותבים שם בתיבה שליד שורת הנוסחאות ולוחצים Enter. אחר כך כותבים את השם בנוסחאות במקום הכתובת. כל השמות נמצאים בלשונית "נוסחאות", במנהל השמות.')),
+    ex('=INDIRECT(A2)', T('הופך טקסט שכתוב בתא (כתובת או שם מוגדר) לתאים עצמם. כך בונים רשימה נפתחת שתלויה ברשימה אחרת.')),
     h('h4', { text: T('טיפים') }),
     h('p', { text: T('כשמשנים מספר, כל הנוסחאות שמשתמשות בו מתעדכנות לבד. גוררים את הריבוע הקטן בפינת התא כדי להעתיק נוסחה לתאים שליד, והכתובות בה זזות איתה. $ לפני אות או מספר (כמו $B$2) משאיר אותם קבועים; F4 מוסיף אותו.') }),
     h('p', { text: T('שגיאות כמו באקסל: #DIV/0! חילוק באפס, #VALUE! חשבון עם טקסט, #REF! תא שנמחק, #NAME? פונקציה שלא קיימת כאן, #N/A ערך שלא נמצא בחיפוש, #SPILL! אין מקום לתוצאות שנשפכות.') })),
     actions: [{ label: T('הבנתי'), kind: 'primary' }], onClose: () => focusGrid() });
 }
+/* --- defined names on screen: the name box beside the formula bar (a name typed there names the chosen cells, or goes
+   to the cells of a name that is there), the Name Manager (Formulas tab, Ctrl+F3) where each change is its own step
+   for undo, and a name's own window --- */
+/* the names a formula on sheet s can use: the sheet's own, and the workbook's that the sheet has no name of its own for */
+function namesFor(s) {
+  const all = WB.names || NO_NAMES, own = new Set();
+  for (const x of all) if (x.s === s.id) own.add(x.n.toLowerCase());
+  return all.filter(x => !x.h && (x.s === s.id || (!x.s && !own.has(x.n.toLowerCase())))).sort((a, b) => COLL.compare(a.n, b.n));
+}
+/* the name whose cells are exactly range g of sheet s: the name box shows it in place of the address, as Excel's does */
+const NBX = { a: null, m: null };
+function nameAt(s, g) {
+  const a = WB.names || NO_NAMES;
+  if (!a.length) return null;
+  if (NBX.a !== a) {
+    NBX.a = a; NBX.m = new Map();
+    for (const x of a) { const c = x.h ? null : nameCells(x); if (c && c.fixed && (!x.s || x.s === c.s.id)) { const k = c.s.id + '|' + rangeA1(c.g); if (x.s || !NBX.m.has(k)) NBX.m.set(k, x); } }
+  }
+  return NBX.m.get(s.id + '|' + rangeA1(g)) || null;
+}
+function goToName(x) {
+  const c = nameCells(x);
+  if (!c) { toast(T('השם {0} הוא לא טווח של תאים, אז אין לאן לעבור', x.n)); return; }
+  if (c.s !== WS) showSheet(c.s);
+  selectRange(c.g);
+  scrollToCell(c.g.r1, c.g.c1);
+  focusGrid();
+}
+/* what was typed into the name box: an address goes there, a name that is there goes to its cells, and a new name is
+   given to the chosen cells */
+function nameBoxEnter() {
+  let t = V.name.value.trim(), s = WS, sheet = null;
+  const m = /^(?:'((?:[^']|'')+)'|([^!]+))!(.+)$/.exec(t);
+  if (m) { sheet = (m[1] ?? m[2]).replace(/''/g, "'"); const n = sheet.toLowerCase(); s = WB.sheets.find(x => x.name.toLowerCase() === n); t = m[3]; }
+  const g = s && parseRange(t);
+  if (g) { if (s !== WS) showSheet(s); selectRange(g); scrollToCell(g.r1, g.c1); focusGrid(); return; }
+  const had = s && NAME_RE.test(t) ? nameOf({ n: t, sheet }, WS) : null;
+  if (had) { goToName(had); return; }
+  const why = !s ? T('אין גיליון בשם הזה') : sheet != null ? T('זו לא כתובת של תא. למשל: B7 או A1:C9') : nameProblem(t);
+  if (why) { toast(why, { icon: 'error', ms: 6000 }); V.name.select(); return; }
+  const cells = selG();
+  edit(() => setNames([...(WB.names || NO_NAMES), { n: t, f: nameRefText(WS, cells) }]));
+  toast(T('השם {0} ניתן לתאים {1}', t, rangeA1(cells)), { icon: 'label' });
+  focusGrid();
+}
+function nameBoxMenu(anchor) {
+  if (ED.on && !endEdit(true)) return;
+  const names = namesFor(WS);
+  menuAt(anchor, T('שמות מוגדרים'), [...names.map(x => ({ ic: 'label', label: x.n, sample: nameCells(x) ? rangeA1(nameCells(x).g) : '', run: () => goToName(x), keep: true })), names.length ? '-' : null,
+    { ic: 'new_label', label: T('שם לתאים שנבחרו…'), run: () => nameDialog(null), keep: true }, { ic: 'sell', label: T('מנהל השמות…'), key: 'Ctrl+F3', run: () => nameManager(), keep: true }]);
+}
+/* a name into the formula being written (or a new formula) */
+function insertName(n) {
+  if (!ED.on) { startEdit('enter', '=' + n); const ta = taOf(), k = ta.value.length; ta.setSelectionRange(k, k); edChanged(); return; }
+  const ta = taOf();
+  ta.setRangeText((ta.value ? '' : '=') + n, ta.selectionStart, ta.selectionEnd, 'end');
+  if (ta.value[0] !== '=') ta.value = '=' + ta.value;
+  ED.point = null;
+  edChanged();
+  ta.focus();
+}
+function nameUseMenu(anchor) {
+  if (ED.on && taOf().value[0] !== '=' && !endEdit(true)) return;
+  const s = (ED.on && WB.sheets.find(x => x.id === ED.sid)) || WS, names = namesFor(s);
+  menuAt(anchor, T('שימוש בנוסחה'), [...names.map(x => ({ ic: 'label', label: x.n, sample: '=' + (x.f.length > 28 ? x.f.slice(0, 27) + '…' : x.f), run: () => insertName(x.n), keep: true })),
+    names.length ? null : { ic: 'info', label: T('עוד אין שמות מוגדרים'), off: true, run: () => {} }, '-', { ic: 'sell', label: T('מנהל השמות…'), key: 'Ctrl+F3', run: () => nameManager(), keep: true }]);
+}
+/* what a name is worth now, in a few words, as Excel's Name Manager shows it: a number, a text, or its first cells in { } */
+function nameShows(x) {
+  const s = (x.s && WB.sheets.find(y => y.id === x.s)) || WS, keep = [CTX, AX, OFF];
+  CTX = { si: WB.sheets.indexOf(s), r: SEL.r, c: SEL.c, dyn: false }; AX = true; OFF = null;
+  let v;
+  try { v = nameVal({ n: x.n, sheet: x.s ? s.name : null }, true); } catch (e) { v = e instanceof Err ? e : E_VAL; } finally { [CTX, AX, OFF] = keep; }
+  const word = y => y == null ? '' : isErr(y) ? y.c : typeof y === 'string' ? '"' + y + '"' : typeof y === 'boolean' ? (y ? 'TRUE' : 'FALSE') : genText(y, 11);
+  if (!isA(v)) return word(v);
+  const [h, w] = dims(v), A = toArr(v.rng ? { rng: true, s: v.s, g: { r1: v.g.r1, c1: v.g.c1, r2: Math.min(v.g.r2, v.g.r1 + 3), c2: Math.min(v.g.c2, v.g.c1 + 3) } } : v);
+  if (isErr(A)) return A.c;
+  if (h * w === 1) return word(A.d[0]);
+  const rows = [];
+  for (let i = 0; i < Math.min(A.h, 4); i++) rows.push(Array.from({ length: Math.min(A.w, 4) }, (_, j) => word(A.d[i * A.w + j])).join(','));
+  return '{' + rows.join(';') + (h > 4 || w > 4 ? '…' : '') + '}';
+}
+/* a name suggested for the chosen cells: the text above them, or beside them (their heading), as Excel suggests */
+function guessName() {
+  const g = selG(), tries = [[g.r1 - 1, g.c1], [g.r1, g.c1 - 1]];
+  for (const [r, c] of tries) {
+    const v = r >= 0 && c >= 0 ? valAt(WS, r, c) : null, n = typeof v === 'string' ? v.trim().replace(/\s+/g, '_').replace(/[^\p{L}\p{N}_.]/gu, '').slice(0, 60) : '';
+    if (n && !nameProblem(n) && !nameOf({ n, sheet: null }, null)) return n;
+  }
+  return '';
+}
+/* a name's own window: a new name (for the chosen cells), or one that is there. Its scope can't change later, as in Excel */
+function nameDialog(x0, done) {
+  if (ED.on && !endEdit(true)) return;
+  const fld = (label, ...kids) => h('label', { class: 'fld' }, h('span', { text: label }), ...kids);
+  const name = h('input', { class: 'field', dir: 'auto', value: x0 ? x0.n : guessName(), maxlength: '255', spellcheck: 'false', autocomplete: 'off', 'aria-label': T('שם'), autofocus: true });
+  const scope = h('select', { class: 'field', 'aria-label': T('היקף') }, h('option', { value: '', text: T('כל חוברת העבודה') }), WB.sheets.map(s => h('option', { value: s.id, text: T('רק הגיליון {0}', s.name) })));
+  scope.value = (x0 && x0.s) || ''; scope.disabled = !!x0;
+  const note = h('input', { class: 'field', dir: 'auto', value: (x0 && x0.c) || '', maxlength: '255', autocomplete: 'off', 'aria-label': T('הערה') });
+  const ref = h('input', { class: 'field', dir: 'ltr', value: '=' + (x0 ? x0.f : nameRefText(WS, selG())), spellcheck: 'false', autocomplete: 'off', 'aria-label': T('מתייחס אל') });
+  const err = h('p', { class: 'sh-ch-err', role: 'alert', hidden: true });
+  const fail = t => { err.textContent = t; err.hidden = false; return false; };
+  const apply = () => {
+    const n = name.value.trim(), why = nameProblem(n), sc = scope.value || null, sh = sc ? WB.sheets.find(s => s.id === sc) : null, all = WB.names || NO_NAMES;
+    if (why) return fail(why);
+    if (all.some(y => y !== x0 && (y.s || '') === (sc || '') && y.n.toLowerCase() === n.toLowerCase())) return fail(T('כבר יש שם כזה. אפשר לבחור שם אחר, או לערוך את השם הקיים.'));
+    const src = nameFormulaIn(ref.value, sh || WS);
+    if (src.err) return fail(src.err);
+    const o = { n, f: src.f, ...(sc ? { s: sc } : {}), ...(note.value.trim() ? { c: note.value.trim().slice(0, 255) } : {}), ...(x0 && x0.h ? { h: true } : {}) };
+    edit(() => {
+      const rest = x0 && x0.n !== n ? renameName(x0, n) : all;   // the formulas that used the old letters say the new ones
+      setNames(x0 ? rest.map(y => y === x0 ? o : y) : [...rest, o]);
+    });
+    if (done) done(nameKey(o));
+    return true;
+  };
+  const m = modal({ title: x0 ? T('עריכת שם') : T('שם חדש'), body: h('div', { class: 'sh-nmd' }, fld(T('שם'), name), fld(T('היקף'), scope), fld(T('מתייחס אל'), ref), fld(T('הערה'), note),
+    h('p', { class: 'muted small', text: T('שם מתייחס לטווח של תאים, למספר או לנוסחה. אחר כך כותבים אותו בנוסחאות במקום הכתובת, או כמקור של רשימה נפתחת.') }), err),
+    actions: [{ label: T('אישור'), kind: 'primary', run: apply }, { label: T('ביטול'), value: false }], onClose: () => { if (!MODALS.length) focusGrid(); } });
+  for (const i of [name, note, ref]) i.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); if (apply()) m.close(true); } });
+}
+function nameManager() {
+  if (ED.on && !endEdit(true)) return;
+  let pick = null;
+  const list = h('div', { class: 'sh-nmm-list', role: 'listbox', tabindex: '0', 'aria-label': T('שמות מוגדרים') }), note = h('div', { class: 'sh-nmm-note', dir: 'auto' });
+  const all = () => (WB.names || NO_NAMES).filter(x => !x.h), cur = () => all().find(x => nameKey(x) === pick) || null;
+  const scopeOf = x => x.s ? (WB.sheets.find(s => s.id === x.s) || {}).name || '' : T('חוברת העבודה');
+  const draw = () => {
+    const names = all();
+    if (!names.some(x => nameKey(x) === pick)) pick = names.length ? nameKey(names[0]) : null;
+    list.textContent = '';
+    if (!names.length) list.append(h('p', { class: 'muted small', style: { padding: '10px' }, text: T('עוד אין כאן שמות. שם נותנים לטווח של תאים, ואז כותבים אותו בנוסחאות במקום הכתובת.') }));
+    for (const x of names) {
+      const k = nameKey(x);
+      list.append(h('div', { class: 'sh-nmm-row' + (k === pick ? ' on' : ''), role: 'option', 'aria-selected': String(k === pick), onclick: () => { pick = k; draw(); }, ondblclick: () => { pick = k; editPick(); } },
+        h('b', {}, h('bdi', { text: x.n })), h('span', {}, h('bdi', { text: nameShows(x) })), h('span', { title: '=' + x.f }, h('bdi', { dir: 'ltr', text: '=' + x.f })), h('span', {}, h('bdi', { text: scopeOf(x) }))));
+    }
+    const x = cur();
+    note.textContent = x && x.c ? x.c : '';
+    ed.disabled = del.disabled = !x;
+    const on = list.querySelector('.on');
+    if (on) on.scrollIntoView({ block: 'nearest' });
+  };
+  const editPick = () => { const x = cur(); if (x) nameDialog(x, k => { pick = k; draw(); }); };
+  const drop = () => { const x = cur(); if (!x) return; edit(() => setNames((WB.names || NO_NAMES).filter(y => y !== x))); draw(); };
+  const btn = (ic, label, run) => h('button', { type: 'button', class: 'btn small', onclick: run }, icon(ic), label);
+  const add = btn('add', T('שם חדש'), () => nameDialog(null, k => { pick = k; draw(); })), ed = btn('edit', T('עריכה@verb'), editPick), del = btn('delete', T('מחיקה'), drop);
+  list.addEventListener('keydown', e => {
+    const names = all(), i = names.findIndex(x => nameKey(x) === pick), step = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
+    if (step && names[i + step]) { pick = nameKey(names[i + step]); draw(); }
+    else if (e.key === 'Enter') editPick();
+    else if (e.key === 'Delete') drop();
+    else if (!step) return;
+    e.preventDefault(); e.stopPropagation();
+  });
+  draw();
+  modal({ title: T('מנהל השמות'), wide: true, body: h('div', { class: 'sh-nmm' }, h('div', { class: 'sh-cfm-bar' }, add, ed, del),
+    h('div', { class: 'sh-nmm-head' }, h('span', { text: T('שם') }), h('span', { text: T('ערך@col') }), h('span', { text: T('מתייחס אל') }), h('span', { text: T('היקף') })), list, note,
+    h('p', { class: 'muted small', text: T('שם של כל חוברת העבודה פועל בכל הגיליונות. אחרי מחיקה של שם, הנוסחאות שהשתמשו בו מראות שגיאה. אפשר לבטל את המחיקה עם Ctrl+Z.') })),
+    actions: [{ label: T('סגירה'), kind: 'primary' }], onClose: () => focusGrid() });
+}
 /* the commands the ribbon's buttons call (data-cmd), added to the app's own list */
 const COMMANDS = {
+  shNames: () => nameManager(), shNameNew: () => nameDialog(null), shNameUse: (a, b) => nameUseMenu(b),
   shUndo: () => undo(), shRedo: () => redo(), shChart: a => insertChart(a),
   shCut: () => copyButton(true), shCopy: () => copyButton(false), shPaste: () => pasteButton('all'),
   shLook: a => toggleLook(a),
@@ -4875,7 +5382,7 @@ const COMMANDS = {
 /* --- after every move: the name box, the formula bar, the ribbon, and the status line --- */
 function selInfo() {
   if (!V.view || !WS) return;
-  if (!ED.on && document.activeElement !== V.name) V.name.value = A1(SEL.r, SEL.c);
+  if (!ED.on && document.activeElement !== V.name) { const nm = nameAt(WS, selG()); V.name.value = nm ? nm.n : A1(SEL.r, SEL.c); }   // the cells' name when they have one
   const m = mergeAt(WS, SEL.r, SEL.c), x = cellAt(WS, m ? m.r1 : SEL.r, m ? m.c1 : SEL.c);
   if (!ED.on) {
     const o = (!x || x.v === undefined) && WS._sp && WS._sp.get(KEY(SEL.r, SEL.c)), from = o && WS.cells.get(o.a), t = editText(from || x);
@@ -4895,7 +5402,11 @@ function selInfo() {
   if (note) {
     let t = '';
     if (CIRC) t = T('יש הפניה מעגלית: נוסחה שמשתמשת בעצמה ({0})', WB.sheets[CIRC.si].name + '!' + A1(kr(CIRC.k), kc(CIRC.k)));
-    else if (x && x.f != null) { const u = unknownIn(x.f); if (u && u !== '?') t = x.x ? T('הפונקציה {0} עוד לא קיימת כאן. מוצג הערך שנשמר בקובץ.', u) : T('הפונקציה {0} עוד לא קיימת כאן', u); }
+    else if (x && x.f != null) {
+      const u = missingIn(x.f, WS);
+      if (u && u.name) t = T('השם {0} לא מוגדר כאן', u.name);
+      else if (u && u.fn !== '?') t = x.x ? T('הפונקציה {0} עוד לא קיימת כאן. מוצג הערך שנשמר בקובץ.', u.fn) : T('הפונקציה {0} עוד לא קיימת כאן', u.fn);
+    }
     note.textContent = t;
     note.classList.toggle('warn', !!t);
   }
@@ -5007,11 +5518,18 @@ async function readXlsx(buf) {
   const theme = themeOf(wb), VT = ExcelJS.ValueType, taken = new Set(), book = { v: 1, dir: UI_DIR, active: 0, sheets: [] }, xlNames = [];
   let hasCf = false;
   let anyRtl = null;
+  // the file's defined names come first, so a formula that uses one is worked out like any other. Each sheet gets its
+  // id now, for the names that belong to one sheet
+  const ids = new Map();
+  wb.eachSheet(ws => { if (ws.state !== 'veryHidden') ids.set(ws.name, sid()); });
+  const known = { sheets: [...ids].map(([name, id]) => ({ id, name })), names: NO_NAMES };
+  try { const xn = await readXlsxNames(buf); known.names = normNames(xn.names.map(x => ({ ...x, ...(x.li == null ? {} : { s: ids.get(xn.sheets[x.li]) || '?' }) })), known.sheets); } catch (e) { console.warn(e); }
   wb.eachSheet(ws => {
     if (ws.state === 'veryHidden') return;
     if (ws.state === 'hidden') add('hidden');
     const view = (ws.views && ws.views[0]) || {};
     const s = newSheet(freeName(cleanName(ws.name) || sheetWord(book.sheets.length + 1), taken), view.rightToLeft ? 'rtl' : 'ltr'), arrays = [];
+    s.id = ids.get(ws.name);
     taken.add(s.name.toLowerCase());
     if (anyRtl == null) anyRtl = !!view.rightToLeft;
     if (view.state === 'frozen') { s.fr = clamp(view.ySplit | 0, 0, 200); s.fc = clamp(view.xSplit | 0, 0, 60); }
@@ -5047,9 +5565,9 @@ async function readXlsx(buf) {
             x.v = xlResult(v.result);
             if (f) {
               x.f = fromXl(String(f).replace(/^=/, ''));
-              if (unknownIn(x.f)) { x.x = true; add('fn'); }
+              if (missingIn(x.f, s, known)) { x.x = true; add('fn'); }
               else if (v.shareType === 'array') { const g = parseRange(v.ref); if (g && (g.r1 !== g.r2 || g.c1 !== g.c2)) arrays.push(g); }
-              else if (tokenize(x.f).some(t => t.t === 'ref' && t.k !== 'c')) x.l = true;   // an older formula: a range alone in it takes one cell
+              else if (tokenize(x.f).some(t => (t.t === 'ref' && t.k !== 'c') || t.t === 'name' || (t.t === 'fn' && (t.n === 'INDIRECT' || t.n === 'OFFSET')))) x.l = true;   // an older formula: a range alone in it (or what a name, INDIRECT or OFFSET gives) takes one cell
             }
             break;
           }
@@ -5086,6 +5604,7 @@ async function readXlsx(buf) {
   const act = wb.views && wb.views[0] && wb.views[0].activeTab;
   book.active = clamp(act | 0, 0, book.sheets.length - 1);
   book.dir = anyRtl ? 'rtl' : anyRtl === false ? 'ltr' : UI_DIR;
+  book.names = known.names.map(nameOut);
   const nb = normBook(book);
   if (hasCharts) await importCharts(buf, nb, xlNames, rep);
   if (hasCf) await importCf(buf, nb, xlNames, rep, theme);
@@ -5241,7 +5760,42 @@ async function writeXlsx() {
   if (dyn) buf = await addDynamic(buf);
   if (WB.sheets.some(s => s.dv.length)) buf = await addXlsxDv(buf);
   if (WB.sheets.some(s => s.cf.length)) buf = await addXlsxCf(buf);
+  if ((WB.names || NO_NAMES).length) buf = await addXlsxNames(buf);
   return new Blob([buf], { type: XLSX_MIME });
+}
+/* defined names in Excel files: ExcelJS keeps only names for plain cells, without their scope or note, so they are
+   written into the workbook's own part here, and read from it. A name of one sheet has that sheet's number
+   (localSheetId), counted among all the file's sheets */
+async function addXlsxNames(buf) {
+  const JSZip = await zipLib(), zip = await JSZip.loadAsync(buf), p = 'xl/workbook.xml', file = zip.file(p);
+  if (!file) return buf;
+  let x = await file.async('string');
+  const xml = WB.names.map(nm => {
+    const i = nm.s ? WB.sheets.findIndex(s => s.id === nm.s) : -1;
+    return `<definedName name="${esc(nm.n)}"${nm.c ? ` comment="${xlAttr(nm.c)}"` : ''}${i >= 0 ? ` localSheetId="${i}"` : ''}${nm.h ? ' hidden="1"' : ''}>${esc(xlFormula(nm.f))}</definedName>`;
+  }).join('');
+  // (through a function: in a plain replacement text a $ of a formula could be read as a pattern)
+  if (x.includes('<definedNames>')) x = x.replace('<definedNames>', () => '<definedNames>' + xml);
+  else if (/<definedNames\s*\/>/.test(x)) x = x.replace(/<definedNames\s*\/>/, () => `<definedNames>${xml}</definedNames>`);
+  else if (x.includes('</sheets>')) x = x.replace('</sheets>', () => `</sheets><definedNames>${xml}</definedNames>`);
+  else return buf;
+  zip.file(p, x);
+  return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+}
+/* a file's names: { sheets: every sheet's name in the file's order, names: [{ n, f, li: the number of its sheet, c, h }] }.
+   Left out: Excel's own (the print area, a filter's range: _xlnm.), what newer functions leave behind (_xl...), and
+   names that point into another file or a table ([ ]), which can't be kept true here */
+async function readXlsxNames(buf) {
+  const JSZip = await zipLib(), zip = await JSZip.loadAsync(buf), f = zip.file('xl/workbook.xml'), out = { sheets: [], names: [] };
+  if (!f) return out;
+  const doc = new DOMParser().parseFromString(await f.async('string'), 'application/xml');
+  out.sheets = xdesc(doc, 'sheet').map(e => xat(e, 'name') || '');
+  for (const e of xdesc(doc, 'definedName')) {
+    const n = xat(e, 'name') || '', t = e.textContent.trim().replace(/^=/, ''), li = xat(e, 'localSheetId');
+    if (!n || /^_xl/i.test(n) || !t || t.includes('[')) continue;
+    out.names.push({ n, f: fromXl(t), li: li == null || li === '' ? null : +li, c: xat(e, 'comment') || '', h: xat(e, 'hidden') === '1' || xat(e, 'hidden') === 'true' });
+  }
+  return out;
 }
 /* CSV: each cell as text another program reads back the same: numbers plain (no ₪ or thousands marks), dates, times and
    percents the way they show. A comma between cells (a semicolon where the comma is the decimal point), and a BOM
@@ -5475,16 +6029,41 @@ function applySpec(book, s, spec, log) {
   if (spec.direction === 'rtl' || spec.direction === 'ltr') setProp(s, 'dir', spec.direction);
   return n;
 }
-/* a whole workbook from a description: { sheets: [{ name, rows, cells, formats, column_widths, freeze_rows, direction }] } */
-function fromSpec(spec) {
+/* for Claude: defined names from a description [{ name, refers_to, sheet (the one sheet the name belongs to; without
+   it, the whole workbook), comment, delete }] put into a list of names (a name that is there already takes the new
+   meaning). Gives the new list, and the ones that couldn't be taken with the reason */
+function namesFromSpec(list, cur, book, s0) {
+  const next = cur.slice(), skipped = [];
+  for (const x of Array.isArray(list) ? list.slice(0, 500) : []) {
+    if (!x || typeof x !== 'object') continue;
+    const n = String(x.name ?? '').trim(), sn = x.sheet == null ? '' : String(x.sheet).trim(), scope = sn ? book.sheets.find(s => s.name.toLowerCase() === sn.toLowerCase()) : null;
+    if (sn && !scope) { skipped.push({ name: n, why: `There is no sheet named "${sn}".` }); continue; }
+    const key = (scope ? scope.id : '') + '|' + n.toLowerCase(), at = next.findIndex(y => nameKey(y) === key);
+    if (x.delete === true) { if (at >= 0) next.splice(at, 1); else skipped.push({ name: n, why: 'There is no such name.' }); continue; }
+    if (nameProblem(n)) { skipped.push({ name: n, why: 'Not a valid name: letters, digits, _ and . after a first letter or _, no spaces, and nothing that reads as a cell address (B2, R1C1) or as TRUE or FALSE.' }); continue; }
+    const src = nameFormulaIn(x.refers_to, scope || s0, book);
+    if (src.err) { skipped.push({ name: n, why: 'refers_to must be a range like =Sheet1!$A$2:$A$9, a number, or a formula.' }); continue; }
+    const o = { n, f: src.f, ...(scope ? { s: scope.id } : {}), ...(x.comment ? { c: String(x.comment) } : {}) };
+    if (at >= 0) next[at] = o; else next.push(o);
+  }
+  return { names: normNames(next, book.sheets), skipped };
+}
+/* a whole workbook from a description: { sheets: [{ name, rows, cells, formats, column_widths, freeze_rows, direction }], names }.
+   What couldn't be taken goes into rep */
+function fromSpec(spec, rep) {
   const list = (Array.isArray(spec && spec.sheets) ? spec.sheets : []).filter(x => x && typeof x === 'object').slice(0, 50);
   const words = JSON.stringify(list).slice(0, 20000);
   const dir = (spec && (spec.direction === 'rtl' || spec.direction === 'ltr')) ? spec.direction : RTL_CH.test(words) ? 'rtl' : /[A-Za-z]/.test(words) ? 'ltr' : UI_DIR;
-  const book = { v: 1, dir, active: 0, sheets: [] }, taken = new Set();
+  const book = { v: 1, dir, active: 0, sheets: [], names: NO_NAMES }, taken = new Set();
   for (const sp of list.length ? list : [{}]) {
     const s = newSheet(freeName(cleanName(sp.name) || sheetWord(book.sheets.length + 1), taken), sp.direction === 'ltr' || sp.direction === 'rtl' ? sp.direction : dir);
     taken.add(s.name.toLowerCase());
     book.sheets.push(s);
+  }
+  if (spec && Array.isArray(spec.names)) {   // before the cells, so formulas write the names the way they were made
+    const r = namesFromSpec(spec.names, NO_NAMES, book, book.sheets[0]);
+    book.names = r.names;
+    if (rep && r.skipped.length) rep.names_not_defined = r.skipped;
   }
   list.forEach((sp, i) => applySpec(book, book.sheets[i], sp));
   const keep = WB;
@@ -5529,6 +6108,8 @@ function forAI(args = {}) {
   if (s.charts.length) out.charts = s.charts.map(ch => ({ type: Object.keys(CK_API).find(k => CK_API[k] === ch.ck), ...(ch.ti ? { title: ch.ti } : {}), data: ch.src ? ch.src.ref : ch.ser.map(x => x.v).join(', '), at: A1(ch.at.r, ch.at.c) }));
   if (s.cf.length) out.conditional_formats = s.cf.map(r => ({ range: r.g.map(rangeA1).join(' '), rule: cfDesc(r).replace(/[\u2066-\u2069]/g, '') }));
   if (s.dv.length) out.validations = s.dv.map(dvToSpec);
+  const names = (WB.names || NO_NAMES).filter(x => !x.h).map(x => ({ name: x.n, refers_to: '=' + x.f, ...(x.s ? { sheet: (WB.sheets.find(y => y.id === x.s) || {}).name } : {}), ...(x.c ? { comment: x.c } : {}) }));
+  if (names.length) out.names = names;
   if (!g) return { ...out, range: null, rows: [], note: 'This sheet is empty.' };
   g = { r1: g.r1, c1: g.c1, r2: Math.min(g.r2, used ? used.r2 : g.r2, g.r1 + 399), c2: Math.min(g.c2, used ? used.c2 : g.c2, g.c1 + 59) };
   const rows = [], formulas = {};
@@ -5554,11 +6135,12 @@ function writeCells(args = {}) {
     s = WB.sheets.find(x => x.name.toLowerCase() === n.toLowerCase());
     if (!s) { s = newSheet(freeName(n || sheetWord(WB.sheets.length + 1), takenNames()), WB.dir); made = true; }
   }
-  let n = 0;
+  let n = 0, named = null;
   const log = [];
   edit(() => {
     if (made) bookStep(() => WB.sheets.push(s));
     if (s !== WS) showSheet(s, true);
+    if (Array.isArray(args.names)) { named = namesFromSpec(args.names, WB.names || NO_NAMES, WB, s); setNames(named.names); }   // before the cells, so formulas write the names the way they were made
     n = applySpec(WB, s, args, log);
   });
   WB.active = WB.sheets.indexOf(WS);
@@ -5567,6 +6149,7 @@ function writeCells(args = {}) {
   const bad = s.dv.length ? [...new Set(log.filter(([r, c]) => { const rule = dvAt(s, r, c); return !!rule && !dvOk(s, rule, r, c); }).map(([r, c]) => A1(r, c)))].slice(0, 30) : [];
   const u = usedRange(s);
   return { sheet: s.name, cells_written: n, used_range: u ? rangeA1(u) : null, ...(made ? { new_sheet: true } : {}),
+    ...(named ? { names: (WB.names || NO_NAMES).filter(x => !x.h).map(x => x.n) } : {}), ...(named && named.skipped.length ? { names_not_defined: named.skipped } : {}),
     ...(bad.length ? { not_allowed: bad, note: 'These cells now hold values that their data validation does not allow (read_spreadsheet lists the validations). The values were written anyway, because validation only stops what a person types. Fix them if that was not intended.' } : {}) };
 }
 
@@ -5606,7 +6189,7 @@ function replace(body) {
   if (!WB) return;
   if (ED.on) endEdit(false);
   const nb = parseBook(body);
-  edit(() => { bookStep(() => { WB.sheets = nb.sheets; WB.dir = nb.dir; }); showSheet(WB.sheets[nb.active] || WB.sheets[0], true); });
+  edit(() => { bookStep(() => { WB.sheets = nb.sheets; WB.dir = nb.dir; }); setNames(nb.names); showSheet(WB.sheets[nb.active] || WB.sheets[0], true); });
   if (RM.on) RM.all = true;
   refresh();
 }
@@ -6193,12 +6776,12 @@ function chartEls(s, maxW) {
 /* =========================================================
    shared rooms (the rooms themselves are in index.html): the workbook as entries, each with its own stamp.
    m its direction, o the order of the sheets, g/<sheet> a sheet's settings, r/<sheet> and k/<sheet> the ids of its
-   rows and columns, c/<sheet>/<row>/<column> a cell. A row and a column are known by an id that moves with it, so
+   rows and columns, c/<sheet>/<row>/<column> a cell, n/<id> a defined name. A row and a column are known by an id that moves with it, so
    what someone writes stays in its row while someone else adds or takes out rows above it. The ids follow from
    each other (nextId), so rows nobody moved have the same ids in every browser without being sent: a list travels
    as the ids that don't follow, with counts for the runs that do
    ========================================================= */
-const RM = { on: false, cells: new Set(), props: new Set(), lists: new Set(), full: new Set(), book: false, all: false, peers: [] };
+const RM = { on: false, cells: new Set(), props: new Set(), lists: new Set(), full: new Set(), book: false, names: false, all: false, peers: [] };
 const RMAX = 100000;   // rows past this in a room aren't shared (a sheet in a room is small; Excel's last row would cost a second)
 const CMAX = MAXC;
 const ID = /^[a-z0-9]{1,12}$/;
@@ -6343,16 +6926,22 @@ function roomNorm(k, v) {
   if (c === 'g') return gNorm(v);
   if (c === 'r' || c === 'k') return unpackIds(v, 'x', c === 'r' ? RMAX : CMAX) ? v : undefined;
   if (c === 'c') { const x = normCell(v); return x ? recOut(x) : undefined; }
+  if (c === 'n') { const x = normName(v, null); return x && k === 'n/' + nameId(x) ? nameOut(x) : undefined; }
   return undefined;
+}
+/* a defined name's entry is n/ and letters made from its scope and its name, so the same name is the same entry for everyone */
+const nameId = x => ('n' + hash53(nameKey(x))).padEnd(6, '0');
+function nameEntries(each) {
+  for (const x of WB.names || NO_NAMES) { const v = nameOut(x); each('n/' + nameId(x), () => v, b => same(b, v)); }
 }
 /* --- this browser's side --- */
 function roomStart() {
   RM.on = true;
-  RM.cells.clear(); RM.props.clear(); RM.lists.clear(); RM.full.clear(); RM.book = RM.all = false;
+  RM.cells.clear(); RM.props.clear(); RM.lists.clear(); RM.full.clear(); RM.book = RM.all = RM.names = false;
 }
 function roomStop(drop) {
   RM.on = false; RM.peers = [];
-  RM.cells.clear(); RM.props.clear(); RM.lists.clear(); RM.full.clear();
+  RM.cells.clear(); RM.props.clear(); RM.lists.clear(); RM.full.clear(); RM.names = false;
   if (drop && WB) for (const s of WB.sheets) { delete s.ri; delete s.ci; }   // out of the room, the ids aren't needed
   if (WB && V.view) renderSoon();
 }
@@ -6378,12 +6967,19 @@ function sheetEntries(s, each) {
 /* every entry, as it is now: each(key, make the value, is this the same value) */
 function roomEntries(each) {
   bookEntries(each);
+  nameEntries(each);
   for (const s of WB.sheets) sheetEntries(s, each);
 }
 /* what changed since the last look, into look(); what is gone, into gone(key) */
 function roomChanges(look, gone, base) {
   if (!WB) return;
   bookEntries(look);
+  if (RM.all || RM.names) {
+    const have = new Set();
+    nameEntries((k, mk, eq) => { have.add(k); look(k, mk, eq); });
+    for (const [k, b] of base) if (b != null && k[0] === 'n' && k[1] === '/' && !have.has(k)) gone(k);
+    RM.names = false;
+  }
   const byId = new Map(WB.sheets.map(s => [s.id, s]));
   if (RM.all || RM.book) {
     for (const [k, b] of base) if (b != null && k[1] === '/' && 'grkc'.includes(k[0]) && !byId.has(k.split('/')[1])) gone(k);   // sheets taken out
@@ -6421,6 +7017,7 @@ function roomValue(k) {
   if (k === 'm') return { dir: WB.dir };
   if (k === 'o') return WB.sheets.map(s => s.id);
   const p = k.split('/'), s = WB.sheets.find(x => x.id === p[1]);
+  if (p[0] === 'n') { const x = (WB.names || NO_NAMES).find(y => nameId(y) === p[1]); return x ? nameOut(x) : null; }
   if (!s) return null;
   if (p[0] === 'g') return gOut(s);
   if (p[0] === 'r') { grow(s, 'ri', 0); return packIds(s.ri, s.id + '/ri'); }
@@ -6484,12 +7081,13 @@ function roomApply(acc, st) {
   const val = k => { const x = st.get(k); return x ? x[0] : null; };
   const byId = id => WB.sheets.find(x => x.id === id);
   let whole = false;
-  const again = new Set(), lists = [], props = new Set(), put = new Set();
+  const again = new Set(), lists = [], props = new Set(), put = new Set(), named = new Set();
   for (const [k] of acc) {
     if (k === 'o' || k === 'm') whole = true;
     else if (k[0] === 'r' || k[0] === 'k') lists.push(k);
     else if (k[0] === 'g') props.add(k.slice(2));
     else if (k[0] === 'c') put.add(k);
+    else if (k[0] === 'n') named.add(k);
   }
   const keep = anchorNow();
   if (whole) {
@@ -6541,6 +7139,15 @@ function roomApply(acc, st) {
     touched.add(s);
   }
   for (const s of touched) dropSteps(s);
+  if (named.size || whole) {
+    // each name that came takes the place of the one here, or goes. A name of a sheet that isn't here yet waits among
+    // the entries, and comes in when its sheet does
+    const cur = new Map((WB.names || NO_NAMES).map(x => ['n/' + nameId(x), x]));
+    for (const k of named) { const v = val(k), x = v && normName(v, null); if (x) cur.set(k, x); else cur.delete(k); }
+    if (whole) for (const [k, x] of st) if (k[0] === 'n' && k[1] === '/' && x[0] != null && x[0].s && !cur.has(k)) { const y = normName(x[0], null); if (y) cur.set(k, y); }
+    const next = normNames([...cur.values()], WB.sheets);
+    if (!sameNames(next, WB.names || NO_NAMES)) { WB.names = next; for (const h of HIST.list) h.names = null; }   // undo takes back only this person's own names
+  }
   if (whole || again.size) { HIST.list = []; HIST.at = 0; }   // rows moved under every step kept for undo
   if (!WB.sheets.includes(WS)) showSheet(WB.sheets[0], true);
   anchorBack(keep);
@@ -6553,6 +7160,7 @@ function roomApply(acc, st) {
 function roomBook(st) {
   const m = st.get('m'), dir = m && m[0] ? m[0].dir : UI_DIR, book = { v: 1, dir, active: 0, sheets: [] }, taken = new Set();
   for (const id of sheetIds(st)) { const s = Object.assign(newSheet('', dir), { id }); buildSheet(s, st, taken); book.sheets.push(s); }
+  book.names = normNames([...st].filter(([k, x]) => k[0] === 'n' && k[1] === '/' && x[0] != null).map(([, x]) => x[0]), book.sheets);
   return book.sheets.length ? JSON.stringify(bookOut(book)) : null;
 }
 /* --- the others --- */
@@ -6575,7 +7183,7 @@ function drawPeers(L, rr, cc) {
   const lo = { r: frR ? 0 : WS.fr, c: frC ? 0 : WS.fc }, hi = { r: frR ? WS.fr - 1 : EXT.rows - 1, c: frC ? WS.fc - 1 : EXT.cols - 1 };
   for (const p of RM.peers) {
     const q = p.pr;
-    if (!q || q.s !== WS.id) continue;
+    if (!q || q.s !== WS.id || !q.g) continue;
     const y = { r1: Math.max(q.g[0], lo.r), c1: Math.max(q.g[1], lo.c), r2: Math.min(q.g[2], hi.r), c2: Math.min(q.g[3], hi.c) };
     if (y.r1 <= y.r2 && y.c1 <= y.c2) {
       const e = part(L, 'peer' + p.id, 'sh-peer');
@@ -7661,7 +8269,7 @@ function dvSource(s, rule, r, c) {
   if (ast.t === 'str') return ast.v;
   const a = cfAnchor(rule), keep = [CTX, AX, OFF];
   CTX = { si: WB.sheets.indexOf(s), r, c, dyn: false }; AX = true; OFF = { dr: r - a.r, dc: c - a.c };
-  try { return ast.t === 'ref' ? refVal(ast, true) : ev(ast); } catch (e) { return e instanceof Err ? e : E_VAL; } finally { [CTX, AX, OFF] = keep; }
+  try { return ast.t === 'ref' ? refVal(ast, true) : ast.t === 'name' ? nameVal(ast, true) : ev(ast); } catch (e) { return e instanceof Err ? e : E_VAL; } finally { [CTX, AX, OFF] = keep; }
 }
 /* a list rule's items for cell (r, c), each with its value, the text the list shows for it, and its number format.
    lit: the list is written out in the rule. null: the source can't be worked out here (it uses a function or a name
@@ -7669,7 +8277,8 @@ function dvSource(s, rule, r, c) {
 function dvList(s, rule, r, c) {
   const src = dvSource(s, rule, r, c), items = [];
   if (typeof src === 'string') return { lit: true, items: src.split(',').map(t => t.trim()).filter(Boolean).map(t => { const p = parseInput(t), ok = !!p && p.f == null && !isErr(p.v); return { t, v: ok ? p.v : t, nf: (ok && p.nf) || null }; }) };
-  if (src == null || isErr(src)) return unknownIn(rule.a) ? null : { lit: false, items };
+  if (src == null || isErr(src)) return lacksFn(rule.a, s) ? null : { lit: false, items };
+  if (src.rng && src.g.r1 !== src.g.r2 && src.g.c1 !== src.g.c2) return { lit: false, items };   // a list is one row or one column: a block of cells (through a name or INDIRECT) passes nothing in Excel
   const keep = SHOWF;
   SHOWF = false;   // the items as their cells show them, also while the sheet shows its formulas
   try {
@@ -7687,7 +8296,12 @@ function dvList(s, rule, r, c) {
 const DVC = { v: -1, m: new Map() };
 function dvItems(s, rule, r, c) {
   if (DVC.v !== CHV) { DVC.v = CHV; DVC.m.clear(); }
-  if (rule._fx === undefined) rule._fx = !tokenize(rule.a).some(t => t.t === 'ref' && !t.a.every(Boolean));
+  // one list for all the rule's cells when its source can't differ between them: fixed references, and names for fixed cells
+  const names = WB.names || NO_NAMES;
+  if (rule._fxn !== names || rule._fxs !== s) {
+    rule._fxn = names; rule._fxs = s;
+    rule._fx = tokenize(rule.a).every(t => t.t === 'ref' ? t.a.every(Boolean) : t.t === 'name' ? !!(nameOf(t, s) && (nameCells(nameOf(t, s)) || {}).fixed) : t.t !== 'fn');
+  }
   const key = s.id + '|' + rule.id + (rule._fx ? '' : '|' + r + ',' + c);
   let L = DVC.m.get(key);
   if (L === undefined) { if (DVC.m.size > 5000) DVC.m.clear(); DVC.m.set(key, L = dvList(s, rule, r, c)); }
@@ -7708,13 +8322,16 @@ function dvChoices(s, r, c) {
   const rule = s.dv.length ? dvAt(s, r, c) : null, L = rule && rule.t === 'list' && !rule.nd ? dvItems(s, rule, r, c) : null;
   return L ? L.items.filter(it => it.t !== '') : null;
 }
-/* whether a rule's formula, as it is for cell (r, c), points at an empty cell by itself (not as part of a range) */
+/* whether a rule's formula, as it is for cell (r, c), points at an empty cell by itself (not as part of a range): by
+   its address, or by a name for one cell. A name nobody defined counts too, and the cell OFFSET starts from doesn't
+   (both measured in Excel) */
 function dvBlankRef(f, s, r, c, a) {
   let hit = false;
-  walk(astOf(f), n => {
-    if (hit || n.t !== 'ref' || n.k !== 'c' || n.sp) return;
-    const sh = n.sheet == null ? s : WB.sheets.find(x => x.name.toLowerCase() === n.sheet.toLowerCase());
-    if (sh && valAt(sh, wrapAt(n.r1, r - a.r, n.ab[0], MAXR), wrapAt(n.c1, c - a.c, n.ab[1], MAXC)) == null) hit = true;
+  const empty = (n, dr, dc) => { const sh = n.sheet == null ? s : WB.sheets.find(x => x.name.toLowerCase() === n.sheet.toLowerCase()); return !!sh && valAt(sh, wrapAt(n.r1, dr, n.ab[0], MAXR), wrapAt(n.c1, dc, n.ab[1], MAXC)) == null; };
+  walkRead(astOf(f), n => {
+    if (hit) return;
+    if (n.t === 'ref') hit = n.k === 'c' && !n.sp && empty(n, r - a.r, c - a.c);
+    else if (n.t === 'name') { const nm = nameOf(n, s), x = nm ? astOf(nm.f) : null; hit = !nm || (!!x && x.t === 'ref' && x.k === 'c' && !x.sp && empty(x, r, c)); }
   });
   return hit;
 }
@@ -7724,8 +8341,16 @@ function dvBlankRef(f, s, r, c, a) {
 function dvOk(s, rule, r, c) {
   const v = valAt(s, r, c);
   if (rule.t === 'any' || (v == null && !rule.nb)) return true;
-  if (rule.t === 'list') { const L = dvItems(s, rule, r, c); return !L || (v != null && dvInList(L, v)); }
-  const a = cfAnchor(rule), val = f => cfEval(f, s, r, c, a), lost = (x, f) => x === E_NAME && !!unknownIn(f);   // a function that isn't here: nothing is checked
+  const a = cfAnchor(rule);
+  if (rule.t === 'list') {
+    // a list that hangs on an empty cell (=INDIRECT(A2) while A2 is empty, or a name for an empty cell) takes anything,
+    // as long as empty cells pass. Not so a list whose cells are written out and happen to be one empty cell (measured)
+    const src = astOf(rule.a);
+    if (!rule.nb && src && src.t !== 'str' && src.t !== 'ref' && dvBlankRef(rule.a, s, r, c, a)) return true;
+    const L = dvItems(s, rule, r, c);
+    return !L || (v != null && dvInList(L, v));
+  }
+  const val = f => cfEval(f, s, r, c, a), lost = (x, f) => x === E_NAME && lacksFn(f, s);   // a function that isn't here: nothing is checked
   let n = v;
   if (rule.t === 'len') { if (isErr(v)) return false; n = toStr(v).length; }
   else if (rule.t !== 'custom' && (typeof v !== 'number' || (rule.t === 'whole' && !Number.isInteger(v)))) return false;
@@ -7907,7 +8532,7 @@ function dvValOut(f, t) {
 }
 /* a list's source as typed: its values with commas between them, or = and the cells that hold them (one row or one
    column, in this sheet or another) */
-function dvListIn(t, book) {
+function dvListIn(t, book, s) {
   t = String(t ?? '').trim();
   if (!t) return { err: T('צריך לכתוב את הערכים של הרשימה') };
   if (t[0] !== '=') {   // kept without spaces around the items: Excel never passes an item that ends with one
@@ -7916,6 +8541,11 @@ function dvListIn(t, book) {
   }
   const f = closeBrackets(t.slice(1)), ast = f && astOf(f), toks = ast ? tokenize(f).filter(k => k.t !== 'ws') : [];
   if (!ast) return { err: T('לא הבנתי את המקור של הרשימה. אחרי ה-= כותבים טווח של תאים.') };
+  if (s && ast.t === 'name') {   // typed in the dialog: the name has to be there, and to be one row or one column
+    const nm = nameOf(ast, s, book || WB), cells = nm ? nameCells(nm, book || WB) : null;
+    if (!nm) return { err: T('אין כאן שם מוגדר כזה: {0}', ast.n) };
+    if (cells && cells.g.r1 !== cells.g.r2 && cells.g.c1 !== cells.g.c2) return { err: T('המקור של רשימה הוא שורה אחת או עמודה אחת של תאים') };
+  }
   if (ast.t !== 'ref') return { a: tidyFormula(f, book) };
   if (ast.g.r1 !== ast.g.r2 && ast.g.c1 !== ast.g.c2) return { err: T('המקור של רשימה הוא שורה אחת או עמודה אחת של תאים') };
   // a range typed without $ would slide along with each cell of the rule; a list's cells stay where they are
@@ -7944,8 +8574,9 @@ function dvDialog(kind0) {
     if (t === 'any') { area.append(h('p', { class: 'muted small', text: T('אפשר להקליד בתאים כל ערך.') })); read = () => ({}); }
     else if (t === 'list') {
       const src = inp(mine ? dvListOut(b0.a) : '', T('מקור הרשימה'), { ph: T('ערכים עם פסיקים ביניהם, או = וטווח של תאים'), focus: kind0 === 'list' }), [ddL, dd] = check(T('רשימה נפתחת בתוך התא'), !(mine && b0.nd));
-      area.append(fld(T('מקור הרשימה'), src), eg(T('כותבים את הערכים עם פסיקים ביניהם, למשל:'), T('כן, לא, אולי')), eg(T('רשימה שכתובה בתאים: = והטווח שלהם, למשל:'), '=F2:F10'), ddL);
-      read = () => { const x = dvListIn(src.value); return x.err ? x : { a: x.a, nd: !dd.checked }; };
+      area.append(fld(T('מקור הרשימה'), src), eg(T('כותבים את הערכים עם פסיקים ביניהם, למשל:'), T('כן, לא, אולי')), eg(T('רשימה שכתובה בתאים: = והטווח שלהם, למשל:'), '=F2:F10'),
+        eg(T('רשימה שתלויה בתא אחר: בתא כתוב שם מוגדר של טווח, והמקור הוא:'), '=INDIRECT(' + A1(ac.r, ac.c ? ac.c - 1 : 1) + ')'), ddL);
+      read = () => { const x = dvListIn(src.value, WB, WS); return x.err ? x : { a: x.a, nd: !dd.checked }; };
     } else if (t === 'custom') {
       const here = A1(ac.r, ac.c), f = inp(mine ? '=' + b0.a : '=', T('נוסחה'), { ltr: true });
       area.append(fld(T('נוסחה'), f), eg(T('מה שמקלידים בתא מתקבל כשהנוסחה יוצאת נכונה (TRUE). כותבים אותה בשביל התא {0}, והיא נבדקת לכל תא כמו נוסחה שהועתקה אליו. למשל:', here), '=ISNUMBER(' + here + ')'));
@@ -8002,7 +8633,7 @@ const xlAttr = t => esc(t).replace(/\n/g, '&#10;');
 const sqrefOf = rule => rule.g.map(g => A1(g.r1, g.c1) + (g.r1 === g.r2 && g.c1 === g.c2 ? '' : ':' + A1(g.r2, g.c2))).join(' ');
 function dvXml(rule) {
   rule = fileRule(rule, true);
-  const far = [rule.a, rule.b].some(f => f != null && tokenize(f).some(t => t.t === 'ref' && t.sheet != null)), ns = far ? 'x14:' : '', sq = sqrefOf(rule);
+  const far = [rule.a, rule.b].some(f => f != null && tokenize(f).some(t => (t.t === 'ref' || t.t === 'name') && t.sheet != null)), ns = far ? 'x14:' : '', sq = sqrefOf(rule);
   let at = rule.t === 'any' ? '' : ` type="${XL_DV[rule.t]}"`;
   if (rule.es) at += ` errorStyle="${XL_ES[rule.es]}"`;
   if (rule.op && rule.op !== 'bw') at += ` operator="${XL_OPS[rule.op]}"`;
@@ -8035,16 +8666,13 @@ async function addXlsxDv(buf) {
   return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
 }
 /* the rules of an Excel file, sheet by sheet (by the sheet's name in the file); null for a rule of a kind that isn't
-   here. A name that stands for cells (a list's source is often one) becomes the cells it names */
+   here */
 async function readXlsxDv(buf) {
   const JSZip = await zipLib(), zip = await JSZip.loadAsync(buf), dp = new DOMParser(), out = new Map();
   const text = async p => { const f = zip.file(p); return f ? f.async('string') : null; };
   const wbt = await text('xl/workbook.xml'), wrt = await text(relsOf('xl/workbook.xml'));
   if (!wbt || !wrt) return out;
   const wbx = dp.parseFromString(wbt, 'application/xml'), rels = new Map(xdesc(dp.parseFromString(wrt, 'application/xml'), 'Relationship').map(r => [xat(r, 'Id'), partPath('xl/workbook.xml', xat(r, 'Target') || '')]));
-  const names = new Map();
-  for (const n of xdesc(wbx, 'definedName')) { const f = n.textContent.trim(), a = astOf(f), k = (xat(n, 'name') || '').toLowerCase(); if (a && a.t === 'ref' && !names.has(k)) names.set(k, f); }
-  const named = f => names.size ? tokenize(f).map(t => (t.t === 'name' && names.get(t.s.toLowerCase())) || t.s).join('') : f;
   const on = (e, a) => { const v = xat(e, a); return v === '1' || v === 'true'; };
   for (const sh of xdesc(wbx, 'sheet')) {
     const rid = [...sh.attributes].find(a => a.localName === 'id' && /relationships/.test(a.namespaceURI || '')), path = rid && rels.get(rid.value), src = path && await text(path);
@@ -8052,7 +8680,7 @@ async function readXlsxDv(buf) {
     const list = [];
     for (const e of xdesc(dp.parseFromString(src, 'application/xml'), 'dataValidation')) {
       const x14 = e.namespaceURI === X14, type = xat(e, 'type') || 'none', t = type === 'none' ? 'any' : Object.keys(XL_DV).find(k => XL_DV[k] === type);
-      const f = n => { const k = xkid(e, 'formula' + n), v = k && (x14 ? (xkid(k, 'f') || k).textContent : k.textContent).trim().replace(/^=/, ''); return v ? named(fromXl(v)) : null; };
+      const f = n => { const k = xkid(e, 'formula' + n), v = k && (x14 ? (xkid(k, 'f') || k).textContent : k.textContent).trim().replace(/^=/, ''); return v ? fromXl(v) : null; };
       list.push(t ? { t, op: Object.keys(XL_OPS).find(k => XL_OPS[k] === (xat(e, 'operator') || 'between')), a: f(1), b: f(2), ref: (x14 ? (xkid(e, 'sqref') || e).textContent : xat(e, 'sqref')) || '',
         nb: !on(e, 'allowBlank'), nd: on(e, 'showDropDown'), np: !on(e, 'showInputMessage'), ne: !on(e, 'showErrorMessage'), es: Object.keys(XL_ES).find(k => XL_ES[k] === xat(e, 'errorStyle')),
         pt: xat(e, 'promptTitle'), pm: xat(e, 'prompt'), et: xat(e, 'errorTitle'), em: xat(e, 'error') } : null);
@@ -8081,7 +8709,7 @@ async function importDv(buf, nb, xlNames, rep) {
         if (rule) s.dv.push(rule);
       }
       if (s.dv.length === before) add('valid');
-      else if ([x.a, x.b].some(f => f != null && unknownIn(f))) add('dvfn');
+      else if ([x.a, x.b].some(f => { const m = f != null ? missingIn(f, s, nb) : null; return !!m && !!m.fn; })) add('dvfn');
     }
   }
 }
