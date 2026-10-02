@@ -1818,7 +1818,6 @@ window.INK_I18N = {
 "גרף מהתאים האלה": "Graphique de ces cellules",
 "גרפים": "Graphiques",
 "הגרף הזה הגיע מקובץ, והנתונים שלו באים מכמה מקומות. אפשר לכתוב כאן טווח אחד במקומם.": "Ce graphique vient d'un fichier, et ses nombres viennent de plusieurs endroits. Tu peux écrire ici une seule plage à la place.",
-"הטווח \"{0}\" לא נמצא. כותבים אותו כמו A1:C7, ואפשר גם עם שם של גיליון: 'גיליון2'!A1:C7": "La plage « {0} » est introuvable. Écris-la comme A1:C7, ou avec le nom d'une feuille : 'Feuil2'!A1:C7",
 "טווח הנתונים": "Plage de données",
 "כדי ליצור גרף, בוחרים קודם את התאים עם המספרים (ואפשר גם את הכותרות שלהם).": "Pour créer un graphique, choisis d'abord les cellules avec les nombres (et leurs en-têtes si tu veux).",
 "כותבים איפה המספרים של הגרף, למשל A1:C7": "Écris où se trouvent les nombres du graphique, par exemple A1:C7",
@@ -2381,7 +2380,8 @@ window.INK_I18N = {
 "במקום הזה אין כותרות. כותרת היא תא עם טקסט, ולידו התאים שיקבלו את השם.": "Il n'y a pas d'en-têtes à cet endroit. Un en-tête est une cellule avec du texte, et à côté se trouvent les cellules qui reçoivent le nom.",
 "יצירת השמות": "Créer les noms",
 "בוחרים קודם את הכותרות יחד עם התאים שלידן, ואז יוצרים מהן שמות": "Sélectionne d'abord les en-têtes avec les cellules à côté d'eux, puis crée des noms à partir d'eux",
-"אלה יותר מדי שמות: בחוברת עבודה יש מקום ל-{0} שמות": "Cela fait trop de noms : un classeur a de la place pour {0} noms"
+"אלה יותר מדי שמות: בחוברת עבודה יש מקום ל-{0} שמות": "Cela fait trop de noms : un classeur a de la place pour {0} noms",
+"הטווח \"{0}\" לא נמצא. כותבים אותו כמו A1:C7, עם שם של גיליון ('גיליון2'!A1:C7), או שם מוגדר של טווח": "La plage « {0} » est introuvable. Écris-la comme A1:C7, avec le nom d'une feuille ('Feuil2'!A1:C7), ou comme un nom défini d'une plage"
 },
 "plurals": {
 "{n} מילים": {

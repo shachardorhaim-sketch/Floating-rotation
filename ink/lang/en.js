@@ -1818,7 +1818,6 @@ window.INK_I18N = {
 "גרף מהתאים האלה": "Chart these cells",
 "גרפים": "Charts",
 "הגרף הזה הגיע מקובץ, והנתונים שלו באים מכמה מקומות. אפשר לכתוב כאן טווח אחד במקומם.": "This chart came from a file, and its numbers come from several places. You can write one range here instead.",
-"הטווח \"{0}\" לא נמצא. כותבים אותו כמו A1:C7, ואפשר גם עם שם של גיליון: 'גיליון2'!A1:C7": "The range \"{0}\" wasn't found. Write it like A1:C7, or with a sheet's name: 'Sheet2'!A1:C7",
 "טווח הנתונים": "Data range",
 "כדי ליצור גרף, בוחרים קודם את התאים עם המספרים (ואפשר גם את הכותרות שלהם).": "To make a chart, first choose the cells with the numbers (their headers too, if you like).",
 "כותבים איפה המספרים של הגרף, למשל A1:C7": "Write where the chart's numbers are, like A1:C7",
@@ -2381,7 +2380,8 @@ window.INK_I18N = {
 "במקום הזה אין כותרות. כותרת היא תא עם טקסט, ולידו התאים שיקבלו את השם.": "There are no headers in that place. A header is a cell with text, and beside it are the cells that get the name.",
 "יצירת השמות": "Create the names",
 "בוחרים קודם את הכותרות יחד עם התאים שלידן, ואז יוצרים מהן שמות": "First select the headers together with the cells beside them, and then create names from them",
-"אלה יותר מדי שמות: בחוברת עבודה יש מקום ל-{0} שמות": "These are too many names: a workbook has room for {0} names"
+"אלה יותר מדי שמות: בחוברת עבודה יש מקום ל-{0} שמות": "These are too many names: a workbook has room for {0} names",
+"הטווח \"{0}\" לא נמצא. כותבים אותו כמו A1:C7, עם שם של גיליון ('גיליון2'!A1:C7), או שם מוגדר של טווח": "The range \"{0}\" wasn't found. Write it like A1:C7, with a sheet's name ('Sheet2'!A1:C7), or as a defined name for a range"
 },
 "plurals": {
 "{n} מילים": {

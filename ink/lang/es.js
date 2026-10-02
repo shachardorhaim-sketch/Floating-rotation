@@ -1818,7 +1818,6 @@ window.INK_I18N = {
 "גרף מהתאים האלה": "Gráfico con estas celdas",
 "גרפים": "Gráficos",
 "הגרף הזה הגיע מקובץ, והנתונים שלו באים מכמה מקומות. אפשר לכתוב כאן טווח אחד במקומם.": "Este gráfico vino de un archivo y sus números vienen de varios lugares. Puedes escribir aquí un solo rango en su lugar.",
-"הטווח \"{0}\" לא נמצא. כותבים אותו כמו A1:C7, ואפשר גם עם שם של גיליון: 'גיליון2'!A1:C7": "No se encontró el rango \"{0}\". Escríbelo como A1:C7, o con el nombre de una hoja: 'Hoja2'!A1:C7",
 "טווח הנתונים": "Rango de datos",
 "כדי ליצור גרף, בוחרים קודם את התאים עם המספרים (ואפשר גם את הכותרות שלהם).": "Para crear un gráfico, primero elige las celdas con los números (y, si quieres, sus encabezados).",
 "כותבים איפה המספרים של הגרף, למשל A1:C7": "Escribe dónde están los números del gráfico, por ejemplo A1:C7",
@@ -2381,7 +2380,8 @@ window.INK_I18N = {
 "במקום הזה אין כותרות. כותרת היא תא עם טקסט, ולידו התאים שיקבלו את השם.": "En ese lugar no hay encabezados. Un encabezado es una celda con texto, y a su lado están las celdas que reciben el nombre.",
 "יצירת השמות": "Crear los nombres",
 "בוחרים קודם את הכותרות יחד עם התאים שלידן, ואז יוצרים מהן שמות": "Primero selecciona los encabezados junto con las celdas que tienen al lado, y después crea nombres a partir de ellos",
-"אלה יותר מדי שמות: בחוברת עבודה יש מקום ל-{0} שמות": "Son demasiados nombres: en un libro caben {0} nombres"
+"אלה יותר מדי שמות: בחוברת עבודה יש מקום ל-{0} שמות": "Son demasiados nombres: en un libro caben {0} nombres",
+"הטווח \"{0}\" לא נמצא. כותבים אותו כמו A1:C7, עם שם של גיליון ('גיליון2'!A1:C7), או שם מוגדר של טווח": "No se encontró el rango \"{0}\". Escríbelo como A1:C7, con el nombre de una hoja ('Hoja2'!A1:C7), o como un nombre definido de un rango"
 },
 "plurals": {
 "{n} מילים": {

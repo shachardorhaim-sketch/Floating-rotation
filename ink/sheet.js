@@ -551,13 +551,13 @@ const RX = {
   str: /"(?:[^"]|"")*"/y,
   err: /#(?:NULL!|DIV\/0!|VALUE!|REF!|NAME\?|NUM!|N\/A|SPILL!|CALC!)/iy,
   sheet: /(?:'((?:[^']|'')+)'|([\p{L}_][\p{L}\p{N}_.]*))!/uy,
-  cell: /(\$?)([A-Za-z]{1,3})(\$?)([1-9]\d{0,6})(?::(\$?)([A-Za-z]{1,3})(\$?)([1-9]\d{0,6}))?(?![\p{L}\p{N}_(.!:$])/uy,
+  cell: /(\$?)([A-Za-z]{1,3})(\$?)([1-9]\d{0,6})(?::(\$?)([A-Za-z]{1,3})(\$?)([1-9]\d{0,6}))?(?![\p{L}\p{N}_(.!$])/uy,
   cols: /(\$?)([A-Za-z]{1,3}):(\$?)([A-Za-z]{1,3})(?![\p{L}\p{N}_(.!$])/uy,
   rows: /(\$?)([1-9]\d{0,6}):(\$?)([1-9]\d{0,6})(?![\p{L}\p{N}_(.!$])/uy,
   num: /(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/y,
   fn: /(?:_xl(?:fn|ws)\.)*[A-Za-z_][A-Za-z0-9_.]*(?=\s*\()/y,
   name: /[\p{L}_\\][\p{L}\p{N}_.?\\]*/uy,
-  op: /<>|<=|>=|[-+*/^&=<>%@]/y,
+  op: /<>|<=|>=|[-+*/^&=<>%@:]/y,
   open: /\s*\(/y,
 };
 const execAt = (re, s, i) => { re.lastIndex = i; return re.exec(s); };
@@ -615,8 +615,14 @@ function tokenize(src) {
   toks.bad = bad;
   return toks;
 }
-/* Excel's order: - (negation) % ^ * / + - & comparisons. ^ goes left to right, and -2^2 is 4 */
-const BIN = { '=': 1, '<>': 1, '<': 1, '>': 1, '<=': 1, '>=': 1, '&': 2, '+': 3, '-': 3, '*': 4, '/': 4, '^': 5 };
+/* Excel's order: : (from one reference to another) - (negation) % ^ * / + - & comparisons. ^ goes left to right, and
+   -2^2 is 4 */
+const BIN = { '=': 1, '<>': 1, '<': 1, '>': 1, '<=': 1, '>=': 1, '&': 2, '+': 3, '-': 3, '*': 4, '/': 4, '^': 5, ':': 7 };
+/* what may stand on a side of the : when it isn't inside one address (A1:INDEX(...), two functions, names): an address,
+   a name, another such range, and the functions that can answer with a reference. Excel takes nothing else there when
+   a formula is typed (A1:SUM(B2) is refused), and so does this; a function nobody knows passes, and is #NAME? */
+const REF_FN = new Set(['INDEX', 'OFFSET', 'INDIRECT', 'IF', 'CHOOSE', 'XLOOKUP']);
+const refSide = n => n.t === 'ref' || n.t === 'name' || n.t === 'span' || n.t === 'err' || (n.t === 'fn' && (REF_FN.has(n.n) || !FUNCS[n.n]));
 function parseFormula(src) {
   const all = tokenize(src);
   if (all.bad) throw new Error('bad');
@@ -675,7 +681,7 @@ function parseFormula(src) {
       case '(': { const e = expr(0); expect(')'); return e; }
       case 'op':
         if (t.s === '-' || t.s === '+') return { t: 'neg', neg: t.s === '-', a: expr(6) };
-        if (t.s === '@') return { t: 'at', a: prim() };
+        if (t.s === '@') return { t: 'at', a: expr(7) };
         break;
     }
     throw new Error('token');
@@ -685,11 +691,14 @@ function parseFormula(src) {
     for (;;) {
       const t = peek();
       if (!t || t.t !== 'op') break;
-      if (t.s === '%') { take(); left = { t: 'pct', a: left }; continue; }
+      if (t.s === '%') { if (min > 6) break; take(); left = { t: 'pct', a: left }; continue; }   // A1:INDEX(...)% is the whole range's
       const p = BIN[t.s];
       if (p == null || p < min) break;
       take();
-      left = { t: 'bin', op: t.s, a: left, b: expr(p + 1) };
+      const b = expr(p + 1);
+      if (t.s !== ':') left = { t: 'bin', op: t.s, a: left, b };
+      else if (refSide(left) && refSide(b)) left = { t: 'span', a: left, b };
+      else throw new Error(':');
     }
     return left;
   }
@@ -795,12 +804,23 @@ function ev(n) {
     case 'name': return nameVal(n);
     case 'ref': return refVal(n);
     case 'fn': {
-      const f = FUNCS[n.n];
+      const f = FUNCS[n.n], keep = KEEP;
+      KEEP = false;
       if (!f) return E_NAME;
       const [lo, hi] = f.n;
       if (n.args.length < lo || n.args.length > hi) return E_VAL;
       if (f.dyn) CTX.dyn = true;
-      try { return f.f(n.args); } catch (e) { if (e instanceof Err) return e; throw e; }
+      try { return f.f(n.args, keep); } catch (e) { if (e instanceof Err) return e; throw e; }
+    }
+    case 'span': {
+      // from one reference to another: the smallest range that holds both, on one sheet. It isn't written in the
+      // formula, so it is kept for the order of the next pass (pointsAt)
+      const a = refOf(n.a), b = isErr(a) ? a : refOf(n.b);
+      if (isErr(b)) return b;
+      if (!a || !a.rng || !b || !b.rng || a.s !== b.s) return E_VAL;
+      const rv = { rng: true, s: a.s, g: { r1: Math.min(a.g.r1, b.g.r1), c1: Math.min(a.g.c1, b.g.c1), r2: Math.max(a.g.r2, b.g.r2), c2: Math.max(a.g.c2, b.g.c2) } };
+      pointsAt(rv);
+      return rv;
     }
     case 'at': return scal(ev(n.a));
     case 'neg': case 'pct': { let v = one(ev(n.a)); if (!AX) v = scalR(v); return isA(v) ? mapArr([v], x => unop(n, x[0])) : unop(n, v); }
@@ -848,11 +868,21 @@ function nameVal(n, keep) {
     if (ast.t === 'ref') return refVal(ast, keep);
     if (ast.t === 'name') return nameVal(ast, keep);
     AX = true;   // a name's formula works on whole ranges, as Excel's do
-    return ev(ast);
+    return keep ? refOf(ast) : ev(ast);
   } finally { NAMING.pop(); [OFF, AX] = was; }
 }
-/* INDIRECT and OFFSET point at cells their formula doesn't name. While a cell's formula is worked out, each range they
-   gave is kept (DD), so the next pass works out those cells first (see recalc) */
+/* a value kept as the reference it is, where it is one: an address or a name for cells even when they are one cell,
+   and the branch IF or CHOOSE picks (KEEP tells the function, which gets it as its second argument). The sides of the
+   : are read this way, and so is the source of a list */
+let KEEP = false, XKEEP = false;
+function refOf(n) {
+  if (n.t === 'ref') return refVal(n, true);
+  if (n.t === 'name') return nameVal(n, true);
+  KEEP = n.t === 'fn';
+  try { return ev(n); } finally { KEEP = false; }
+}
+/* INDIRECT, OFFSET, INDEX and the : between two of them point at cells their formula doesn't name. While a cell's
+   formula is worked out, each range they gave is kept (DD), so the next pass works out those cells first (see recalc) */
 let DDON = false, DD = null;
 function pointsAt(rv) {
   if (!DDON) return;
@@ -993,7 +1023,7 @@ function fx(lo, hi, kinds, fn, more) {
     let lift = null;
     vals.forEach((v, i) => { if (kindAt(i) === 'v' && isA(v)) (lift || (lift = [])).push(i); });
     if (!lift) return call(fn, vals);
-    return mapArr(lift.map(i => vals[i]), xs => { const v = vals.slice(); lift.forEach((i, k) => { v[i] = xs[k]; }); return call(fn, v); });
+    return mapArr(lift.map(i => vals[i]), xs => { const v = vals.slice(); lift.forEach((i, k) => { v[i] = xs[k]; }); const r = call(fn, v); return r && r.rng ? zero(scal(r)) : r; });
   } };
 }
 
@@ -1407,7 +1437,7 @@ const FUNCS = {
   QUARTILE: fx(2, 2, 'av', (r, q) => { const k = Math.trunc(num(q)); if (k < 0 || k > 4) throw E_NUM; return pctl(numsIn(r), k / 4); }),
   'QUARTILE.INC': fx(2, 2, 'av', (r, q) => { const k = Math.trunc(num(q)); if (k < 0 || k > 4) throw E_NUM; return pctl(numsIn(r), k / 4); }),
   // logic
-  IF: { n: [2, 3], f: a => {
+  IF: { n: [2, 3], f: (a, keep) => {
     const c = argS(a[0]);
     if (isA(c)) {   // a condition for each place: the answers are picked place by place
       const t = a[1].t === 'miss' ? 0 : argS(a[1]), e = !a[2] ? false : a[2].t === 'miss' ? 0 : argS(a[2]);
@@ -1417,7 +1447,7 @@ const FUNCS = {
     if (isErr(b)) return b;
     const pick = b ? a[1] : a[2];
     if (!pick) return false;
-    return pick.t === 'miss' ? 0 : ev(pick);
+    return pick.t === 'miss' ? 0 : keep ? refOf(pick) : ev(pick);
   } },
   IFS: fx(2, 254, 'v', (...v) => { if (v.length % 2) throw E_VAL; for (let i = 0; i < v.length; i += 2) if (bool(v[i])) return zero(v[i + 1]); throw E_NA; }),
   IFERROR: { n: [2, 2], f: a => ifErr(a, isErr) },
@@ -1576,29 +1606,40 @@ const FUNCS = {
     if (i < 0) throw E_NA;
     return i + 1;
   }),
-  XLOOKUP: fx(3, 6, 'vaaavv', (x, look, ret, nf, m, s) => {
-    const L = arrOf(look);
-    if (L.h > 1 && L.w > 1) throw E_VAL;
-    const across = L.h === 1 && L.w > 1, [rh, rw] = dims(ret);
-    if (across ? rw !== dims(look)[1] : rh !== dims(look)[0]) throw E_VAL;
-    const i = xfind(L.d, x, m == null ? 0 : Math.trunc(num(m)), s == null ? 1 : Math.trunc(num(s)));
-    if (i < 0) { if (nf !== undefined) return nf == null ? 0 : nf; throw E_NA; }
-    const out = lineOf(ret, i, across), [h, w] = dims(out);
-    return h * w === 1 ? zero(scal(out)) : out;
-  }),
+  XLOOKUP: (() => {
+    const look = fx(3, 6, 'vaaavv', (x, look, ret, nf, m, s) => {
+      const L = arrOf(look);
+      if (L.h > 1 && L.w > 1) throw E_VAL;
+      const across = L.h === 1 && L.w > 1, [rh, rw] = dims(ret);
+      if (across ? rw !== dims(look)[1] : rh !== dims(look)[0]) throw E_VAL;
+      const i = xfind(L.d, x, m == null ? 0 : Math.trunc(num(m)), s == null ? 1 : Math.trunc(num(s)));
+      if (i < 0) { if (nf !== undefined) return nf == null ? 0 : nf; throw E_NA; }
+      const out = lineOf(ret, i, across), [h, w] = dims(out);
+      return h * w === 1 && !(XKEEP && out.rng) ? zero(scal(out)) : out;
+    });
+    // beside the : it answers with the cell it found, as a reference: SUM(XLOOKUP(...):XLOOKUP(...))
+    return { n: look.n, f: (a, keep) => { XKEEP = !!keep; try { return look.f(a); } finally { XKEEP = false; } } };
+  })(),
+  // INDEX answers with a reference. The cells it gives aren't the ones written in it (the whole range it looks in is
+  // not read, only what it picks), so they are kept for the order of the next pass, like INDIRECT's and OFFSET's
   INDEX: { n: [2, 4], f: a => {
     const src = argA(a[0]);
     if (isErr(src)) return src;
     const rv = a[1].t === 'miss' ? null : argS(a[1]), cv = a.length > 2 && a[2].t !== 'miss' ? argS(a[2]) : null;
-    if (isA(rv) || isA(cv)) return mapArr([rv, cv], ([r, c]) => { try { return zero(scal(indexOf(src, r, c, a.length))); } catch (e) { if (e instanceof Err) return e; throw e; } });
-    return indexOf(src, rv, cv, a.length);
+    if (isA(rv) || isA(cv)) {
+      if (src.rng) pointsAt(src);
+      return mapArr([rv, cv], ([r, c]) => { try { return zero(scal(indexOf(src, r, c, a.length))); } catch (e) { if (e instanceof Err) return e; throw e; } });
+    }
+    const out = indexOf(src, rv, cv, a.length);
+    if (out && out.rng) pointsAt(out);
+    return out;
   } },
-  CHOOSE: { n: [2, 255], f: a => {
+  CHOOSE: { n: [2, 255], f: (a, keep) => {
     const k = argS(a[0]);
     if (isA(k)) { const opts = a.slice(1).map(x => x.t === 'miss' ? 0 : argS(x)); return mapArr([k, ...opts], ([i, ...o]) => { const j = Math.trunc(toNum(i)); return isErr(j) ? j : j >= 1 && j <= o.length ? zero(o[j - 1]) : E_VAL; }); }
     const j = Math.trunc(num(k));
     if (j < 1 || j >= a.length) return E_VAL;
-    return a[j].t === 'miss' ? 0 : ev(a[j]);
+    return a[j].t === 'miss' ? 0 : keep ? refOf(a[j]) : ev(a[j]);
   } },
   ROW: { n: [0, 1], f: a => rowCol(a, true) },
   COLUMN: { n: [0, 1], f: a => rowCol(a, false) },
@@ -2028,8 +2069,9 @@ function recalc() {
 }
 /* the references a formula reads, each through fn(sheet number, range): the ones written in it, and the ones in the
    names it uses (their parts without $ are for A1, and move to the formula's cell). The cell OFFSET starts from is
-   not read, nor the cells ROW, COLUMN, ROWS and COLUMNS ask about: =SUM(OFFSET(B9,-3,0,3,1)) in B9 is no loop */
-const ASKS = new Set(['OFFSET', 'ROW', 'COLUMN', 'ROWS', 'COLUMNS']);
+   not read, nor the range INDEX picks from (only what it picks, which pointsAt keeps), nor the cells ROW, COLUMN, ROWS
+   and COLUMNS ask about: =SUM(OFFSET(B9,-3,0,3,1)) and =SUM(B1:INDEX(B:B,ROW()-1)) in B9 are no loops, as in Excel */
+const ASKS = new Set(['OFFSET', 'INDEX', 'ROW', 'COLUMN', 'ROWS', 'COLUMNS']);
 function walkRead(n, fn) {
   if (!n) return;
   fn(n);
@@ -2066,25 +2108,29 @@ function calcPass(pass, st) {
   });
   for (const m of cols) for (const l of m.values()) l.sort((a, b) => a - b);
   const byName = new Map(sheets.map((s, i) => [s.name.toLowerCase(), i]));
-  const indeg = new Int32Array(nodes.length), out = new Array(nodes.length);
+  const indeg = new Int32Array(nodes.length), out = new Array(nodes.length), seq = new Int32Array(nodes.length).fill(-1);
+  // the formulas a range of sheet si takes its values from, each through fn(its place in nodes): the ones in it, and
+  // the ones that spill into it (areas: where each formula spilled)
+  const inRange = (si, g, areas, fn) => {
+    const fc = cols[si], hit = (r, c) => fn(at.get(si * 4e10 + KEY(r, c)));
+    if (g.c2 - g.c1 + 1 > fc.size) { for (const [c, rows] of fc) if (c >= g.c1 && c <= g.c2) rowsIn(rows, g.r1, g.r2, r => hit(r, c)); }
+    else for (let c = g.c1; c <= g.c2; c++) { const rows = fc.get(c); if (rows) rowsIn(rows, g.r1, g.r2, r => hit(r, c)); }
+    for (const [k, area] of areas) if (meets(area, g)) hit(kr(k), kc(k));
+  };
   nodes.forEach((n, i) => {
     const ast = !n.c.x && astOf(n.c.f);
     if (!ast) return;
     const seen = new Set();
-    const dep = (si, r, c) => { const j = at.get(si * 4e10 + KEY(r, c)); if (j != null && !seen.has(j)) { seen.add(j); (out[j] || (out[j] = [])).push(i); indeg[i]++; } };
-    const reads = (si, g) => {
-      const fc = cols[si];
-      if (g.c2 - g.c1 + 1 > fc.size) { for (const [c, rows] of fc) if (c >= g.c1 && c <= g.c2) rowsIn(rows, g.r1, g.r2, r => dep(si, r, c)); }
-      else for (let c = g.c1; c <= g.c2; c++) { const rows = fc.get(c); if (rows) rowsIn(rows, g.r1, g.r2, r => dep(si, r, c)); }
-      for (const [k, area] of sheets[si]._sa0) if (meets(area, g)) dep(si, kr(k), kc(k));   // it reads cells another formula spills into
-    };
+    const dep = j => { if (j != null && !seen.has(j)) { seen.add(j); (out[j] || (out[j] = [])).push(i); indeg[i]++; } };
+    const reads = (si, g) => inRange(si, g, sheets[si]._sa0, dep);
     readsOf(ast, n.si, kr(n.k), kc(n.k), byName, reads);
     const dd = sheets[n.si]._dd0.get(n.k);
     if (dd && !(st.doubt && st.doubt.has(n.c))) { n.dd = true; for (const d of dd) { const si = num.get(d.s); if (si != null) reads(si, d.g); } }
   });
+  let tick = 0;
   const run = (list, deg) => {
     const q = list.filter(i => !deg[i]);
-    for (let h = 0; h < q.length; h++) { const i = q[h]; evalCell(nodes[i]); for (const j of out[i] || []) if (--deg[j] === 0) q.push(j); }
+    for (let h = 0; h < q.length; h++) { const i = q[h]; seq[i] = tick++; evalCell(nodes[i]); for (const j of out[i] || []) if (--deg[j] === 0) q.push(j); }
     return q.length;
   };
   const done = run(nodes.map((_, i) => i), indeg);
@@ -2112,7 +2158,19 @@ function calcPass(pass, st) {
     st.doubt = null;
     return true;
   }
-  return (pass < 2 && sheets.some(s => !sameSpills(s._sa, s._sa0))) || (pass < 12 && sheets.some(s => !sameMap(s._dd, s._dd0, sameDeps)));
+  // a formula that points somewhere new took the right values if every formula there was worked out before it. One
+  // that wasn't (or the formula itself) needs another pass, which has that part of the order
+  const late = () => sheets.some((s, si) => {
+    for (const [k, dd] of s._dd) {
+      if (sameDeps(dd, s._dd0.get(k))) continue;
+      const me = seq[at.get(si * 4e10 + k)];
+      let found = false;
+      for (const d of dd) { const sj = num.get(d.s); if (sj != null) inRange(sj, d.g, sheets[sj]._sa, j => { if (j != null && seq[j] >= me) found = true; }); }
+      if (found) return true;
+    }
+    return false;
+  });
+  return (pass < 2 && sheets.some(s => !sameSpills(s._sa, s._sa0))) || (pass < 12 && late());
 }
 const sameMap = (a, b, eq) => { if (a.size !== b.size) return false; for (const [k, g] of a) if (!eq(g, b.get(k))) return false; return true; };
 const sameSpills = (a, b) => sameMap(a, b, sameG);
@@ -2444,6 +2502,7 @@ function renameName(old, to) {
     for (const [k, x] of [...s.cells]) if (x.f != null) { const f = swap(x.f, s); if (f !== x.f) setCell(s, kr(k), kc(k), { ...x, f }); }
     for (const key of RULE_KEYS) eachRuleOf(s, key, f => swap(f, s));
   }
+  eachChart((f, self) => swap(f, WB.sheets.find(s => s.name === self)));   // a chart whose range is the name
   return (WB.names || NO_NAMES).map(x => { if (x === old) return x; const f = swap(x.f, x.s ? WB.sheets.find(s => s.id === x.s) : null); return f === x.f ? x : { ...x, f }; });
 }
 
@@ -5680,7 +5739,7 @@ async function readXlsx(buf) {
               x.f = fromXl(String(f).replace(/^=/, ''));
               if (missingIn(x.f, s, known)) { x.x = true; add('fn'); }
               else if (v.shareType === 'array') { const g = parseRange(v.ref); if (g && (g.r1 !== g.r2 || g.c1 !== g.c2)) arrays.push(g); }
-              else if (tokenize(x.f).some(t => (t.t === 'ref' && t.k !== 'c') || t.t === 'name' || (t.t === 'fn' && (t.n === 'INDIRECT' || t.n === 'OFFSET')))) x.l = true;   // an older formula: a range alone in it (or what a name, INDIRECT or OFFSET gives) takes one cell
+              else if (tokenize(x.f).some(t => (t.t === 'ref' && t.k !== 'c') || t.t === 'name' || (t.t === 'op' && t.s === ':') || (t.t === 'fn' && (t.n === 'INDIRECT' || t.n === 'OFFSET')))) x.l = true;   // an older formula: a range alone in it (or what a name, INDIRECT or OFFSET gives) takes one cell
             }
             break;
           }
@@ -5749,6 +5808,10 @@ const NEW_FNS = new Set(['CONCAT', 'TEXTJOIN', 'IFS', 'SWITCH', 'MAXIFS', 'MINIF
   'QUARTILE.INC', 'CEILING.MATH', 'FLOOR.MATH', 'AGGREGATE', 'FORMULATEXT', 'TEXTBEFORE', 'TEXTAFTER', 'TEXTSPLIT', 'VSTACK', 'HSTACK', 'TAKE', 'DROP', 'CHOOSECOLS',
   'CHOOSEROWS', 'TOCOL', 'TOROW', 'WRAPROWS', 'WRAPCOLS', 'EXPAND', 'ANCHORARRAY', 'SINGLE']);
 const XLWS = new Set(['FILTER', 'SORT']);
+/* an error as a file keeps it. #SPILL! and #CALC! came with Excel 365, and an older Excel refuses a whole file that has
+   one of them as a value (measured in Excel 2016): they are written #VALUE!, and the formula gives the real one again */
+const OLD_ERRS = new Set(['#NULL!', '#DIV/0!', '#VALUE!', '#REF!', '#NAME?', '#NUM!', '#N/A']);
+const xlErr = v => ({ error: OLD_ERRS.has(v.c) ? v.c : '#VALUE!' });
 function xlFormula(f, arr) {
   const toks = tokenize(f), out = [];
   for (let i = 0; i < toks.length; i++) {
@@ -5757,11 +5820,16 @@ function xlFormula(f, arr) {
     else if (t.t === 'ref' && t.sp) out.push('_xlfn.ANCHORARRAY(' + t.s.slice(0, -1) + ')');
     else if (t.t === 'op' && t.s === '@') {
       if (!arr) continue;
-      // what @ stands before: a reference, or a function or brackets up to where they close
-      let j = i + 1;
-      while (toks[j] && toks[j].t === 'ws') j++;
-      let end = j;
-      if (toks[j] && (toks[j].t === 'fn' || toks[j].t === '(')) { let depth = 0; for (end = toks[j].t === 'fn' ? j + 1 : j; end < toks.length; end++) { if (toks[end].t === '(') depth++; else if (toks[end].t === ')' && --depth === 0) break; } }
+      // what @ stands before: a reference, or a function or brackets up to where they close, and on through any : after it
+      const skip = j => { while (toks[j] && toks[j].t === 'ws') j++; return j; };
+      const endOf = j => {
+        let end = j;
+        if (toks[j] && (toks[j].t === 'fn' || toks[j].t === '(')) { let depth = 0; for (end = toks[j].t === 'fn' ? j + 1 : j; end < toks.length; end++) { if (toks[end].t === '(') depth++; else if (toks[end].t === ')' && --depth === 0) break; } }
+        return end;
+      };
+      const j = skip(i + 1);
+      let end = endOf(j);
+      for (let k = skip(end + 1); toks[k] && toks[k].t === 'op' && toks[k].s === ':'; k = skip(end + 1)) end = endOf(skip(k + 1));
       out.push('_xlfn.SINGLE(' + xlFormula(toks.slice(j, end + 1).map(x => x.s).join(''), true) + ')');
       i = end;
     }
@@ -5847,13 +5915,14 @@ async function writeXlsx() {
     for (const [r, st] of s.rs) ws.getRow(r + 1).style = xlStyleOut(st);
     for (const k of [...s.cells.keys()].sort((a, b) => a - b)) {
       const x = s.cells.get(k), cell = ws.getCell(kr(k) + 1, kc(k) + 1);
-      if (x.f != null) {
+      if (x.f != null && !x.x && !astOf(x.f)) cell.value = '=' + x.f;   // a formula that can't be read (Claude's tool takes any text): written as text, because Excel refuses a whole file for one such formula
+      else if (x.f != null) {
         // an array answer (or math done cell by cell) is written the way Excel 365 writes it: an array formula over the cells it fills
-        const area = !x.l && !x.x && s._sa && s._sa.get(k), arr = !x.l && !x.x && !!(area || x.dx), result = isErr(x.v) ? { error: x.v.c } : x.v ?? 0;
+        const area =!x.l && !x.x && s._sa && s._sa.get(k), arr = !x.l && !x.x && !!(area || x.dx), result = isErr(x.v) ? xlErr(x.v) : x.v ?? 0;
         cell.value = arr ? { formula: xlFormula(x.f, true), result, shareType: 'array', ref: area ? rangeA1(area) : A1(kr(k), kc(k)) } : { formula: xlFormula(x.f), result };
         if (arr) dyn = true;
       }
-      else if (isErr(x.v)) cell.value = { error: x.v.c };
+      else if (isErr(x.v)) cell.value = xlErr(x.v);
       else if (x.v != null && x.v !== '') cell.value = x.v;
       cell.style = xlStyleOut(x.st);
     }
@@ -5862,7 +5931,7 @@ async function writeXlsx() {
       const x = s.cells.get(k);
       if ((x && x.v !== undefined) || o.v == null || o.v === '') continue;
       const cell = ws.getCell(kr(k) + 1, kc(k) + 1);
-      cell.value = isErr(o.v) ? { error: o.v.c } : o.v;
+      cell.value = isErr(o.v) ? xlErr(o.v) : o.v;
       if (!x) cell.style = xlStyleOut(emptyLook(s, kr(k), kc(k)));
     }
     for (const m of s.merges) ws.mergeCells(m.r1 + 1, m.c1 + 1, m.r2 + 1, m.c2 + 1);
@@ -6392,10 +6461,12 @@ function chartOut(ch) {
   else { o.ser = ch.ser.map(x => ({ ...x })); if (ch.cats) o.cats = ch.cats; }
   return o;
 }
-/* 'B2:B9' on the chart's own sheet, or after a sheet's name ('Sheet 2'!B2:B9). Whole columns stop at the last row in use */
+/* 'B2:B9' on the chart's own sheet, or after a sheet's name ('Sheet 2'!B2:B9), or a defined name that stands for cells
+   (Sales, Data!Sales): the cells its formula gives now, so a name made with OFFSET or INDEX grows with its cells and
+   the chart with it. Whole columns stop at the last row in use. name: the defined name, when the text is one */
 function chartRef(s, ref) {
   const t = String(ref || '').trim(), i = t.lastIndexOf('!');
-  let sh = s, part = t;
+  let sh = s, part = t, name = null;
   if (i > 0) {
     let nm = t.slice(0, i).trim();
     if (nm[0] === "'" && nm.endsWith("'")) nm = nm.slice(1, -1).replace(/''/g, "'");
@@ -6404,9 +6475,19 @@ function chartRef(s, ref) {
     part = t.slice(i + 1);
   }
   let g = sh && parseRange(part);
-  if (!g) return null;
+  if (!g) {
+    const k = WB && s ? tokenize(t).filter(x => x.t !== 'ws') : [];
+    name = k.length === 1 && k[0].t === 'name' ? nameOf(k[0], s) : null;
+    if (!name) return null;
+    const keep = [CTX, AX, OFF];
+    CTX = { si: WB.sheets.indexOf(s), r: 0, c: 0, dyn: false }; AX = true; OFF = null;
+    let v;
+    try { v = nameVal(k[0], true); } catch (e) { v = null; } finally { [CTX, AX, OFF] = keep; }
+    if (!v || !v.rng) return null;
+    sh = v.s; g = v.g;
+  }
   if (wholeCols(g) || wholeRows(g)) { const u = usedEnd(sh); g = { r1: g.r1, c1: g.c1, r2: Math.min(g.r2, Math.max(g.r1, u.r - 1)), c2: Math.min(g.c2, Math.max(g.c1, u.c - 1)) }; }
-  return { s: sh, g };
+  return name ? { s: sh, g, name } : { s: sh, g };
 }
 const cellText = (sh, r, c) => { const x = cellSp(sh, r, c); return x ? view(x).t : ''; };
 const cellNum = (sh, r, c) => { const v = valAt(sh, r, c); return typeof v === 'number' ? v : 0; };
@@ -6599,7 +6680,7 @@ function openChartDialog(id) {
     err.hidden = true;
     const t = refIn.value.trim();
     if (t) {
-      if (!chartRef(WS, t)) { err.textContent = T('הטווח "{0}" לא נמצא. כותבים אותו כמו A1:C7, ואפשר גם עם שם של גיליון: \'גיליון2\'!A1:C7', t); err.hidden = false; return false; }
+      if (!chartRef(WS, t)) { err.textContent = T('הטווח "{0}" לא נמצא. כותבים אותו כמו A1:C7, עם שם של גיליון (\'גיליון2\'!A1:C7), או שם מוגדר של טווח', t); err.hidden = false; return false; }
       st.src = { ref: t, by: by.value, hr: hr.checked ? 1 : 0, hc: hc.checked ? 1 : 0 };
       delete st.ser; delete st.cats;
     } else if (!ch0.ser) { err.textContent = T('כותבים איפה המספרים של הגרף, למשל A1:C7'); err.hidden = false; return false; }
@@ -6709,7 +6790,7 @@ function chartFromXml(doc) {
   if (!ty) return null;
   let ck = XK[ty.localName];
   if (ck === 'bar') ck = xat(xkid(ty, 'barDir'), 'val') === 'bar' ? 'bar' : 'col';
-  const fOf = e => { const f = e && xdesc(e, 'f')[0]; return f ? f.textContent.trim() : null; };
+  const fOf = e => { const f = e && xdesc(e, 'f')[0]; return f ? f.textContent.trim().replace(/^\[0\]!/, '') : null; };   // [0]!Sales: a name of the workbook
   const ser = [];
   for (const s of xkids(ty, 'ser')) {
     const v = fOf(xkid(s, 'val'));
@@ -6757,6 +6838,7 @@ function toSrc(s, ch) {
   if (vs.some(v => v.s !== sh)) return null;
   const cat = ch.cats ? chartRef(s, ch.cats) : null, names = ch.ser.map(x => x.nr ? chartRef(s, x.nr) : null);
   if (ch.cats && (!cat || cat.s !== sh)) return null;
+  if ([...vs, cat, ...names].some(x => x && x.name)) return null;   // a series that is a defined name stays one, and follows it
   const one = (x, r, c) => !!x && x.s === sh && x.g.r1 === r && x.g.r2 === r && x.g.c1 === c && x.g.c2 === c;
   const pre = sh === s ? '' : "'" + sh.name.replace(/'/g, "''") + "'!";
   if (vs.every((v, i) => v.g.c1 === v.g.c2 && v.g.c1 === g0.c1 + i && v.g.r1 === g0.r1 && v.g.r2 === g0.r2)) {
@@ -6778,7 +6860,9 @@ function xlSeries(s, ch) {
   const q = sh => "'" + sh.name.replace(/'/g, "''") + "'!";
   const abs = (sh, g) => q(sh) + (g.r1 === g.r2 && g.c1 === g.c2 ? '$' + colName(g.c1) + '$' + (g.r1 + 1) : '$' + colName(g.c1) + '$' + (g.r1 + 1) + ':$' + colName(g.c2) + '$' + (g.r2 + 1));
   const vals = (sh, g, num) => { const out = []; for (let r = g.r1; r <= g.r2 && out.length < 4000; r++) for (let c = g.c1; c <= g.c2 && out.length < 4000; c++) out.push(num ? cellNum(sh, r, c) : cellText(sh, r, c)); return out; };
-  const one = ref => { const R = chartRef(s, ref); return R && { f: abs(R.s, R.g), sh: R.s, g: R.g }; };
+  // a series that is a defined name is written as the name, the way Excel's files do: [0]!Sales for the workbook's, 'Sheet'!Sales for a sheet's own
+  const named = nm => { const own = nm.s && WB.sheets.find(x => x.id === nm.s); return (own ? q(own) : '[0]!') + nm.n; };
+  const one = ref => { const R = chartRef(s, ref); return R && { f: R.name ? named(R.name) : abs(R.s, R.g), sh: R.s, g: R.g }; };
   const out = { cats: null, ser: [] };
   if (ch.src) {
     const R = chartRef(s, ch.src.ref); if (!R) return null;
@@ -8382,7 +8466,7 @@ function dvSource(s, rule, r, c) {
   if (ast.t === 'str') return ast.v;
   const a = cfAnchor(rule), keep = [CTX, AX, OFF];
   CTX = { si: WB.sheets.indexOf(s), r, c, dyn: false }; AX = true; OFF = { dr: r - a.r, dc: c - a.c };
-  try { return ast.t === 'ref' ? refVal(ast, true) : ast.t === 'name' ? nameVal(ast, true) : ev(ast); } catch (e) { return e instanceof Err ? e : E_VAL; } finally { [CTX, AX, OFF] = keep; }
+  try { return refOf(ast); } catch (e) { return e instanceof Err ? e : E_VAL; } finally { [CTX, AX, OFF] = keep; }
 }
 /* a list rule's items for cell (r, c), each with its value, the text the list shows for it, and its number format.
    lit: the list is written out in the rule. null: the source can't be worked out here (it uses a function or a name

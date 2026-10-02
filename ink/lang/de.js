@@ -1818,7 +1818,6 @@ window.INK_I18N = {
 "גרף מהתאים האלה": "Diagramm aus diesen Zellen",
 "גרפים": "Diagramme",
 "הגרף הזה הגיע מקובץ, והנתונים שלו באים מכמה מקומות. אפשר לכתוב כאן טווח אחד במקומם.": "Dieses Diagramm stammt aus einer Datei, und seine Zahlen kommen aus mehreren Stellen. Du kannst hier stattdessen einen Bereich angeben.",
-"הטווח \"{0}\" לא נמצא. כותבים אותו כמו A1:C7, ואפשר גם עם שם של גיליון: 'גיליון2'!A1:C7": "Der Bereich „{0}“ wurde nicht gefunden. Schreib ihn wie A1:C7 oder mit dem Namen eines Blatts: 'Tabelle2'!A1:C7",
 "טווח הנתונים": "Datenbereich",
 "כדי ליצור גרף, בוחרים קודם את התאים עם המספרים (ואפשר גם את הכותרות שלהם).": "Für ein Diagramm wählst du zuerst die Zellen mit den Zahlen aus (gern auch ihre Überschriften).",
 "כותבים איפה המספרים של הגרף, למשל A1:C7": "Gib an, wo die Zahlen des Diagramms stehen, zum Beispiel A1:C7",
@@ -2381,7 +2380,8 @@ window.INK_I18N = {
 "במקום הזה אין כותרות. כותרת היא תא עם טקסט, ולידו התאים שיקבלו את השם.": "An dieser Stelle gibt es keine Überschriften. Eine Überschrift ist eine Zelle mit Text, und daneben stehen die Zellen, die den Namen bekommen.",
 "יצירת השמות": "Namen erstellen",
 "בוחרים קודם את הכותרות יחד עם התאים שלידן, ואז יוצרים מהן שמות": "Markier zuerst die Überschriften zusammen mit den Zellen daneben, dann kannst du daraus Namen erstellen",
-"אלה יותר מדי שמות: בחוברת עבודה יש מקום ל-{0} שמות": "Das sind zu viele Namen: Eine Arbeitsmappe hat Platz für {0} Namen"
+"אלה יותר מדי שמות: בחוברת עבודה יש מקום ל-{0} שמות": "Das sind zu viele Namen: Eine Arbeitsmappe hat Platz für {0} Namen",
+"הטווח \"{0}\" לא נמצא. כותבים אותו כמו A1:C7, עם שם של גיליון ('גיליון2'!A1:C7), או שם מוגדר של טווח": "Der Bereich „{0}“ wurde nicht gefunden. Schreib ihn wie A1:C7, mit dem Namen eines Blatts ('Tabelle2'!A1:C7) oder als definierten Namen für einen Bereich"
 },
 "plurals": {
 "{n} מילים": {
