@@ -2487,7 +2487,25 @@ window.INK_I18N = {
 "תקופה_ראשונה": "première_période",
 "שיטה": "méthode",
 "בודק אם זו הפניה לתאים": "Vérifie si c'est une référence à des cellules",
-"מספר האזורים שבהפניה": "Le nombre de zones d'une référence"
+"מספר האזורים שבהפניה": "Le nombre de zones d'une référence",
+"נותן שמות לערכים בתוך הנוסחה, כדי לחשב כל אחד פעם אחת ולקרוא לו בשמו": "Donne des noms à des valeurs dans la formule, pour calculer chacune une fois et l'appeler par son nom",
+"פונקציה משלך: שמות של פרמטרים ואחריהם החישוב. קוראים לה עם סוגריים, או נותנים לה שם מוגדר": "Une fonction à toi : des noms de paramètres, puis le calcul. On l'appelle avec des parenthèses, ou on lui donne un nom défini",
+"מפעיל פונקציה על כל ערך במערך, ומחזיר מערך של התוצאות": "Applique une fonction à chaque valeur d'un tableau et renvoie un tableau des résultats",
+"מצמצם מערך לערך אחד: הפונקציה מקבלת את מה שנצבר ואת הערך הבא": "Réduit un tableau à une seule valeur : la fonction reçoit ce qui est accumulé et la valeur suivante",
+"כמו REDUCE, אבל מחזיר את כל שלבי הביניים": "Comme REDUCE, mais renvoie toutes les étapes intermédiaires",
+"מפעיל פונקציה על כל שורה, ומחזיר ערך לכל שורה": "Applique une fonction à chaque ligne et renvoie une valeur par ligne",
+"מפעיל פונקציה על כל עמודה, ומחזיר ערך לכל עמודה": "Applique une fonction à chaque colonne et renvoie une valeur par colonne",
+"בונה מערך בגודל שבוחרים: הפונקציה מקבלת את מספר השורה והעמודה": "Construit un tableau de la taille choisie : la fonction reçoit le numéro de ligne et de colonne",
+"בודק אם פרמטר של LAMBDA הושמט": "Vérifie si un paramètre d'une LAMBDA a été omis",
+"שם@arg": "nom",
+"ערך_השם": "valeur_nom",
+"חישוב_או_שם": "calcul_ou_nom",
+"פרמטר_או_חישוב": "paramètre_ou_calcul",
+"פונקציה@arg": "lambda",
+"פונקציה_או_מערך": "lambda_ou_tableau",
+"ערך_התחלתי": "valeur_initiale",
+"פרמטר": "argument",
+"פונקציה ({0})": "Fonction ({0})"
 },
 "plurals": {
 "{n} מילים": {

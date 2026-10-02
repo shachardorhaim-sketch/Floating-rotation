@@ -157,7 +157,7 @@ function normBook(j) {
   book.names = normNames(o.names, book.sheets);
   // a formula kept as the file had it, because it used what wasn't here then (INDIRECT, a name): worked out from now on,
   // the way a plain formula of an Excel file is
-  for (const s of book.sheets) for (const c of s.cells.values()) if (c.x && !missingIn(c.f, s, book)) { delete c.x; c.l = true; }
+  for (const s of book.sheets) for (const c of s.cells.values()) if (c.x && !missingIn(c.f, s, book)) { delete c.x; if (olderWay(c.f)) c.l = true; }
   return book;
 }
 function parseBook(body) { let j = null; try { j = JSON.parse(body); } catch {} return normBook(j); }
@@ -555,9 +555,10 @@ const RX = {
   cols: /(\$?)([A-Za-z]{1,3}):(\$?)([A-Za-z]{1,3})(?![\p{L}\p{N}_(.!$])/uy,
   rows: /(\$?)([1-9]\d{0,6}):(\$?)([1-9]\d{0,6})(?![\p{L}\p{N}_(.!$])/uy,
   num: /(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/y,
-  fn: /(?:_xl(?:fn|ws)\.)*[A-Za-z_][A-Za-z0-9_.]*(?=\s*\()/y,
+  fn: /(?:_xl(?:fn|ws)\.)*[\p{L}_][\p{L}\p{N}_.]*(?=\s*\()/uy,
   name: /[\p{L}_\\][\p{L}\p{N}_.?\\]*/uy,
   op: /<>|<=|>=|[-+*/^&=<>%@:]/y,
+  opt: /\[\s*([\p{L}_\\][\p{L}\p{N}_.?\\]*)\s*\]/uy,
   open: /\s*\(/y,
 };
 const execAt = (re, s, i) => { re.lastIndex = i; return re.exec(s); };
@@ -610,6 +611,7 @@ function tokenize(src) {
     if (ch === '{' || ch === '}') { brace = Math.max(0, brace + (ch === '{' ? 1 : -1)); toks.push({ t: ch, s: ch, p: i }); i++; continue; }
     if (ch === ';') { toks.push({ t: brace ? ';' : ',', s: ch, p: i }); i++; continue; }
     if ('(),'.includes(ch)) { toks.push({ t: ch, s: ch, p: i }); i++; continue; }
+    if (ch === '[' && (m = execAt(RX.opt, src, i))) { toks.push({ t: 'opt', s: m[0], n: m[1], p: i }); i += m[0].length; continue; }   // [name]: a LAMBDA's parameter that may be left out
     toks.push({ t: 'bad', s: ch, p: i }); bad = true; i++;
   }
   toks.bad = bad;
@@ -640,6 +642,22 @@ function parseFormula(src) {
     if (t.t === 'err') return ERR[t.v] || E_REF;
     throw new Error('arr');
   }
+  // the values in a function's brackets, after its ( was taken
+  function argList() {
+    const args = [];
+    if (peek() && peek().t === ')') { take(); return args; }
+    for (;;) {
+      const p = peek();
+      args.push(p && (p.t === ',' || p.t === ')') ? { t: 'miss' } : expr(0));
+      const x = take();
+      if (!x) throw new Error('end');
+      if (x.t === ')') break;
+      if (x.t !== ',') throw new Error(',');
+    }
+    return args;
+  }
+  // what a function or brackets gave may be called in turn, when it is a LAMBDA: LAMBDA(x,x+1)(5)
+  const called = n => { while (peek() && peek().t === '(') { take(); n = { t: 'call', f: n, args: argList() }; } return n; };
   function prim() {
     const t = take();
     if (!t) throw new Error('end');
@@ -650,20 +668,8 @@ function parseFormula(src) {
       case 'err': return { t: 'err', v: ERR[t.v] || E_REF };
       case 'ref': return { t: 'ref', sheet: t.sheet, k: t.k, g: G4(t.r1, t.c1, t.r2, t.c2), r1: t.r1, c1: t.c1, r2: t.r2, c2: t.c2, ab: t.a, sp: t.sp };
       case 'name': return { t: 'name', n: t.n, sheet: t.sheet };
-      case 'fn': {
-        expect('(');
-        const args = [];
-        if (peek() && peek().t === ')') { take(); return { t: 'fn', n: t.n, args }; }
-        for (;;) {
-          const p = peek();
-          args.push(p && (p.t === ',' || p.t === ')') ? { t: 'miss' } : expr(0));
-          const x = take();
-          if (!x) throw new Error('end');
-          if (x.t === ')') break;
-          if (x.t !== ',') throw new Error(',');
-        }
-        return { t: 'fn', n: t.n, args };
-      }
+      case 'fn': expect('('); return called({ t: 'fn', n: t.n, args: argList() });
+      case 'opt': return { t: 'opt', n: t.n };
       case '{': {
         const rows = [[]];
         for (;;) {
@@ -678,7 +684,7 @@ function parseFormula(src) {
         if (rows.some(r => r.length !== w)) throw new Error('arr');
         return { t: 'arr', v: { arr: true, h: rows.length, w, d: rows.flat() } };
       }
-      case '(': { const e = expr(0); expect(')'); return e; }
+      case '(': { const e = expr(0); expect(')'); return called(e); }
       case 'op':
         if (t.s === '-' || t.s === '+') return { t: 'neg', neg: t.s === '-', a: expr(6) };
         if (t.s === '@') return { t: 'at', a: expr(7) };
@@ -720,6 +726,7 @@ function walk(n, fn) {
   if (!n) return;
   fn(n);
   if (n.t === 'fn') for (const x of n.args) walk(x, fn);
+  else if (n.t === 'call') { walk(n.f, fn); for (const x of n.args) walk(x, fn); }
   else if (n.a) { walk(n.a, fn); if (n.b) walk(n.b, fn); }
 }
 
@@ -756,7 +763,7 @@ function toNum(v) {
   const p = String(v).trim() ? parseInput(String(v).trim()) : null;
   return p && !p.f && typeof p.v === 'number' ? p.v : E_VAL;
 }
-function toStr(v) { return typeof v === 'string' ? v : v == null ? '' : typeof v === 'boolean' ? (v ? 'TRUE' : 'FALSE') : isErr(v) ? v.c : genText(v, 15); }
+function toStr(v) { return typeof v === 'string' ? v : v == null || v.lam ? '' : typeof v === 'boolean' ? (v ? 'TRUE' : 'FALSE') : isErr(v) ? v.c : genText(v, 15); }
 function toBool(v) {
   if (typeof v === 'boolean') return v;
   if (typeof v === 'number') return v !== 0;
@@ -790,6 +797,7 @@ function compare(op, a, b) {
 function binop(op, a, b) {
   if (isErr(a)) return a;
   if (isErr(b)) return b;
+  if (isLam(a) || isLam(b)) return E_VAL;
   if (op === '&') return toStr(a) + toStr(b);
   if (BIN[op] === 1) return compare(op, a, b);
   const x = toNum(a); if (isErr(x)) return x;
@@ -810,14 +818,21 @@ function unop(n, x) {
 }
 function ev(n) {
   switch (n.t) {
-    case 'num': case 'str': case 'bool': case 'err': case 'arr': return n.v;
+    case 'num': case 'str': case 'bool': case 'err': case 'arr': case 'val': return n.v;
     case 'miss': return null;
+    case 'opt': return E_VAL;
+    case 'call': {
+      const keep = KEEP;
+      KEEP = false;
+      const f = ev(n.f);
+      return isLam(f) ? applyLam(f, n.args.map(argL), keep) : isErr(f) ? f : E_VAL;
+    }
     case 'name': return nameVal(n);
     case 'ref': return refVal(n);
     case 'fn': {
       const f = FUNCS[n.n], keep = KEEP;
       KEEP = false;
-      if (!f) return E_NAME;
+      if (!f) return callNamed(n, keep);
       const [lo, hi] = f.n;
       if (n.args.length < lo || n.args.length > hi) return E_VAL;
       if (f.dyn) CTX.dyn = true;
@@ -834,7 +849,7 @@ function ev(n) {
       return rv;
     }
     case 'at': return scal(ev(n.a));
-    case 'neg': case 'pct': { let v = one(ev(n.a)); if (!AX) v = scalR(v); return isA(v) ? mapArr([v], x => unop(n, x[0])) : unop(n, v); }
+    case 'neg': case 'pct': { let v = one(ev(n.a)); if (!AX) v = scalR(v); return isA(v) ? mapArr([v], x => unop(n, x[0])) : isLam(v) ? E_VAL : unop(n, v); }
     case 'bin': {
       let a = one(ev(n.a)), b = one(ev(n.b));
       if (!AX) { a = scalR(a); b = scalR(b); }
@@ -870,6 +885,7 @@ const one = v => v && v.rng && v.g.r1 === v.g.r2 && v.g.c1 === v.g.c2 ? valAt(v.
    the cell that uses the name, the way Excel keeps relative names. A name that uses itself is #NAME?, as in Excel */
 const NAMING = [];
 function nameVal(n, keep) {
+  if (ENV && n.sheet == null) { const b = envGet(n.n); if (b !== undefined) return b === OMITTED ? null : keep ? b : one(b); }   // a name LET or a LAMBDA gave
   const nm = nameOf(n, WB.sheets[CTX.si]), ast = nm ? astOf(nm.f) : null;
   if (!ast || NAMING.includes(nm)) return E_NAME;
   const was = [OFF, AX];
@@ -889,8 +905,75 @@ let KEEP = false, XKEEP = false;
 function refOf(n) {
   if (n.t === 'ref') return refVal(n, true);
   if (n.t === 'name') return nameVal(n, true);
-  KEEP = n.t === 'fn';
+  KEEP = n.t === 'fn' || n.t === 'call';
   try { return ev(n); } finally { KEEP = false; }
+}
+/* LET and LAMBDA. The names they give stand in ENV with their values, the innermost first. A value stays what was
+   given: a reference stays a reference (ROW(x) works on it), an array an array. A LAMBDA is a value too:
+   { lam, params, body, env: the names around it when it was made, off: where its relative references stand }; it is
+   worked out when it is called — LAMBDA(x,x+1)(5), a name LET gave it, or a defined name that holds it, which may
+   call itself. A cell that ends up holding one shows #CALC!, as in Excel */
+let ENV = null, LAM_DEPTH = 0, LAM_N = 0;
+const tooDeep = e => e instanceof RangeError || (!!e && e.name === 'InternalError');   // the browser's stack ran out (Firefox names it InternalError)
+const OMITTED = { omit: true };   // a parameter in [ ] that was left out; ISOMITTED sees it, anything else reads an empty value
+const isLam = v => !!v && v.lam === true;
+function envGet(name) { const k = name.toLowerCase(); for (let e = ENV; e; e = e.up) { const v = e.names.get(k); if (v !== undefined) return v; } return undefined; }
+/* a value handed to a LAMBDA, as it is */
+const argL = n => n.t === 'miss' ? OMITTED : argA(n);
+function applyLam(lam, vals, keep) {
+  if (lam.native) { const f = FUNCS[lam.native]; try { return vals.length < f.n[0] || vals.length > f.n[1] ? E_VAL : f.f(vals.map(v => ({ t: 'val', v: v === OMITTED ? null : v }))); } catch (e) { if (e instanceof Err) return e; throw e; } }
+  const ps = lam.params, names = new Map();
+  if (vals.length > ps.length) return E_VAL;
+  for (let i = 0; i < ps.length; i++) {
+    let v = i < vals.length ? vals[i] : OMITTED;
+    if (v === OMITTED && !ps[i].opt) { if (i >= vals.length) return E_VAL; v = null; }
+    names.set(ps[i].k, v);
+  }
+  // A LAMBDA that calls itself without end, or far too many times: #NUM!, as in Excel. Once that happens, every call
+  // still waiting inside the same outermost call ends at once (two calls on each level would otherwise never finish).
+  // The browser's own stack may end before the 1024th level; that is the same #NUM!
+  const e0 = ENV, a0 = AX, o0 = OFF, d0 = LAM_DEPTH;
+  if (!d0) LAM_N = 0;
+  if (d0 >= 1024 || ++LAM_N > 3e6) { LAM_N = Infinity; return E_NUM; }
+  ENV = { names, up: lam.env }; AX = true; OFF = lam.off; LAM_DEPTH = d0 + 1;
+  try { return keep ? refOf(lam.body) : ev(lam.body); }
+  catch (e) { if (e instanceof Err) return e; if (!d0 && tooDeep(e)) return E_NUM; throw e; }
+  finally { ENV = e0; AX = a0; OFF = o0; LAM_DEPTH = d0; }
+}
+/* a name used as a function, F(3): one that LET or a LAMBDA's parameters gave, or a defined name, when it holds a LAMBDA */
+function callNamed(n, keep) {
+  let f = ENV ? envGet(n.n) : undefined;
+  if (f === undefined) { const nm = nameOf({ n: n.n, sheet: null }, WB.sheets[CTX.si]); if (!nm) return E_NAME; f = nameVal({ t: 'name', n: nm.n, sheet: null }, true); }
+  return isLam(f) ? applyLam(f, n.args.map(argL), keep) : isErr(f) ? f : E_VAL;
+}
+/* the LAMBDA an argument holds (MAP's, REDUCE's...): one written there, a name for one, or the bare name of a function
+   (BYROW(A1:C3,SUM)) */
+function lamOf(n) {
+  if (n.t === 'name' && n.sheet == null && !(ENV && envGet(n.n) !== undefined) && FUNCS[n.n.toUpperCase()] && !nameOf(n, WB.sheets[CTX.si])) return { lam: true, native: n.n.toUpperCase() };
+  const f = ev(n);
+  if (isErr(f)) throw f;
+  if (!isLam(f)) throw E_VAL;
+  return f;
+}
+/* what a LAMBDA gave, as one cell's value: a reference to one cell is its value; more than one value (or a LAMBDA) can't
+   stand in one place of an array */
+function oneV(v) {
+  v = one(v);
+  if (isLam(v)) return E_CALC;
+  if (isA(v)) { const A = toArr(v); return isErr(A) ? A : A.h * A.w === 1 ? zero(A.d[0]) : E_CALC; }
+  return zero(v);
+}
+/* the places of an array or a range as a LAMBDA takes them one by one: a range's cells as references (ROW(x) works),
+   by rows. A whole column ends at the last row in use */
+function placesIn(v) {
+  if (v && v.rng) {
+    const g = v.g, big = (g.r2 - g.r1 + 1) * (g.c2 - g.c1 + 1) > 1e5, r2 = big ? Math.min(g.r2, Math.max(g.r1, LIMR - 1)) : g.r2, c2 = big ? Math.min(g.c2, Math.max(g.c1, LIMC - 1)) : g.c2;
+    const h = r2 - g.r1 + 1, w = c2 - g.c1 + 1;
+    if (h * w > 1e6) throw E_NUM;
+    return { h, w, at: (i, j) => i < h && j < w ? { rng: true, s: v.s, g: { r1: g.r1 + i, c1: g.c1 + j, r2: g.r1 + i, c2: g.c1 + j } } : MISS, row: i => ({ rng: true, s: v.s, g: { r1: g.r1 + i, c1: g.c1, r2: g.r1 + i, c2 } }), col: j => ({ rng: true, s: v.s, g: { r1: g.r1, c1: g.c1 + j, r2, c2: g.c1 + j } }) };
+  }
+  const A = arrOf(v);
+  return { h: A.h, w: A.w, at: (i, j) => elt(A, i, j), row: i => lineOf(A, i, false), col: j => lineOf(A, j, true) };
 }
 /* INDIRECT, OFFSET, INDEX and the : between two of them point at cells their formula doesn't name. While a cell's
    formula is worked out, each range they gave is kept (DD), so the next pass works out those cells first (see recalc) */
@@ -1031,7 +1114,7 @@ function call(fn, v) {
   catch (e) { if (e instanceof Err) return e; throw e; }
 }
 const num = v => { const x = toNum(v); if (isErr(x)) throw x; return x; };
-const str = v => { if (isErr(v)) throw v; return toStr(v); };
+const str = v => { if (isErr(v)) throw v; if (v && v.lam) throw E_VAL; return toStr(v); };
 const bool = v => { const x = toBool(v); if (isErr(x)) throw x; return x; };
 const int = v => Math.trunc(num(v));
 const opt = (v, d) => v === undefined ? d : v;
@@ -1043,7 +1126,7 @@ function argA(n) {
   if (n.t === 'name') return nameVal(n, true);
   const k = AX;
   AX = true;
-  KEEP = n.t === 'fn' && (n.n === 'IF' || n.n === 'CHOOSE' || n.n === 'XLOOKUP');   // the cell they pick stays a reference: ROW(IF(TRUE,A3)) is 3, as in Excel
+  KEEP = n.t === 'call' || (n.t === 'fn' && (n.n === 'IF' || n.n === 'CHOOSE' || n.n === 'XLOOKUP' || n.n === 'LET' || !FUNCS[n.n]));   // the cell they pick stays a reference: ROW(IF(TRUE,A3)) is 3, as in Excel
   try { return ev(n); } finally { AX = k; KEEP = false; }
 }
 /* a function of single values. kinds tells how each argument is taken (the last goes on for the rest, or a function of
@@ -1759,6 +1842,60 @@ const FUNCS = {
     if (!pick) return false;
     return pick.t === 'miss' ? 0 : keep ? refOf(pick) : ev(pick);
   } },
+  // names for values inside one formula, and functions of one's own
+  LET: { n: [3, 253], f: (a, keep) => {
+    if (a.length % 2 === 0) return E_VAL;
+    const was = ENV, names = new Map();
+    ENV = { names, up: was };
+    try {
+      for (let i = 0; i + 1 < a.length; i += 2) {
+        if (a[i].t !== 'name' || a[i].sheet != null) return E_VAL;
+        names.set(a[i].n.toLowerCase(), a[i + 1].t === 'miss' ? null : argA(a[i + 1]));   // each value may use the names before it
+      }
+      const last = a[a.length - 1];
+      return keep ? refOf(last) : ev(last);
+    } finally { ENV = was; }
+  } },
+  LAMBDA: { n: [1, 254], f: a => {
+    const params = [], seen = new Set();
+    for (const x of a.slice(0, -1)) {
+      if (!((x.t === 'name' && x.sheet == null) || x.t === 'opt')) return E_VAL;
+      const k = x.n.toLowerCase();
+      if (seen.has(k)) return E_VAL;
+      seen.add(k); params.push({ k, opt: x.t === 'opt', s: x.n });
+    }
+    return { lam: true, params, body: a[a.length - 1], env: ENV, off: OFF };
+  } },
+  ISOMITTED: { n: [1, 1], f: a => a[0].t === 'name' && a[0].sheet == null && !!ENV && envGet(a[0].n) === OMITTED },
+  MAP: { n: [2, 254], dyn: true, f: a => {
+    const f = lamOf(a[a.length - 1]), src = a.slice(0, -1).map(x => placesIn(argA(x)));
+    const h = Math.max(...src.map(p => p.h)), w = Math.max(...src.map(p => p.w)), d = new Array(h * w);
+    if (h * w > 1e6) return E_NUM;
+    for (let i = 0; i < h; i++) for (let j = 0; j < w; j++) { const vals = src.map(p => p.at(i, j)); d[i * w + j] = vals.includes(MISS) ? E_NA : oneV(applyLam(f, vals)); }
+    return mkArr(h, w, d);
+  } },
+  REDUCE: { n: [3, 3], f: a => {
+    const f = lamOf(a[2]), p = placesIn(argA(a[1])), n = p.h * p.w;
+    let acc, k = 0;
+    if (a[0].t === 'miss') { if (!n) return E_CALC; acc = p.at(0, 0); k = 1; } else acc = argA(a[0]);   // with no first value, the array's first one starts
+    for (; k < n; k++) acc = applyLam(f, [acc, p.at(Math.floor(k / p.w), k % p.w)]);
+    return acc;
+  } },
+  SCAN: { n: [3, 3], dyn: true, f: a => {
+    const f = lamOf(a[2]), p = placesIn(argA(a[1])), n = p.h * p.w, d = new Array(n);
+    let acc, k = 0;
+    if (a[0].t === 'miss') { if (!n) return E_CALC; acc = p.at(0, 0); d[0] = oneV(acc); k = 1; } else acc = argA(a[0]);
+    for (; k < n; k++) { acc = applyLam(f, [acc, p.at(Math.floor(k / p.w), k % p.w)]); d[k] = oneV(acc); }
+    return mkArr(p.h, p.w, d);
+  } },
+  BYROW: { n: [2, 2], dyn: true, f: a => { const f = lamOf(a[1]), p = placesIn(argA(a[0])); return mkArr(p.h, 1, Array.from({ length: p.h }, (_, i) => oneV(applyLam(f, [p.row(i)])))); } },
+  BYCOL: { n: [2, 2], dyn: true, f: a => { const f = lamOf(a[1]), p = placesIn(argA(a[0])); return mkArr(1, p.w, Array.from({ length: p.w }, (_, j) => oneV(applyLam(f, [p.col(j)])))); } },
+  MAKEARRAY: { n: [3, 3], dyn: true, f: a => {
+    const h = Math.trunc(num(argS(a[0]))), w = Math.trunc(num(argS(a[1]))), f = lamOf(a[2]);
+    if (h < 1 || w < 1) return E_VAL;
+    if (h * w > 1e6) return E_NUM;
+    return mkArr(h, w, Array.from({ length: h * w }, (_, k) => oneV(applyLam(f, [Math.floor(k / w) + 1, k % w + 1]))));
+  } },
   IFS: fx(2, 254, 'v', (...v) => { if (v.length % 2) throw E_VAL; for (let i = 0; i < v.length; i += 2) if (bool(v[i])) return zero(v[i + 1]); throw E_NA; }),
   IFERROR: { n: [2, 2], f: a => ifErr(a, isErr) },
   IFNA: { n: [2, 2], f: a => ifErr(a, x => x === E_NA) },
@@ -2274,7 +2411,7 @@ const FUNCS = {
   ISFORMULA: fx(1, 1, 'a', r => { if (!r || !r.rng) throw E_VAL; const x = r.s.cells.get(KEY(r.g.r1, r.g.c1)); return !!(x && x.f != null); }),
   NA: { n: [0, 0], f: () => E_NA },
   'ERROR.TYPE': fx(1, 1, 'v', v => { if (!isErr(v)) throw E_NA; return { '#NULL!': 1, '#DIV/0!': 2, '#VALUE!': 3, '#REF!': 4, '#NAME?': 5, '#NUM!': 6, '#N/A': 7, '#SPILL!': 9, '#CALC!': 14 }[v.c]; }),
-  TYPE: { n: [1, 1], f: a => { const v = argA(a[0]); if (isA(v)) { const [h, w] = dims(v); if (h * w > 1) return 64; } const x = isA(v) ? scal(v) : v; return typeof x === 'number' || x == null ? 1 : typeof x === 'string' ? 2 : typeof x === 'boolean' ? 4 : 16; } },
+  TYPE: { n: [1, 1], f: a => { const v = argA(a[0]); if (isLam(v)) return 128; if (isA(v)) { const [h, w] = dims(v); if (h * w > 1) return 64; } const x = isA(v) ? scal(v) : v; return typeof x === 'number' || x == null ? 1 : typeof x === 'string' ? 2 : typeof x === 'boolean' ? 4 : 16; } },
   // what newer Excel writes for @ and # inside its files
   SINGLE: { n: [1, 1], f: a => scal(ev(a[0])) },
   ANCHORARRAY: { n: [1, 1], f: a => a[0].t === 'ref' ? refVal({ ...a[0], sp: true }) : E_REF },
@@ -2379,6 +2516,8 @@ const ARGN = {
   pr: N_('מחיר'), redemption: N_('ערך_פדיון'), basis: N_('בסיס_ימים'), investment: N_('השקעה'), issue: N_('הנפקה'), yld: N_('תשואה'), first_interest: N_('ריבית_ראשונה'),
   par: N_('ערך_נקוב'), frequency: N_('תשלומים_בשנה'), calc_method: N_('שיטת_חישוב'), coupon: N_('קופון'), first_coupon: N_('קופון_ראשון'),
   last_interest: N_('ריבית_אחרונה'), date_purchased: N_('תאריך_רכישה'), first_period: N_('תקופה_ראשונה'), method: N_('שיטה'),
+  name: N_('שם@arg'), name_value: N_('ערך_השם'), calculation_or_name: N_('חישוב_או_שם'), parameter_or_calculation: N_('פרמטר_או_חישוב'), lambda: N_('פונקציה@arg'),
+  lambda_or_array: N_('פונקציה_או_מערך'), initial_value: N_('ערך_התחלתי'), argument: N_('פרמטר'),
 };
 const FN_INFO = {
   // math
@@ -2463,6 +2602,15 @@ const FN_INFO = {
   'QUARTILE.INC': ['stat', N_('הרבעון (0 עד 4) של הרשימה'), 'array, quart', 'QUARTILE.INC(B2:B10,1)'],
   // logic
   IF: ['logic', N_('בודק תנאי: ערך אחד אם הוא נכון, ואחר אם לא'), 'logical_test, value_if_true, [value_if_false]', 'IF(B2>=55,"✓","✗")'],
+  LET: ['logic', N_('נותן שמות לערכים בתוך הנוסחה, כדי לחשב כל אחד פעם אחת ולקרוא לו בשמו'), 'name1, name_value1, calculation_or_name2, [name_value2], ...', 'LET(x,B2*2,x+x)'],
+  LAMBDA: ['logic', N_('פונקציה משלך: שמות של פרמטרים ואחריהם החישוב. קוראים לה עם סוגריים, או נותנים לה שם מוגדר'), 'parameter_or_calculation1, [parameter_or_calculation2], ...', 'LAMBDA(x,x*2)(5)'],
+  MAP: ['logic', N_('מפעיל פונקציה על כל ערך במערך, ומחזיר מערך של התוצאות'), 'array1, lambda_or_array2, [lambda_or_array3], ...', 'MAP(A2:A9,LAMBDA(x,x*2))'],
+  REDUCE: ['logic', N_('מצמצם מערך לערך אחד: הפונקציה מקבלת את מה שנצבר ואת הערך הבא'), 'initial_value, array, lambda', 'REDUCE(0,A2:A9,LAMBDA(a,b,a+b))'],
+  SCAN: ['logic', N_('כמו REDUCE, אבל מחזיר את כל שלבי הביניים'), 'initial_value, array, lambda', 'SCAN(0,A2:A9,LAMBDA(a,b,a+b))'],
+  BYROW: ['logic', N_('מפעיל פונקציה על כל שורה, ומחזיר ערך לכל שורה'), 'array, lambda', 'BYROW(A2:C9,LAMBDA(r,SUM(r)))'],
+  BYCOL: ['logic', N_('מפעיל פונקציה על כל עמודה, ומחזיר ערך לכל עמודה'), 'array, lambda', 'BYCOL(A2:C9,LAMBDA(c,MAX(c)))'],
+  MAKEARRAY: ['logic', N_('בונה מערך בגודל שבוחרים: הפונקציה מקבלת את מספר השורה והעמודה'), 'rows, cols, lambda', 'MAKEARRAY(3,3,LAMBDA(r,c,r*c))'],
+  ISOMITTED: ['logic', N_('בודק אם פרמטר של LAMBDA הושמט'), 'argument', 'LAMBDA(x,[y],IF(ISOMITTED(y),x,x+y))(5)'],
   IFS: ['logic', N_('בודק כמה תנאים לפי הסדר, ומחזיר את הערך של הראשון שנכון'), 'logical_test1, value_if_true1, ...', 'IFS(B2>=90,"A",B2>=55,"B",TRUE,"C")'],
   IFERROR: ['logic', N_('ערך אחר במקום שגיאה'), 'value, value_if_error', 'IFERROR(A2/B2,0)'],
   IFNA: ['logic', N_('ערך אחר במקום ‎#N/A'), 'value, value_if_na', 'IFNA(VLOOKUP(A2,D:E,2,FALSE),"-")'],
@@ -2637,16 +2785,30 @@ function missingIn(f, s, book = WB, used) {
   const a = astOf(f);
   if (!a) return { fn: '?' };
   let bad = null;
-  walk(a, n => {
-    if (bad) return;
-    if (n.t === 'fn') { if (!FUNCS[n.n]) bad = { fn: n.n }; return; }
-    if (n.t !== 'name') return;
+  const named = n => {   // a defined name: there, and nothing missing inside it
     const nm = book ? nameOf(n, s, book) : null;
-    if (!nm) bad = { name: n.n };
-    else if (!(used && used.has(nm))) bad = missingIn(nm.f, s, book, new Set(used || []).add(nm));
-  });
+    if (nm && !(used && used.has(nm))) bad = missingIn(nm.f, s, book, new Set(used || []).add(nm));
+    return !!nm;
+  };
+  const visit = (n, own) => {   // own: the names LET and LAMBDA gave around here
+    if (bad || !n) return;
+    if (n.t === 'fn') {
+      const scope = n.n === 'LET' || n.n === 'LAMBDA', last = n.args.length - 1;
+      if (scope) own = new Set(own);
+      else if (!FUNCS[n.n] && !own.has(n.n.toLowerCase()) && !named({ n: n.n, sheet: null })) { bad = { fn: n.n }; return; }
+      n.args.forEach((x, i) => {
+        if (scope && i < last && (n.n === 'LAMBDA' || i % 2 === 0) && ((x.t === 'name' && x.sheet == null) || x.t === 'opt')) own.add(x.n.toLowerCase());
+        else if (i === last && LAM_FNS.has(n.n) && x.t === 'name' && x.sheet == null && FUNCS[x.n.toUpperCase()] && !own.has(x.n.toLowerCase())) return;   // a function's bare name: BYROW(A1:C3,SUM)
+        else visit(x, own);
+      });
+    } else if (n.t === 'call') { visit(n.f, own); for (const x of n.args) visit(x, own); }
+    else if (n.t === 'name') { if (!(n.sheet == null && own.has(n.n.toLowerCase())) && !named(n)) bad = { name: n.n }; }
+    else if (n.a) { visit(n.a, own); if (n.b) visit(n.b, own); }
+  };
+  visit(a, new Set());
   return bad;
 }
+const LAM_FNS = new Set(['MAP', 'REDUCE', 'SCAN', 'BYROW', 'BYCOL', 'MAKEARRAY']);
 const lacksFn = (f, s) => { const m = missingIn(f, s); return !!m && !!m.fn; };
 
 /* --- recalculating: every formula, in an order where each comes after the formulas it reads. Formulas that read
@@ -2678,6 +2840,7 @@ function walkRead(n, fn) {
   if (!n) return;
   fn(n);
   if (n.t === 'fn') n.args.forEach((x, i) => { if (i || !ASKS.has(n.n) || x.t !== 'ref' || x.sp) walkRead(x, fn); });
+  else if (n.t === 'call') { walkRead(n.f, fn); for (const x of n.args) walkRead(x, fn); }
   else if (n.a) { walkRead(n.a, fn); if (n.b) walkRead(n.b, fn); }
 }
 function readsOf(ast, si, r, c, byName, fn, used) {
@@ -2685,8 +2848,8 @@ function readsOf(ast, si, r, c, byName, fn, used) {
     if (x.t === 'ref') {
       const ti = x.sheet == null ? si : byName.get(x.sheet.toLowerCase());
       if (ti != null) fn(ti, used ? G4(wrapAt(x.r1, r, x.ab[0], MAXR), wrapAt(x.c1, c, x.ab[1], MAXC), wrapAt(x.r2, r, x.ab[2], MAXR), wrapAt(x.c2, c, x.ab[3], MAXC)) : x.g);
-    } else if (x.t === 'name') {
-      const nm = nameOf(x, WB.sheets[si]), a = nm && !(used && used.has(nm)) ? astOf(nm.f) : null;
+    } else if (x.t === 'name' || (x.t === 'fn' && !FUNCS[x.n])) {   // a defined name, also one called as a function (a name LET gave isn't one: nameOf finds none, or one that adds what it reads)
+      const nm = nameOf(x.t === 'name' ? x : { n: x.n, sheet: null }, WB.sheets[si]), a = nm && !(used && used.has(nm)) ? astOf(nm.f) : null;
       if (a) readsOf(a, si, r, c, byName, fn, new Set(used || []).add(nm));
     }
   });
@@ -2817,8 +2980,10 @@ function evalCell(n) {
   AX = !c.l;
   DDON = true; DD = null;
   let v;
-  try { v = ev(ast); } catch (e) { v = e instanceof Err ? e : E_VAL; }
-  AX = false; DDON = false;
+  ENV = null; LAM_DEPTH = 0;
+  try { v = ev(ast); } catch (e) { v = e instanceof Err ? e : tooDeep(e) ? E_NUM : E_VAL; }
+  if (isLam(v)) v = E_CALC;
+  AX = false; DDON = false; ENV = null;
   if (DD) { WB.sheets[n.si]._dd.set(n.k, DD); DD = null; }
   // an array (or a range) as the answer spills into the cells below and beside, as in Excel 365; a formula from an
   // older file takes the one cell in its own row or column instead
@@ -2844,10 +3009,10 @@ function spill(s, k, r, c, v) {
     const key = KEY(r + i, c + j);
     if (hasVal(s.cells.get(key)) || s._sp.has(key)) return E_SPILL;
   }
-  for (let i = 0; i < A.h; i++) for (let j = 0; j < A.w; j++) if (i || j) s._sp.set(KEY(r + i, c + j), { v: zero(A.d[i * A.w + j]), a: k });
+  for (let i = 0; i < A.h; i++) for (let j = 0; j < A.w; j++) if (i || j) s._sp.set(KEY(r + i, c + j), { v: isLam(A.d[i * A.w + j]) ? E_CALC : zero(A.d[i * A.w + j]), a: k });
   s._sv = (s._sv || 0) + 1;
   s._sa.set(k, g);
-  return A.d[0];
+  return isLam(A.d[0]) ? E_CALC : A.d[0];
 }
 
 /* --- formulas rewritten: tidied when typed, moved when copied, and kept pointing at the same cells when rows,
@@ -2868,14 +3033,18 @@ function refText(t, g, sheet = t.sheet) {
 function mapRefs(f, fn, names) {
   const toks = tokenize(f);
   let changed = false;
-  const out = toks.map(t => { if (t.t !== 'ref' && !(names && t.t === 'name')) return t.s; const n = fn(t); if (n == null || n === t.s) return t.s; changed = true; return n; });
+  const out = toks.map(t => { if (t.t !== 'ref' && !(names && (t.t === 'name' || (t.t === 'fn' && !FUNCS[t.n])))) return t.s; const n = fn(t); if (n == null || n === t.s) return t.s; changed = true; return n; });   // (a name called as a function, Double(4), is one of the names too)
   return changed ? out.join('') : f;
 }
 /* the way Excel keeps a typed formula: functions and references in capitals, a sheet's name and a defined name the way
    they are written where they were made */
 function tidyFormula(f, book = WB) {
   return tokenize(f).map(t => {
-    if (t.t === 'fn') return t.s.replace(/^(_xl(?:fn|ws)\.)?(.*)$/i, (m, p, n) => (p ? p.toLowerCase() : '') + n.toUpperCase());
+    if (t.t === 'fn') {   // a function in capitals; a name called as a function (one LET gave, or a defined name) the way it is written
+      if (FUNCS[t.n]) return t.s.replace(/^(_xl(?:fn|ws)\.)?(.*)$/i, (m, p, n) => (p ? p.toLowerCase() : '') + n.toUpperCase());
+      const nm = book ? nameIndex(book).any.get(t.s.toLowerCase()) : null;
+      return nm ? nm.n : t.s;
+    }
     if (t.t === 'ref') { const s = t.sheet == null || !book ? null : book.sheets.find(x => x.name.toLowerCase() === t.sheet.toLowerCase()); return refText(t, t, s ? s.name : t.sheet); }
     if (t.t === 'name') {
       const s = t.sheet == null || !book ? null : book.sheets.find(x => x.name.toLowerCase() === t.sheet.toLowerCase()), nm = book ? nameIndex(book).any.get(t.n.toLowerCase()) : null;
@@ -3013,7 +3182,7 @@ function setNames(list) {
   for (const s of WB.sheets) {
     const back = [];
     for (const [k, x] of s.cells) if (x.x && !missingIn(x.f, s)) back.push([k, x]);
-    for (const [k, x] of back) { const y = { ...x, l: true }; delete y.x; setCell(s, kr(k), kc(k), y); }
+    for (const [k, x] of back) { const y = { ...x }; delete y.x; if (olderWay(y.f)) y.l = true; setCell(s, kr(k), kc(k), y); }
   }
 }
 /* each name's formula through fn(formula, name) */
@@ -3102,7 +3271,7 @@ function withLabelNames(s, list) {
 }
 /* a name changed its letters: every formula that meant it says the new ones */
 function renameName(old, to) {
-  const swap = (f, s) => mapRefs(f, t => t.t === 'name' && nameOf(t, s) === old ? sheetPrefix(t.sheet) + to : null, true);
+  const swap = (f, s) => mapRefs(f, t => (t.t === 'name' ? nameOf(t, s) : t.t === 'fn' ? nameOf({ n: t.s, sheet: null }, s) : null) === old ? sheetPrefix(t.sheet) + to : null, true);
   for (const s of WB.sheets) {
     for (const [k, x] of [...s.cells]) if (x.f != null) { const f = swap(x.f, s); if (f !== x.f) setCell(s, kr(k), kc(k), { ...x, f }); }
     for (const key of RULE_KEYS) eachRuleOf(s, key, f => swap(f, s));
@@ -3344,7 +3513,7 @@ let SHOWF = false;      // formulas instead of their results (Ctrl+`)
 /* what a cell shows: t the text, k its kind (n number, s text, b TRUE/FALSE, e error), col a color from its format */
 function view(x) {
   const st = x.st, nf = st && st.nf, v = x.v;
-  if (SHOWF && x.f) return { t: '=' + x.f, k: 's' };
+  if (SHOWF && x.f) return { t: editText(x), k: 's' };
   if (v == null || v === '') return { t: '', k: '' };
   if (isErr(v)) return { t: v.c, k: 'e' };
   if (typeof v === 'boolean') return { t: v ? 'TRUE' : 'FALSE', k: 'b' };
@@ -3709,7 +3878,7 @@ function endEdit(commit, move, force) {
     const s = WB.sheets.find(x => x.id === ED.sid) || WS, g = ED.all ? selG() : null, r = ED.r, c = ED.c;
     const rule = force ? null : dvAt(s, r, c);
     ED.on = false;
-    const did = edit(() => writeInput(s, r, c, text, g));
+    const did = edit(() => { writeInput(s, r, c, text, g); widenFor(s, r, c); });
     if (did && rule && rule.t !== 'any' && !rule.ne && !dvOk(s, rule, r, c)) {
       // the cell's rule doesn't take this (a formula is judged by its answer, once everything is worked out): it
       // comes out again, and the alert asks what to do with it
@@ -3792,6 +3961,17 @@ function writeInput(s, r, c, text, g) {
     if (m && (m.r1 !== rr || m.c1 !== cc)) continue;
     put(rr, cc, p && p.f != null ? { f: shiftFormula(tidyFormula(p.f), rr - r, cc - c) } : p);
   }
+}
+/* A number that was just typed and doesn't fit (a date with its hour, money): the column grows to show it, as Excel's
+   does, when nobody chose that column's width */
+function widenFor(s, r, c) {
+  const x = s.cells.get(KEY(r, c)), st = x && x.st;
+  if (!st || !st.nf || s.cw.has(c) || mergeAt(s, r, c)) return;
+  if (x.f != null) recalc();
+  const vw = view(x);
+  if (vw.k !== 'n' || vw.bad) return;
+  const need = Math.ceil(textW(vw.t, fontOf(st, (st.fs || DEF_FS) * 4 / 3))) + 10;
+  if (need > s.dw + 4) { const m = new Map(s.cw); m.set(c, Math.min(900, need)); setProp(s, 'cw', m); }
 }
 /* after each change to the text being written: the other box, the colored references, the helper, the size */
 function edChanged() {
@@ -4310,7 +4490,7 @@ function acTake() {
   const ta = taOf(), n = AC.list[AC.i];
   if (!n) return;
   if (AC.dv) { const r = ED.r, c = ED.c; endEdit(false); dvPut(r, c, n); return; }   // an item of the cell's list, in place of what was typed
-  ta.setRangeText(n.nm ? n.nm.n : n + '(', AC.from, ta.selectionStart, 'end');
+  ta.setRangeText(n.nm ? n.nm.n + (/^LAMBDA\s*\(/i.test(n.nm.f) ? '(' : '') : n + '(', AC.from, ta.selectionStart, 'end');   // a name that holds a LAMBDA is called like a function
   ED.point = null;
   edChanged();
 }
@@ -6052,6 +6232,7 @@ function nameShows(x) {
   let v;
   try { v = nameVal({ n: x.n, sheet: x.s ? s.name : null }, true); } catch (e) { v = e instanceof Err ? e : E_VAL; } finally { [CTX, AX, OFF] = keep; }
   const word = y => y == null ? '' : isErr(y) ? y.c : typeof y === 'string' ? '"' + y + '"' : typeof y === 'boolean' ? (y ? 'TRUE' : 'FALSE') : genText(y, 11);
+  if (isLam(v)) return T('פונקציה ({0})', (v.params || []).map(p => p.opt ? '[' + p.s + ']' : p.s).join(', '));   // a LAMBDA: what it takes
   if (!isA(v)) return word(v);
   const [h, w] = dims(v), A = toArr(v.rng ? { rng: true, s: v.s, g: { r1: v.g.r1, c1: v.g.c1, r2: Math.min(v.g.r2, v.g.r1 + 3), c2: Math.min(v.g.c2, v.g.c1 + 3) } } : v);
   if (isErr(A)) return A.c;
@@ -6321,7 +6502,7 @@ function xlLook(cell, theme) {
   return normStyle(st);
 }
 const XL_BUILTIN = { 'mm-dd-yy': DATE_NF, 'm/d/yy h:mm': DATE_NF + ' hh:mm', 'm/d/yy': DATE_NF };
-const xlResult = v => v instanceof Date ? jsDateSerial(v) : v && typeof v === 'object' && v.error ? ERR[v.error] || E_NA : typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean' ? v : 0;
+const xlResult = v => v instanceof Date ? jsDateSerial(v) : v && typeof v === 'object' && v.error ? ERR[v.error] || E_NA : typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean' ? v : '';
 /* an Excel workbook as a workbook here, with a count of what couldn't come across */
 async function readXlsx(buf) {
   const u8 = new Uint8Array(buf);
@@ -6383,12 +6564,12 @@ async function readXlsx(buf) {
             let f = v.formula;
             if (v.sharedFormula) { const m = ws.getCell(v.sharedFormula), mf = m.value && m.value.formula; if (mf) f = shiftFormula(mf, rn - +m.row, cn - +m.col); }
             if (f == null) f = cell.formula;
-            x.v = xlResult(v.result);
+            x.v = xlResult(cell.result);   // not v.result: the library's copy of the value leaves out an answer of 0 or FALSE
             if (f) {
               x.f = fromXl(String(f).replace(/^=/, ''));
               if (missingIn(x.f, s, known)) { x.x = true; add('fn'); }
               else if (v.shareType === 'array') { const g = parseRange(v.ref); if (g && (g.r1 !== g.r2 || g.c1 !== g.c2)) arrays.push(g); }
-              else if (tokenize(x.f).some(t => (t.t === 'ref' && t.k !== 'c') || t.t === 'name' || (t.t === 'op' && t.s === ':') || (t.t === 'fn' && (t.n === 'INDIRECT' || t.n === 'OFFSET')))) x.l = true;   // an older formula: a range alone in it (or what a name, INDIRECT or OFFSET gives) takes one cell
+              else if (olderWay(x.f) && tokenize(x.f).some(t => (t.t === 'ref' && t.k !== 'c') || t.t === 'name' || (t.t === 'op' && t.s === ':') || (t.t === 'fn' && (t.n === 'INDIRECT' || t.n === 'OFFSET')))) x.l = true;   // an older formula: a range alone in it (or what a name, INDIRECT or OFFSET gives) takes one cell
             }
             break;
           }
@@ -6455,7 +6636,12 @@ async function importCharts(buf, nb, xlNames, rep) {
 const NEW_FNS = new Set(['CONCAT', 'TEXTJOIN', 'IFS', 'SWITCH', 'MAXIFS', 'MINIFS', 'XLOOKUP', 'XMATCH', 'SORTBY', 'UNIQUE', 'SEQUENCE', 'RANDARRAY', 'LET', 'LAMBDA',
   'IFNA', 'XOR', 'DAYS', 'ISOWEEKNUM', 'ISFORMULA', 'UNICHAR', 'UNICODE', 'STDEV.S', 'STDEV.P', 'VAR.S', 'VAR.P', 'MODE.SNGL', 'RANK.EQ', 'RANK.AVG', 'PERCENTILE.INC',
   'QUARTILE.INC', 'CEILING.MATH', 'FLOOR.MATH', 'AGGREGATE', 'FORMULATEXT', 'TEXTBEFORE', 'TEXTAFTER', 'TEXTSPLIT', 'VSTACK', 'HSTACK', 'TAKE', 'DROP', 'CHOOSECOLS',
-  'CHOOSEROWS', 'TOCOL', 'TOROW', 'WRAPROWS', 'WRAPCOLS', 'EXPAND', 'ANCHORARRAY', 'SINGLE', 'PDURATION', 'RRI']);
+  'CHOOSEROWS', 'TOCOL', 'TOROW', 'WRAPROWS', 'WRAPCOLS', 'EXPAND', 'ANCHORARRAY', 'SINGLE', 'PDURATION', 'RRI', 'MAP', 'REDUCE', 'SCAN', 'BYROW', 'BYCOL', 'MAKEARRAY', 'ISOMITTED']);
+/* the functions only an Excel with arrays that spill has: a formula of a file that uses one was never written the older
+   way (a range standing alone taking one cell) */
+const DA_FNS = new Set(['LET', 'LAMBDA', 'MAP', 'REDUCE', 'SCAN', 'BYROW', 'BYCOL', 'MAKEARRAY', 'ISOMITTED', 'FILTER', 'SORT', 'SORTBY', 'UNIQUE', 'SEQUENCE', 'RANDARRAY', 'XLOOKUP', 'XMATCH', 'TEXTSPLIT',
+  'TEXTBEFORE', 'TEXTAFTER', 'VSTACK', 'HSTACK', 'TAKE', 'DROP', 'CHOOSECOLS', 'CHOOSEROWS', 'TOCOL', 'TOROW', 'WRAPROWS', 'WRAPCOLS', 'EXPAND']);
+const olderWay = f => !tokenize(f).some(t => (t.t === 'fn' && DA_FNS.has(t.n)) || (t.t === 'op' && t.s === '@') || (t.t === 'ref' && t.sp));
 const XLWS = new Set(['FILTER', 'SORT']);
 /* an error as a file keeps it. #SPILL! and #CALC! came with Excel 365, and an older Excel refuses a whole file that has
    one of them as a value (measured in Excel 2016): they are written #VALUE!, and the formula gives the real one again */
@@ -6463,8 +6649,23 @@ const OLD_ERRS = new Set(['#NULL!', '#DIV/0!', '#VALUE!', '#REF!', '#NAME?', '#N
 const xlErr = v => ({ error: OLD_ERRS.has(v.c) ? v.c : '#VALUE!' });
 function xlFormula(f, arr) {
   const toks = tokenize(f), out = [];
+  // LET and LAMBDA: inside their brackets the names they give are written _xlpm.name, and [name] _xlop.name, as Excel
+  // keeps them. scopes: each one's bracket depth, which argument the walk is in, and its names
+  const scopes = [], near = (i, d) => { do i += d; while (toks[i] && toks[i].t === 'ws'); return toks[i]; };
+  let depth = 0, opening = null;
+  const given = n => scopes.some(sc => sc.names.has(n.toLowerCase()));
   for (let i = 0; i < toks.length; i++) {
-    const t = toks[i];
+    const t = toks[i], top = scopes[scopes.length - 1];
+    if (t.t === '(') { depth++; if (opening) { scopes.push({ depth, kind: opening, arg: 0, names: new Set() }); opening = null; } }
+    else if (t.t === ')') { while (scopes.length && scopes[scopes.length - 1].depth === depth) scopes.pop(); depth--; }
+    else if (t.t === ',' && top && top.depth === depth) top.arg++;
+    else if (t.t !== 'ws') opening = t.t === 'fn' && (t.n === 'LET' || t.n === 'LAMBDA') ? t.n : null;
+    if (top && top.depth === depth && (t.t === 'opt' || (t.t === 'name' && t.sheet == null)) && ['(', ','].includes((near(i, -1) || {}).t) && (near(i, 1) || {}).t === ',' && (top.kind === 'LAMBDA' || top.arg % 2 === 0)) {
+      top.names.add(t.n.toLowerCase());   // here a name is given
+      out.push(t.t === 'opt' ? '_xlop.' + t.n : '_xlpm.' + t.s);
+      continue;
+    }
+    if ((t.t === 'name' && t.sheet == null && given(t.n)) || (t.t === 'fn' && !FUNCS[t.n] && given(t.s))) { out.push('_xlpm.' + t.s); continue; }
     if (t.t === 'fn' && !/^_xl/i.test(t.s)) out.push((XLWS.has(t.n) ? '_xlfn._xlws.' : NEW_FNS.has(t.n) ? '_xlfn.' : '') + t.s);
     else if (t.t === 'ref' && t.sp) out.push('_xlfn.ANCHORARRAY(' + t.s.slice(0, -1) + ')');
     else if (t.t === 'op' && t.s === '@') {
@@ -6487,7 +6688,13 @@ function xlFormula(f, arr) {
   return out.join('');
 }
 /* and back: what the file wrote for # and @ */
-const fromXl = f => f.replace(/_xlfn\.ANCHORARRAY\(((?:'(?:[^']|'')+'!|[^()'!,]+!)?\$?[A-Za-z]{1,3}\$?\d+)\)/gi, '$1#').replace(/_xlfn\.SINGLE\(/gi, '@(');
+function fromXl(f) {
+  const out = f.replace(/_xlfn\.ANCHORARRAY\(((?:'(?:[^']|'')+'!|[^()'!,]+!)?\$?[A-Za-z]{1,3}\$?\d+)\)/gi, '$1#').replace(/_xlfn\.SINGLE\(/gi, '@(');
+  if (!/_xl(?:pm|op)\./i.test(out)) return out;
+  return tokenize(out).map(t => t.t === 'name' && /^_xlop\./i.test(t.s) ? '[' + t.s.slice(6) + ']' : (t.t === 'name' || t.t === 'fn') && /^_xlpm\./i.test(t.s) ? t.s.slice(6) : t.s).join('');
+}
+/* a name's formula from a file without the _xlfn. before the functions known here (a cell's keeps it, and shows without) */
+const bareFns = f => /_xl(?:fn|ws)\./i.test(f) ? tokenize(f).map(t => t.t === 'fn' && FUNCS[t.n] ? t.s.replace(/^(?:_xl(?:fn|ws)\.)+/i, '') : t.s).join('') : f;
 /* the part Excel 365 adds for its array formulas, which cm="1" on a cell points to */
 const XL_META = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<metadata xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:xda="http://schemas.microsoft.com/office/spreadsheetml/2017/dynamicarray"><metadataTypes count="1"><metadataType name="XLDAPR" minSupportedVersion="120000" copy="1" pasteAll="1" pasteValues="1" merge="1" splitFirst="1" rowColShift="1" clearFormats="1" clearComments="1" assign="1" coerce="1" cellMeta="1"/></metadataTypes><futureMetadata name="XLDAPR" count="1"><bk><extLst><ext uri="{bdbb8cdc-fa1e-496e-a857-3c3f30c029c3}"><xda:dynamicArrayProperties fDynamic="1" fCollapsed="0"/></ext></extLst></bk></futureMetadata><cellMetadata count="1"><bk><rc t="1" v="0"/></bk></cellMetadata></metadata>';
 /* array formulas marked the way Excel 365 marks its own, so it spills them instead of showing {=...} */
@@ -6572,7 +6779,7 @@ async function writeXlsx() {
         if (arr) dyn = true;
       }
       else if (isErr(x.v)) cell.value = xlErr(x.v);
-      else if (x.v != null && x.v !== '') cell.value = x.v;
+      else if (x.v != null) cell.value = x.v;   // a text of no letters too (what a file has where "" was pasted as a value): COUNTA and "*" count it
       cell.style = xlStyleOut(x.st);
     }
     // the values a formula spilled, as plain values the way Excel keeps them
@@ -6624,7 +6831,7 @@ async function readXlsxNames(buf) {
   for (const e of xdesc(doc, 'definedName')) {
     const n = xat(e, 'name') || '', t = e.textContent.trim().replace(/^=/, ''), li = xat(e, 'localSheetId');
     if (!n || /^_xl/i.test(n) || !t || t.includes('[')) continue;
-    out.names.push({ n, f: fromXl(t), li: li == null || li === '' ? null : +li, c: xat(e, 'comment') || '', h: xat(e, 'hidden') === '1' || xat(e, 'hidden') === 'true' });
+    out.names.push({ n, f: bareFns(fromXl(t)), li: li == null || li === '' ? null : +li, c: xat(e, 'comment') || '', h: xat(e, 'hidden') === '1' || xat(e, 'hidden') === 'true' });
   }
   return out;
 }
@@ -6947,7 +7154,7 @@ function forAI(args = {}) {
   const rows = [], formulas = {};
   for (let r = g.r1; r <= g.r2; r++) {
     const row = [];
-    for (let c = g.c1; c <= g.c2; c++) { const x = cellSp(s, r, c); row.push(x ? view(x).t : ''); if (x && x.f != null) formulas[A1(r, c)] = '=' + x.f; }
+    for (let c = g.c1; c <= g.c2; c++) { const x = cellSp(s, r, c); row.push(x ? view(x).t : ''); if (x && x.f != null) formulas[A1(r, c)] = editText(x); }
     rows.push(row);
   }
   while (rows.length && rows[rows.length - 1].every(t => t === '')) rows.pop();

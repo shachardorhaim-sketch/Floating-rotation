@@ -2487,7 +2487,25 @@ window.INK_I18N = {
 "תקופה_ראשונה": "first_period",
 "שיטה": "method",
 "בודק אם זו הפניה לתאים": "Checks whether this is a reference to cells",
-"מספר האזורים שבהפניה": "The number of areas in a reference"
+"מספר האזורים שבהפניה": "The number of areas in a reference",
+"נותן שמות לערכים בתוך הנוסחה, כדי לחשב כל אחד פעם אחת ולקרוא לו בשמו": "Gives names to values inside the formula, so each is worked out once and called by its name",
+"פונקציה משלך: שמות של פרמטרים ואחריהם החישוב. קוראים לה עם סוגריים, או נותנים לה שם מוגדר": "A function of your own: names of parameters, then the calculation. Call it with brackets, or give it a defined name",
+"מפעיל פונקציה על כל ערך במערך, ומחזיר מערך של התוצאות": "Applies a function to every value of an array, and gives an array of the results",
+"מצמצם מערך לערך אחד: הפונקציה מקבלת את מה שנצבר ואת הערך הבא": "Reduces an array to one value: the function gets what has built up so far and the next value",
+"כמו REDUCE, אבל מחזיר את כל שלבי הביניים": "Like REDUCE, but gives every step on the way",
+"מפעיל פונקציה על כל שורה, ומחזיר ערך לכל שורה": "Applies a function to each row, and gives one value for each row",
+"מפעיל פונקציה על כל עמודה, ומחזיר ערך לכל עמודה": "Applies a function to each column, and gives one value for each column",
+"בונה מערך בגודל שבוחרים: הפונקציה מקבלת את מספר השורה והעמודה": "Builds an array of the size you choose: the function gets the numbers of the row and the column",
+"בודק אם פרמטר של LAMBDA הושמט": "Checks whether a parameter of a LAMBDA was left out",
+"שם@arg": "name",
+"ערך_השם": "name_value",
+"חישוב_או_שם": "calculation_or_name",
+"פרמטר_או_חישוב": "parameter_or_calculation",
+"פונקציה@arg": "lambda",
+"פונקציה_או_מערך": "lambda_or_array",
+"ערך_התחלתי": "initial_value",
+"פרמטר": "argument",
+"פונקציה ({0})": "Function ({0})"
 },
 "plurals": {
 "{n} מילים": {

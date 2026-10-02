@@ -2487,7 +2487,25 @@ window.INK_I18N = {
 "תקופה_ראשונה": "primer_período",
 "שיטה": "método",
 "בודק אם זו הפניה לתאים": "Comprueba si esto es una referencia a celdas",
-"מספר האזורים שבהפניה": "El número de áreas de una referencia"
+"מספר האזורים שבהפניה": "El número de áreas de una referencia",
+"נותן שמות לערכים בתוך הנוסחה, כדי לחשב כל אחד פעם אחת ולקרוא לו בשמו": "Da nombres a valores dentro de la fórmula, para calcular cada uno una vez y llamarlo por su nombre",
+"פונקציה משלך: שמות של פרמטרים ואחריהם החישוב. קוראים לה עם סוגריים, או נותנים לה שם מוגדר": "Una función propia: nombres de parámetros y después el cálculo. Se llama con paréntesis, o se le da un nombre definido",
+"מפעיל פונקציה על כל ערך במערך, ומחזיר מערך של התוצאות": "Aplica una función a cada valor de una matriz y devuelve una matriz con los resultados",
+"מצמצם מערך לערך אחד: הפונקציה מקבלת את מה שנצבר ואת הערך הבא": "Reduce una matriz a un solo valor: la función recibe lo acumulado y el valor siguiente",
+"כמו REDUCE, אבל מחזיר את כל שלבי הביניים": "Como REDUCE, pero devuelve todos los pasos intermedios",
+"מפעיל פונקציה על כל שורה, ומחזיר ערך לכל שורה": "Aplica una función a cada fila y devuelve un valor por fila",
+"מפעיל פונקציה על כל עמודה, ומחזיר ערך לכל עמודה": "Aplica una función a cada columna y devuelve un valor por columna",
+"בונה מערך בגודל שבוחרים: הפונקציה מקבלת את מספר השורה והעמודה": "Construye una matriz del tamaño que elijas: la función recibe el número de fila y de columna",
+"בודק אם פרמטר של LAMBDA הושמט": "Comprueba si se omitió un parámetro de una LAMBDA",
+"שם@arg": "nombre",
+"ערך_השם": "valor_nombre",
+"חישוב_או_שם": "cálculo_o_nombre",
+"פרמטר_או_חישוב": "parámetro_o_cálculo",
+"פונקציה@arg": "lambda",
+"פונקציה_או_מערך": "lambda_o_matriz",
+"ערך_התחלתי": "valor_inicial",
+"פרמטר": "argumento",
+"פונקציה ({0})": "Función ({0})"
 },
 "plurals": {
 "{n} מילים": {
