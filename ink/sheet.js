@@ -74,7 +74,7 @@ function freeName(n, taken) {
   if (!taken.has(n.toLowerCase())) return n;
   for (let i = 2; ; i++) { const t = n.slice(0, 26) + ' (' + i + ')'; if (!taken.has(t.toLowerCase())) return t; }
 }
-const HEX = /^#[0-9a-f]{6}$/i, BORDER = /^[123][sdo=]#[0-9a-f]{6}$/i;
+const HEX = /^#[0-9a-f]{6}$/i, BORDER = /^[123][sdo=]#[0-9a-f]{6}$/i, BD_SIDES = ['bt', 'bb', 'bs', 'be'];
 /* the look of a cell: b i u s (strike), wr (wrap), c (text color), bg (fill), fs (size, pt), ff (font), ha (l c r, the
    side on screen, as Excel keeps it), va (t m b), nf (Excel's number format code), and borders bt bb bs be: top,
    bottom, and the start and end sides (toward column A, and away from it; Excel's "left" and "right"). A border is
@@ -3733,10 +3733,10 @@ function drawBorders(L, rr, cc) {
     if (!rowH(r)) continue;
     for (let c = cc[0]; c <= cc[1]; c++) {
       if (!colW(c)) continue;
-      const x = cellAt(s, r, c), st = x ? x.st : looks ? emptyLook(s, r, c) : null;
-      if (!st || !(st.bt || st.bb || st.bs || st.be)) continue;
-      for (const k of ['bt', 'bb', 'bs', 'be']) {
-        const b = st[k];
+      const x = cellAt(s, r, c), st = x ? x.st : looks ? emptyLook(s, r, c) : null, cf = cfAt(s, r, c), cb = cf && cf.st;   // a rule's border wins on its side
+      if (!(st && (st.bt || st.bb || st.bs || st.be)) && !(cb && (cb.bt || cb.bb || cb.bs || cb.be))) continue;
+      for (const k of BD_SIDES) {
+        const b = (cb && cb[k]) || (st && st[k]);
         if (!b) continue;
         const kind = b[1], lw = kind === '=' ? 3 : +b[0], horiz = k === 'bt' || k === 'bb', e = part(L, 'b' + k + r + ',' + c, 'sh-bd');
         const p = k === 'bt' ? rowY(r) - 1 : k === 'bb' ? rowY(r + 1) - 1 : k === 'bs' ? colX(c) - 1 : colX(c + 1) - 1, o = p - Math.floor((lw - 1) / 2);
@@ -5464,7 +5464,7 @@ function tableEl(s, g, o = {}) {
   const cg = h('colgroup');
   for (const c of cols) { const w = s.cw.get(c) ?? s.dw; W += w; cg.append(h('col', { style: { width: w + 'px' } })); }
   const t = h('table', { dir: s.dir, cellspacing: '0', cellpadding: '0', style: { borderCollapse: 'collapse', tableLayout: 'fixed', width: W + 'px', fontFamily: `"${DEF_FONT}", Arial, sans-serif`, fontSize: DEF_FS + 'pt', color: '#000', background: '#fff' } }, cg);
-  const look = (r, c) => { const x = s.cells.get(KEY(r, c)); return x ? x.st : emptyLook(s, r, c); };
+  const look = (r, c) => { const x = s.cells.get(KEY(r, c)), st = x ? x.st : emptyLook(s, r, c), cf = cfAt(s, r, c); return cf && cf.st ? { ...(st || {}), ...cf.st } : st; };
   const tb = h('tbody');
   for (const r of rows) {
     const tr = h('tr', { style: { height: (s.rh.get(r) ?? s.dh) + 'px' } });
@@ -7271,7 +7271,8 @@ const SHEET_LOOK = { accent: '#4472c4', a2: '#ed7d31', text: '#404040', bg: '#ff
 const CKS = ['col', 'bar', 'line', 'pie', 'donut'];
 const CK_API = { column: 'col', bar: 'bar', line: 'line', pie: 'pie', donut: 'donut' };   // the names Claude uses
 /* a conditional formatting rule from Claude's description: { range, type, value, value2, text, formula, count, period,
-   style (red, yellow, green) or fill / text_color / bold, and for bars, scales and icons their colors and icons } */
+   style (red, yellow, green) or fill / text_color / bold, border / border_style / border_color, and for bars, scales
+   and icons their colors and icons } */
 const CF_API_ICONS = { arrows: '3Arrows', traffic_lights: '3TrafficLights1', signs: '3Signs', symbols: '3Symbols', flags: '3Flags', stars: '3Stars', ratings: '5Rating', quarters: '5Quarters', triangles: '3Triangles' };
 function cfFromSpec(c) {
   if (!c || typeof c !== 'object') return null;
@@ -7279,6 +7280,9 @@ function cfFromSpec(c) {
   if (!g.length || g.some(x => !x)) return null;
   const look = CF_LOOKS.find(([k]) => k === c.style);
   const st = look ? { ...look[2] } : cfStyle({ bg: c.fill, c: c.text_color, b: c.bold, i: c.italic });
+  // a border on each cell the rule changes: all four sides, or the top or bottom one; a thin line, solid, dashed or dotted
+  const line = '1' + ({ dashed: 'd', dotted: 'o' }[c.border_style] || 's') + (HEX.test(c.border_color) ? c.border_color.toLowerCase() : '#000000');
+  for (const k of { all: BD_SIDES, outside: BD_SIDES, top: ['bt'], bottom: ['bb'] }[c.border] || []) st[k] = line;
   if (!look && !Object.keys(st).length) Object.assign(st, CF_LOOKS[0][2]);
   const val = v => v == null ? null : typeof v === 'number' ? String(v) : cfValIn(String(v));
   const ops = { greater_than: 'gt', greater_or_equal: 'ge', less_than: 'lt', less_or_equal: 'le', equal: 'eq', not_equal: 'ne', between: 'bw', not_between: 'nb' };
@@ -8291,7 +8295,9 @@ const ICON_SETS = { '3Arrows': 3, '3ArrowsGray': 3, '3Triangles': 3, '4Arrows': 
 /* Excel's ready looks for a rule: light red fill with dark red text, and the rest */
 const CF_LOOKS = [['red', N_('מילוי אדום בהיר עם טקסט אדום כהה'), { bg: '#ffc7ce', c: '#9c0006' }], ['yellow', N_('מילוי צהוב עם טקסט צהוב כהה'), { bg: '#ffeb9c', c: '#9c5700' }],
   ['green', N_('מילוי ירוק עם טקסט ירוק כהה'), { bg: '#c6efce', c: '#006100' }], ['fill', N_('מילוי אדום בהיר'), { bg: '#ffc7ce' }], ['text', N_('טקסט אדום'), { c: '#9c0006' }]];
-const cfStyle = x => { const st = {}; if (x && typeof x === 'object') { for (const k of ['b', 'i', 'u', 's']) if (x[k] === true) st[k] = true; for (const k of ['c', 'bg']) if (HEX.test(x[k])) st[k] = x[k].toLowerCase(); } return st; };
+/* a rule's border on a side is always a thin line (solid, dashed or dotted): Excel refuses medium, thick and double there */
+const cfLine = b => '1' + (b[1] === 'd' || b[1] === 'o' ? b[1] : 's') + b.slice(2).toLowerCase();
+const cfStyle = x => { const st = {}; if (x && typeof x === 'object') { for (const k of ['b', 'i', 'u', 's']) if (x[k] === true) st[k] = true; for (const k of ['c', 'bg']) if (HEX.test(x[k])) st[k] = x[k].toLowerCase(); for (const k of BD_SIDES) if (BORDER.test(x[k])) st[k] = cfLine(x[k]); } return st; };
 /* one end of a bar, a stop of a color scale or an icon's threshold: t the kind (auto: 0 or the lowest; min, max, num a
    number, pct a percent of the way from the lowest to the highest, pctl a percentile, formula), v its number or formula */
 function normVo(x, t0, v0) {
@@ -8688,7 +8694,9 @@ function dxfXml(st) {
   if (st.s) font += '<strike/>';
   if (st.u) font += '<u/>';
   if (st.c) font += `<color rgb="${argb(st.c)}"/>`;
-  return '<dxf>' + (font ? `<font>${font}</font>` : '') + (st.bg ? `<fill><patternFill><bgColor rgb="${argb(st.bg)}"/></patternFill></fill>` : '') + '</dxf>';
+  const line = (n, b) => b ? `<${n} style="${b[1] === 'd' ? 'dashed' : b[1] === 'o' ? 'dotted' : 'thin'}"><color rgb="${argb(b.slice(2))}"/></${n}>` : '';
+  const bd = line('left', st.bs) + line('right', st.be) + line('top', st.bt) + line('bottom', st.bb);
+  return '<dxf>' + (font ? `<font>${font}</font>` : '') + (st.bg ? `<fill><patternFill><bgColor rgb="${argb(st.bg)}"/></patternFill></fill>` : '') + (bd ? `<border>${bd}</border>` : '') + '</dxf>';
 }
 const voVal = o => o.t === 'formula' ? xlFormula(o.v) : String(o.v);
 const voMain = (o, bar) => o.t === 'auto' ? `<cfvo type="${bar === 'lo' ? 'min' : 'max'}"/>` : `<cfvo type="${XL_VO[o.t]}"${o.t === 'min' || o.t === 'max' ? '' : ` val="${esc(voVal(o))}"`}${o.gt ? ' gte="0"' : ''}/>`;
@@ -8788,6 +8796,11 @@ async function readXlsxCf(buf, theme) {
       const c = color(xkid(f, 'color')); if (c) st.c = c;
     }
     if (fill && xat(fill, 'patternType') !== 'none') { const c = color(xkid(fill, 'bgColor')) || color(xkid(fill, 'fgColor')); if (c) st.bg = c; }
+    const bd = xkid(d, 'border');
+    if (bd) for (const [n, k] of [['left', 'bs'], ['right', 'be'], ['top', 'bt'], ['bottom', 'bb']]) {
+      const e = xkid(bd, n), style = e && xat(e, 'style');
+      if (style && style !== 'none') st[k] = '1' + (/dash/i.test(style) ? 'd' : /dot|hair/i.test(style) ? 'o' : 's') + (color(xkid(e, 'color')) || '#000000');
+    }
     return st;
   }) : [];
   const fromF = e => e ? fromXl(e.textContent.trim().replace(/^=/, '')) : null;
@@ -8932,9 +8945,8 @@ function cfSwatch(r) {
   else if (r.k === 'scale') box.style.background = `linear-gradient(to right, ${r.cs.map(o => o.c).join(', ')})`;
   else if (r.k === 'icons') { box.classList.add('ic'); box.innerHTML = [...Array(ICON_SETS[r.set]).keys()].reverse().map(i => iconSvg(r.set, i, 14)).join(''); }
   else {
-    const st = r.st || {};
     box.textContent = 'AaBb אבג';
-    Object.assign(box.style, { background: st.bg || '', color: st.c || '', fontWeight: st.b ? '700' : '', fontStyle: st.i ? 'italic' : '', textDecoration: [st.u && 'underline', st.s && 'line-through'].filter(Boolean).join(' ') });
+    lookOn(box, r.st || {});
   }
   return box;
 }
@@ -9012,11 +9024,30 @@ function cfIconGallery(anchor) {
   cfGallery(anchor, T('ערכות סמלים'), CF_ICON_GROUPS.map(([name, sets]) => [T(name), sets.map(set => [iconsPic(set), T('ערכת סמלים'), { k: 'icons', set }])]), () => cfEditor({ k: 'icons', set: '3Arrows' }));
 }
 
-/* --- a rule's look: fill, text color, bold, italic, underline, strikethrough --- */
+/* --- a rule's look: fill, text color, bold, italic, underline, strikethrough, borders --- */
+function lookOn(e, st) {
+  const rtl = WS.dir === 'rtl', side = { bt: 'borderTop', bb: 'borderBottom', bs: rtl ? 'borderRight' : 'borderLeft', be: rtl ? 'borderLeft' : 'borderRight' };
+  Object.assign(e.style, { background: st.bg || '', color: st.c || '', fontWeight: st.b ? '700' : '', fontStyle: st.i ? 'italic' : '', textDecoration: [st.u && 'underline', st.s && 'line-through'].filter(Boolean).join(' ') });
+  for (const k of BD_SIDES) e.style[side[k]] = st[k] ? `2px ${BD_CSS[st[k][1]] || 'solid'} ${st[k].slice(2)}` : '';
+}
+/* the borders a rule draws on each cell it changes: the four sides or one of them, a thin line of a kind and a color */
+function cfBorderMenu(anchor, st, done) {
+  const rtl = WS.dir === 'rtl', p = Object.assign({ c: '#000000', k: '1s' }, PREFS.shCfBd || {}), spec = p.k + p.c;
+  const set = sides => () => { for (const k of BD_SIDES) if (!sides || sides.includes(k)) { if (sides) st[k] = spec; else delete st[k]; } closePopover(); done(); };
+  const kinds = [['1s', T('דק')], ['1d', T('מקווקו')], ['1o', T('מנוקד')]];
+  const again = () => { closePopover(); cfBorderMenu(anchor, st, done); };
+  const styleRow = h('div', { class: 'sh-bdrow' }, kinds.map(([k, name]) => h('button', { class: 'opt' + (p.k === k ? ' on' : ''), type: 'button', title: name, 'aria-label': name,
+    onclick: () => { PREFS.shCfBd = { ...p, k }; savePrefs(); again(); } }, h('i', { style: { borderTopWidth: '1.5px', borderTopStyle: BD_CSS[k[1]] } }))));
+  const colorRow = h('div', { class: 'sh-bdrow' }, deckSwatches(p.c, TEXT_COLORS.slice(0, 11), c => { PREFS.shCfBd = { ...p, c: c || '#000000' }; savePrefs(); again(); }, null));
+  openPop(anchor, h('div', { class: 'menu' }, h('div', { class: 'pop-t', text: T('גבולות') }), menuItems([
+    { ic: 'border_all', label: T('כל הגבולות'), run: set(BD_SIDES) }, { ic: 'border_bottom', label: T('גבול תחתון'), run: set(['bb']) }, { ic: 'border_top', label: T('גבול עליון'), run: set(['bt']) },
+    { ic: 'border_right', label: T('גבול ימני'), run: set([rtl ? 'bs' : 'be']) }, { ic: 'border_left', label: T('גבול שמאלי'), run: set([rtl ? 'be' : 'bs']) }, { ic: 'border_clear', label: T('בלי גבולות'), run: set(null) },
+  ]), h('div', { class: 'pop-t sub', text: T('סוג קו') }), styleRow, h('div', { class: 'pop-t sub', text: T('צבע קו') }), colorRow));
+}
 function cfLookPicker(st, onChange) {
   const box = h('div', { class: 'sh-cflook' }), prev = h('span', { class: 'sh-cfsw big' });
   const draw = () => {
-    Object.assign(prev.style, { background: st.bg || '', color: st.c || '', fontWeight: st.b ? '700' : '', fontStyle: st.i ? 'italic' : '', textDecoration: [st.u && 'underline', st.s && 'line-through'].filter(Boolean).join(' ') });
+    lookOn(prev, st);
     for (const [k, b] of btns) b.classList.toggle('on', !!st[k]);
     onChange(st);
   };
@@ -9027,6 +9058,7 @@ function cfLookPicker(st, onChange) {
   box.append(prev, h('div', { class: 'sh-cflook-row' }, ...btns.map(x => x[1]),
     h('button', { type: 'button', class: 'rb', title: T('מילוי'), 'aria-label': T('מילוי'), onclick: e => pick('bg', e.currentTarget) }, icon('format_color_fill')),
     h('button', { type: 'button', class: 'rb', title: T('צבע הטקסט'), 'aria-label': T('צבע הטקסט'), onclick: e => pick('c', e.currentTarget) }, icon('format_color_text')),
+    h('button', { type: 'button', class: 'rb', title: T('גבולות'), 'aria-label': T('גבולות'), onclick: e => cfBorderMenu(e.currentTarget, st, draw) }, icon('border_outer')),
     h('button', { type: 'button', class: 'btn small', onclick: () => { for (const k of Object.keys(st)) delete st[k]; draw(); } }, T('ניקוי'))));
   draw();
   return box;

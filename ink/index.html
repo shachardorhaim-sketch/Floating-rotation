@@ -499,7 +499,7 @@ label.bk-row:hover{background:var(--surface-2)}
 .modal .mbody>p:first-child{margin-top:0}
 .modal>footer{display:flex;flex-wrap:wrap;gap:8px;padding:12px 20px 18px}
 @keyframes fade{from{opacity:0}}
-#pop{position:fixed;z-index:90;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:12px;box-shadow:var(--pop);padding:10px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto}
+#pop{position:fixed;z-index:110;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:12px;box-shadow:var(--pop);padding:10px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto}
 .pop-t{font-size:12px;font-weight:600;color:var(--text-2);margin:0 2px 8px}
 .pop-sec{font-size:11.5px;color:var(--text-3);margin:10px 2px 5px}
 .sw-grid{display:grid;grid-template-columns:repeat(6,26px);gap:6px}
@@ -2127,13 +2127,14 @@ function toast(msg, o = {}) {
 }
 const MODALS = [];
 function modal({ title, body, actions = [], wide = false, onClose }) {
+  closePopover();   // the menus open above every window (a window's own color list too), so one from before goes
   const back = h('div', { class: 'mback' });
   const bodyEl = h('div', { class: 'mbody' });
   if (body) bodyEl.append(body);
   let done = false;
   const m = {
     body: bodyEl,
-    close(v) { if (done) return; done = true; back.remove(); const i = MODALS.indexOf(m); if (i >= 0) MODALS.splice(i, 1); if (onClose) onClose(v); },
+    close(v) { if (done) return; done = true; closePopover(); back.remove(); const i = MODALS.indexOf(m); if (i >= 0) MODALS.splice(i, 1); if (onClose) onClose(v); },
   };
   const box = h('div', { class: 'modal' + (wide ? ' wide' : ''), role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
     h('header', {}, h('h3', { text: title }), h('button', { class: 'icon-btn', 'aria-label': T('סגירה'), onclick: () => m.close(null) }, icon('close'))),
