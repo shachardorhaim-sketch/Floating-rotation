@@ -92,6 +92,9 @@ function normStyle(x) {
   for (const k of ['bt', 'bb', 'bs', 'be']) if (BORDER.test(x[k])) s[k] = x[k].toLowerCase();
   return Object.keys(s).length ? s : null;
 }
+/* a link a cell may hold: a web address, an email, or # and a place in the workbook ('Sheet 2'!B7, a defined name).
+   Anything else (javascript:, a file on the computer) is left out, also from a room or a file */
+const linkOk = t => { t = typeof t === 'string' ? t.trim() : ''; return t.length <= 2083 && /^(?:https?:\/\/\S+|mailto:\S+|#\S.*)$/i.test(t) ? t : null; };
 function normCell(x) {
   if (!x || typeof x !== 'object') return null;
   const c = {};
@@ -103,7 +106,9 @@ function normCell(x) {
   if (c.f && x.x === true) c.x = true;
   if (c.f && x.l === true) c.l = true;
   const st = normStyle(x.st); if (st) c.st = st;
-  return c.f || c.v !== undefined || c.st ? c : null;
+  if (typeof x.n === 'string' && x.n.trim()) c.n = x.n.slice(0, 32767);   // a note on the cell
+  const k = linkOk(x.k); if (k) c.k = k;   // a link
+  return c.f || c.v !== undefined || c.st || c.n || c.k ? c : null;
 }
 function normSheet(x, dir, taken) {
   if (!x || typeof x !== 'object') return null;
@@ -168,6 +173,8 @@ function cellOut(c) {
   if (c.x) j.x = true;
   if (c.l) j.l = true;
   if (c.st) j.st = c.st;
+  if (c.n) j.n = c.n;
+  if (c.k) j.k = c.k;
   return j;
 }
 function sheetOut(s) {
@@ -2408,6 +2415,7 @@ const FUNCS = {
   ISEVEN: fx(1, 1, 'v', v => { if (typeof v === 'boolean') throw E_VAL; return Math.trunc(num(v)) % 2 === 0; }),
   ISODD: fx(1, 1, 'v', v => { if (typeof v === 'boolean') throw E_VAL; return Math.abs(Math.trunc(num(v))) % 2 === 1; }),
   ISREF: { n: [1, 1], f: a => { const v = refOf(a[0]); return !!v && v.rng === true; } },
+  HYPERLINK: fx(1, 2, 'v', (loc, name) => { CTX.link = str(loc); return name === undefined ? CTX.link : name ?? 0; }),   // without a name it shows the address as text
   ISFORMULA: fx(1, 1, 'a', r => { if (!r || !r.rng) throw E_VAL; const x = r.s.cells.get(KEY(r.g.r1, r.g.c1)); return !!(x && x.f != null); }),
   NA: { n: [0, 0], f: () => E_NA },
   'ERROR.TYPE': fx(1, 1, 'v', v => { if (!isErr(v)) throw E_NA; return { '#NULL!': 1, '#DIV/0!': 2, '#VALUE!': 3, '#REF!': 4, '#NAME?': 5, '#NUM!': 6, '#N/A': 7, '#SPILL!': 9, '#CALC!': 14 }[v.c]; }),
@@ -2489,6 +2497,7 @@ function textAround(t, d, n, m, e, nf, before) {
 const FN_CATS = [['logic', N_('לוגיות'), 'call_split'], ['text', N_('טקסט'), 'text_fields'], ['date', N_('תאריך ושעה'), 'calendar_today'],
   ['look', N_('חיפוש והפניה'), 'search'], ['math', N_('מתמטיקה'), 'calculate'], ['stat', N_('סטטיסטיקה'), 'bar_chart'], ['fin', N_('כספים'), 'payments'], ['info', N_('מידע'), 'info']];
 const ARGN = {
+  link_location: N_('כתובת_הקישור'), friendly_name: N_('שם_להצגה'),
   number: N_('מספר'), value: N_('ערך'), text: N_('טקסט'), range: N_('טווח'), criteria: N_('תנאי'), criteria_range: N_('טווח_תנאי'),
   sum_range: N_('טווח_סכום'), average_range: N_('טווח_ממוצע'), max_range: N_('טווח_מקסימום'), min_range: N_('טווח_מינימום'),
   lookup_value: N_('ערך_לחיפוש'), table_array: N_('טבלה'), col_index_num: N_('מספר_עמודה'), row_index_num: N_('מספר_שורה'), range_lookup: N_('התאמה_משוערת'),
@@ -2680,6 +2689,7 @@ const FN_INFO = {
   // finding values
   VLOOKUP: ['look', N_('מחפש ערך בעמודה הראשונה של טבלה, ומחזיר ערך מאותה שורה'), 'lookup_value, table_array, col_index_num, [range_lookup]', 'VLOOKUP(A2,D2:F20,3,FALSE)'],
   HLOOKUP: ['look', N_('מחפש ערך בשורה הראשונה של טבלה, ומחזיר ערך מאותה עמודה'), 'lookup_value, table_array, row_index_num, [range_lookup]', 'HLOOKUP(A2,D1:H3,2,FALSE)'],
+  HYPERLINK: ['look', N_('קישור: מראה את השם שבוחרים, ולחיצה עליו פותחת את הכתובת (או מקום בחוברת, עם # לפניו)'), 'link_location, [friendly_name]', 'HYPERLINK("https://example.com","אתר")'],
   XLOOKUP: ['look', N_('מחפש ערך ברשימה, ומחזיר את מה שעומד מולו ברשימה אחרת'), 'lookup_value, lookup_array, return_array, [if_not_found], [match_mode], [search_mode]', 'XLOOKUP(A2,D2:D20,F2:F20,"-")'],
   LOOKUP: ['look', N_('מחפש ערך ברשימה ממוינת'), 'lookup_value, lookup_array, [return_array]', 'LOOKUP(B2,{0,55,90},{"C","B","A"})'],
   MATCH: ['look', N_('המקום של ערך ברשימה'), 'lookup_value, lookup_array, [match_type]', 'MATCH(D1,A2:A10,0)'],
@@ -2994,6 +3004,7 @@ function evalCell(n) {
   if (c.v !== v) changedAt(WB.sheets[n.si], col);
   c.v = v;
   c.dx = CTX.dyn;
+  if (CTX.link != null) c.hl = CTX.link; else if (c.hl) delete c.hl;   // what HYPERLINK gave: the cell follows it when clicked
 }
 /* an array answer: its first value stays in the formula's cell, the rest fill the cells beside and below. Anything in
    the way (a value, a merged cell, another formula's spill) gives #SPILL! */
@@ -3600,7 +3611,9 @@ function render() {
   if (RM.peers.length) for (const [L, rr, cc] of layers) drawPeers(L, rr, cc);
   for (const L of [V.body, V.top, V.side, V.corner]) sweep(L);
   placeEditor();
+  linkTip();
   dvTip();
+  noteTip();
 }
 /* gridlines: each column's end and each row's bottom, as lines across the part of the sheet in view */
 function gridLines(L, rr, cc) {
@@ -3639,6 +3652,7 @@ function drawCells(L, rr, cc) {
         done.add(m);
         const a = cellAt(s, m.r1, m.c1);
         drawCell(L, 'm' + m.r1 + ',' + m.c1, a, a ? a.st : emptyLook(s, m.r1, m.c1), colX(m.c1), rowY(m.r1), spanW(m.c1, m.c2), spanH(m.r1, m.r2), null, true, cfAt(s, m.r1, m.c1));
+        if (a && a.n) noteMark(L, m.r1, m.c1, colX(m.c1), rowY(m.r1), spanW(m.c1, m.c2));
         continue;
       }
       let x = cellAt(s, r, c);
@@ -3646,8 +3660,14 @@ function drawCells(L, rr, cc) {
       const st = x ? x.st : looks ? emptyLook(s, r, c) : null, cf = cfAt(s, r, c);
       if (!x && !(st && st.bg) && !cf) continue;
       drawCell(L, 'c' + r + ',' + c, x, st, colX(c), rowY(r), w, hh, { r, c }, false, cf);
+      if (x && x.n) noteMark(L, r, c, colX(c), rowY(r), w);
     }
   }
+}
+/* a note's mark: a small red triangle in the cell's top corner on the end side (the top left in a right-to-left sheet) */
+function noteMark(L, r, c, X, Y, w) {
+  const z = Math.max(5, Math.round(6 * Z));
+  place(part(L, 'n' + r + ',' + c, 'sh-nmark'), X + w - z - 1, Y, z, z);
 }
 function drawCell(L, key, x, st, X, Y, w, hgt, spill, merged, cf) {
   if (cf && cf.st) st = { ...(st || {}), ...cf.st };   // what the conditional formatting gives wins over the cell's own look
@@ -3947,12 +3967,12 @@ function writeInput(s, r, c, text, g) {
   const cur = cellAt(s, r, c), look = cur ? cur.st : emptyLook(s, r, c), p = parseInput(text, look && look.nf);
   const put = (rr, cc, pp) => {
     const x = cellAt(s, rr, cc), st0 = x ? x.st : emptyLook(s, rr, cc);
-    if (!pp) { setCell(s, rr, cc, st0 ? { st: st0 } : null); return; }
+    if (!pp) { setCell(s, rr, cc, keepOn(x, st0 ? { st: st0 } : null)); return; }
     const cell = {};
     if (pp.f != null) { cell.f = tidyFormula(pp.f); cell.v = 0; } else cell.v = pp.v;
     const nf = pp.nf || (pp.f != null && !(st0 && st0.nf) ? autoNf(cell.f, s) : null), st = nf ? { ...(st0 || {}), nf } : st0;
     if (st) cell.st = st;
-    setCell(s, rr, cc, cell);
+    setCell(s, rr, cc, keepOn(x, cell));
   };
   if (!g || (g.r1 === g.r2 && g.c1 === g.c2) || sameG(g, mergeAt(s, r, c))) { put(r, c, p); return; }
   const u = usedEnd(s), r2 = Math.min(g.r2, Math.max(u.r, r) + 1000), c2 = Math.min(g.c2, Math.max(u.c, c) + 100);
@@ -4178,6 +4198,185 @@ function hit(e, loose) {
   }
   return { kind: 'cell', r, c, m: mergeAt(WS, r, c) };
 }
+/* --- notes: a cell's note shows beside it while the pointer is on the cell, as in Excel --- */
+const NOTE = { at: null, ed: null };
+function noteHover(hh) {
+  const r = hh ? (hh.m ? hh.m.r1 : hh.r) : -1, c = hh ? (hh.m ? hh.m.c1 : hh.c) : -1, x = hh && !NOTE.ed ? cellAt(WS, r, c) : null;
+  const at = x && x.n ? WS.id + ':' + r + ',' + c : null;
+  if (at === NOTE.at) return;
+  NOTE.at = at;
+  noteTip();
+}
+/* where a note's box goes: beside the cell on its end side, or on the other side when there is no room */
+function notePlace(e, r, c) {
+  const vis = V.vis, m = mergeAt(WS, r, c), c2 = m ? m.c2 : c;
+  const x0 = colX(c) - (c >= WS.fc ? vis.sx : 0), x1 = colX(c2 + 1) - (c2 >= WS.fc ? vis.sx : 0), y = rowY(r) - (r >= WS.fr ? vis.sy : 0), w = e.offsetWidth || 200;
+  e.style.right = e.style.left = '';
+  e.style[SIDE] = px(x1 + 10 + w > vis.vw && x0 - 10 - w > RHW ? x0 - 10 - w : x1 + 10);
+  e.style.top = px(Math.max(CHH, Math.min(y, vis.vh - (e.offsetHeight || 60) - 4)));
+}
+function noteTip() {
+  const at = NOTE.at && NOTE.at.split(':')[0] === WS.id ? NOTE.at.split(':')[1].split(',').map(Number) : null, x = at && cellAt(WS, at[0], at[1]);
+  if (!x || !x.n || NOTE.ed || ED.on) { if (V.note) V.note.hidden = true; return; }
+  if (!V.note) { V.note = h('div', { class: 'sh-note', role: 'note', dir: 'auto' }); V.over.append(V.note); }
+  V.note.hidden = false;
+  if (V.note.textContent !== x.n) V.note.textContent = x.n;
+  notePlace(V.note, at[0], at[1]);
+}
+/* a note written or changed in its box on the sheet (Shift+F2): it is kept when the box loses focus, or with Esc */
+function noteEdit(r = SEL.r, c = SEL.c) {
+  if (!WS || (ED.on && !endEdit(true))) return;
+  const m = mergeAt(WS, r, c);
+  if (m) { r = m.r1; c = m.c1; }
+  if (NOTE.ed) NOTE.ed.ta.blur();
+  const s = WS, x = cellAt(s, r, c), ta = h('textarea', { class: 'sh-note ed', dir: 'auto', spellcheck: 'true', 'aria-label': T('הערה') });
+  ta.value = (x && x.n) || '';
+  NOTE.ed = { ta };
+  NOTE.at = null;
+  noteTip();
+  V.over.append(ta);
+  notePlace(ta, r, c);
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+  ta.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) { e.preventDefault(); ta.blur(); } });
+  ta.addEventListener('blur', () => {
+    if (!NOTE.ed || NOTE.ed.ta !== ta) return;
+    NOTE.ed = null;
+    ta.remove();
+    if (WB && WB.sheets.includes(s)) setNote(s, r, c, ta.value.replace(/\s+$/, ''));
+    if (WS === s) focusGrid();
+  });
+}
+function setNote(s, r, c, text) {
+  const x = cellAt(s, r, c);
+  if (text === ((x && x.n) || '')) return false;
+  return edit(() => { const n = { ...(x || {}) }; if (text) n.n = text.slice(0, 32767); else delete n.n; setCell(s, r, c, n.f != null || n.v !== undefined || n.st || n.n ? n : null); });
+}
+/* every note in the chosen cells goes (Excel's Delete Note) */
+function deleteNotes() {
+  const g = selG();
+  edit(() => { for (const [k, x] of [...WS.cells]) if (x.n && inG(g, kr(k), kc(k))) { const n = { ...x }; delete n.n; setCell(WS, kr(k), kc(k), n.f != null || n.v !== undefined || n.st ? n : null); } });
+}
+const notesIn = g => { for (const [k, x] of WS.cells) if (x.n && inG(g, kr(k), kc(k))) return true; return false; };
+
+/* --- links: a cell's link (Ctrl+K, or HYPERLINK in its formula) shows under it when it is the active cell; the address
+   there opens it, and Ctrl+click on the cell does too --- */
+const LINK_LOOK = { c: '#0563c1', u: true };   // Excel's Hyperlink style
+const linkAt = (s, r, c) => { const x = cellAt(s, r, c); return x ? x.k || x.hl || null : null; };
+function followLink(t) {
+  t = String(t || '').trim();
+  if (t[0] === '#') { if (!goPlace(placeOf(t.slice(1)))) toast(T('המקום שהקישור מצביע עליו לא נמצא בחוברת'), { icon: 'error' }); return; }
+  if (/^www\./i.test(t)) t = 'https://' + t;
+  if (!/^(?:https?:\/\/|mailto:)/i.test(t)) { if (goPlace(placeOf(t))) return; toast(T('אי אפשר לפתוח את הקישור הזה'), { icon: 'error' }); return; }
+  window.open(t, '_blank', 'noopener,noreferrer');
+}
+/* what a link shows in its chip: the address, or the place in the workbook */
+const linkWords = t => t[0] === '#' ? T('מקום בחוברת: {0}', t.slice(1)) : t.replace(/^mailto:/i, '');
+function linkTip() {
+  const g = selG(), m = mergeAt(WS, SEL.r, SEL.c), one = (g.r1 === g.r2 && g.c1 === g.c2) || (m && sameG(g, m)), t = one && !ED.on && !NOTE.ed ? linkAt(WS, m ? m.r1 : SEL.r, m ? m.c1 : SEL.c) : null, vis = V.vis;
+  if (!t || !vis) { if (V.link) V.link.hidden = true; return; }
+  if (!V.link) {
+    V.link = h('div', { class: 'sh-link', role: 'note' });
+    V.link.addEventListener('pointerdown', e => e.stopPropagation());
+    V.over.append(V.link);
+  }
+  const own = !!(cellAt(WS, m ? m.r1 : SEL.r, m ? m.c1 : SEL.c) || {}).k, sig = t + '|' + own;
+  if (V.link._s !== sig) {
+    V.link._s = sig;
+    V.link.textContent = '';
+    V.link.append(icon(t[0] === '#' ? 'move_down' : /^mailto:/i.test(t) ? 'mail' : 'public'), h('a', { href: t[0] === '#' ? '#' : t, dir: 'auto', title: t, text: linkWords(t), onclick: e => { e.preventDefault(); followLink(t); } }),
+      own ? h('button', { class: 'icon-btn', type: 'button', title: T('עריכת קישור'), 'aria-label': T('עריכת קישור'), onclick: () => linkDialog() }, icon('edit')) : '',
+      own ? h('button', { class: 'icon-btn', type: 'button', title: T('הסרת קישור'), 'aria-label': T('הסרת קישור'), onclick: () => removeLinks() }, icon('link_off')) : '');
+  }
+  const r2 = m ? m.r2 : SEL.r, c0 = m ? m.c1 : SEL.c, x = colX(c0) - (c0 >= WS.fc ? vis.sx : 0), y = rowY(r2 + 1) - (r2 >= WS.fr ? vis.sy : 0);
+  V.link.hidden = (r2 >= WS.fr && y < CHH + vis.FH) || (c0 >= WS.fc && x < RHW + vis.FW) || y > vis.vh - 20 || x > vis.vw - 20;
+  V.link.style.right = V.link.style.left = '';
+  V.link.style[SIDE] = px(x);
+  V.link.style.top = px(y + 4);
+}
+/* a link for the chosen cells (Ctrl+K), as Excel's Insert Link: a web address, a place in this workbook, or an email */
+function linkDialog() {
+  if (!WS || (ED.on && !endEdit(true))) return;
+  const g = selG(), m = mergeAt(WS, SEL.r, SEL.c), r0 = m ? m.r1 : SEL.r, c0 = m ? m.c1 : SEL.c, x0 = cellAt(WS, r0, c0), k0 = (x0 && x0.k) || '';
+  const fld = (label, ...kids) => h('label', { class: 'fld' }, h('span', { text: label }), ...kids);
+  const kind0 = k0[0] === '#' ? 'place' : /^mailto:/i.test(k0) ? 'mail' : 'web';
+  const kind = h('select', { class: 'field', 'aria-label': T('קישור אל') }, h('option', { value: 'web', text: T('כתובת אינטרנט') }), h('option', { value: 'place', text: T('מקום בחוברת') }), h('option', { value: 'mail', text: T('דואר אלקטרוני') }));
+  kind.value = kind0;
+  const hasText = x0 && x0.f == null && x0.v != null && x0.v !== '';
+  const text = h('input', { class: 'field', dir: 'auto', value: hasText ? view(x0).t : '', maxlength: '255', autocomplete: 'off', 'aria-label': T('טקסט להצגה') });
+  text.disabled = !!(x0 && x0.f != null);
+  const url = h('input', { class: 'field', dir: 'ltr', value: kind0 === 'web' ? k0 : '', placeholder: 'https://', spellcheck: 'false', autocomplete: 'off', 'aria-label': T('כתובת'), autofocus: true });
+  const p0 = kind0 === 'place' ? placeOf(k0.slice(1)) : null;
+  const sheet = h('select', { class: 'field', 'aria-label': T('גיליון') }, WB.sheets.map(s => h('option', { value: s.id, text: s.name })));
+  sheet.value = (p0 && p0.s ? p0.s : WS).id;
+  const cellRef = h('input', { class: 'field', dir: 'ltr', value: p0 && p0.g ? rangeA1(p0.g) : p0 && p0.nm ? p0.nm.n : 'A1', spellcheck: 'false', autocomplete: 'off', 'aria-label': T('תא או שם') });
+  const mail = h('input', { class: 'field', dir: 'ltr', value: kind0 === 'mail' ? decodeURIComponent(k0.slice(7).split('?')[0]) : '', placeholder: 'name@example.com', spellcheck: 'false', autocomplete: 'off', 'aria-label': T('כתובת דואר') });
+  const subj0 = kind0 === 'mail' && /[?&]subject=([^&]*)/i.exec(k0);
+  const subj = h('input', { class: 'field', dir: 'auto', value: subj0 ? decodeURIComponent(subj0[1]) : '', autocomplete: 'off', 'aria-label': T('נושא') });
+  const parts = { web: [fld(T('כתובת'), url)], place: [fld(T('גיליון'), sheet), fld(T('תא או שם'), cellRef)], mail: [fld(T('כתובת דואר'), mail), fld(T('נושא'), subj)] };
+  const holder = h('div', { class: 'sh-lkd-parts' });
+  const show = () => { holder.textContent = ''; holder.append(...parts[kind.value]); };
+  kind.addEventListener('change', show);
+  show();
+  const err = h('p', { class: 'sh-ch-err', role: 'alert', hidden: true });
+  const fail = t => { err.textContent = t; err.hidden = false; return false; };
+  const apply = () => {
+    let k;
+    if (kind.value === 'web') {
+      let u = url.value.trim();
+      if (!u) return fail(T('כותבים את הכתובת של הקישור'));
+      if (!/^[a-z][a-z0-9+.-]*:/i.test(u)) u = 'https://' + u;
+      if (!/^https?:\/\/\S+$/i.test(u)) return fail(T('זו לא כתובת של אתר. למשל: https://example.com'));
+      k = u;
+    } else if (kind.value === 'place') {
+      const s = WB.sheets.find(y => y.id === sheet.value) || WS, t = cellRef.value.trim() || 'A1', q = /^[\p{L}_][\p{L}\p{N}_.]*$/u.test(s.name) ? s.name : "'" + s.name.replace(/'/g, "''") + "'";
+      const pl = placeOf(q + '!' + t);
+      if (!pl.g && !pl.nm) return fail(T('זו לא כתובת של תא או שם בחוברת. למשל: B7'));
+      k = '#' + (pl.g ? q + '!' + rangeA1(pl.g) : pl.nm.n);
+    } else {
+      const a = mail.value.trim().replace(/^mailto:/i, '');
+      if (!/^[^\s@]+@[^\s@]+$/.test(a)) return fail(T('זו לא כתובת דואר. למשל: name@example.com'));
+      k = 'mailto:' + a + (subj.value.trim() ? '?subject=' + encodeURIComponent(subj.value.trim()) : '');
+    }
+    if (!linkOk(k)) return fail(T('הקישור ארוך מדי'));
+    setLinks(g, k, text.disabled ? null : text.value);
+    return true;
+  };
+  const acts = [{ label: T('אישור'), kind: 'primary', run: apply }, { label: T('ביטול'), value: false }];
+  if (k0) acts.splice(1, 0, { label: T('הסרת קישור'), run: () => { removeLinks(); return true; } });
+  const md = modal({ title: k0 ? T('עריכת קישור') : T('הוספת קישור'), body: h('div', { class: 'sh-nmd' }, fld(T('קישור אל'), kind), holder, fld(T('טקסט להצגה'), text), err), actions: acts, onClose: () => { if (!MODALS.length) focusGrid(); } });
+  md.body.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && e.target.tagName === 'INPUT') { e.preventDefault(); if (apply()) md.close(true); } });
+}
+/* the link on each chosen cell (or the area of a merge): an empty cell shows the text, or the address itself; the look
+   becomes Excel's link look where the cell has no color of its own */
+function setLinks(g, k, text) {
+  const s = WS, u = usedEnd(s), r2 = Math.min(g.r2, Math.max(u.r, g.r1)), c2 = Math.min(g.c2, Math.max(u.c, g.c1));
+  edit(() => {
+    for (let r = g.r1; r <= r2; r++) for (let c = g.c1; c <= c2; c++) {
+      const m = mergeAt(s, r, c);
+      if (m && (m.r1 !== r || m.c1 !== c)) continue;
+      const x = cellAt(s, r, c), n = { ...(x || {}), k }, st = { ...((x ? x.st : emptyLook(s, r, c)) || {}) };
+      if (n.f == null) { if (text != null && text.trim() && r === g.r1 && c === g.c1) n.v = text.trim(); else if (n.v == null || n.v === '') n.v = k[0] === '#' ? k.slice(1) : k.replace(/^mailto:/i, '').split('?')[0]; }
+      if (!st.c) Object.assign(st, LINK_LOOK);
+      n.st = normStyle(st) || undefined;
+      if (!n.st) delete n.st;
+      setCell(s, r, c, n);
+    }
+  });
+}
+/* the links of the chosen cells go, and Excel's link look with them (Remove Hyperlinks) */
+function removeLinks() {
+  const g = selG();
+  edit(() => {
+    for (const [key, x] of [...WS.cells]) {
+      if (!x.k || !inG(g, kr(key), kc(key))) continue;
+      const n = { ...x }; delete n.k;
+      if (n.st && n.st.c === LINK_LOOK.c && n.st.u) { const st = { ...n.st }; delete st.c; delete st.u; n.st = normStyle(st) || undefined; if (!n.st) delete n.st; }
+      setCell(WS, kr(key), kc(key), n.f != null || n.v !== undefined || n.st || n.n ? n : null);
+    }
+  });
+}
+const linksIn = g => { for (const [k, x] of WS.cells) if (x.k && inG(g, kr(k), kc(k))) return true; return false; };
 let DRAG = null;
 function onDown(e) {
   if (!WS || (e.button !== 0 && e.button !== 2)) return;
@@ -4220,6 +4419,7 @@ function onDown(e) {
     case 'rowh': selectRows(e.shiftKey && SEL.whole === 'r' ? SEL.r : hh.r, hh.r); DRAG = { kind: 'rows' }; break;
     case 'fill': DRAG = { kind: 'fill', g: selG(), to: null }; break;
     case 'cell':
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey) { const l = linkAt(WS, hh.m ? hh.m.r1 : hh.r, hh.m ? hh.m.c1 : hh.c); if (l) { selectCell(hh.m ? hh.m.r1 : hh.r, hh.m ? hh.m.c1 : hh.c); followLink(l); return; } }
       if (e.shiftKey) { SEL.er = hh.r; SEL.ec = hh.c; SEL.whole = null; after(); }
       else selectCell(hh.m ? hh.m.r1 : hh.r, hh.m ? hh.m.c1 : hh.c);
       DRAG = { kind: 'cells' };
@@ -4232,6 +4432,7 @@ function onMove(e) {
   if (!DRAG) {   // the pointer shows where a column or row can be resized, the fill handle and the filter buttons
     const hh = hit(e), cur = hh ? { colb: 'col-resize', rowb: 'row-resize', fill: 'crosshair', filt: 'pointer', dv: 'pointer' }[hh.kind] || '' : '';
     if (V.scroll.style.cursor !== cur) V.scroll.style.cursor = cur;
+    noteHover(hh && hh.kind === 'cell' && e.pointerType !== 'touch' ? hh : null);
     return;
   }
   if (DRAG.kind === 'chart') { chartMove(e); return; }
@@ -4400,6 +4601,8 @@ function gridKey(e) {
     moveSel(k === 'PageDown' ? n : -Math.min(n, SEL.r), 0, e.shiftKey);
     return true;
   }
+  if (k === 'F2' && e.shiftKey && !mod) { e.preventDefault(); noteEdit(); return true; }
+  if (mod && !e.shiftKey && !e.altKey && (k === 'k' || k === 'K' || e.code === 'KeyK')) { e.preventDefault(); linkDialog(); return true; }
   if (k === 'F2') { e.preventDefault(); startEdit('edit'); return true; }
   if (k === 'F3' && e.shiftKey && !mod) { e.preventDefault(); fnDialog(); return true; }
   if (k === 'F3' && mod) { e.preventDefault(); if (e.shiftKey) namesFromSelection(); else nameManager(); return true; }
@@ -4519,7 +4722,9 @@ function usedPart(g) {
   const u = usedEnd(WS);
   return { r1: g.r1, c1: g.c1, r2: Math.min(g.r2, Math.max(g.r1, u.r - 1)), c2: Math.min(g.c2, Math.max(g.c1, u.c - 1)) };
 }
-const withLook = (x, st) => { const n = { ...x }; if (st) n.st = st; else delete n.st; return hasVal(n) || n.st ? n : null; };
+const withLook = (x, st) => { const n = { ...x }; if (st) n.st = st; else delete n.st; return hasVal(n) || n.st || n.n || n.k ? n : null; };
+/* what stays on a cell when what is written in it changes or is cleared: its note and its link, as in Excel */
+const keepOn = (x, cell) => x && (x.n || x.k) ? { ...(cell || {}), ...(x.n ? { n: x.n } : {}), ...(x.k ? { k: x.k } : {}) } : cell;
 /* one change to the look of every chosen cell. Whole columns, rows or the sheet keep it as their own look too, so
    what is typed there later gets it, as in Excel */
 function patchLook(fn, g = selG()) {
@@ -4582,7 +4787,7 @@ function clearSel(what) {
     for (const [k, x] of [...WS.cells]) {
       const r = kr(k), c = kc(k);
       if (!inG(g, r, c)) continue;
-      if (what === 'v') setCell(WS, r, c, x.st ? { st: x.st } : null);
+      if (what === 'v') setCell(WS, r, c, keepOn(x, x.st ? { st: x.st } : null));
       else if (what === 'f') setCell(WS, r, c, withLook(x, null));
       else setCell(WS, r, c, null);
     }
@@ -5612,6 +5817,13 @@ const CSS = `
 .sh-cfm-d{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sh-c.wr>span{flex:0 1 auto;min-width:0;width:100%;overflow-wrap:anywhere}
 .sh-bd{z-index:3}
+.sh-nmark{z-index:6;pointer-events:none;background:linear-gradient(to bottom left,#e3242b 50%,transparent 50%)}
+.sh-scroll[dir=rtl] .sh-nmark{background:linear-gradient(to bottom right,#e3242b 50%,transparent 50%)}
+.sh-note{position:absolute;z-index:9;width:200px;min-height:56px;max-height:260px;overflow:auto;box-sizing:border-box;padding:6px 8px;background:#ffffe1;color:#1b1f2a;border:1px solid #8a8a5c;box-shadow:2px 2px 6px rgba(0,0,0,.18);font:12.5px/1.45 Tahoma,Arial,sans-serif;white-space:pre-wrap;overflow-wrap:anywhere;text-align:start;pointer-events:none}
+.sh-link{position:absolute;z-index:9;display:flex;align-items:center;gap:6px;max-width:380px;padding:3px 4px 3px 10px;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:8px;box-shadow:var(--pop);font:13px var(--ui);pointer-events:auto}
+.sh-link a{color:#0563c1;text-decoration:underline;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;min-width:0}
+.sh-link .icon-btn{width:28px;height:28px}
+.sh-note.ed{pointer-events:auto;resize:both;height:110px;max-height:none;outline:2px solid #2743d8;outline-offset:-1px}
 .sh-fb{z-index:4;display:grid;place-items:center;border:1px solid #b9bfca;border-radius:3px;background:#f3f4f7;color:#3d4556}
 .sh-fb .ms{font-size:15px;width:auto}
 .sh-fb.on{background:#e3e8fd;border-color:#2743d8;color:#2743d8}
@@ -5820,7 +6032,9 @@ function ribbonPanels() {
     group(T('תצוגה@view'), '', rbtn('shGrid', 'grid_on', T('קווי רשת'), { big: true, id: 'shGridBtn' }), rbtn('shDir', 'format_textdirection_r_to_l', T('גיליון מימין לשמאל'), { big: true, id: 'shDirBtn' })),
     group(T('זום'), '', rbtn('shZoom', 'remove', T('הקטנה'), { arg: '-1' }), h('button', { class: 'rb txt', type: 'button', 'data-cmd': 'shZoom', 'data-arg': '0', id: 'shZoomPct', title: T('חזרה ל-100%') }, '100%'), rbtn('shZoom', 'add', T('הגדלה'), { arg: '1' })));
   const insert = h('div', { class: 'panel sheet-only', 'data-panel': 'sinsert', hidden: true },
-    group(T('גרפים'), '', ...CKS.map(k => rbtn('shChart', CHARTS[k].ic, T(CHARTS[k].n), { big: true, arg: k, title: T('גרף חדש מהתאים שבחרת') }))));
+    group(T('גרפים'), '', ...CKS.map(k => rbtn('shChart', CHARTS[k].ic, T(CHARTS[k].n), { big: true, arg: k, title: T('גרף חדש מהתאים שבחרת') }))),
+    group(T('קישורים'), '', rbtn('shLink', 'link', T('קישור'), { big: true, title: T('קישור לאתר, למקום בחוברת או לדואר (Ctrl+K)') })),
+    group(T('הערות'), '', rbtn('shNote', 'sticky_note_2', T('הערה'), { big: true, title: T('הערה על התא, שמופיעה כשהעכבר עליו (Shift+F2)') })));
   return [home, insert, formulas, data, viewP];
 }
 const SHEET_TAB_LIST = () => [['shome', T('בית')], ['sinsert', T('הוספה')], ['sformula', T('נוסחאות')], ['sdata', T('נתונים')], ['sview', T('תצוגה@view')]];
@@ -5857,6 +6071,7 @@ function mount() {
   sc.addEventListener('pointerup', onUp);
   sc.addEventListener('pointercancel', () => { cancelAnimationFrame(SCROLLER); if (DRAG && DRAG.line) DRAG.line.remove(); DRAG = null; });
   sc.addEventListener('dblclick', onDbl);
+  sc.addEventListener('pointerleave', () => noteHover(null));
   sc.addEventListener('contextmenu', e => { if (!WS) return; e.preventDefault(); const ce = chartAt(e); if (ce) { CH.id = ce.dataset.id; renderSoon(); openChartMenu(e.clientX, e.clientY); return; } const hh = hit(e); if (hh && hh.kind === 'filt') return; openCellMenu(e.clientX, e.clientY); });
   sc.addEventListener('scroll', () => { renderSoon(); if (AC.box && !AC.box.hidden) requestAnimationFrame(acShow); }, { passive: true });
   sc.addEventListener('wheel', e => { if (!(e.ctrlKey || e.metaKey) || !WS) return; e.preventDefault(); setZoom(WS.zoom + (e.deltaY < 0 ? 10 : -10)); }, { passive: false });
@@ -5988,6 +6203,12 @@ function openCellMenu(x, y) {
     !cols && { ic: 'table_rows', label: T('מחיקת שורות'), run: deleteRows },
     !rows && { ic: 'view_column', label: T('מחיקת עמודות'), run: deleteCols },
     { ic: 'ink_eraser', label: T('ניקוי התוכן'), key: 'Delete', run: () => clearSel('v') },
+    '-',
+    (() => { const x = cellAt(WS, SEL.r, SEL.c); return { ic: 'sticky_note_2', label: x && x.n ? T('עריכת הערה') : T('הוספת הערה'), key: 'Shift+F2', run: () => noteEdit() }; })(),
+    notesIn(g) && { ic: 'speaker_notes_off', label: T('מחיקת הערה'), run: deleteNotes },
+    (() => { const l = linkAt(WS, SEL.r, SEL.c); return { ic: 'link', label: l && cellAt(WS, SEL.r, SEL.c).k ? T('עריכת קישור') + '…' : T('קישור') + '…', key: 'Ctrl+K', run: () => linkDialog() }; })(),
+    linkAt(WS, SEL.r, SEL.c) && { ic: 'open_in_new', label: T('פתיחת הקישור'), run: () => followLink(linkAt(WS, SEL.r, SEL.c)) },
+    linksIn(g) && { ic: 'link_off', label: T('הסרת קישור'), run: removeLinks },
     '-',
     { ic: 'arrow_upward', label: T('מיון מהקטן לגדול'), run: () => quickSort(false) },
     { ic: 'arrow_downward', label: T('מיון מהגדול לקטן'), run: () => quickSort(true) },
@@ -6187,14 +6408,22 @@ function goToName(x) {
 }
 /* what was typed into the name box: an address goes there, a name that is there goes to its cells, and a new name is
    given to the chosen cells */
-function nameBoxEnter() {
-  let t = V.name.value.trim(), s = WS, sheet = null;
+/* where a text points in the workbook: B7, A1:C9, 'Sheet 2'!B7, or a defined name (the name box, and links) */
+function placeOf(t) {
+  let s = WS, sheet = null;
   const m = /^(?:'((?:[^']|'')+)'|([^!]+))!(.+)$/.exec(t);
   if (m) { sheet = (m[1] ?? m[2]).replace(/''/g, "'"); const n = sheet.toLowerCase(); s = WB.sheets.find(x => x.name.toLowerCase() === n); t = m[3]; }
-  const g = s && parseRange(t);
-  if (g) { if (s !== WS) showSheet(s); selectRange(g); scrollToCell(g.r1, g.c1); focusGrid(); return; }
-  const had = s && NAME_RE.test(t) ? nameOf({ n: t, sheet }, WS) : null;
-  if (had) { goToName(had); return; }
+  const g = s ? parseRange(t) : null, nm = !g && s && NAME_RE.test(t) ? nameOf({ n: t, sheet }, WS) : null;
+  return { s, sheet, t, g, nm };
+}
+function goPlace(p) {
+  if (p.g) { if (p.s !== WS) showSheet(p.s); selectRange(p.g); scrollToCell(p.g.r1, p.g.c1); focusGrid(); return true; }
+  if (p.nm) { goToName(p.nm); return true; }
+  return false;
+}
+function nameBoxEnter() {
+  const p = placeOf(V.name.value.trim()), { s, sheet, t } = p;
+  if (goPlace(p)) return;
   const why = !s ? T('אין גיליון בשם הזה') : sheet != null ? T('זו לא כתובת של תא. למשל: B7 או A1:C9') : nameProblem(t);
   if (why) { toast(why, { icon: 'error', ms: 6000 }); V.name.select(); return; }
   const cells = selG();
@@ -6376,7 +6605,7 @@ const COMMANDS = {
   shSortMenu: (a, b) => sortMenu(b), shClearMenu: (a, b) => clearMenu(b), shFind: () => openFind(false),
   shSort: a => quickSort(a === 'd'), shSortDlg: () => sortDialog(), shFilter: () => toggleFilter(), shFilterClear: () => clearFilter(),
   shDvList: () => dvDialog('list'), shDvMenu: (a, b) => dvMenu(b),
-  shShowF: () => toggleFormulas(), shFxHelp: () => formulaHelp(), shFnDlg: () => fnDialog(), shFnCat: (a, b) => fnCatMenu(a, b), shCfMenu: (a, b) => cfMenu(b),
+  shNote: () => noteEdit(), shLink: () => linkDialog(), shShowF: () => toggleFormulas(), shFxHelp: () => formulaHelp(), shFnDlg: () => fnDialog(), shFnCat: (a, b) => fnCatMenu(a, b), shCfMenu: (a, b) => cfMenu(b),
   shFreezeMenu: (a, b) => freezeMenu(b), shGrid: () => edit(() => setProp(WS, 'gl', !WS.gl)), shDir: () => edit(() => setProp(WS, 'dir', WS.dir === 'rtl' ? 'ltr' : 'rtl')),
   shZoom: a => setZoom(+a === 0 ? 100 : WS.zoom + (+a > 0 ? 10 : -10)),
 };
@@ -6558,7 +6787,7 @@ async function readXlsx(buf) {
           case VT.Number: case VT.String: case VT.Boolean: x.v = v; break;
           case VT.Date: x.v = jsDateSerial(v); break;
           case VT.RichText: x.v = (v.richText || []).map(t => t.text).join(''); break;
-          case VT.Hyperlink: x.v = typeof v.text === 'string' ? v.text : v.text && v.text.richText ? v.text.richText.map(t => t.text).join('') : String(v.hyperlink || ''); add('link'); break;
+          case VT.Hyperlink: x.v = typeof v.text === 'string' ? v.text : v.text && v.text.richText ? v.text.richText.map(t => t.text).join('') : String(v.hyperlink || ''); break;   // the link itself: importExtras
           case VT.Error: x.v = ERR[v.error] || E_NA; break;
           case VT.Formula: {
             let f = v.formula;
@@ -6575,7 +6804,6 @@ async function readXlsx(buf) {
           }
           default: break;
         }
-        if (cell.note) add('note');
         const st = xlLook(cell, theme);
         if (st) x.st = st;
         if (x.v !== undefined || x.f || x.st) { const n = normCell(x.v instanceof Err ? { ...x, v: undefined, e: x.v.c } : x); if (n) s.cells.set(KEY(r, c), n); }
@@ -6611,7 +6839,46 @@ async function readXlsx(buf) {
   if (hasCharts) await importCharts(buf, nb, xlNames, rep);
   if (hasCf) await importCf(buf, nb, xlNames, rep, theme);
   await importDv(buf, nb, xlNames, rep);
+  await importExtras(buf, nb, xlNames, rep);   // notes and links, which the file's compressed parts hide from a quick look
   return { book: bookOut(nb), rep };
+}
+/* the file's notes (xl/commentsN.xml, through each sheet's links) and links (the sheet's <hyperlinks>), read here:
+   ExcelJS loses a note on a cell that has nothing else, and Excel writes such cells only into the notes' part; and it
+   keeps a link only on a cell of text. The author's name, which Excel writes as a note's first line, stays part of the
+   text. A link to another file or to a place on the computer is left out, and counted for the report */
+async function importExtras(buf, nb, xlNames, rep) {
+  try {
+    const JSZip = await zipLib(), zip = await JSZip.loadAsync(buf), dp = new DOMParser();
+    const xml = async p => { const f = zip.file(p); return f ? dp.parseFromString(await f.async('string'), 'application/xml') : null; };
+    const wbx = await xml('xl/workbook.xml'), wr = await xml(relsOf('xl/workbook.xml'));
+    if (!wbx || !wr) return;
+    const rels = new Map(xdesc(wr, 'Relationship').map(r => [xat(r, 'Id'), partPath('xl/workbook.xml', xat(r, 'Target') || '')]));
+    for (const sh of xdesc(wbx, 'sheet')) {
+      const s = nb.sheets[xlNames.indexOf(xat(sh, 'name'))], rid = [...sh.attributes].find(a => a.localName === 'id' && /relationships/.test(a.namespaceURI || '')), path = rid && rels.get(rid.value);
+      const sr = s && path && await xml(relsOf(path));
+      if (!sr) continue;
+      const sx = await xml(path), hl = sx ? xdesc(sx, 'hyperlink') : [];
+      for (const e of hl) {
+        const g = parseRange(xat(e, 'ref') || ''), rid = [...e.attributes].find(a => a.localName === 'id' && /relationships/.test(a.namespaceURI || ''));
+        const rel = rid && xdesc(sr, 'Relationship').find(r => xat(r, 'Id') === rid.value), loc = xat(e, 'location');
+        const k = linkOk(rel ? (xat(rel, 'Target') || '') + (loc ? '#' + loc : '') : loc ? '#' + loc : '');
+        if (!g) continue;
+        if (!k) { rep.set('link', (rep.get('link') || 0) + 1); continue; }
+        let n = 0;
+        for (let r = g.r1; r <= Math.min(g.r2, MAXR - 1); r++) for (let c = g.c1; c <= Math.min(g.c2, MAXC - 1) && n < 2000; c++, n++) { const key = KEY(r, c); s.cells.set(key, { ...(s.cells.get(key) || {}), k }); }
+      }
+      for (const r of xdesc(sr, 'Relationship').filter(r => /\/comments$/.test(xat(r, 'Type') || ''))) {
+        const doc = await xml(partPath(path, xat(r, 'Target') || ''));
+        if (!doc) continue;
+        for (const cm of xdesc(doc, 'comment')) {
+          const at = parseA1(xat(cm, 'ref') || ''), text = xdesc(cm, 't').map(t => t.textContent).join('').replace(/\r\n?/g, '\n');
+          if (!at || !text.trim() || at.r >= MAXR || at.c >= MAXC) continue;
+          const k = KEY(at.r, at.c), x = s.cells.get(k);
+          s.cells.set(k, { ...(x || {}), n: text.slice(0, 32767) });
+        }
+      }
+    }
+  } catch (e) { console.warn(e); }
 }
 /* the file's charts onto its sheets (by the sheet's name in the file); kinds that aren't here are counted for the report */
 async function importCharts(buf, nb, xlNames, rep) {
@@ -6781,6 +7048,7 @@ async function writeXlsx() {
       else if (isErr(x.v)) cell.value = xlErr(x.v);
       else if (x.v != null) cell.value = x.v;   // a text of no letters too (what a file has where "" was pasted as a value): COUNTA and "*" count it
       cell.style = xlStyleOut(x.st);
+      if (x.n) cell.note = x.n;
     }
     // the values a formula spilled, as plain values the way Excel keeps them
     if (s._sp) for (const [k, o] of s._sp) {
@@ -6798,8 +7066,36 @@ async function writeXlsx() {
   if (dyn) buf = await addDynamic(buf);
   if (WB.sheets.some(s => s.dv.length)) buf = await addXlsxDv(buf);
   if (WB.sheets.some(s => s.cf.length)) buf = await addXlsxCf(buf);
+  if (WB.sheets.some(s => { for (const x of s.cells.values()) if (x.k) return true; return false; })) buf = await addXlsxLinks(buf);
   if ((WB.names || NO_NAMES).length) buf = await addXlsxNames(buf);
   return new Blob([buf], { type: XLSX_MIME });
+}
+/* links into each sheet's <hyperlinks>: a web address or an email through the sheet's links (TargetMode External), a
+   place in the workbook as location, the way Excel writes them. ExcelJS writes a link only on a cell of text */
+async function addXlsxLinks(buf) {
+  const JSZip = await zipLib(), zip = await JSZip.loadAsync(buf);
+  for (let i = 0; i < WB.sheets.length; i++) {
+    const list = [...WB.sheets[i].cells].filter(([, x]) => x.k).sort((a, b) => a[0] - b[0]);
+    const sp = `xl/worksheets/sheet${i + 1}.xml`, sf = zip.file(sp);
+    if (!list.length || !sf) continue;
+    const rp = relsOf(sp), rf = zip.file(rp);
+    let rx = rf ? await rf.async('string') : '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>', id = 1;
+    const out = list.map(([k, x]) => {
+      const ref = A1(kr(k), kc(k));
+      if (x.k[0] === '#') return `<hyperlink ref="${ref}" location="${esc(x.k.slice(1))}"/>`;
+      while (rx.includes(`Id="rId${id}"`)) id++;
+      rx = rx.replace('</Relationships>', `<Relationship Id="rId${id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="${esc(x.k)}" TargetMode="External"/></Relationships>`);
+      return `<hyperlink ref="${ref}" r:id="rId${id}"/>`;
+    });
+    zip.file(rp, rx);
+    let sx = await sf.async('string');
+    if (!/xmlns:r=/.test(sx.slice(0, 600))) sx = sx.replace('<worksheet ', '<worksheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ');
+    const at = ['<printOptions', '<pageMargins', '<pageSetup', '<headerFooter', '<rowBreaks', '<colBreaks', '<customProperties', '<cellWatches', '<ignoredErrors', '<smartTags', '<drawing', '<legacyDrawing', '<picture', '<oleObjects', '<controls', '<webPublishItems', '<tableParts', '<extLst', '</worksheet>'].map(t => sx.indexOf(t)).filter(q => q >= 0);
+    const pos = Math.min(...at);
+    sx = sx.slice(0, pos) + '<hyperlinks>' + out.join('') + '</hyperlinks>' + sx.slice(pos);
+    zip.file(sp, sx);
+  }
+  return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
 }
 /* defined names in Excel files: ExcelJS keeps only names for plain cells, without their scope or note, so they are
    written into the workbook's own part here, and read from it. A name of one sheet has that sheet's number
@@ -6988,13 +7284,13 @@ function applySpec(book, s, spec, log) {
     if (r >= MAXR || c >= MAXC) return 0;
     if (log && log.length < 5000) log.push([r, c]);
     const cur = cellAt(s, r, c), st0 = cur ? cur.st : emptyLook(s, r, c);
-    if (v == null || v === '') { setCell(s, r, c, st0 ? { st: st0 } : null); return 1; }
+    if (v == null || v === '') { setCell(s, r, c, keepOn(cur, st0 ? { st: st0 } : null)); return 1; }
     const p = typeof v === 'number' ? (Number.isFinite(v) ? { v } : null) : typeof v === 'boolean' ? { v } : parseInput(String(v), st0 && st0.nf);
     if (!p) return 0;
     const x = p.f != null ? { f: tidyFormula(closeBrackets(p.f), book), v: 0 } : { v: p.v };
     const nf = p.nf || (p.f != null && !(st0 && st0.nf) ? autoNf(x.f, s) : null), st = nf ? { ...(st0 || {}), nf } : st0;
     if (st) x.st = st;
-    setCell(s, r, c, x);
+    setCell(s, r, c, keepOn(cur, x));
     return 1;
   };
   let n = 0;
@@ -7002,6 +7298,23 @@ function applySpec(book, s, spec, log) {
   const at = parseA1(spec.start || 'A1') || { r: 0, c: 0 };
   if (Array.isArray(spec.rows)) spec.rows.slice(0, 5000).forEach((row, i) => { if (Array.isArray(row)) row.slice(0, 500).forEach((v, j) => { if (v !== undefined) n += put(at.r + i, at.c + j, v); }); });
   if (spec.cells && typeof spec.cells === 'object') for (const [a, v] of Object.entries(spec.cells)) { const p = parseA1(a); if (p) n += put(p.r, p.c, v); }
+  if (spec.notes && typeof spec.notes === 'object') for (const [a, t] of Object.entries(spec.notes).slice(0, 5000)) {
+    const p = parseA1(a), text = t == null ? '' : String(t).replace(/\s+$/, '');
+    if (!p || p.r >= MAXR || p.c >= MAXC) continue;
+    const x = cellAt(s, p.r, p.c), m = { ...(x || {}) };
+    if (text) m.n = text.slice(0, 32767); else delete m.n;
+    setCell(s, p.r, p.c, m.f != null || m.v !== undefined || m.st || m.n ? m : null);
+    n++;
+  }
+  if (spec.links && typeof spec.links === 'object') for (const [a, t] of Object.entries(spec.links).slice(0, 5000)) {
+    const p = parseA1(a), k = t ? linkOk(/^www\./i.test(String(t).trim()) ? 'https://' + String(t).trim() : t) : null;
+    if (!p || p.r >= MAXR || p.c >= MAXC || (t && !k)) continue;
+    const x = cellAt(s, p.r, p.c), m = { ...(x || {}) };
+    if (k) { m.k = k; if (!(m.st && m.st.c)) m.st = normStyle({ ...(m.st || {}), ...LINK_LOOK }); if (m.f == null && (m.v == null || m.v === '')) m.v = k[0] === '#' ? k.slice(1) : k.replace(/^mailto:/i, ''); }
+    else delete m.k;
+    setCell(s, p.r, p.c, m.f != null || m.v !== undefined || m.st || m.n || m.k ? m : null);
+    n++;
+  }
   const cw = spec.column_widths;
   if (cw && typeof cw === 'object') {
     const m = new Map(s.cw);
@@ -7151,16 +7464,16 @@ function forAI(args = {}) {
   if (names.length) out.names = names;
   if (!g) return { ...out, range: null, rows: [], note: 'This sheet is empty.' };
   g = { r1: g.r1, c1: g.c1, r2: Math.min(g.r2, used ? used.r2 : g.r2, g.r1 + 399), c2: Math.min(g.c2, used ? used.c2 : g.c2, g.c1 + 59) };
-  const rows = [], formulas = {};
+  const rows = [], formulas = {}, notes = {}, links = {};
   for (let r = g.r1; r <= g.r2; r++) {
     const row = [];
-    for (let c = g.c1; c <= g.c2; c++) { const x = cellSp(s, r, c); row.push(x ? view(x).t : ''); if (x && x.f != null) formulas[A1(r, c)] = editText(x); }
+    for (let c = g.c1; c <= g.c2; c++) { const x = cellSp(s, r, c); row.push(x ? view(x).t : ''); if (x && x.f != null) formulas[A1(r, c)] = editText(x); if (x && x.n) notes[A1(r, c)] = x.n; if (x && (x.k || x.hl)) links[A1(r, c)] = x.k || x.hl; }
     rows.push(row);
   }
   while (rows.length && rows[rows.length - 1].every(t => t === '')) rows.pop();
   const spills = {};
   if (s._sa) for (const [k, a] of s._sa) if (meets(a, g)) spills[A1(kr(k), kc(k))] = rangeA1(a);
-  const res = { ...out, range: rangeA1(g), rows, ...(Object.keys(formulas).length ? { formulas } : {}), ...(Object.keys(spills).length ? { spills } : {}),
+  const res = { ...out, range: rangeA1(g), rows, ...(Object.keys(formulas).length ? { formulas } : {}), ...(Object.keys(notes).length ? { notes } : {}), ...(Object.keys(links).length ? { links } : {}), ...(Object.keys(spills).length ? { spills } : {}),
     note: 'rows[0] is row ' + (g.r1 + 1) + ' and each row starts at column ' + colName(g.c1) + '. Each value is what the cell shows (with its number format); formulas lists the cells that hold one' + (Object.keys(spills).length ? ', and spills the cells an array formula (SORT, FILTER, UNIQUE...) fills from its own cell.' : '.') };
   if (s === WS) res.selected = rangeA1(usedPart(selG()));
   if (used && (used.r2 > g.r2 || used.c2 > g.c2) && !args.range) res.truncated = 'Only part of the sheet was returned. Read the rest with the range argument.';
@@ -9543,7 +9856,7 @@ function dvTip() {
   tip.hidden = (m.r2 >= WS.fr && y < CHH + vis.FH) || (m.c >= WS.fc && x < RHW + vis.FW) || y > vis.vh - 20 || x > vis.vw - 20;
   tip.style.right = tip.style.left = '';
   tip.style[SIDE] = px(x + Math.min(20, spanW(m.c, m.c2) / 2));
-  tip.style.top = px(y + 6);
+  tip.style.top = px(y + 6 + (V.link && !V.link.hidden ? V.link.offsetHeight + 4 : 0));
 }
 /* red rings around the cells in view whose values don't pass their rules (Excel's Circle Invalid Data), worked out
    again after each change */
