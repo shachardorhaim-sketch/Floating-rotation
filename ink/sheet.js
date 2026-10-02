@@ -729,6 +729,17 @@ let AX = false;     // arrays are on: a range stays whole, and math on it is don
 let OFF = null;     // conditional formatting: a rule's formula, moved to the cell it is checked for ({ dr, dc })
 let LIMR = MAXR, LIMC = MAXC;   // a whole column (or row) as an array ends after the last row (or column) in use
 const COLL = new Intl.Collator(LOCALE, { sensitivity: 'accent', numeric: false });
+/* Text in the order Excel has it (measured there, in Data > Sort and in < between two texts): the scripts go Latin,
+   Greek, Cyrillic, Hebrew, Arabic, Chinese, whatever the language of the interface (the browser's own order for
+   Hebrew puts Hebrew first); a hyphen or an apostrophe inside a word isn't counted (co-op goes with coop), and only
+   settles a tie */
+const ROOT_COLL = new Intl.Collator('en', { sensitivity: 'accent' });
+const scriptOf = t => { const ch = t.codePointAt(0); return ch === undefined || ch < 0x250 ? 0 : /^\p{sc=Grek}/u.test(t) ? 1 : /^\p{sc=Cyrl}/u.test(t) ? 2 : /^\p{sc=Hebr}/u.test(t) ? 3 : /^\p{sc=Arab}/u.test(t) ? 4 : /^[\p{sc=Han}\p{sc=Hira}\p{sc=Kana}\p{sc=Hang}]/u.test(t) ? 6 : 5; };
+const WORD_SIGN = /['\u2019-]/, WORD_SIGNS = /['\u2019-]/g;
+function textCmp(a, b, coll = COLL) {
+  const by = (x, y) => scriptOf(x) !== scriptOf(y) ? ROOT_COLL.compare(x, y) : coll.compare(x, y);
+  return WORD_SIGN.test(a) || WORD_SIGN.test(b) ? by(a.replace(WORD_SIGNS, ''), b.replace(WORD_SIGNS, '')) || a.length - b.length || by(a, b) : by(a, b);
+}
 const sheetNamed = name => { if (name == null) return WB.sheets[CTX.si]; const n = name.toLowerCase(); return WB.sheets.find(s => s.name.toLowerCase() === n) || null; };
 /* a cell's value; an empty cell another formula spills into shows that formula's value */
 function valAt(s, r, c) {
@@ -772,7 +783,7 @@ function compare(op, a, b) {
   const rank = v => typeof v === 'number' ? 0 : typeof v === 'string' ? 1 : 2, ra = rank(a), rb = rank(b);
   let c;
   if (ra !== rb) c = ra < rb ? -1 : 1;
-  else if (ra === 1) c = a.toLowerCase() === b.toLowerCase() ? 0 : COLL.compare(a, b) < 0 ? -1 : 1;
+  else if (ra === 1) c = a.toLowerCase() === b.toLowerCase() ? 0 : textCmp(a, b) < 0 ? -1 : 1;
   else c = a < b ? -1 : a > b ? 1 : 0;
   return op === '=' ? c === 0 : op === '<>' ? c !== 0 : op === '<' ? c < 0 : op === '>' ? c > 0 : op === '<=' ? c <= 0 : c >= 0;
 }
@@ -962,12 +973,33 @@ function toArr(v) {
     if ((r2 - g.r1 + 1) * (c2 - g.c1 + 1) > 1e5) { r2 = Math.min(r2, Math.max(g.r1, LIMR - 1)); c2 = Math.min(c2, Math.max(g.c1, LIMC - 1)); }
     const h = r2 - g.r1 + 1, w = c2 - g.c1 + 1;
     if (h * w > 4e6) return E_NUM;
+    const kept = DDON && w <= 16 && h * w >= 32 ? keptArr(s, g.r1, g.c1, r2, c2) : null;
+    if (kept && kept.A) return kept.A;
     const d = new Array(h * w);
     for (let i = 0; i < h; i++) for (let j = 0; j < w; j++) d[i * w + j] = valAt(s, g.r1 + i, g.c1 + j);
-    return mkArr(h, w, d);
+    const A = mkArr(h, w, d);
+    if (kept) { d._c = true; kept.A = A; if ((KEPT_N += h * w) > 3e6) { KEPT.clear(); KEPT_N = 0; } }
+    return A;
   }
   return mkArr(1, 1, [v]);
 }
+/* A range's values are kept while one formula after another reads them in a pass: a lookup in each of 2,000 rows reads
+   the same 20,000 cells, and finds its value through one index (findExact, sortedPos) instead of reading them all.
+   They are good as long as no cell of their columns has changed since: s._cv counts each column's changes, s._sv the
+   spills. Only narrow ranges are kept, where lookups look; nothing is kept outside a pass */
+const KEPT = new Map();
+let KEPT_N = 0;
+function keptArr(s, r1, c1, r2, c2) {
+  const key = s.id + ':' + r1 + ',' + c1 + ',' + r2 + ',' + c2;
+  let stamp = s._sv || 0;
+  if (s._cv) for (let c = c1; c <= c2; c++) stamp += s._cv.get(c) || 0;
+  const e = KEPT.get(key);
+  if (e && e.stamp === stamp) return e;
+  const n = { stamp, A: null };
+  KEPT.set(key, n);
+  return n;
+}
+const changedAt = (s, c) => { (s._cv || (s._cv = new Map())).set(c, (s._cv.get(c) || 0) + 1); };
 const arrOf = v => { const A = toArr(v); if (isErr(A)) throw A; return A; };
 const dims = v => v && v.rng ? [v.g.r2 - v.g.r1 + 1, v.g.c2 - v.g.c1 + 1] : v && v.arr ? [v.h, v.w] : [1, 1];
 /* each value of a range (only cells that hold one) or of an array (but its empty places) */
@@ -1011,7 +1043,8 @@ function argA(n) {
   if (n.t === 'name') return nameVal(n, true);
   const k = AX;
   AX = true;
-  try { return ev(n); } finally { AX = k; }
+  KEEP = n.t === 'fn' && (n.n === 'IF' || n.n === 'CHOOSE' || n.n === 'XLOOKUP');   // the cell they pick stays a reference: ROW(IF(TRUE,A3)) is 3, as in Excel
+  try { return ev(n); } finally { AX = k; KEEP = false; }
 }
 /* a function of single values. kinds tells how each argument is taken (the last goes on for the rest, or a function of
    its place): v one value, a an array or a reference as it is. Where an array stands for a v, the function answers for
@@ -1115,7 +1148,7 @@ function critOf(c) {
   }
   if (isErr(c)) return v => v === c;
   if (typeof c === 'boolean') return v => v === c;
-  if (c == null) return v => v === 0;   // an empty cell as the condition means 0
+  if (c == null) c = 0;   // an empty cell as the condition means 0
   return v => typeof v === 'number' ? v === c : typeof v === 'string' && numLike(v) === c;
 }
 /* text that reads as a number ("5", "1/10/2026"), as its number; otherwise null */
@@ -1133,16 +1166,53 @@ function critText(s) {
   if (x != null) return op === '=' ? v => typeof v === 'number' ? v === x : typeof v === 'string' && numLike(v) === x
     : op === '<>' ? v => !(typeof v === 'number' && v === x) : test(v => typeof v === 'number', v => v < x ? -1 : v > x ? 1 : 0);
   if (op === '=' || op === '<>') { const re = wildRe(t); return op === '=' ? v => typeof v === 'string' && re.test(v) : v => !(typeof v === 'string' && re.test(v)); }
-  return test(v => typeof v === 'string', v => v.toLowerCase() === t.toLowerCase() ? 0 : COLL.compare(v, t) < 0 ? -1 : 1);
+  return test(v => typeof v === 'string', v => v.toLowerCase() === t.toLowerCase() ? 0 : textCmp(v, t) < 0 ? -1 : 1);
 }
 /* the places (from the top corner) of the cells that pass every condition: pairs of [range, condition] of one size */
 function ifsCells(pairs) {
   const [h, w] = dims(pairs[0][0]);
   for (const [r] of pairs) { const [h2, w2] = dims(r); if (h2 !== h || w2 !== w) throw E_VAL; }
-  const tests = pairs.map(([r, c]) => [arrOf(r), critOf(c)]), A0 = tests[0][0], out = [];
-  for (let i = 0; i < A0.d.length; i++) if (tests.every(([A, f]) => f(A.d[i]))) out.push(i);
+  const tests = pairs.map(([r, c]) => [arrOf(r), critOf(c), c]), A0 = tests[0][0], out = [];
+  // a condition that asks for one value, on a kept range (see keptArr): its places come from the range's index, and
+  // only they are checked against the other conditions
+  const lead = tests.find(([A, , c]) => A.d._c && eqKey(c, A.d) !== undefined);
+  if (lead) { for (const i of placesOf(lead[0].d).get(eqKey(lead[2], lead[0].d)) || []) if (tests.every(([A, f]) => f(A.d[i]))) out.push(i); }
+  else for (let i = 0; i < A0.d.length; i++) if (tests.every(([A, f]) => f(A.d[i]))) out.push(i);
   // a whole column is looked at only down to the last row in use; the empty rest passes when empty cells pass
   return { out, rest: h * w - A0.d.length, restOk: tests.every(([, f]) => f(null)) };
+}
+/* the one value a condition asks for, as the key of a kept range's index (keyOf): text without * ? ~, or a number
+   when no text in the range reads as a number (COUNTIF's 5 also finds "5"). undefined for any other condition */
+function eqKey(c, list) {
+  let x = c;
+  if (typeof c === 'string') {
+    const m = /^(<=|>=|<>|=|<|>)/.exec(c);
+    if (m && m[1] !== '=') return undefined;
+    const t = m ? c.slice(1) : c, u = t.trim().toUpperCase();
+    if (t === '' || /[*?~]/.test(t) || ERR[u] || u === 'TRUE' || u === 'FALSE') return undefined;
+    x = numLike(t);
+    if (x == null) return 's' + t.toLowerCase();
+  }
+  if (x == null) x = 0;
+  if (typeof x !== 'number') return undefined;
+  if (list._nt === undefined) list._nt = list.some(v => typeof v === 'string' && numLike(v) != null);
+  return list._nt ? undefined : x;
+}
+/* every place of each value in a kept range, by key */
+function placesOf(list) {
+  let all = list._all;
+  if (!all) { all = list._all = new Map(); for (let i = 0; i < list.length; i++) { const k = keyOf(list[i]); if (k !== undefined) { const at = all.get(k); if (at) at.push(i); else all.set(k, [i]); } } }
+  return all;
+}
+/* COUNTIF(range, ">5") on a kept range: how many of its numbers pass, through the numbers in order (undefined: count
+   the usual way) */
+function cmpCount(A, c) {
+  if (!A.d._c || typeof c !== 'string') return undefined;
+  const m = /^(<=|>=|<|>)([\s\S]*)$/.exec(c), x = m ? numLike(m[2]) : null;
+  if (x == null) return undefined;
+  const sn = A.d._sn || (A.d._sn = Float64Array.from(A.d.filter(v => typeof v === 'number')).sort());
+  const under = strict => { let a = 0, b = sn.length; while (a < b) { const mid = (a + b) >> 1; if (strict ? sn[mid] < x : sn[mid] <= x) a = mid + 1; else b = mid; } return a; };   // how many are < x (strict) or <= x
+  return m[1] === '<' ? under(true) : m[1] === '<=' ? under(false) : m[1] === '>' ? sn.length - under(false) : sn.length - under(true);
 }
 /* the range to add up (average, ...), grown or shrunk to the size of the first range from its top corner, as Excel does */
 function sameSize(v, like) {
@@ -1156,9 +1226,16 @@ const pairsOf = (a, from) => { const p = []; if ((a.length - from) % 2) throw E_
 
 /* --- finding a value: exactly (capitals don't matter; * and ? when wild), or its place among sorted values --- */
 const kindOf = v => typeof v === 'number' ? 'n' : typeof v === 'string' ? 's' : typeof v === 'boolean' ? 'b' : null;
-const cmp3 = (a, b) => typeof a === 'string' ? (a.toLowerCase() === b.toLowerCase() ? 0 : COLL.compare(a, b) < 0 ? -1 : 1) : a < b ? -1 : a > b ? 1 : 0;
+const cmp3 = (a, b) => typeof a === 'string' ? (a.toLowerCase() === b.toLowerCase() ? 0 : textCmp(a, b) < 0 ? -1 : 1) : a < b ? -1 : a > b ? 1 : 0;
+const keyOf = v => typeof v === 'number' ? v : typeof v === 'string' ? 's' + v.toLowerCase() : typeof v === 'boolean' ? (v ? 'bT' : 'bF') : undefined;
 function findExact(list, x, wild, back) {
   if (isErr(x)) throw x;
+  if (list._c && !(typeof x === 'string' && wild && /[*?~]/.test(x))) {   // a kept range: each value's first and last place, found once
+    let ix = list._ix;
+    if (!ix) { ix = list._ix = [new Map(), new Map()]; for (let i = 0; i < list.length; i++) { const k = keyOf(list[i]); if (k !== undefined) { if (!ix[0].has(k)) ix[0].set(k, i); ix[1].set(k, i); } } }
+    const i = ix[back ? 1 : 0].get(keyOf(x == null ? 0 : x));
+    return i === undefined ? -1 : i;
+  }
   let test;
   if (typeof x === 'string') {
     if (wild && /[*?~]/.test(x)) { const re = wildRe(x); test = v => typeof v === 'string' && re.test(v); }
@@ -1168,16 +1245,26 @@ function findExact(list, x, wild, back) {
   else for (let i = 0; i < list.length; i++) if (test(list[i])) return i;
   return -1;
 }
-/* the last value ≤ x in rising values (falling: the last ≥ x), among values of x's own kind, by halving as Excel does */
+/* the last value ≤ x in rising values (falling: the last ≥ x), by halving the way Excel does it (measured on values out
+   of order, where the path shows): where the middle holds a value of another kind than x, the next one of x's kind
+   after it is looked at; when there is none up to the end of the part, the search goes on before the middle */
 function sortedPos(list, x, desc) {
   if (isErr(x)) throw x;
   if (x == null) x = 0;
-  const kind = kindOf(x), idx = [];
-  for (let i = 0; i < list.length; i++) if (kindOf(list[i]) === kind) idx.push(i);
-  let lo = 0, hi = idx.length - 1, best = -1;
+  const kind = kindOf(x), n = list.length;
+  let next = null;   // a kept list remembers, for each place, the next place that holds a value of this kind
+  if (list._c) {
+    const all = list._nx || (list._nx = {});
+    if (!(next = all[kind])) { next = all[kind] = new Int32Array(n + 1); next[n] = n; for (let i = n - 1; i >= 0; i--) next[i] = kindOf(list[i]) === kind ? i : next[i + 1]; }
+  }
+  let lo = 0, hi = n - 1, best = -1;
   while (lo <= hi) {
-    const m = (lo + hi) >> 1, c = cmp3(list[idx[m]], x);
-    if (desc ? c >= 0 : c <= 0) { best = idx[m]; lo = m + 1; } else hi = m - 1;
+    const m = (lo + hi) >> 1;
+    let j = m;
+    if (next) j = next[m]; else while (j <= hi && kindOf(list[j]) !== kind) j++;
+    if (j > hi) { hi = m - 1; continue; }
+    const c = cmp3(list[j], x);
+    if (desc ? c >= 0 : c <= 0) { best = j; lo = j + 1; } else hi = m - 1;
   }
   return best;
 }
@@ -1211,7 +1298,7 @@ function arrCmp(a, b) {
   const rk = v => v == null ? 4 : typeof v === 'number' ? 0 : typeof v === 'string' ? 1 : typeof v === 'boolean' ? 2 : 3, ra = rk(a), rb = rk(b);
   if (ra !== rb) return ra - rb;
   if (ra === 0) return a - b;
-  if (ra === 1) return a.toLowerCase() === b.toLowerCase() ? 0 : COLL.compare(a, b);
+  if (ra === 1) return a.toLowerCase() === b.toLowerCase() ? 0 : textCmp(a, b);
   if (ra === 2) return (a ? 1 : 0) - (b ? 1 : 0);
   return 0;
 }
@@ -1310,6 +1397,229 @@ function delimAt(t, delims, n, ci, atEnd) {
 }
 const strList = v => isA(v) ? arrOf(v).d.map(x => str(x)) : [str(v)];
 
+/* --- money: loans and savings (PMT and its family), flows of cash (NPV, IRR), things that lose their worth (SLN, DB),
+   and bonds and bills. Each was measured against Excel --- */
+const payAt = t => t != null && num(t) ? 1 : 0;   // payments at the start of each period (1) or at its end (0)
+const growth = (r, n) => { if (r === -1 && !n) throw E_NUM; return Math.pow(1 + r, n); };
+function fvOf(r, n, pmt, pv, t) { if (!r) return -(pv + pmt * n); const g = growth(r, n); return -(pv * g + pmt * (1 + r * t) * (g - 1) / r); }
+function pvOf(r, n, pmt, fv, t) { if (!r) return -(fv + pmt * n); const g = growth(r, n); if (g === 0 || g === Infinity) throw E_DIV; return -(fv + pmt * (1 + r * t) * (g - 1) / r) / g; }
+function pmtOf(r, n, pv, fv, t) { if (!n || r <= -1) throw E_NUM; if (!r) return -(pv + fv) / n; const g = growth(r, n); return -r * (pv * g + fv) / ((1 + r * t) * (g - 1)); }
+/* the interest inside payment number per */
+function ipmtOf(r, per, n, pv, fv, t) {
+  if (per < 1 || per >= n + 1) throw E_NUM;
+  const p = pmtOf(r, n, pv, fv, t);
+  if (per === 1) return t ? 0 : -pv * r;
+  return (t ? fvOf(r, per - 2, p, pv, 1) - p : fvOf(r, per - 1, p, pv, 0)) * r;
+}
+/* CUMIPMT and CUMPRINC: the interest (or the principal) paid in payments start to end */
+function cumOf(rate, nper, pv, start, end, type, princ) {
+  const r = num(rate), n = num(nper), v = num(pv), a = num(start), b = num(end), t = num(type);
+  if (r <= 0 || n <= 0 || v <= 0 || a < 1 || b < 1 || a > b || b > n || (t !== 0 && t !== 1)) throw E_NUM;
+  const p = pmtOf(r, n, v, 0, t);
+  let sum = 0;
+  for (let i = Math.ceil(a); i <= Math.trunc(b); i++) { const ip = i === 1 ? (t ? 0 : -v * r) : (t ? fvOf(r, i - 2, p, v, 1) - p : fvOf(r, i - 1, p, v, 0)) * r; sum += princ ? p - ip : ip; }
+  return sum;
+}
+/* the x where f(x) is 0, by Newton's steps from a first guess (kept above lo); null when the steps don't settle */
+function rootOf(f, guess, lo) {
+  let x = guess;
+  for (let i = 0; i < 100; i++) {
+    const y = f(x);
+    if (!Number.isFinite(y)) return null;
+    if (y === 0) return x;
+    const h = Math.max(Math.abs(x), 1) * 1e-7, d = (f(x + h) - f(x - h)) / (2 * h);
+    if (!d || !Number.isFinite(d)) return null;
+    let nx = x - y / d;
+    if (lo != null && nx <= lo) nx = (x + lo) / 2;
+    if (Math.abs(nx - x) <= 1e-13 * Math.max(1, Math.abs(nx))) return nx;
+    x = nx;
+  }
+  return null;
+}
+/* XNPV's and XIRR's values and dates: as many of each, and all numbers. XNPV takes no date before the first (strict) */
+function flows(vals, dates, strict) {
+  const V = isA(vals) ? arrOf(vals).d : [vals], D = isA(dates) ? arrOf(dates).d : [dates];
+  for (const x of [...V, ...D]) { if (isErr(x)) throw x; if (typeof x !== 'number') throw strict ? E_NUM : E_VAL; }
+  if (V.length !== D.length) throw E_NUM;
+  const d = D.map(x => Math.floor(dateNum(x)));
+  if (strict && d.some(x => x < d[0])) throw E_NUM;
+  return [V, d];
+}
+const xnpvOf = (r, v, d) => { let s = 0; for (let i = 0; i < v.length; i++) s += v[i] / Math.pow(1 + r, (d[i] - d[0]) / 365); return s; };
+/* an asset's loss of worth in period p when it loses a fixed part of what is left (DDB). Before the first period is
+   over, the whole first period's loss (measured) */
+function ddbOf(c, s, l, p, f) {
+  if (p < 1) p = 1;
+  let rate = f / l, old;
+  if (rate >= 1) { rate = 1; old = p === 1 ? c : 0; } else old = c * Math.pow(1 - rate, p - 1);
+  const now = c * Math.pow(1 - rate, p);
+  return Math.max(0, now < s ? old - s : old - now);
+}
+/* VDB from a to b, as Excel works it out: a fixed part of what is left each period, moving for good to a straight
+   line once that would lose more. The periods are counted from where a's fraction falls: first the part of a period
+   before it, then whole periods (measured: a start of 2.5 makes the move at 1.5, not at 2) */
+function vdbOf(c, s, life, a, b, f) {
+  const rate = f / life, f0 = a - Math.floor(a);
+  let left = c, line = null, sum = 0;
+  const lose = t => { if (line == null && (left - s) / (life - t) > left * rate) line = (left - s) / (life - t); return line != null ? line : Math.min(left * rate, left - s); };
+  if (f0) left -= lose(0) * f0;
+  for (let k = 0, t = f0; t < b; t = f0 + ++k) {
+    const term = lose(t);
+    sum += term * Math.max(0, Math.min(b, t + 1) - Math.max(a, t));
+    left -= term;
+  }
+  return sum;
+}
+/* how Excel counts the days between two dates (basis): 0 months of 30 days the US way, 1 the real days over the real
+   year, 2 real days over 360, 3 real days over 365, 4 months of 30 days the European way. Each rule here was measured
+   in Excel, its oddities too */
+const leapY = y => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+const lastDay = d => d.d === daysIn(d.y, d.m);
+const lastFeb = d => d.m === 2 && lastDay(d);
+/* the US way: February's last day and the 31st count as the 30th (both: the end date's do whatever the start is) */
+function us360(s, e, both) {
+  const a = fromSerial(s), b = fromSerial(e);
+  let d1 = a.d, d2 = b.d;
+  if (lastFeb(b) && (lastFeb(a) || both)) d2 = 30;
+  if (d2 === 31 && (d1 >= 30 || both)) d2 = 30;
+  if (d1 === 31) d1 = 30;
+  if (lastFeb(a)) d1 = 30;
+  return (b.y - a.y) * 360 + (b.m - a.m) * 30 + d2 - d1;
+}
+function eu360(s, e) { const a = fromSerial(s), b = fromSerial(e); return (b.y - a.y) * 360 + (b.m - a.m) * 30 + Math.min(b.d, 30) - Math.min(a.d, 30); }
+const daysBy = (s, e, basis) => basis === 0 ? us360(s, e) : basis === 4 ? eu360(s, e) : e - s;
+/* the days of a year: 360 or 365 by the basis. For basis 1: 366 when the dates are within a year of each other and
+   29 February falls between them (else 365), and the average length of the years they touch when further apart */
+function yearBy(s, e, basis) {
+  if (basis !== 1) return basis === 3 ? 365 : 360;
+  const a = fromSerial(s), b = fromSerial(e);
+  if (a.y === b.y) return leapY(a.y) ? 366 : 365;
+  if (b.y === a.y + 1 && (a.m > b.m || (a.m === b.m && a.d >= b.d))) return (b.m === 2 && b.d === 29) || (leapY(a.y) ? a.m <= 2 : leapY(b.y) && b.m > 2) ? 366 : 365;
+  return (toSerial(b.y + 1, 1, 1) - toSerial(a.y, 1, 1)) / (b.y - a.y + 1);
+}
+function yearFrac(s, e, basis) { if (s > e) [s, e] = [e, s]; return s === e ? 0 : daysBy(s, e, basis) / yearBy(s, e, basis); }
+const day0 = v => Math.floor(dateNum(v));
+const basisOf = v => { const b = v == null ? 0 : Math.trunc(num(v)); if (b < 0 || b > 4) throw E_NUM; return b; };
+const freqOf = v => { const f = Math.trunc(num(v)); if (f !== 1 && f !== 2 && f !== 4) throw E_NUM; return f; };
+/* a security's two dates: settlement (when it is bought) before maturity (when it is paid back) */
+const twoDates = (s, m) => { const a = day0(s), b = day0(m); if (a >= b) throw E_NUM; return [a, b]; };
+/* a date k months on (back when k < 0): on its month's last day when eom, else on the same day, or the last one the
+   month has */
+function addMonths(n, k, eom) {
+  const d = fromSerial(n), t = d.y * 12 + d.m - 1 + k, y = Math.floor(t / 12), m = t - y * 12 + 1;
+  return toSerial(y, m, eom ? daysIn(y, m) : Math.min(d.d, daysIn(y, m)));
+}
+/* a bond's coupon dates are counted back from maturity, freq times a year; when maturity is its month's last day, so
+   is each of them. The dates around settlement (pcd on or before it, ncd after it), and how many coupons are to come */
+function coupons(settle, mat, freq) {
+  const eom = lastDay(fromSerial(mat)), at = k => addMonths(mat, -k * 12 / freq, eom), a = fromSerial(settle), b = fromSerial(mat);
+  let k = Math.max(1, Math.floor(((b.y - a.y) * 12 + b.m - a.m) * freq / 12) - 1);
+  while (at(k) > settle) k++;
+  while (k > 1 && at(k - 1) <= settle) k--;
+  return { pcd: at(k), ncd: at(k - 1), n: k };
+}
+/* COUPDAYS: the days of the coupon period settlement is in. Basis 1 counts real days, and where coupon dates fall on
+   the ends of months Excel's count is not always the days between COUPPCD and COUPNCD. Measured there, the closest
+   walk is this one: back from maturity's day in the year of settlement, a month's last day staying a month's last day
+   from one step to the next; and from a settlement that is a coupon date, up to its own day 12 / freq months on */
+function coupDays(settle, mat, freq, basis) {
+  if (basis !== 1) return (basis === 3 ? 365 : 360) / freq;
+  const S = fromSerial(settle), M = fromSerial(mat), step = 12 / freq, at = y => toSerial(y, M.m, Math.min(M.d, daysIn(y, M.m)));
+  let cur = at(S.y) < settle ? at(S.y + 1) : at(S.y), next = null;
+  while (cur > settle) { next = cur; cur = addMonths(cur, -step, lastDay(fromSerial(cur))); }
+  return (next == null || cur === settle ? addMonths(cur, step, false) : next) - cur;
+}
+/* what a bond's price is made of: n coupons to come, E the days of the coupon period (the real ones between its two
+   coupon dates for basis 1), A the days of it that are gone */
+function coupParts(a, b, fr, basis) { const c = coupons(a, b, fr); return { n: c.n, E: basis === 1 ? c.ncd - c.pcd : (basis === 3 ? 365 : 360) / fr, A: daysBy(c.pcd, a, basis), pcd: c.pcd, ncd: c.ncd }; }
+function priceOf(a, b, rate, yld, red, fr, basis) {
+  const { n, E, A } = coupParts(a, b, fr, basis), c = 100 * rate / fr, y = 1 + yld / fr, x = (E - A) / E;
+  if (n === 1) return (c + red) / (1 + x * yld / fr) - c * A / E;
+  let p = red / Math.pow(y, n - 1 + x) - c * A / E;
+  for (let k = 0; k < n; k++) p += c / Math.pow(y, k + x);
+  return p;
+}
+function durOf(a, b, cpn, yld, fr, basis) {
+  const { n, E, A } = coupParts(a, b, fr, basis), c = 100 * cpn / fr, y = 1 + yld / fr, x = (E - A) / E;
+  let top = 0, all = 0;
+  for (let k = 1; k <= n; k++) { const t = k - 1 + x, v = (c + (k === n ? 100 : 0)) / Math.pow(y, t); top += t * v; all += v; }
+  return top / all / fr;
+}
+/* ACCRINT the way Excel has it: the time from the issue to settlement is counted through "quasi-coupon" periods that
+   run from the first interest date, back and on. A whole period counts 1 (and 0 when method is FALSE); the part at
+   the issue counts its days over the days of its period, and the part up to settlement its days over the days of the
+   period before the first interest date */
+function accrOf(issue, first, settle, rate, par, freq, basis, method) {
+  const months = 12 / freq, eom = lastDay(fromSerial(first)), back = n => addMonths(n, -months, eom);
+  let q = back(first);   // the quasi-coupon date the last part starts from: the one before the first interest date,
+  const len = basis === 1 ? first - q : (basis === 3 ? 365 : 360) / freq;   // whose period's length serves that part
+  if (settle > first && method) { q = first; for (let nx = addMonths(q, months, eom); nx < settle; nx = addMonths(q, months, eom)) q = nx; }
+  let a = daysBy(Math.max(issue, q), settle, basis) / len;
+  for (let late = q; late > issue;) {
+    const early = back(late);
+    if (issue <= early) a += method ? 1 : 0;
+    else a += daysBy(issue, late, basis) / (basis === 3 ? 365 / freq : basis === 4 ? eu360(early, late) : basis === 1 ? late - early : us360(early, late, true));
+    late = early;
+  }
+  return par * rate / freq * a;
+}
+/* ODDLPRICE and ODDLYIELD: a last period of another length, cut into quasi-coupon periods from the last interest date */
+function oddLast(settle, mat, last, rate, v, red, freq, basis, price) {
+  const months = 12 / freq, nc = coupons(last, mat, freq).n;
+  const len = (s, e) => Math.max(0, basis === 0 ? us360(s, e, true) : daysBy(s, e, basis)), days = (s, e) => Math.max(0, daysBy(s, e, basis));
+  let early = last, dcnl = 0, anl = 0, dscnl = 0;
+  for (let i = 1; i <= nc; i++) {
+    const late = addMonths(early, months, false), nl = len(early, late), dci = i === nc ? len(early, mat) : nl;
+    dcnl += dci / nl;
+    anl += (late < settle ? dci : early < settle ? days(early, settle) : 0) / nl;
+    dscnl += days(Math.max(settle, early), Math.min(mat, late)) / nl;
+    early = late;
+  }
+  const x = 100 * rate / freq, t = dcnl * x + red;
+  return price ? t / (dscnl * v / freq + 1) - anl * x : (t - (anl * x + v)) / (anl * x + v) * freq / dscnl;
+}
+/* ODDFPRICE: a first period of another length. A short one is a part of one coupon period; a long one is cut into
+   quasi-coupon periods back from the first coupon date */
+function oddFirst(settle, mat, issue, first, rate, yld, red, freq, basis) {
+  const months = 12 / freq, E = coupParts(settle, first, freq, basis).E, c = 100 * rate / freq, x = 1 + yld / freq;
+  const days = (s, e) => Math.max(0, daysBy(s, e, basis)), dfc = days(issue, first);
+  if (dfc < E) {
+    const n = coupons(settle, mat, freq).n, y = days(settle, first) / E;
+    let p = red / Math.pow(x, n - 1 + y) + c * dfc / E / Math.pow(x, y) - c * days(issue, settle) / E;
+    for (let k = 2; k <= n; k++) p += c / Math.pow(x, k - 1 + y);
+    return p;
+  }
+  const nc = coupons(issue, first, freq).n;
+  let late = first, dcnl = 0, anl = 0;
+  for (let i = nc; i >= 1; i--) {
+    const early = addMonths(late, -months, false), nl = basis === 1 ? days(early, late) : E;
+    dcnl += (i > 1 ? nl : days(issue, late)) / nl;
+    anl += days(Math.max(issue, early), Math.min(settle, late)) / nl;
+    late = early;
+  }
+  const cp = coupons(settle, first, freq), dsc = basis === 2 || basis === 3 ? days(settle, cp.ncd) : E - daysBy(cp.pcd, settle, basis);
+  let nq = 0;   // the whole quasi-coupon periods between settlement and the first coupon
+  for (let d = addMonths(settle, months, false); d < first; d = addMonths(d, months, false)) nq++;
+  const n = coupons(first, mat, freq).n, y = dsc / E;
+  let p = red / Math.pow(x, y + nq + n) + c * dcnl / Math.pow(x, nq + y) - c * anl;
+  for (let k = 1; k <= n; k++) p += c / Math.pow(x, k + nq + y);
+  return p;
+}
+/* AMORLINC's and AMORDEGRC's first period: the part of a year from the purchase to the end of the first period (a
+   purchase on that very day counts a whole year) */
+function amorFirst(cost, bought, first, salvage, rate, basis) {
+  const fix = n => { const d = fromSerial(n); return (basis === 1 || basis === 3) && leapY(d.y) && d.m === 2 && d.d >= 28 ? toSerial(d.y, 2, 28) : n; };
+  const year = basis === 1 ? (leapY(fromSerial(bought).y) ? 366 : 365) : basis === 3 ? 365 : 360;
+  const part = daysBy(fix(bought), fix(first), basis) / year * rate * cost;
+  return { first: Math.min(part || cost * rate, cost - salvage), whole: !part };
+}
+/* a bill of the US Treasury: paid back within a year */
+function bill(s, m) { const [a, b] = twoDates(s, m), d = fromSerial(a); if (b > toSerial(d.y + 1, d.m, d.d)) throw E_NUM; return b - a; }
+/* the functions that came from Excel's Analysis ToolPak take no TRUE or FALSE where a number goes (flag: the one
+   argument that is a TRUE or FALSE; noBool: for the ones that take any number of arguments) */
+const noBool = args => { valsOf(args, v => { if (typeof v === 'boolean') throw E_VAL; }); return args; };
+const fa = (lo, hi, kinds, fn, flag = -1) => fx(lo, hi, kinds, (...v) => { v.forEach((x, i) => { if (typeof x === 'boolean' && i !== flag) throw E_VAL; }); return fn(...v); });
+
 /* the functions: n is how many arguments each takes. Each gets its arguments unworked, and works them out itself */
 const FUNCS = {
   // math
@@ -1333,7 +1643,7 @@ const FUNCS = {
   ABS: fx(1, 1, 'v', x => Math.abs(num(x))),
   SIGN: fx(1, 1, 'v', x => Math.sign(num(x))),
   MOD: fx(2, 2, 'v', (x, d) => { const a = num(x), b = num(d); if (!b) throw E_DIV; const r = a - b * Math.floor(q15(a / b)); return Math.abs(r) < Math.abs(b) * 1e-15 ? 0 : r; }),
-  QUOTIENT: fx(2, 2, 'v', (x, d) => { const b = num(d); if (!b) throw E_DIV; return Math.trunc(q15(num(x) / b)); }),
+  QUOTIENT: fa(2, 2, 'v', (x, d) => { const b = num(d); if (!b) throw E_DIV; return Math.trunc(q15(num(x) / b)); }),
   POWER: fx(2, 2, 'v', (x, y) => { const r = binop('^', x, y); if (isErr(r)) throw r; return r; }),
   SQRT: fx(1, 1, 'v', x => { const n = num(x); if (n < 0) throw E_NUM; return Math.sqrt(n); }),
   EXP: fx(1, 1, 'v', x => Math.exp(num(x))),
@@ -1345,15 +1655,15 @@ const FUNCS = {
   FLOOR: fx(2, 2, 'v', (x, s) => { const n = num(x), k = num(s); if (!k) { if (!n) return 0; throw E_DIV; } if (n > 0 && k < 0) throw E_NUM; return Math.floor(q15(n / k)) * k; }),
   'CEILING.MATH': fx(1, 3, 'v', (x, s, m) => { const n = num(x), k = Math.abs(s == null ? 1 : num(s)); if (!k) return 0; return n < 0 && m != null && num(m) ? -Math.ceil(q15(-n / k)) * k : Math.ceil(q15(n / k)) * k; }),
   'FLOOR.MATH': fx(1, 3, 'v', (x, s, m) => { const n = num(x), k = Math.abs(s == null ? 1 : num(s)); if (!k) return 0; return n < 0 && m != null && num(m) ? -Math.floor(q15(-n / k)) * k : Math.floor(q15(n / k)) * k; }),
-  MROUND: fx(2, 2, 'v', (x, s) => { const n = num(x), k = num(s); if (!k) return 0; if (n * k < 0) throw E_NUM; return roundTo(n / k, 0, 0) * k; }),
+  MROUND: fa(2, 2, 'v', (x, s) => { const n = num(x), k = num(s); if (!k) return 0; if (n * k < 0) throw E_NUM; return roundTo(n / k, 0, 0) * k; }),
   EVEN: fx(1, 1, 'v', x => { const n = num(x), a = Math.ceil(q15(Math.abs(n) / 2)) * 2; return n < 0 ? -a : a; }),
   ODD: fx(1, 1, 'v', x => { const n = num(x); let a = Math.ceil(q15(Math.abs(n))); if (a % 2 === 0) a++; return n < 0 ? -a : a; }),
   FACT: fx(1, 1, 'v', x => { const n = Math.trunc(num(x)); if (n < 0) throw E_NUM; let p = 1; for (let i = 2; i <= n; i++) p *= i; return p; }),
   COMBIN: fx(2, 2, 'v', (x, y) => { const n = Math.trunc(num(x)), k = Math.trunc(num(y)); if (n < 0 || k < 0 || k > n) throw E_NUM; let p = 1; for (let i = 1; i <= k; i++) p = p * (n - k + i) / i; return Math.round(p); }),
-  GCD: { n: [1, 255], f: a => { const n = nums(a).map(Math.trunc); if (n.some(x => x < 0)) return E_NUM; const g = (x, y) => y ? g(y, x % y) : x; return n.reduce(g, 0); } },
-  LCM: { n: [1, 255], f: a => { const n = nums(a).map(Math.trunc); if (n.some(x => x < 0)) return E_NUM; if (n.some(x => !x)) return 0; const g = (x, y) => y ? g(y, x % y) : x; return n.reduce((l, x) => l / g(l, x) * x, 1); } },
+  GCD: { n: [1, 255], f: a => { const n = nums(noBool(a)).map(Math.trunc); if (n.some(x => x < 0)) return E_NUM; const g = (x, y) => y ? g(y, x % y) : x; return n.reduce(g, 0); } },
+  LCM: { n: [1, 255], f: a => { const n = nums(noBool(a)).map(Math.trunc); if (n.some(x => x < 0)) return E_NUM; if (n.some(x => !x)) return 0; const g = (x, y) => y ? g(y, x % y) : x; return n.reduce((l, x) => l / g(l, x) * x, 1); } },
   RAND: { n: [0, 0], f: () => Math.random() },
-  RANDBETWEEN: fx(2, 2, 'v', (a, b) => { const lo = Math.ceil(num(a)), hi = Math.floor(num(b)); if (lo > hi) throw E_NUM; return lo + Math.floor(Math.random() * (hi - lo + 1)); }),
+  RANDBETWEEN: fa(2, 2, 'v', (a, b) => { const lo = Math.ceil(num(a)), hi = Math.floor(num(b)); if (lo > hi) throw E_NUM; return lo + Math.floor(Math.random() * (hi - lo + 1)); }),
   SIN: fx(1, 1, 'v', x => Math.sin(num(x))),
   COS: fx(1, 1, 'v', x => Math.cos(num(x))),
   TAN: fx(1, 1, 'v', x => Math.tan(num(x))),
@@ -1410,7 +1720,7 @@ const FUNCS = {
   COUNT: { n: [1, 255], f: a => numsOf(a, true).length },
   COUNTA: { n: [1, 255], f: a => { let n = 0; for (const x of a) { if (x.t === 'miss') { n++; continue; } const v = argA(x); if (isA(v)) eachV(v, () => { n++; }); else n++; } return n; } },
   COUNTBLANK: fx(1, 1, 'a', r => { if (!isA(r)) throw E_VAL; const [h, w] = dims(r); let full = 0; eachV(r, v => { if (v !== '') full++; }); return h * w - full; }),
-  COUNTIF: fx(2, 2, 'av', (r, c) => { const x = ifsCells([[r, c]]); return x.out.length + (x.restOk ? x.rest : 0); }),
+  COUNTIF: fx(2, 2, 'av', (r, c) => { const n = isA(r) ? cmpCount(arrOf(r), c) : undefined; if (n !== undefined) return n; const x = ifsCells([[r, c]]); return x.out.length + (x.restOk ? x.rest : 0); }),
   COUNTIFS: fx(2, 255, i => i % 2 ? 'v' : 'a', (...a) => { const x = ifsCells(pairsOf(a, 0)); return x.out.length + (x.restOk ? x.rest : 0); }),
   MAX: { n: [1, 255], f: a => { const n = numsOf(a); if (isErr(n)) return n; let m = -Infinity; for (const x of n) if (x > m) m = x; return n.length ? m : 0; } },
   MIN: { n: [1, 255], f: a => { const n = numsOf(a); if (isErr(n)) return n; let m = Infinity; for (const x of n) if (x < m) m = x; return n.length ? m : 0; } },
@@ -1558,7 +1868,7 @@ const FUNCS = {
     if (k >= 12 && k <= 16) return (d - (k - 10) + 7) % 7 + 1;
     throw E_NUM;
   }),
-  WEEKNUM: fx(1, 2, 'v', (v, t) => {
+  WEEKNUM: fa(1, 2, 'v', (v, t) => {
     const n = Math.floor(dateNum(v)), k = t == null ? 1 : Math.trunc(num(t));
     if (k === 21) return isoWeek(n);
     const first = k === 1 || k === 17 ? 0 : k === 2 || k === 11 ? 1 : k >= 12 && k <= 16 ? k - 10 : -1;
@@ -1569,14 +1879,235 @@ const FUNCS = {
   ISOWEEKNUM: fx(1, 1, 'v', v => isoWeek(dateNum(v))),
   DATEDIF: fx(3, 3, 'v', datedif),
   DAYS: fx(2, 2, 'v', (e, s) => Math.floor(dateNum(e)) - Math.floor(dateNum(s))),
-  EDATE: fx(2, 2, 'v', (v, k) => monthsOn(v, k, false)),
-  EOMONTH: fx(2, 2, 'v', (v, k) => monthsOn(v, k, true)),
-  NETWORKDAYS: fx(2, 3, 'vva', (a, b, h) => workdays(a, b, weekendOf(1), holidaySet(h))),
+  EDATE: fa(2, 2, 'v', (v, k) => monthsOn(v, k, false)),
+  EOMONTH: fa(2, 2, 'v', (v, k) => monthsOn(v, k, true)),
+  NETWORKDAYS: fa(2, 3, 'vva', (a, b, h) => workdays(a, b, weekendOf(1), holidaySet(h))),
   'NETWORKDAYS.INTL': fx(2, 4, 'vvva', (a, b, w, h) => workdays(a, b, weekendOf(w), holidaySet(h))),
-  WORKDAY: fx(2, 3, 'vva', (a, k, h) => workday(a, k, weekendOf(1), holidaySet(h))),
+  WORKDAY: fa(2, 3, 'vva', (a, k, h) => workday(a, k, weekendOf(1), holidaySet(h))),
   'WORKDAY.INTL': fx(2, 4, 'vvva', (a, k, w, h) => workday(a, k, weekendOf(w), holidaySet(h))),
   DATEVALUE: fx(1, 1, 'v', v => Math.floor(dateOfText(v))),
   TIMEVALUE: fx(1, 1, 'v', v => { const n = dateOfText(v); return n - Math.floor(n); }),
+  YEARFRAC: fa(2, 3, 'v', (s, e, b) => yearFrac(day0(s), day0(e), basisOf(b))),
+  DAYS360: fx(2, 3, 'v', (s, e, m) => {
+    const x = day0(s), y = day0(e);
+    if (m != null && bool(m)) return eu360(x, y);
+    // the US way here: a start on its month's last day is the 30th; an end on the 31st is the 30th too, or the 1st of
+    // the next month when the start is before the 30th
+    const a = fromSerial(x), b = fromSerial(y);
+    let d1 = a.d, d2 = b.d, m2 = b.m;
+    if (lastDay(a)) d1 = 30;
+    if (d2 === 31) { if (d1 < 30) { d2 = 1; m2++; } else d2 = 30; }
+    return (b.y - a.y) * 360 + (m2 - a.m) * 30 + d2 - d1;
+  }),
+  // money
+  PV: fx(3, 5, 'v', (r, n, p, f, t) => pvOf(num(r), num(n), num(p), f == null ? 0 : num(f), payAt(t))),
+  FV: fx(3, 5, 'v', (r, n, p, v, t) => fvOf(num(r), num(n), num(p), v == null ? 0 : num(v), payAt(t))),
+  PMT: fx(3, 5, 'v', (r, n, v, f, t) => pmtOf(num(r), num(n), num(v), f == null ? 0 : num(f), payAt(t))),
+  NPER: fx(3, 5, 'v', (rate, pmt, pv, fv, type) => {
+    const r = num(rate), p = num(pmt), v = num(pv), f = fv == null ? 0 : num(fv), t = payAt(type);
+    if (!r) { if (!p) throw E_DIV; return -(v + f) / p; }
+    const q = (p * (1 + r * t) - f * r) / (p * (1 + r * t) + v * r);
+    if (r <= -1 || !(q > 0)) throw E_NUM;
+    return Math.log(q) / Math.log(1 + r);
+  }),
+  RATE: fx(3, 6, 'v', (nper, pmt, pv, fv, type, guess) => {
+    const n = num(nper), p = num(pmt), v = num(pv), f = fv == null ? 0 : num(fv), t = payAt(type);
+    if (n <= 0) throw E_NUM;
+    const r = rootOf(x => { if (Math.abs(x) < 1e-10) return v + p * n + f; const g = Math.expm1(n * Math.log1p(x)); return v * (g + 1) + p * (1 + x * t) * g / x + f; }, guess == null ? 0.1 : num(guess), -1);
+    if (r == null) throw E_NUM;
+    return r;
+  }),
+  IPMT: fx(4, 6, 'v', (r, per, n, v, f, t) => ipmtOf(num(r), num(per), num(n), num(v), f == null ? 0 : num(f), payAt(t))),
+  PPMT: fx(4, 6, 'v', (r, per, n, v, f, t) => { const R = num(r), N = num(n), V = num(v), F = f == null ? 0 : num(f), T = payAt(t); return pmtOf(R, N, V, F, T) - ipmtOf(R, num(per), N, V, F, T); }),
+  ISPMT: fx(4, 4, 'v', (r, per, n, v) => { const N = num(n); if (!N) throw E_DIV; return num(v) * num(r) * (num(per) / N - 1); }),
+  CUMIPMT: fa(6, 6, 'v', (r, n, v, s, e, t) => cumOf(r, n, v, s, e, t, false)),
+  CUMPRINC: fa(6, 6, 'v', (r, n, v, s, e, t) => cumOf(r, n, v, s, e, t, true)),
+  NPV: { n: [2, 255], f: a => {
+    const r = num(scalR(argS(a[0]))), v = nums(a.slice(1));
+    if (r === -1) return E_DIV;
+    let s = 0, d = 1;
+    for (const x of v) { d *= 1 + r; s += x / d; }
+    return s;
+  } },
+  IRR: fx(1, 2, 'av', (vals, guess) => {
+    const v = numsIn(vals);
+    if (!v.some(x => x > 0) || !v.some(x => x < 0)) throw E_NUM;
+    const r = rootOf(x => { let s = 0, d = 1; for (const y of v) { s += y / d; d *= 1 + x; } return s; }, guess == null ? 0.1 : num(guess), -1);
+    if (r == null) throw E_NUM;
+    return r;
+  }),
+  MIRR: fx(3, 3, 'avv', (vals, fr, rr) => {
+    const v = numsIn(vals), f = num(fr), r = num(rr), n = v.length;
+    let pos = 0, neg = 0;
+    v.forEach((x, i) => { if (x > 0) pos += x / Math.pow(1 + r, i); else neg += x / Math.pow(1 + f, i); });
+    if (!neg || n < 2) throw E_DIV;   // nothing paid in: no rate. Nothing paid out is -100%, as Excel has it
+    return Math.pow(-pos * Math.pow(1 + r, n - 1) / neg, 1 / (n - 1)) - 1;
+  }),
+  XNPV: fa(3, 3, 'vaa', (rate, vals, dates) => { const r = num(rate), [v, d] = flows(vals, dates, true); if (r <= 0) throw E_NUM; return xnpvOf(r, v, d); }),
+  XIRR: fa(2, 3, 'aav', (vals, dates, guess) => {
+    const [v, d] = flows(vals, dates, false), g = guess == null ? 0.1 : num(guess);
+    if (g <= -1 || !v.some(x => x > 0) || !v.some(x => x < 0)) throw E_NUM;
+    const r = rootOf(x => xnpvOf(x, v, d), g, -1);
+    if (r == null) throw E_NUM;
+    return r;
+  }),
+  SLN: fx(3, 3, 'v', (c, s, l) => { const life = num(l); if (!life) throw E_DIV; return (num(c) - num(s)) / life; }),
+  SYD: fx(4, 4, 'v', (cost, salvage, life, per) => {
+    const c = num(cost), s = num(salvage), l = num(life), p = num(per);
+    if (s < 0 || l <= 0 || p <= 0 || p > l) throw E_NUM;
+    return (c - s) * (l - p + 1) * 2 / (l * (l + 1));
+  }),
+  DB: fx(4, 5, 'v', (cost, salvage, life, period, month) => {
+    const c = num(cost), s = num(salvage), l = num(life), p = num(period), m = month == null ? 12 : Math.trunc(num(month));
+    if (c < 0 || s < 0 || l <= 0 || p <= 0 || m < 1 || m > 12 || p > l + (m < 12 ? 1 : 0)) throw E_NUM;
+    if (!c) return 0;
+    const rate = roundTo(1 - Math.pow(s / c, 1 / l), 3, 0);
+    let total = 0, d = c * rate * m / 12;
+    for (let i = 2; i <= p; i++) { total += d; d = (c - total) * rate * (i > l ? (12 - m) / 12 : 1); }
+    return d;
+  }),
+  DDB: fx(4, 5, 'v', (cost, salvage, life, period, factor) => {
+    const c = num(cost), s = num(salvage), l = num(life), p = num(period), f = factor == null ? 2 : num(factor);
+    if (c < 0 || s < 0 || l <= 0 || p <= 0 || p > l || f <= 0) throw E_NUM;
+    return ddbOf(c, s, l, p, f);
+  }),
+  VDB: fx(5, 7, 'v', (cost, salvage, life, start, end, factor, noSwitch) => {
+    const c = num(cost), s = num(salvage), l = num(life), a = num(start), b = num(end), f = factor == null ? 2 : num(factor);
+    if (c < 0 || s < 0 || l <= 0 || a < 0 || b < a || b > l || f <= 0) throw E_NUM;
+    if (noSwitch != null && bool(noSwitch)) {
+      const a0 = Math.floor(q15(a)), b0 = Math.ceil(q15(b));
+      let sum = 0;
+      for (let i = a0 + 1; i <= b0; i++) {
+        let term = ddbOf(c, s, l, i, f);
+        if (i === a0 + 1) term *= Math.min(b, a0 + 1) - a;
+        else if (i === b0) term *= b + 1 - b0;
+        sum += term;
+      }
+      return sum;
+    }
+    return vdbOf(c, s, l, a, b, f);
+  }),
+  AMORLINC: fa(6, 7, 'v', (cost, bought, first, salvage, period, rate, bs) => {
+    const c = num(cost), s = num(salvage), per = num(period), r = num(rate), basis = basisOf(bs), d = day0(bought), f1 = day0(first);
+    if (c <= 0 || s < 0 || s > c || per < 0 || r <= 0 || d > f1 || basis === 2) throw E_NUM;
+    if (c === s || per > Math.ceil(1 / r)) return 0;
+    const f = amorFirst(c, d, f1, s, r, basis).first;
+    if (per < 1) return per ? r * c : f;
+    let depr = r * c, left = c - s - f;
+    for (let i = 1; i <= per; i++) { depr = Math.min(depr, left); left = Math.max(0, left - depr); }
+    return depr;
+  }),
+  AMORDEGRC: fa(6, 7, 'v', (cost, bought, first, salvage, period, rate, bs) => {
+    const c = num(cost), s = num(salvage), per = num(period), r = num(rate), basis = basisOf(bs), d = day0(bought), f1 = day0(first);
+    if (c <= 0 || s < 0 || s > c || per < 0 || r <= 0 || d > f1 || basis === 2) throw E_NUM;
+    const life = Math.ceil(1 / r);
+    if (life < 3) throw E_NUM;
+    if (c === s || per > life) return 0;
+    // the rate grows with the life, and the last two periods take half of what is left each
+    let k = r * (life >= 3 && life <= 4 ? 1.5 : life >= 5 && life <= 6 ? 2 : life > 6 ? 2.5 : 1);
+    const f = amorFirst(c, d, f1, s, k, basis), all = f.whole ? life : life + 1, n0 = roundTo(f.first, 0, 0);
+    if (per < 1) return n0;
+    let left = c - n0, depr = 0;
+    for (let i = 1; i <= per; i++) {
+      const half = all - (i + 1) === 2, now = half ? left * 0.5 : k * left;
+      if (half) k = 1;
+      depr = left < s ? 0 : now;
+      left -= depr;
+    }
+    return roundTo(depr, 0, 0);
+  }),
+  EFFECT: fa(2, 2, 'v', (rate, npery) => { const r = num(rate), n = Math.trunc(num(npery)); if (r <= 0 || n < 1) throw E_NUM; return Math.pow(1 + r / n, n) - 1; }),
+  NOMINAL: fa(2, 2, 'v', (rate, npery) => { const r = num(rate), n = Math.trunc(num(npery)); if (r <= 0 || n < 1) throw E_NUM; return (Math.pow(r + 1, 1 / n) - 1) * n; }),
+  FVSCHEDULE: fa(2, 2, 'va', (p, sch) => {
+    let v = num(p);
+    for (const x of isA(sch) ? arrOf(sch).d : [sch]) { if (x == null) continue; if (isErr(x)) throw x; if (typeof x !== 'number') throw E_VAL; v *= 1 + x; }
+    return v;
+  }),
+  PDURATION: fx(3, 3, 'v', (rate, pv, fv) => { const r = num(rate), p = num(pv), f = num(fv); if (r <= 0 || p <= 0 || f <= 0) throw E_NUM; return (Math.log(f) - Math.log(p)) / Math.log(1 + r); }),
+  RRI: fx(3, 3, 'v', (nper, pv, fv) => { const n = num(nper), p = num(pv), f = num(fv); if (n <= 0 || !p || f / p < 0) throw E_NUM; return Math.pow(f / p, 1 / n) - 1; }),
+  DOLLARDE: fa(2, 2, 'v', (d, fr) => { const x = num(d), f = Math.trunc(num(fr)); if (f < 0) throw E_NUM; if (!f) throw E_DIV; const i = Math.trunc(x); return i + (x - i) * Math.pow(10, Math.ceil(Math.log10(f))) / f; }),
+  DOLLARFR: fa(2, 2, 'v', (d, fr) => { const x = num(d), f = Math.trunc(num(fr)); if (f < 0) throw E_NUM; if (!f) throw E_DIV; const i = Math.trunc(x); return i + (x - i) * f / Math.pow(10, Math.ceil(Math.log10(f))); }),
+  TBILLPRICE: fa(3, 3, 'v', (s, m, d) => { const days = bill(s, m), r = num(d); if (r <= 0) throw E_NUM; const p = 100 * (1 - r * days / 360); if (p < 0) throw E_NUM; return p; }),
+  TBILLYIELD: fa(3, 3, 'v', (s, m, pr) => { const days = bill(s, m), p = num(pr); if (p <= 0) throw E_NUM; return (100 - p) / p * 360 / days; }),
+  TBILLEQ: fa(3, 3, 'v', (s, m, d) => {
+    const days = bill(s, m), r = num(d);
+    if (r <= 0) throw E_NUM;
+    if (days <= 182) return 365 * r / (360 - r * days);
+    const p = 1 - r * days / 360, x = days / (days === 366 ? 366 : 365);   // over half a year, the interest is counted twice
+    return (-2 * x + 2 * Math.sqrt(x * x - (2 * x - 1) * (1 - 1 / p))) / (2 * x - 1);
+  }),
+  DISC: fa(4, 5, 'v', (s, m, pr, red, bs) => { const [a, b] = twoDates(s, m), p = num(pr), r = num(red); if (p <= 0 || r <= 0) throw E_NUM; return (1 - p / r) / yearFrac(a, b, basisOf(bs)); }),
+  INTRATE: fa(4, 5, 'v', (s, m, inv, red, bs) => { const [a, b] = twoDates(s, m), i = num(inv), r = num(red); if (i <= 0 || r <= 0) throw E_NUM; return (r - i) / i / yearFrac(a, b, basisOf(bs)); }),
+  RECEIVED: fa(4, 5, 'v', (s, m, inv, disc, bs) => { const [a, b] = twoDates(s, m), i = num(inv), d = num(disc); if (i <= 0 || d <= 0) throw E_NUM; const k = 1 - d * yearFrac(a, b, basisOf(bs)); if (k <= 0) throw E_NUM; return i / k; }),
+  PRICEDISC: fa(4, 5, 'v', (s, m, disc, red, bs) => { const [a, b] = twoDates(s, m), d = num(disc), r = num(red); if (d <= 0 || r <= 0) throw E_NUM; return r * (1 - d * yearFrac(a, b, basisOf(bs))); }),
+  YIELDDISC: fa(4, 5, 'v', (s, m, pr, red, bs) => { const [a, b] = twoDates(s, m), p = num(pr), r = num(red); if (p <= 0 || r <= 0) throw E_NUM; return (r / p - 1) / yearFrac(a, b, basisOf(bs)); }),
+  // a security that pays its interest at maturity: one year's length (by issue and settlement) serves all three times
+  PRICEMAT: fa(5, 6, 'v', (s, m, iss, rate, yld, bs) => {
+    const [a, b] = twoDates(s, m), i = day0(iss), r = num(rate), y = num(yld), basis = basisOf(bs);
+    if (r < 0 || y < 0 || i >= a) throw E_NUM;
+    const B = yearBy(i, a, basis), dim = daysBy(i, b, basis), A = daysBy(i, a, basis);
+    return (100 + dim / B * r * 100) / (1 + (dim - A) / B * y) - A / B * r * 100;
+  }),
+  YIELDMAT: fa(5, 6, 'v', (s, m, iss, rate, pr, bs) => {
+    const [a, b] = twoDates(s, m), i = day0(iss), r = num(rate), p = num(pr), basis = basisOf(bs);
+    if (r < 0 || p <= 0 || i >= a) throw E_NUM;
+    const B = yearBy(i, a, basis), dim = daysBy(i, b, basis), A = daysBy(i, a, basis);
+    return (dim / B * r + 1 - p / 100 - A / B * r) / (p / 100 + A / B * r) * B / (dim - A);
+  }),
+  ACCRINTM: fa(4, 5, 'v', (iss, s, rate, par, bs) => { const [a, b] = twoDates(iss, s), r = num(rate), p = par == null ? 1000 : num(par); if (r <= 0 || p <= 0) throw E_NUM; return p * r * yearFrac(a, b, basisOf(bs)); }),
+  ACCRINT: fa(6, 8, 'v', (iss, first, settle, rate, par, freq, bs, method) => {
+    const [i, s] = twoDates(iss, settle), f1 = day0(first), r = num(rate), p = par == null ? 1000 : num(par), fr = freqOf(freq), basis = basisOf(bs);
+    if (r <= 0 || p <= 0) throw E_NUM;
+    return accrOf(i, f1, s, r, p, fr, basis, method == null || bool(method));
+  }, 7),
+  COUPPCD: fa(3, 4, 'v', (s, m, f, bs) => { const [a, b] = twoDates(s, m), fr = freqOf(f); basisOf(bs); return coupons(a, b, fr).pcd; }),
+  COUPNCD: fa(3, 4, 'v', (s, m, f, bs) => { const [a, b] = twoDates(s, m), fr = freqOf(f); basisOf(bs); return coupons(a, b, fr).ncd; }),
+  COUPNUM: fa(3, 4, 'v', (s, m, f, bs) => { const [a, b] = twoDates(s, m), fr = freqOf(f); basisOf(bs); return coupons(a, b, fr).n; }),
+  COUPDAYBS: fa(3, 4, 'v', (s, m, f, bs) => { const [a, b] = twoDates(s, m); return coupParts(a, b, freqOf(f), basisOf(bs)).A; }),
+  COUPDAYS: fa(3, 4, 'v', (s, m, f, bs) => { const [a, b] = twoDates(s, m); return coupDays(a, b, freqOf(f), basisOf(bs)); }),
+  COUPDAYSNC: fa(3, 4, 'v', (s, m, f, bs) => { const [a, b] = twoDates(s, m), basis = basisOf(bs), p = coupParts(a, b, freqOf(f), basis); return basis ? daysBy(a, p.ncd, basis) : p.pcd === a ? us360(a, p.ncd, true) : p.E - p.A; }),
+  PRICE: fa(6, 7, 'v', (s, m, rate, yld, red, f, bs) => {
+    const [a, b] = twoDates(s, m), r = num(rate), y = num(yld), rd = num(red);
+    if (r < 0 || y < 0 || rd <= 0) throw E_NUM;
+    return priceOf(a, b, r, y, rd, freqOf(f), basisOf(bs));
+  }),
+  YIELD: fa(6, 7, 'v', (s, m, rate, pr, red, f, bs) => {
+    const [a, b] = twoDates(s, m), r = num(rate), p = num(pr), rd = num(red), fr = freqOf(f), basis = basisOf(bs);
+    if (r < 0 || p <= 0 || rd <= 0) throw E_NUM;
+    const c = coupons(a, b, fr);
+    if (c.n === 1) {   // one coupon left: no search is needed. Here bases 1 to 3 all count the real days (measured)
+      const real = basis > 0 && basis < 4, E = real ? c.ncd - c.pcd : 360 / fr, A = real ? a - c.pcd : daysBy(c.pcd, a, basis), k = p / 100 + A / E * r / fr;
+      return ((rd / 100 + r / fr) - k) / k * fr * E / daysBy(a, b, basis);
+    }
+    const y = rootOf(x => priceOf(a, b, r, x, rd, fr, basis) - p, r || 0.1, -fr);
+    if (y == null) throw E_NUM;
+    return y;
+  }),
+  DURATION: fa(5, 6, 'v', (s, m, cpn, yld, f, bs) => { const [a, b] = twoDates(s, m), c = num(cpn), y = num(yld); if (c < 0 || y < 0) throw E_NUM; return durOf(a, b, c, y, freqOf(f), basisOf(bs)); }),
+  MDURATION: fa(5, 6, 'v', (s, m, cpn, yld, f, bs) => { const [a, b] = twoDates(s, m), c = num(cpn), y = num(yld), fr = freqOf(f); if (c < 0 || y < 0) throw E_NUM; return durOf(a, b, c, y, fr, basisOf(bs)) / (1 + y / fr); }),
+  ODDLPRICE: fa(7, 8, 'v', (s, m, last, rate, yld, red, f, bs) => {
+    const [a, b] = twoDates(s, m), l = day0(last), r = num(rate), y = num(yld), rd = num(red);
+    if (r < 0 || y < 0 || rd <= 0 || l >= a) throw E_NUM;
+    return oddLast(a, b, l, r, y, rd, freqOf(f), basisOf(bs), true);
+  }),
+  ODDLYIELD: fa(7, 8, 'v', (s, m, last, rate, pr, red, f, bs) => {
+    const [a, b] = twoDates(s, m), l = day0(last), r = num(rate), p = num(pr), rd = num(red);
+    if (r < 0 || p <= 0 || rd <= 0 || l >= a) throw E_NUM;
+    return oddLast(a, b, l, r, p, rd, freqOf(f), basisOf(bs), false);
+  }),
+  ODDFPRICE: fa(8, 9, 'v', (s, m, iss, first, rate, yld, red, f, bs) => {
+    const [a, b] = twoDates(s, m), i = day0(iss), f1 = day0(first), r = num(rate), y = num(yld), rd = num(red);
+    const fr = freqOf(f);
+    if (r < 0 || y < 0 || rd <= 0 || !(b > f1 && f1 > a && a > i) || coupons(f1, b, fr).pcd !== f1) throw E_NUM;
+    return oddFirst(a, b, i, f1, r, y, rd, fr, basisOf(bs));
+  }),
+  ODDFYIELD: fa(8, 9, 'v', (s, m, iss, first, rate, pr, red, f, bs) => {
+    const [a, b] = twoDates(s, m), i = day0(iss), f1 = day0(first), r = num(rate), p = num(pr), rd = num(red), fr = freqOf(f), basis = basisOf(bs);
+    if (r < 0 || p <= 0 || rd <= 0 || !(b > f1 && f1 > a && a > i) || coupons(f1, b, fr).pcd !== f1) throw E_NUM;
+    const y = rootOf(x => oddFirst(a, b, i, f1, r, x, rd, fr, basis) - p, r || 0.1, -fr);
+    if (y == null) throw E_NUM;
+    return y;
+  }),
   // finding values, and references
   VLOOKUP: fx(3, 4, 'vavv', (x, t, c, ap) => lookIn(x, t, c, ap, false)),
   HLOOKUP: fx(3, 4, 'vavv', (x, t, r, ap) => lookIn(x, t, r, ap, true)),
@@ -1643,6 +2174,7 @@ const FUNCS = {
   } },
   ROW: { n: [0, 1], f: a => rowCol(a, true) },
   COLUMN: { n: [0, 1], f: a => rowCol(a, false) },
+  AREAS: { n: [1, 1], f: a => { const v = refOf(a[0]); return isErr(v) ? v : v && v.rng ? 1 : E_VAL; } },   // one: an address here is always one block
   ROWS: fx(1, 1, 'a', v => { if (isErr(v)) throw v; return dims(v)[0]; }),
   COLUMNS: fx(1, 1, 'a', v => { if (isErr(v)) throw v; return dims(v)[1]; }),
   ADDRESS: fx(2, 5, 'v', (r, c, ab, a1, sh) => {
@@ -1738,6 +2270,7 @@ const FUNCS = {
   ISNA: fx(1, 1, 'v', v => v === E_NA),
   ISEVEN: fx(1, 1, 'v', v => { if (typeof v === 'boolean') throw E_VAL; return Math.trunc(num(v)) % 2 === 0; }),
   ISODD: fx(1, 1, 'v', v => { if (typeof v === 'boolean') throw E_VAL; return Math.abs(Math.trunc(num(v))) % 2 === 1; }),
+  ISREF: { n: [1, 1], f: a => { const v = refOf(a[0]); return !!v && v.rng === true; } },
   ISFORMULA: fx(1, 1, 'a', r => { if (!r || !r.rng) throw E_VAL; const x = r.s.cells.get(KEY(r.g.r1, r.g.c1)); return !!(x && x.f != null); }),
   NA: { n: [0, 0], f: () => E_NA },
   'ERROR.TYPE': fx(1, 1, 'v', v => { if (!isErr(v)) throw E_NA; return { '#NULL!': 1, '#DIV/0!': 2, '#VALUE!': 3, '#REF!': 4, '#NAME?': 5, '#NUM!': 6, '#N/A': 7, '#SPILL!': 9, '#CALC!': 14 }[v.c]; }),
@@ -1759,7 +2292,8 @@ function lookIn(x, t, k, ap, across) {
   const A = arrOf(t), i = Math.trunc(num(k)), [h, w] = dims(t);
   if (i < 1) throw E_VAL;
   if (i > (across ? h : w)) throw E_REF;
-  const first = across ? A.d.slice(0, A.w) : col0(A);
+  let first = across ? A._r0 : A._c0;
+  if (!first) { first = across ? A.d.slice(0, A.w) : col0(A); if (A.d._c) { first._c = true; if (across) A._r0 = first; else A._c0 = first; } }
   const p = (ap === undefined ? true : bool(ap)) ? sortedPos(first, x, false) : findExact(first, x, true);
   if (p < 0) throw E_NA;
   return zero(across ? (i - 1 < A.h ? A.d[(i - 1) * A.w + p] : null) : A.d[p * A.w + i - 1]);
@@ -1816,7 +2350,7 @@ function textAround(t, d, n, m, e, nf, before) {
 /* the words the formula helper shows: each function's kind, what it does, its arguments (names from ARGN; [ ] when
    it may be left out) and an example */
 const FN_CATS = [['logic', N_('לוגיות'), 'call_split'], ['text', N_('טקסט'), 'text_fields'], ['date', N_('תאריך ושעה'), 'calendar_today'],
-  ['look', N_('חיפוש והפניה'), 'search'], ['math', N_('מתמטיקה'), 'calculate'], ['stat', N_('סטטיסטיקה'), 'bar_chart'], ['info', N_('מידע'), 'info']];
+  ['look', N_('חיפוש והפניה'), 'search'], ['math', N_('מתמטיקה'), 'calculate'], ['stat', N_('סטטיסטיקה'), 'bar_chart'], ['fin', N_('כספים'), 'payments'], ['info', N_('מידע'), 'info']];
 const ARGN = {
   number: N_('מספר'), value: N_('ערך'), text: N_('טקסט'), range: N_('טווח'), criteria: N_('תנאי'), criteria_range: N_('טווח_תנאי'),
   sum_range: N_('טווח_סכום'), average_range: N_('טווח_ממוצע'), max_range: N_('טווח_מקסימום'), min_range: N_('טווח_מינימום'),
@@ -1837,6 +2371,14 @@ const ARGN = {
   col_delimiter: N_('מפריד_עמודות'), row_delimiter: N_('מפריד_שורות'), pad_with: N_('מילוי'), match_end: N_('סוף_כמפריד'), mode: N_('כיוון'),
   row: N_('שורה'), column: N_('עמודה'), abs_num: N_('סוג_כתובת'), a1: N_('סגנון_A1'), sheet_text: N_('שם_גיליון'), error_val: N_('שגיאה'), times: N_('פעמים'),
   ref_text: N_('כתובת_כטקסט'), cols: N_('עמודות@arg'), height: N_('גובה@arg'), width: N_('רוחב@arg'),
+  rate: N_('ריבית'), nper: N_('מספר_תשלומים'), pmt: N_('תשלום'), pv: N_('ערך_נוכחי'), fv: N_('ערך_עתידי'), type: N_('סוג_תשלום'), per: N_('תקופה'), period: N_('תקופה'),
+  guess: N_('ניחוש'), values: N_('ערכים@arg'), dates: N_('תאריכים@arg'), finance_rate: N_('ריבית_מימון'), reinvest_rate: N_('ריבית_השקעה_מחדש'), cost: N_('עלות'),
+  salvage: N_('ערך_גרט'), life: N_('אורך_חיים'), factor: N_('מקדם'), start_period: N_('תקופת_התחלה'), end_period: N_('תקופת_סיום'), no_switch: N_('בלי_מעבר'),
+  nominal_rate: N_('ריבית_נקובה'), effect_rate: N_('ריבית_אפקטיבית'), npery: N_('תקופות_בשנה'), principal: N_('קרן'), schedule: N_('לוח_ריביות'),
+  fractional_dollar: N_('מחיר_בשבר'), decimal_dollar: N_('מחיר_עשרוני'), fraction: N_('מכנה'), settlement: N_('סליקה'), maturity: N_('פדיון'), discount: N_('ניכיון'),
+  pr: N_('מחיר'), redemption: N_('ערך_פדיון'), basis: N_('בסיס_ימים'), investment: N_('השקעה'), issue: N_('הנפקה'), yld: N_('תשואה'), first_interest: N_('ריבית_ראשונה'),
+  par: N_('ערך_נקוב'), frequency: N_('תשלומים_בשנה'), calc_method: N_('שיטת_חישוב'), coupon: N_('קופון'), first_coupon: N_('קופון_ראשון'),
+  last_interest: N_('ריבית_אחרונה'), date_purchased: N_('תאריך_רכישה'), first_period: N_('תקופה_ראשונה'), method: N_('שיטה'),
 };
 const FN_INFO = {
   // math
@@ -1985,6 +2527,8 @@ const FN_INFO = {
   'WORKDAY.INTL': ['date', N_('התאריך אחרי מספר ימי עבודה, עם סוף שבוע לבחירה'), 'start_date, days, [weekend], [holidays]', 'WORKDAY.INTL(A2,10,7)'],
   DATEVALUE: ['date', N_('ממיר תאריך שכתוב כטקסט לתאריך'), 'date_text', 'DATEVALUE("30/09/2026")'],
   TIMEVALUE: ['date', N_('ממיר שעה שכתובה כטקסט לשעה'), 'time_text', 'TIMEVALUE("14:30")'],
+  YEARFRAC: ['date', N_('החלק של השנה שבין שני תאריכים'), 'start_date, end_date, [basis]', 'YEARFRAC(A2,B2,1)'],
+  DAYS360: ['date', N_('מספר הימים בין שני תאריכים, בשנה של 12 חודשים בני 30 יום'), 'start_date, end_date, [method]', 'DAYS360(A2,B2)'],
   // finding values
   VLOOKUP: ['look', N_('מחפש ערך בעמודה הראשונה של טבלה, ומחזיר ערך מאותה שורה'), 'lookup_value, table_array, col_index_num, [range_lookup]', 'VLOOKUP(A2,D2:F20,3,FALSE)'],
   HLOOKUP: ['look', N_('מחפש ערך בשורה הראשונה של טבלה, ומחזיר ערך מאותה עמודה'), 'lookup_value, table_array, row_index_num, [range_lookup]', 'HLOOKUP(A2,D1:H3,2,FALSE)'],
@@ -1995,6 +2539,7 @@ const FN_INFO = {
   INDEX: ['look', N_('הערך בשורה ובעמודה שבוחרים מתוך טווח'), 'array, row_num, [column_num]', 'INDEX(A2:C10,3,2)'],
   CHOOSE: ['look', N_('בוחר ערך מרשימה לפי מספר'), 'index_num, value1, [value2], ...', 'CHOOSE(2,"A","B","C")'],
   ROW: ['look', N_('מספר השורה של תא'), '[reference]', 'ROW()'],
+  AREAS: ['look', N_('מספר האזורים שבהפניה'), 'reference', 'AREAS(A1:C3)'],
   COLUMN: ['look', N_('מספר העמודה של תא'), '[reference]', 'COLUMN()'],
   ROWS: ['look', N_('כמה שורות יש בטווח'), 'array', 'ROWS(A2:A10)'],
   COLUMNS: ['look', N_('כמה עמודות יש בטווח'), 'array', 'COLUMNS(A1:D1)'],
@@ -2006,6 +2551,62 @@ const FN_INFO = {
   SORT: ['look', N_('טווח ממוין, שנשפך לתאים'), 'array, [sort_index], [sort_order], [by_col]', 'SORT(A2:B20,2,-1)'],
   SORTBY: ['look', N_('טווח ממוין לפי טווח אחר'), 'array, by_array1, [sort_order1], ...', 'SORTBY(A2:A20,B2:B20,-1)'],
   UNIQUE: ['look', N_('הערכים בלי כפילויות, שנשפכים לתאים'), 'array, [by_col], [exactly_once]', 'UNIQUE(A2:A20)'],
+  // money
+  PMT: ['fin', N_('התשלום הקבוע של הלוואה, בריבית קבועה'), 'rate, nper, pv, [fv], [type]', 'PMT(5%/12,60,100000)'],
+  PV: ['fin', N_('הערך של היום של תשלומים קבועים בעתיד'), 'rate, nper, pmt, [fv], [type]', 'PV(5%/12,60,-500)'],
+  FV: ['fin', N_('הערך בעתיד של חיסכון בהפקדות קבועות'), 'rate, nper, pmt, [pv], [type]', 'FV(4%/12,120,-200)'],
+  NPER: ['fin', N_('מספר התשלומים עד שהלוואה נגמרת או שחיסכון מגיע לסכום'), 'rate, pmt, pv, [fv], [type]', 'NPER(5%/12,-1000,50000)'],
+  RATE: ['fin', N_('הריבית לתקופה של הלוואה או של חיסכון'), 'nper, pmt, pv, [fv], [type], [guess]', 'RATE(60,-1900,100000)*12'],
+  IPMT: ['fin', N_('החלק של הריבית בתשלום מסוים של הלוואה'), 'rate, per, nper, pv, [fv], [type]', 'IPMT(5%/12,1,60,100000)'],
+  PPMT: ['fin', N_('החלק של הקרן בתשלום מסוים של הלוואה'), 'rate, per, nper, pv, [fv], [type]', 'PPMT(5%/12,1,60,100000)'],
+  ISPMT: ['fin', N_('הריבית בתקופה מסוימת של הלוואה שהקרן שלה מוחזרת בחלקים שווים'), 'rate, per, nper, pv', 'ISPMT(5%/12,1,60,100000)'],
+  CUMIPMT: ['fin', N_('כל הריבית ששולמה בין שני תשלומים של הלוואה'), 'rate, nper, pv, start_period, end_period, type', 'CUMIPMT(5%/12,60,100000,1,12,0)'],
+  CUMPRINC: ['fin', N_('כל הקרן שהוחזרה בין שני תשלומים של הלוואה'), 'rate, nper, pv, start_period, end_period, type', 'CUMPRINC(5%/12,60,100000,1,12,0)'],
+  NPV: ['fin', N_('הערך הנוכחי הנקי של תזרימי כסף, לפי ריבית היוון'), 'rate, value1, [value2], ...', 'NPV(8%,B2:B6)+B1'],
+  IRR: ['fin', N_('שיעור התשואה הפנימי של תזרימי כסף'), 'values, [guess]', 'IRR(B1:B6)'],
+  MIRR: ['fin', N_('שיעור תשואה פנימי, כשהמימון וההשקעה מחדש בריביות שונות'), 'values, finance_rate, reinvest_rate', 'MIRR(B1:B6,10%,12%)'],
+  XNPV: ['fin', N_('ערך נוכחי נקי של תזרימי כסף שהתאריכים שלהם לא קבועים'), 'rate, values, dates', 'XNPV(9%,B2:B6,A2:A6)'],
+  XIRR: ['fin', N_('שיעור תשואה פנימי של תזרימי כסף שהתאריכים שלהם לא קבועים'), 'values, dates, [guess]', 'XIRR(B2:B6,A2:A6)'],
+  EFFECT: ['fin', N_('הריבית השנתית האמיתית, מריבית נקובה שמחושבת כמה פעמים בשנה'), 'nominal_rate, npery', 'EFFECT(5.25%,4)'],
+  NOMINAL: ['fin', N_('הריבית השנתית הנקובה, מהריבית האמיתית'), 'effect_rate, npery', 'NOMINAL(5.35%,4)'],
+  FVSCHEDULE: ['fin', N_('הערך בעתיד של סכום, אחרי כמה ריביות שונות זו אחר זו'), 'principal, schedule', 'FVSCHEDULE(1000,{0.09,0.11,0.1})'],
+  PDURATION: ['fin', N_('מספר התקופות עד שהשקעה מגיעה לסכום'), 'rate, pv, fv', 'PDURATION(2.5%,2000,2200)'],
+  RRI: ['fin', N_('הריבית לתקופה שמתאימה לגידול של השקעה'), 'nper, pv, fv', 'RRI(96,10000,11000)'],
+  SLN: ['fin', N_('הפחת של נכס בתקופה אחת, בקו ישר'), 'cost, salvage, life', 'SLN(30000,7500,10)'],
+  SYD: ['fin', N_('הפחת של נכס בתקופה מסוימת, בשיטת סכום ספרות השנים'), 'cost, salvage, life, per', 'SYD(30000,7500,10,1)'],
+  DB: ['fin', N_('הפחת של נכס בתקופה מסוימת, ביתרה פוחתת בשיעור קבוע'), 'cost, salvage, life, period, [month]', 'DB(30000,7500,10,1)'],
+  DDB: ['fin', N_('הפחת של נכס בתקופה מסוימת, ביתרה פוחתת כפולה'), 'cost, salvage, life, period, [factor]', 'DDB(30000,7500,10,1)'],
+  VDB: ['fin', N_('הפחת של נכס בין שתי תקופות, ביתרה פוחתת שעוברת לקו ישר'), 'cost, salvage, life, start_period, end_period, [factor], [no_switch]', 'VDB(30000,7500,10,0,1)'],
+  AMORLINC: ['fin', N_('הפחת בכל תקופת חשבון, בקו ישר (חשבונאות צרפתית)'), 'cost, date_purchased, first_period, salvage, period, rate, [basis]', 'AMORLINC(2400,A2,B2,300,1,15%,1)'],
+  AMORDEGRC: ['fin', N_('הפחת בכל תקופת חשבון, פוחת (חשבונאות צרפתית)'), 'cost, date_purchased, first_period, salvage, period, rate, [basis]', 'AMORDEGRC(2400,A2,B2,300,1,15%,1)'],
+  DOLLARDE: ['fin', N_('מחיר שכתוב כשבר (1.02 הוא 1 ועוד 2/16) כמספר עשרוני'), 'fractional_dollar, fraction', 'DOLLARDE(1.02,16)'],
+  DOLLARFR: ['fin', N_('מחיר עשרוני כמחיר שכתוב כשבר'), 'decimal_dollar, fraction', 'DOLLARFR(1.125,16)'],
+  PRICE: ['fin', N_('המחיר לכל 100 ערך נקוב של אגרת חוב שמשלמת ריבית כל תקופה'), 'settlement, maturity, rate, yld, redemption, frequency, [basis]', 'PRICE(A2,B2,5.75%,6.5%,100,2,0)'],
+  YIELD: ['fin', N_('התשואה של אגרת חוב שמשלמת ריבית כל תקופה'), 'settlement, maturity, rate, pr, redemption, frequency, [basis]', 'YIELD(A2,B2,5.75%,95.04,100,2,0)'],
+  DURATION: ['fin', N_('משך החיים הממוצע (מח"מ) של אגרת חוב, בשנים'), 'settlement, maturity, coupon, yld, frequency, [basis]', 'DURATION(A2,B2,8%,9%,2,1)'],
+  MDURATION: ['fin', N_('מח"מ מתוקן של אגרת חוב'), 'settlement, maturity, coupon, yld, frequency, [basis]', 'MDURATION(A2,B2,8%,9%,2,1)'],
+  ACCRINT: ['fin', N_('הריבית שנצברה בנייר ערך שמשלם ריבית כל תקופה'), 'issue, first_interest, settlement, rate, par, frequency, [basis], [calc_method]', 'ACCRINT(A2,B2,C2,10%,1000,2,0)'],
+  ACCRINTM: ['fin', N_('הריבית שנצברה בנייר ערך שמשלם ריבית בפדיון'), 'issue, settlement, rate, par, [basis]', 'ACCRINTM(A2,B2,10%,1000,3)'],
+  COUPPCD: ['fin', N_('תאריך הקופון האחרון לפני הסליקה'), 'settlement, maturity, frequency, [basis]', 'COUPPCD(A2,B2,2,1)'],
+  COUPNCD: ['fin', N_('תאריך הקופון הבא אחרי הסליקה'), 'settlement, maturity, frequency, [basis]', 'COUPNCD(A2,B2,2,1)'],
+  COUPNUM: ['fin', N_('מספר הקופונים שנשארו מהסליקה עד הפדיון'), 'settlement, maturity, frequency, [basis]', 'COUPNUM(A2,B2,2,1)'],
+  COUPDAYBS: ['fin', N_('מספר הימים מתחילת תקופת הקופון עד הסליקה'), 'settlement, maturity, frequency, [basis]', 'COUPDAYBS(A2,B2,2,1)'],
+  COUPDAYS: ['fin', N_('מספר הימים בתקופת הקופון שהסליקה בתוכה'), 'settlement, maturity, frequency, [basis]', 'COUPDAYS(A2,B2,2,1)'],
+  COUPDAYSNC: ['fin', N_('מספר הימים מהסליקה עד הקופון הבא'), 'settlement, maturity, frequency, [basis]', 'COUPDAYSNC(A2,B2,2,1)'],
+  DISC: ['fin', N_('שיעור הניכיון של נייר ערך'), 'settlement, maturity, pr, redemption, [basis]', 'DISC(A2,B2,97.975,100,1)'],
+  INTRATE: ['fin', N_('הריבית של נייר ערך שמוחזק עד הפדיון'), 'settlement, maturity, investment, redemption, [basis]', 'INTRATE(A2,B2,1000000,1014420,2)'],
+  RECEIVED: ['fin', N_('הסכום שמתקבל בפדיון של נייר ערך שמוחזק עד הפדיון'), 'settlement, maturity, investment, discount, [basis]', 'RECEIVED(A2,B2,1000000,5.75%,2)'],
+  PRICEDISC: ['fin', N_('המחיר לכל 100 ערך נקוב של נייר ערך שנמכר בניכיון'), 'settlement, maturity, discount, redemption, [basis]', 'PRICEDISC(A2,B2,5.25%,100,2)'],
+  YIELDDISC: ['fin', N_('התשואה השנתית של נייר ערך שנמכר בניכיון'), 'settlement, maturity, pr, redemption, [basis]', 'YIELDDISC(A2,B2,99.795,100,2)'],
+  PRICEMAT: ['fin', N_('המחיר לכל 100 ערך נקוב של נייר ערך שמשלם ריבית בפדיון'), 'settlement, maturity, issue, rate, yld, [basis]', 'PRICEMAT(A2,B2,C2,6.1%,6.1%,0)'],
+  YIELDMAT: ['fin', N_('התשואה השנתית של נייר ערך שמשלם ריבית בפדיון'), 'settlement, maturity, issue, rate, pr, [basis]', 'YIELDMAT(A2,B2,C2,6.25%,100.0123,0)'],
+  TBILLPRICE: ['fin', N_('המחיר לכל 100 ערך נקוב של מלווה קצר מועד'), 'settlement, maturity, discount', 'TBILLPRICE(A2,B2,9%)'],
+  TBILLYIELD: ['fin', N_('התשואה של מלווה קצר מועד'), 'settlement, maturity, pr', 'TBILLYIELD(A2,B2,98.45)'],
+  TBILLEQ: ['fin', N_('התשואה של מלווה קצר מועד, כמו שמחשבים באגרת חוב'), 'settlement, maturity, discount', 'TBILLEQ(A2,B2,9%)'],
+  ODDFPRICE: ['fin', N_('המחיר של אגרת חוב שהתקופה הראשונה שלה באורך אחר'), 'settlement, maturity, issue, first_coupon, rate, yld, redemption, frequency, [basis]', 'ODDFPRICE(A2,B2,C2,D2,7.85%,6.25%,100,2,1)'],
+  ODDFYIELD: ['fin', N_('התשואה של אגרת חוב שהתקופה הראשונה שלה באורך אחר'), 'settlement, maturity, issue, first_coupon, rate, pr, redemption, frequency, [basis]', 'ODDFYIELD(A2,B2,C2,D2,5.75%,84.5,100,2,0)'],
+  ODDLPRICE: ['fin', N_('המחיר של אגרת חוב שהתקופה האחרונה שלה באורך אחר'), 'settlement, maturity, last_interest, rate, yld, redemption, frequency, [basis]', 'ODDLPRICE(A2,B2,C2,3.75%,4.05%,100,2,0)'],
+  ODDLYIELD: ['fin', N_('התשואה של אגרת חוב שהתקופה האחרונה שלה באורך אחר'), 'settlement, maturity, last_interest, rate, pr, redemption, frequency, [basis]', 'ODDLYIELD(A2,B2,C2,3.75%,99.875,100,2,0)'],
   // information
   ISBLANK: ['info', N_('בודק אם תא ריק'), 'value', 'ISBLANK(A2)'],
   ISNUMBER: ['info', N_('בודק אם זה מספר'), 'value', 'ISNUMBER(A2)'],
@@ -2018,6 +2619,7 @@ const FN_INFO = {
   ISEVEN: ['info', N_('בודק אם המספר זוגי'), 'number', 'ISEVEN(A2)'],
   ISODD: ['info', N_('בודק אם המספר אי־זוגי'), 'number', 'ISODD(A2)'],
   ISFORMULA: ['info', N_('בודק אם יש בתא נוסחה'), 'reference', 'ISFORMULA(A2)'],
+  ISREF: ['info', N_('בודק אם זו הפניה לתאים'), 'value', 'ISREF(A2)'],
   NA: ['info', N_('השגיאה ‎#N/A: אין ערך'), '', 'NA()'],
   'ERROR.TYPE': ['info', N_('המספר של סוג השגיאה'), 'error_val', 'ERROR.TYPE(A2)'],
   TYPE: ['info', N_('סוג הערך: 1 מספר, 2 טקסט, 4 לוגי, 16 שגיאה, 64 מערך'), 'value', 'TYPE(A2)'],
@@ -2065,7 +2667,7 @@ function rowsIn(rows, lo, hi, fn) {
 function recalc() {
   if (!WB) return;
   const st = { doubt: null, sure: new Set() };
-  for (let pass = 0; pass < 16 && calcPass(pass, st); pass++);
+  try { for (let pass = 0; pass < 16 && calcPass(pass, st); pass++); } finally { KEPT.clear(); KEPT_N = 0; }
 }
 /* the references a formula reads, each through fn(sheet number, range): the ones written in it, and the ones in the
    names it uses (their parts without $ are for A1, and move to the formula's cell). The cell OFFSET starts from is
@@ -2094,6 +2696,7 @@ const NO_DD = new Map();
 function calcPass(pass, st) {
   const sheets = WB.sheets, nodes = [], at = new Map(), cols = sheets.map(() => new Map()), num = new Map(sheets.map((s, i) => [s, i]));
   LIMR = 1; LIMC = 1; SUBT = false;
+  KEPT.clear(); KEPT_N = 0;
   sheets.forEach((s, si) => {
     const u = usedEnd(s);
     LIMR = Math.max(LIMR, u.r); LIMC = Math.max(LIMC, u.c);
@@ -2147,7 +2750,7 @@ function calcPass(pass, st) {
       for (const i of doubt) st.doubt.set(nodes[i].c, nodes[i]);
       return true;
     }
-    for (const i of loop) { const n = nodes[i], dd = sheets[n.si]._dd0.get(n.k); n.c.v = 0; if (dd) sheets[n.si]._dd.set(n.k, dd); if (!CIRC) CIRC = n; }
+    for (const i of loop) { const n = nodes[i], dd = sheets[n.si]._dd0.get(n.k); if (n.c.v !== 0) changedAt(sheets[n.si], kc(n.k)); n.c.v = 0; if (dd) sheets[n.si]._dd.set(n.k, dd); if (!CIRC) CIRC = n; }
     const rest = left.filter(i => !loop.has(i)), inRest = new Set(rest), deg = new Int32Array(nodes.length);
     for (const i of rest) for (const j of out[i] || []) if (inRest.has(j)) deg[j]++;
     run(rest, deg);
@@ -2223,6 +2826,7 @@ function evalCell(n) {
   else if (isA(v)) v = spill(WB.sheets[n.si], n.k, r, col, v);
   if (v == null) v = 0;
   else if (typeof v === 'number' && !Number.isFinite(v)) v = E_NUM;
+  if (c.v !== v) changedAt(WB.sheets[n.si], col);
   c.v = v;
   c.dx = CTX.dyn;
 }
@@ -2241,6 +2845,7 @@ function spill(s, k, r, c, v) {
     if (hasVal(s.cells.get(key)) || s._sp.has(key)) return E_SPILL;
   }
   for (let i = 0; i < A.h; i++) for (let j = 0; j < A.w; j++) if (i || j) s._sp.set(KEY(r + i, c + j), { v: zero(A.d[i * A.w + j]), a: k });
+  s._sv = (s._sv || 0) + 1;
   s._sa.set(k, g);
   return A.d[0];
 }
@@ -3127,6 +3732,47 @@ function endEdit(commit, move, force) {
   focusGrid();
   return true;
 }
+/* The number format a formula's cell takes when it has none, as Excel gives one (each rule measured there). TODAY and
+   DATE are a date, NOW a date with the time, TIME a time, PMT and its family money (minus in red), RATE and IRR a
+   percent. A reference takes its first cell's format, on the formula's own sheet only. + and - take the first side's
+   that has one, but two dates (or two money functions) give a plain number. * / ^ % & and comparisons give a plain
+   number whatever stands in them, and that wins over anything added to it. SUM, AVERAGE, MAX, MIN, MEDIAN, ROUND and
+   its family, INT and MOD take their first argument's that has one. Every other function has none of its own, so
+   what is added to it decides. (One thing is left out on purpose: Excel hands on the Text format too, and the next
+   edit of that cell then shows the formula instead of working it out.) */
+const MONEY_NF = () => curNf(CUR) + ';[Red]-' + curNf(CUR);
+const NF_MONEY = {}, NF_PLAIN = {};
+const NF_OWN = { TODAY: () => DATE_NF, DATE: () => DATE_NF, NOW: () => DATE_NF + (LANG === 'en' ? ' h:mm' : ' hh:mm'), TIME: () => TIME_NF, RATE: () => PCT_NF, IRR: () => PCT_NF, MIRR: () => PCT_NF };
+for (const f of ['PMT', 'PV', 'FV', 'NPV', 'IPMT', 'PPMT', 'SLN', 'DB', 'DDB', 'SYD', 'VDB']) NF_OWN[f] = () => NF_MONEY;
+const NF_PASS = new Set(['SUM', 'AVERAGE', 'MAX', 'MIN', 'MEDIAN', 'ROUND', 'ROUNDUP', 'ROUNDDOWN', 'TRUNC', 'INT', 'MOD']);
+const withDate = nf => { const k = typeof nf === 'string' ? nfKind(nf) : ''; return k === 'date' || k === 'ldate'; };
+function nfOfAst(n, s) {   // a format code, NF_MONEY, NF_PLAIN (a plain number that wins), or null (none of its own)
+  switch (n.t) {
+    case 'ref': {
+      if (n.sheet != null) return null;
+      const x = cellAt(s, n.g.r1, n.g.c1), look = x ? x.st : emptyLook(s, n.g.r1, n.g.c1), nf = look && look.nf;
+      return nf && nf !== '@' ? nf : null;
+    }
+    case 'neg': return nfOfAst(n.a, s);
+    case 'pct': return NF_PLAIN;
+    case 'bin': {
+      if (n.op !== '+' && n.op !== '-') return NF_PLAIN;
+      const a = nfOfAst(n.a, s), b = nfOfAst(n.b, s);
+      if (a === NF_PLAIN || b === NF_PLAIN || (withDate(a) && withDate(b)) || (a === NF_MONEY && b === NF_MONEY)) return NF_PLAIN;
+      return a || b;
+    }
+    case 'fn': {
+      if (NF_OWN[n.n]) return NF_OWN[n.n]();
+      if (NF_PASS.has(n.n)) for (const x of n.args) { const f = nfOfAst(x, s); if (f) return f; }
+      return null;
+    }
+  }
+  return null;
+}
+function autoNf(f, s) {
+  const ast = astOf(f), nf = ast ? nfOfAst(ast, s) : null;
+  return nf === NF_MONEY ? MONEY_NF() : typeof nf === 'string' ? nf : null;
+}
 /* what was typed into a cell; with Ctrl+Enter into every chosen cell, where a formula moves with each one */
 function writeInput(s, r, c, text, g) {
   const cur = cellAt(s, r, c), look = cur ? cur.st : emptyLook(s, r, c), p = parseInput(text, look && look.nf);
@@ -3135,7 +3781,7 @@ function writeInput(s, r, c, text, g) {
     if (!pp) { setCell(s, rr, cc, st0 ? { st: st0 } : null); return; }
     const cell = {};
     if (pp.f != null) { cell.f = tidyFormula(pp.f); cell.v = 0; } else cell.v = pp.v;
-    const st = pp.nf ? { ...(st0 || {}), nf: pp.nf } : st0;
+    const nf = pp.nf || (pp.f != null && !(st0 && st0.nf) ? autoNf(cell.f, s) : null), st = nf ? { ...(st0 || {}), nf } : st0;
     if (st) cell.st = st;
     setCell(s, rr, cc, cell);
   };
@@ -3619,12 +4265,15 @@ function acUpdate() {
     AC.list = [...has.filter(it => it.t.toLowerCase().startsWith(t)), ...has.filter(it => !it.t.toLowerCase().startsWith(t))].slice(0, 10);
     AC.dv = true; AC.i = AC.list.indexOf(was); AC.on = AC.list.length > 0 && !(AC.list.length === 1 && AC.list[0].t === v.trim());
   } else if (ED.on && v[0] === '=' && pos === ta.selectionEnd) {
-    const before = v.slice(0, pos), m = /(?:^=|[=(,;+\-*/^&<>\s])([\p{L}_][\p{L}\p{N}_.]*)$/u.exec(before);
-    if (m && !/^[A-Za-z]{1,3}\d+$/.test(m[1])) {
+    const before = v.slice(0, pos), m = /(?:^=|[=(,;:+\-*/^&<>\s])([\p{L}_][\p{L}\p{N}_.]*)$/u.exec(before);
+    // right after a : only what can answer with a reference is offered, and nothing while the letters may still be a
+    // column's (A:C, A1:IV9): Enter takes the marked name, and would spoil a plain range
+    const colon = !!m && before[before.length - m[1].length - 1] === ':';
+    if (m && !/^[A-Za-z]{1,3}\d+$/.test(m[1]) && !(colon && /^[A-Za-z]{1,3}$/.test(m[1]))) {
       // the functions and the defined names that start with what was typed, in one list by the alphabet (a name is { nm })
       const up = m[1].toUpperCase(), low = m[1].toLowerCase(), sheet = WB.sheets.find(x => x.id === ED.sid) || WS;
       const names = namesFor(sheet).filter(x => x.n.toLowerCase().startsWith(low) && x.n.toLowerCase() !== low).map(x => ({ nm: x }));
-      AC.list = [...FN_LIST.filter(n => n.startsWith(up) && n !== up), ...names].sort((a, b) => COLL.compare(a.nm ? a.nm.n : a, b.nm ? b.nm.n : b));
+      AC.list = [...FN_LIST.filter(n => n.startsWith(up) && n !== up && (!colon || REF_FN.has(n))), ...names].sort((a, b) => COLL.compare(a.nm ? a.nm.n : a, b.nm ? b.nm.n : b));
       AC.from = pos - m[1].length; AC.i = Math.max(0, AC.list.findIndex(it => it === was || (!!it.nm && !!was && it.nm === was.nm))); AC.on = AC.list.length > 0;   // the marked name stays marked (a key going up asks again)
     }
     const stack = [];
@@ -4004,7 +4653,7 @@ function sortCmp(a, b, desc) {
   let c;
   if (ra !== rb) c = ra - rb;
   else if (ra === 0) c = a - b;
-  else if (ra === 1) c = SORT_COLL.compare(a, b);
+  else if (ra === 1) c = textCmp(a, b, SORT_COLL);
   else if (ra === 2) c = (a ? 1 : 0) - (b ? 1 : 0);
   else c = String(a.c).localeCompare(String(b.c));
   return desc ? -c : c;
@@ -5806,7 +6455,7 @@ async function importCharts(buf, nb, xlNames, rep) {
 const NEW_FNS = new Set(['CONCAT', 'TEXTJOIN', 'IFS', 'SWITCH', 'MAXIFS', 'MINIFS', 'XLOOKUP', 'XMATCH', 'SORTBY', 'UNIQUE', 'SEQUENCE', 'RANDARRAY', 'LET', 'LAMBDA',
   'IFNA', 'XOR', 'DAYS', 'ISOWEEKNUM', 'ISFORMULA', 'UNICHAR', 'UNICODE', 'STDEV.S', 'STDEV.P', 'VAR.S', 'VAR.P', 'MODE.SNGL', 'RANK.EQ', 'RANK.AVG', 'PERCENTILE.INC',
   'QUARTILE.INC', 'CEILING.MATH', 'FLOOR.MATH', 'AGGREGATE', 'FORMULATEXT', 'TEXTBEFORE', 'TEXTAFTER', 'TEXTSPLIT', 'VSTACK', 'HSTACK', 'TAKE', 'DROP', 'CHOOSECOLS',
-  'CHOOSEROWS', 'TOCOL', 'TOROW', 'WRAPROWS', 'WRAPCOLS', 'EXPAND', 'ANCHORARRAY', 'SINGLE']);
+  'CHOOSEROWS', 'TOCOL', 'TOROW', 'WRAPROWS', 'WRAPCOLS', 'EXPAND', 'ANCHORARRAY', 'SINGLE', 'PDURATION', 'RRI']);
 const XLWS = new Set(['FILTER', 'SORT']);
 /* an error as a file keeps it. #SPILL! and #CALC! came with Excel 365, and an older Excel refuses a whole file that has
    one of them as a value (measured in Excel 2016): they are written #VALUE!, and the formula gives the real one again */
@@ -6136,7 +6785,7 @@ function applySpec(book, s, spec, log) {
     const p = typeof v === 'number' ? (Number.isFinite(v) ? { v } : null) : typeof v === 'boolean' ? { v } : parseInput(String(v), st0 && st0.nf);
     if (!p) return 0;
     const x = p.f != null ? { f: tidyFormula(closeBrackets(p.f), book), v: 0 } : { v: p.v };
-    const st = p.nf ? { ...(st0 || {}), nf: p.nf } : st0;
+    const nf = p.nf || (p.f != null && !(st0 && st0.nf) ? autoNf(x.f, s) : null), st = nf ? { ...(st0 || {}), nf } : st0;
     if (st) x.st = st;
     setCell(s, r, c, x);
     return 1;
@@ -6247,10 +6896,11 @@ function fromSpec(spec, rep) {
     book.names = r.names;
     if (rep && r.skipped.length) rep.names_not_defined = r.skipped;
   }
-  list.forEach((sp, i) => applySpec(book, book.sheets[i], sp));
+  const logs = list.map(() => []);
+  list.forEach((sp, i) => applySpec(book, book.sheets[i], sp, logs[i]));
   const keep = WB;
   WB = book;
-  try { recalc(); } finally { WB = keep; }
+  try { recalc(); if (rep) Object.assign(rep, formulaNotes(book, logs.flatMap((l, i) => l.map(([r, c]) => [book.sheets[i], r, c])))); } finally { WB = keep; }
   return bookOut({ ...book, sheets: book.sheets });
 }
 function templates() {
@@ -6309,6 +6959,25 @@ function forAI(args = {}) {
   if (used && (used.r2 > g.r2 || used.c2 > g.c2) && !args.range) res.truncated = 'Only part of the sheet was returned. Read the rest with the range argument.';
   return res;
 }
+/* for Claude: which of the formulas it wrote can't be read, use what isn't here, or answer with an error (cells: each
+   [sheet, row, column] it wrote) */
+function formulaNotes(book, cells) {
+  const bad = [], unknown = [], errs = {}, many = book.sheets.length > 1;
+  let n = 0;
+  for (const [s, r, c] of cells) {
+    const x = s.cells.get(KEY(r, c));
+    if (!x || x.f == null) continue;
+    const at = (many ? sheetPrefix(s.name) : '') + A1(r, c);
+    if (!astOf(x.f)) { if (bad.length < 30) bad.push(at); continue; }
+    const m = missingIn(x.f, s, book);
+    if (m) { if (unknown.length < 30) unknown.push({ cell: at, ...(m.fn ? { function: m.fn } : { name: m.name }) }); }
+    else if (isErr(x.v) && n < 30) { errs[at] = x.v.c; n++; }
+  }
+  if (!bad.length && !unknown.length && !n) return {};
+  return { ...(bad.length ? { formulas_not_read: bad } : {}), ...(unknown.length ? { formulas_unknown: unknown } : {}), ...(n ? { formula_errors: errs } : {}),
+    formulas_note: 'formulas_not_read: what was written after the = is not a formula this app can read (check the brackets and the quotes, commas between arguments, English function names, A1 references); such a cell shows #NAME?. '
+      + 'formulas_unknown: a function this app does not have, or a name nobody defined. formula_errors: the formula was read, and this error is its answer. Fix the ones that were not meant.' };
+}
 /* for Claude: cells written (and formatted), as one step the user can undo */
 function writeCells(args = {}) {
   let s = WS, made = false;
@@ -6332,7 +7001,8 @@ function writeCells(args = {}) {
   const u = usedRange(s);
   return { sheet: s.name, cells_written: n, used_range: u ? rangeA1(u) : null, ...(made ? { new_sheet: true } : {}),
     ...(named ? { names: (WB.names || NO_NAMES).filter(x => !x.h).map(x => x.n) } : {}), ...(named && named.skipped.length ? { names_not_defined: named.skipped } : {}),
-    ...(bad.length ? { not_allowed: bad, note: 'These cells now hold values that their data validation does not allow (read_spreadsheet lists the validations). The values were written anyway, because validation only stops what a person types. Fix them if that was not intended.' } : {}) };
+    ...(bad.length ? { not_allowed: bad, note: 'These cells now hold values that their data validation does not allow (read_spreadsheet lists the validations). The values were written anyway, because validation only stops what a person types. Fix them if that was not intended.' } : {}),
+    ...formulaNotes(WB, log.map(([r, c]) => [s, r, c])) };
 }
 
 /* =========================================================
