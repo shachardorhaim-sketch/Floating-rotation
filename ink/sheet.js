@@ -9697,7 +9697,14 @@ function tableGrow(s, r, c) {
     setProp(s, 'tables', s.tables.map(y => y === t ? nt : y));
     if (s.af && meets(s.af, g)) setProp(s, 'af', { ...s.af, r1: ng.r1, c1: ng.c1, r2: ng.r2 - nt.tr, c2: ng.c2, hide: s.af.hide });
     if (ng.c2 > g.c2 && nt.hr) { const x = cellAt(s, g.r1, c), n = cols[cols.length - 1].n; if (!x || x.v !== n) setCell(s, g.r1, c, { ...(x || {}), v: n }); }
-    if (ng.r2 > g.r2) cols.forEach((y, j) => { if (!y.cf || j === c - g.c1) return; const cc = g.c1 + j, x = cellAt(s, r, cc); if (!x || !hasVal(x)) setCell(s, r, cc, { ...(x || {}), f: y.cf, v: 0 }); });
+    if (ng.r2 > g.r2) {
+      cols.forEach((y, j) => { if (!y.cf || j === c - g.c1) return; const cc = g.c1 + j, x = cellAt(s, r, cc); if (!x || !hasVal(x)) setCell(s, r, cc, { ...(x || {}), f: y.cf, v: 0 }); });
+      // the new row takes its columns' ways from the row above, as Excel's table does: the look of each cell, and the
+      // list or rule (data validation) and conditional formatting that reach down to it
+      for (let cc = g.c1; cc <= g.c2; cc++) { const up = cellAt(s, r - 1, cc), x = cellAt(s, r, cc); if (up && up.st && !(x && x.st)) setCell(s, r, cc, { ...(x || {}), st: up.st }); }
+      const down = rules => rules.map(q => { const gs = q.g.map(y => y.r2 === r - 1 && y.c1 >= g.c1 && y.c2 <= g.c2 ? { ...y, r2: r } : y); return gs.some((y, i) => y !== q.g[i]) ? { ...q, g: gs } : q; });
+      for (const k of ['dv', 'cf']) { const l = down(s[k]); if (l.some((q, i) => q !== s[k][i])) setProp(s, k, l); }
+    }
     return nt;
   }
   return null;
