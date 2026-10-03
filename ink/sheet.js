@@ -65,7 +65,7 @@ const DEF_FONT = 'Arial', DEF_FS = 10, DEF_W = 100, DEF_H = 21;
 const sid = () => { let s = ''; while (s.length < 8) s += Math.random().toString(36).slice(2); return s.slice(0, 8); };
 function newSheet(name, dir) {
   return { id: sid(), name, dir, cells: new Map(), cw: new Map(), rh: new Map(), hc: new Set(), hr: new Set(), cs: new Map(), rs: new Map(), ds: null,
-    fr: 0, fc: 0, merges: [], af: null, gl: true, tab: null, dw: DEF_W, dh: DEF_H, ac: { r: 0, c: 0 }, zoom: 100, charts: [], pics: [], tables: [], cf: [], dv: [] };
+    fr: 0, fc: 0, merges: [], af: null, gl: true, tab: null, dw: DEF_W, dh: DEF_H, ac: { r: 0, c: 0 }, zoom: 100, charts: [], pics: [], tables: [], pivots: [], cf: [], dv: [] };
 }
 /* pictures: a sheet's pics say where each one sits (as a chart does: a cell, the distance from its corner, a size) and
    which image it shows (img); the images themselves are the workbook's (WB.imgs), each under a key made from its data,
@@ -181,6 +181,7 @@ function normSheet(x, dir, taken) {
   s.tables = [];
   for (const t of (Array.isArray(x.tables) ? x.tables : []).slice(0, 100).map(normTable)) if (t && !s.tables.some(o => meets(o.g, t.g))) s.tables.push(headsOf(s, t));
   if (!s.af) { const t = s.tables.find(y => y.fb && y.hr); if (t) s.af = { r1: t.g.r1, c1: t.g.c1, r2: t.g.r2 - t.tr, c2: t.g.c2, hide: {} }; }   // a table's filter buttons, when the sheet has no filter of its own
+  s.pivots = (Array.isArray(x.pivots) ? x.pivots : []).slice(0, 50).map(normPivot).filter(Boolean);
   s.cf = (Array.isArray(x.cf) ? x.cf : []).slice(0, 500).map(normCf).filter(Boolean);
   s.dv = (Array.isArray(x.dv) ? x.dv : []).slice(0, DV_MAX).map(normDv).filter(Boolean);
   // in a shared room: the ids of its rows and columns (see the rooms, at the end)
@@ -243,6 +244,7 @@ function sheetOut(s) {
   if (s.charts.length) o.charts = s.charts.map(chartOut);
   if (s.pics.length) o.pics = s.pics.map(picOut);
   if (s.tables.length) o.tables = s.tables.map(tableOut);
+  if (s.pivots.length) o.pivots = s.pivots.map(pivotOut);
   if (s.cf.length) o.cf = s.cf.map(cfOut);
   if (s.dv.length) o.dv = s.dv.map(cfOut);
   if (s.ri && s.ri.length) o.ri = packIds(s.ri, s.id + '/ri');
@@ -846,6 +848,7 @@ function valAt(s, r, c) {
   const k = KEY(r, c), cell = s.cells.get(k);
   if (cell && cell.v !== undefined) return cell.v;
   const x = s._sp && s._sp.get(k);
+  if (x && typeof x.a === 'string') PV_READ = true;   // a pivot table's cell
   return x ? x.v : null;
 }
 function toNum(v) {
@@ -1179,7 +1182,7 @@ function eachIn(rv, fn) {
   const { s, g } = rv, area = (g.r2 - g.r1 + 1) * (g.c2 - g.c1 + 1), sp = s._sp && s._sp.size ? s._sp : null;
   if (area > (s.cells.size + (sp ? sp.size : 0)) * 2) {
     for (const [k, cell] of s.cells) { if (cell.v == null) continue; const r = kr(k), c = kc(k); if (inG(g, r, c)) { const x = fn(cell.v, r, c); if (x !== undefined) return x; } }
-    if (sp) for (const [k, o] of sp) { if (o.v == null) continue; const r = kr(k), c = kc(k); if (!inG(g, r, c)) continue; const cell = s.cells.get(k); if (cell && cell.v != null) continue; const x = fn(o.v, r, c); if (x !== undefined) return x; }
+    if (sp) for (const [k, o] of sp) { if (o.v == null) continue; const r = kr(k), c = kc(k); if (!inG(g, r, c)) continue; const cell = s.cells.get(k); if (cell && cell.v != null) continue; if (typeof o.a === 'string') PV_READ = true; const x = fn(o.v, r, c); if (x !== undefined) return x; }
   } else {
     for (let r = g.r1; r <= g.r2; r++) for (let c = g.c1; c <= g.c2; c++) { const v = valAt(s, r, c); if (v != null) { const x = fn(v, r, c); if (x !== undefined) return x; } }
   }
@@ -2551,6 +2554,7 @@ const FUNCS = {
   ISEVEN: fx(1, 1, 'v', v => { if (typeof v === 'boolean') throw E_VAL; return Math.trunc(num(v)) % 2 === 0; }),
   ISODD: fx(1, 1, 'v', v => { if (typeof v === 'boolean') throw E_VAL; return Math.abs(Math.trunc(num(v))) % 2 === 1; }),
   ISREF: { n: [1, 1], f: a => { const v = refOf(a[0]); return !!v && v.rng === true; } },
+  GETPIVOTDATA: { n: [2, 254], f: a => getPivotData(a) },
   HYPERLINK: fx(1, 2, 'v', (loc, name) => { CTX.link = str(loc); return name === undefined ? CTX.link : name ?? 0; }),   // without a name it shows the address as text
   ISFORMULA: fx(1, 1, 'a', r => { if (!r || !r.rng) throw E_VAL; const x = r.s.cells.get(KEY(r.g.r1, r.g.c1)); return !!(x && x.f != null); }),
   NA: { n: [0, 0], f: () => E_NA },
@@ -2633,7 +2637,7 @@ function textAround(t, d, n, m, e, nf, before) {
 const FN_CATS = [['logic', N_('לוגיות'), 'call_split'], ['text', N_('טקסט'), 'text_fields'], ['date', N_('תאריך ושעה'), 'calendar_today'],
   ['look', N_('חיפוש והפניה'), 'search'], ['math', N_('מתמטיקה'), 'calculate'], ['stat', N_('סטטיסטיקה'), 'bar_chart'], ['fin', N_('כספים'), 'payments'], ['info', N_('מידע'), 'info']];
 const ARGN = {
-  link_location: N_('כתובת_הקישור'), friendly_name: N_('שם_להצגה'),
+  link_location: N_('כתובת_הקישור'), friendly_name: N_('שם_להצגה'), data_field: N_('שדה_ערכים'), pivot_table: N_('טבלת_ציר'), field: N_('שדה@arg'), item: N_('פריט@arg'),
   number: N_('מספר'), value: N_('ערך'), text: N_('טקסט'), range: N_('טווח'), criteria: N_('תנאי'), criteria_range: N_('טווח_תנאי'),
   sum_range: N_('טווח_סכום'), average_range: N_('טווח_ממוצע'), max_range: N_('טווח_מקסימום'), min_range: N_('טווח_מינימום'),
   lookup_value: N_('ערך_לחיפוש'), table_array: N_('טבלה'), col_index_num: N_('מספר_עמודה'), row_index_num: N_('מספר_שורה'), range_lookup: N_('התאמה_משוערת'),
@@ -2825,6 +2829,7 @@ const FN_INFO = {
   // finding values
   VLOOKUP: ['look', N_('מחפש ערך בעמודה הראשונה של טבלה, ומחזיר ערך מאותה שורה'), 'lookup_value, table_array, col_index_num, [range_lookup]', 'VLOOKUP(A2,D2:F20,3,FALSE)'],
   HLOOKUP: ['look', N_('מחפש ערך בשורה הראשונה של טבלה, ומחזיר ערך מאותה עמודה'), 'lookup_value, table_array, row_index_num, [range_lookup]', 'HLOOKUP(A2,D1:H3,2,FALSE)'],
+  GETPIVOTDATA: ['look', N_('ערך שטבלת ציר מראה: לפי שדה הערכים שלה, ושדות של השורות והעמודות שלה עם פריט של כל אחד'), 'data_field, pivot_table, [field1, item1], ...', 'GETPIVOTDATA("Sales",A3,"Region","North")'],
   HYPERLINK: ['look', N_('קישור: מראה את השם שבוחרים, ולחיצה עליו פותחת את הכתובת (או מקום בחוברת, עם # לפניו)'), 'link_location, [friendly_name]', 'HYPERLINK("https://example.com","אתר")'],
   XLOOKUP: ['look', N_('מחפש ערך ברשימה, ומחזיר את מה שעומד מולו ברשימה אחרת'), 'lookup_value, lookup_array, return_array, [if_not_found], [match_mode], [search_mode]', 'XLOOKUP(A2,D2:D20,F2:F20,"-")'],
   LOOKUP: ['look', N_('מחפש ערך ברשימה ממוינת'), 'lookup_value, lookup_array, [return_array]', 'LOOKUP(B2,{0,55,90},{"C","B","A"})'],
@@ -2975,8 +2980,30 @@ function rowsIn(rows, lo, hi, fn) {
    only if they point there still is it a loop (st.sure), as Excel calls it */
 function recalc() {
   if (!WB) return;
-  const st = { doubt: null, sure: new Set() };
-  try { for (let pass = 0; pass < 16 && calcPass(pass, st); pass++); } finally { KEPT.clear(); KEPT_N = 0; }
+  // a pivot table's cells are in place while the formulas are worked out (a formula may read them, or GETPIVOTDATA), and
+  // are worked out again after them, from its source. When they change and a formula read them, the formulas go again
+  if (WB.sheets.some(s => s.pivots.length && !s._pvc)) placePivots();
+  for (let round = 0; round < 3; round++) {
+    const st = { doubt: null, sure: new Set() };
+    PV_READ = false;
+    try { for (let pass = 0; pass < 16 && calcPass(pass, st); pass++); } finally { KEPT.clear(); KEPT_N = 0; }
+    if (!placePivots() || !PV_READ) break;
+  }
+}
+/* every sheet's pivot tables into their places (s._pvc: their cells, s._pva: where each stands); true when their cells
+   are not what they were */
+let PV_READ = false;   // a formula read a pivot table's cell (or used GETPIVOTDATA) in this round
+function placePivots() {
+  let moved = false;
+  for (const s of WB.sheets) {
+    const old = s._pvc || new Map();
+    if (!s._sp) s._sp = new Map();
+    for (const k of old.keys()) { const o = s._sp.get(k); if (o && typeof o.a === 'string') s._sp.delete(k); }
+    s._pva = new Map(); s._pvc = new Map();
+    for (const x of s.pivots) placePivot(s, x);
+    if (old.size !== s._pvc.size || [...old].some(([k, o]) => { const q = s._pvc.get(k); return !q || q.v !== o.v; })) moved = true;
+  }
+  return moved;
 }
 /* the references a formula reads, each through fn(sheet number, range): the ones written in it, and the ones in the
    names it uses (their parts without $ are for A1, and move to the formula's cell). The cell OFFSET starts from is
@@ -3013,7 +3040,7 @@ function calcPass(pass, st) {
   sheets.forEach((s, si) => {
     const u = usedEnd(s);
     LIMR = Math.max(LIMR, u.r); LIMC = Math.max(LIMC, u.c);
-    s._sa0 = s._sa || new Map(); s._sa = new Map(); s._sp = new Map();
+    s._sa0 = s._sa || new Map(); s._sa = new Map(); s._sp = new Map(s._pvc || []);   // with a pivot table's cells, as it stands
     s._dd0 = s._dd || NO_DD; s._dd = new Map();
     for (const [k, c] of s.cells) {
       if (!c.f) continue;
@@ -3452,6 +3479,7 @@ function cellSp(s, r, c) {
   const o = s._sp && s._sp.get(KEY(r, c));
   if (!o) return x;
   let st = x ? x.st : emptyLook(s, r, c);
+  if (o.st) st = { ...o.st, ...(st || {}) };   // a pivot table's own look
   const a = s.cells.get(o.a), nf = a && a.st && a.st.nf;
   if (nf && !(st && st.nf)) st = { ...(st || {}), nf };
   return st ? { v: o.v, st, sp: o.a } : { v: o.v, sp: o.a };
@@ -3494,13 +3522,14 @@ function usedEnd(s) {
   let r = 0, c = 0;
   for (const k of s.cells.keys()) { const rr = kr(k) + 1, cc = kc(k) + 1; if (rr > r) r = rr; if (cc > c) c = cc; }
   for (const m of s.merges) { r = Math.max(r, m.r2 + 1); c = Math.max(c, m.c2 + 1); }
-  if (s._sa) for (const g of s._sa.values()) { r = Math.max(r, g.r2 + 1); c = Math.max(c, g.c2 + 1); }
+  for (const m of [s._sa, s._pva]) if (m) for (const g of m.values()) { r = Math.max(r, g.r2 + 1); c = Math.max(c, g.c2 + 1); }   // what formulas spill, and pivot tables
   return { r, c };
 }
 function usedRange(s) {
   let r2 = -1, c2 = -1;
   for (const [k, x] of s.cells) { if (!hasVal(x) && !x.st) continue; const r = kr(k), c = kc(k); if (r > r2) r2 = r; if (c > c2) c2 = c; }
   for (const m of s.merges) { r2 = Math.max(r2, m.r2); c2 = Math.max(c2, m.c2); }
+  for (const m of [s._sa, s._pva]) if (m) for (const g of m.values()) { r2 = Math.max(r2, g.r2); c2 = Math.max(c2, g.c2); }   // what formulas spill, and pivot tables, as in Excel
   return r2 < 0 ? null : { r1: 0, c1: 0, r2, c2 };
 }
 /* the block of filled cells around a cell, the way Excel finds a table (for sorting, filtering and AutoSum) */
@@ -3839,7 +3868,7 @@ function drawCell(L, key, x, st, X, Y, w, hgt, spill, merged, cf) {
   }
   const bg = (st && st.bg) || '', color = (cf && cf.st && cf.st.c) || vw.col || (st && st.c) || '', va = (st && st.va) || 'b', wrap = !!(st && st.wr);
   place(e, ex, Y, ew, hgt);
-  const sig = [text, al, va, bg, color, font, st && st.u ? 1 : 0, st && st.s ? 1 : 0, wrap ? 1 : 0, vw.k, merged ? 1 : 0, ew !== w ? 1 : 0,
+  const sig = [text, al, va, bg, color, font, st && st.u ? 1 : 0, st && st.s ? 1 : 0, wrap ? 1 : 0, vw.k, merged ? 1 : 0, ew !== w ? 1 : 0, (st && st.ind) || 0,
     cf && (cf.bar || cf.icon) ? JSON.stringify([cf.bar, cf.icon, w, hgt, Z, WS.dir]) : ''].join('|');
   if (e._s === sig) return;
   e._s = sig;
@@ -3853,6 +3882,7 @@ function drawCell(L, key, x, st, X, Y, w, hgt, spill, merged, cf) {
   e.style.textAlign = al === 'l' ? 'left' : al === 'c' ? 'center' : 'right';
   e.textContent = '';
   e.style.paddingLeft = e.style.paddingRight = '';
+  if (st && st.ind) e.style[WS.dir === 'rtl' ? 'paddingRight' : 'paddingLeft'] = (3 + st.ind * 12) * Z + 'px';   // a pivot table's inner rows step in
   if (text) {
     const sp = document.createElement('span');
     sp.textContent = text;
@@ -3998,6 +4028,7 @@ function editText(x) {
 function startEdit(mode, text, from = 'cell') {
   if (ED.on || !WS) return;
   const m = mergeAt(WS, SEL.r, SEL.c), r = m ? m.r1 : SEL.r, c = m ? m.c1 : SEL.c;
+  if (pivotAt(WS, r, c)) { V.ed.value = ''; toast(T('אי אפשר לשנות חלק של טבלת ציר. משנים אותה ברשימת השדות.'), { icon: 'pivot_table_chart' }); return; }
   const p = RM.on && RM.peers.find(x => x.pr && x.pr.ed && x.pr.ed.s === WS.id && x.pr.ed.r === r && x.pr.ed.c === c);
   if (p) { V.ed.value = ''; toast(T('התא הזה בעריכה אצל {0}', p.name), { icon: 'edit' }); return; }
   Object.assign(ED, { on: true, mode, r, c, sid: WS.id, from, point: null, refs: null, all: false, dv: dvChoices(WS, r, c) });
@@ -4168,8 +4199,8 @@ function pointable() {
   if (ED.point && ED.point.e === pos) return true;
   return /[=(,;+\-*/^&<>:]\s*$/.test(v.slice(0, pos));
 }
-function putRef(g) {
-  const ta = taOf(), t = rangeA1(g), p = ED.point && ED.point.e === ta.selectionStart ? ED.point : { s: ta.selectionStart, e: ta.selectionStart };
+function putRef(g, text) {
+  const ta = taOf(), t = text || rangeA1(g), p = ED.point && ED.point.e === ta.selectionStart ? ED.point : { s: ta.selectionStart, e: ta.selectionStart };
   ta.value = ta.value.slice(0, p.s) + t + ta.value.slice(p.e);
   const e = p.s + t.length;
   ta.setSelectionRange(e, e);
@@ -4182,7 +4213,7 @@ function pointKey(k, shift) {
   let a = p ? { r: p.ar, c: p.ac } : { r: ED.r, c: ED.c }, b = p ? { r: p.br, c: p.bc } : { ...a };
   if (shift && p) b = { r: clamp(b.r + d[0], 0, MAXR - 1), c: clamp(b.c + d[1], 0, MAXC - 1) };
   else { a = { r: clamp(a.r + d[0], 0, MAXR - 1), c: clamp(a.c + d[1], 0, MAXC - 1) }; b = { ...a }; }
-  putRef(G4(a.r, a.c, b.r, b.c));
+  putRef(G4(a.r, a.c, b.r, b.c), a.r === b.r && a.c === b.c && PREFS.shGpd !== false && pivotRefText(WS, a.r, a.c));   // a pivot table's value: GETPIVOTDATA, as with the mouse
   Object.assign(ED.point, { ar: a.r, ac: a.c, br: b.r, bc: b.c });
   scrollToCell(b.r, b.c);
 }
@@ -4542,6 +4573,8 @@ function onDown(e) {
   e.preventDefault();
   if (ED.on) {
     if (hh.kind === 'cell' && pointable()) {
+      const gp = PREFS.shGpd !== false && pivotRefText(WS, hh.r, hh.c);
+      if (gp) { putRef(G4(hh.r, hh.c, hh.r, hh.c), gp); return; }   // a pivot table's value: Excel writes GETPIVOTDATA for it
       putRef(G4(hh.r, hh.c, hh.r, hh.c));
       Object.assign(ED.point, { ar: hh.r, ac: hh.c, br: hh.r, bc: hh.c });
       DRAG = { kind: 'point' };
@@ -5442,7 +5475,7 @@ async function deleteSheet(s = WS) {
 }
 function dupSheet(s = WS) {
   // each formula's cell is its own in the copy: its answer is written onto it, and the copy's answer may differ
-  const c = { ...s, id: sid(), name: freeName(s.name.slice(0, 26) + ' (2)', takenNames()), cells: new Map([...s.cells].map(([k, x]) => [k, x.f != null ? { ...x } : x])), cw: new Map(s.cw), rh: new Map(s.rh), hc: new Set(s.hc), hr: new Set(s.hr), cs: new Map(s.cs), rs: new Map(s.rs), merges: s.merges.map(m => ({ ...m })), af: s.af ? { ...s.af, hide: { ...s.af.hide } } : null, ac: { ...s.ac }, _sc: null, _fh: null, ri: undefined, ci: undefined, _ri: null, _ci: null, charts: s.charts.map(ch => ({ ...bare(ch), id: sid() })), pics: s.pics.map(x => ({ ...x, id: sid() })), tables: [] };
+  const c = { ...s, id: sid(), name: freeName(s.name.slice(0, 26) + ' (2)', takenNames()), cells: new Map([...s.cells].map(([k, x]) => [k, x.f != null ? { ...x } : x])), cw: new Map(s.cw), rh: new Map(s.rh), hc: new Set(s.hc), hr: new Set(s.hr), cs: new Map(s.cs), rs: new Map(s.rs), merges: s.merges.map(m => ({ ...m })), af: s.af ? { ...s.af, hide: { ...s.af.hide } } : null, ac: { ...s.ac }, _sc: null, _fh: null, ri: undefined, ci: undefined, _ri: null, _ci: null, charts: s.charts.map(ch => ({ ...bare(ch), id: sid() })), pics: s.pics.map(x => ({ ...x, id: sid() })), tables: [], pivots: s.pivots.map(x => ({ ...x, id: sid() })) };
   edit(() => {
     bookStep(() => { WB.sheets.splice(WB.sheets.indexOf(s) + 1, 0, c); });
     // as Excel does: the copy gets its own names, for the sheet's own and for every name that points at the sheet
@@ -6024,6 +6057,17 @@ const CSS = `
 .sh-topts{display:grid;grid-template-columns:repeat(3,auto);gap:4px 12px;align-content:center;padding:2px 4px}
 .sh-tprops{display:flex;flex-direction:column;gap:3px;justify-content:center;padding:0 4px}
 .sh-tname{width:128px;height:28px;padding:2px 6px}
+.sh-pvpane{position:absolute;top:0;bottom:0;inset-inline-end:0;width:264px;z-index:12;overflow:auto;padding:10px 12px;background:var(--surface);color:var(--text);border-inline-start:1px solid var(--line);box-shadow:var(--pop);font:13px var(--ui);box-sizing:border-box}
+.sh-pvhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.sh-pvfields{display:flex;flex-direction:column;gap:2px;max-height:38%;overflow:auto;padding:4px 0;border-bottom:1px solid var(--line);margin-bottom:8px}
+.sh-pvf{font-size:13px}
+.sh-pvareas{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sh-pvarea{min-height:70px;border:1px solid var(--line);border-radius:6px;padding:4px;display:flex;flex-direction:column;gap:3px}
+.sh-pvat{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-2,#555)}
+.sh-pvat .ms{font-size:16px}
+.sh-pvchip{display:flex;align-items:center;justify-content:space-between;gap:2px;width:100%;padding:3px 6px;border:1px solid var(--line);border-radius:5px;background:var(--surface-2,#f4f6fb);color:var(--text);font:12px var(--ui);cursor:pointer;text-align:start}
+.sh-pvchip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sh-pvflist{display:flex;flex-direction:column;gap:4px;max-height:50vh;overflow:auto}
 .sh-pic-img{display:block;width:100%;height:100%;pointer-events:none;user-select:none;-webkit-user-drag:none}
 .sh-ch-in{position:absolute;inset:0;overflow:hidden;pointer-events:none;direction:ltr;color:#404040}
 .sh-ch-in svg{position:absolute;inset:0;width:100%;height:100%}
@@ -6191,12 +6235,13 @@ function ribbonPanels() {
     group(T('תצוגה@view'), '', rbtn('shGrid', 'grid_on', T('קווי רשת'), { big: true, id: 'shGridBtn' }), rbtn('shDir', 'format_textdirection_r_to_l', T('גיליון מימין לשמאל'), { big: true, id: 'shDirBtn' })),
     group(T('זום'), '', rbtn('shZoom', 'remove', T('הקטנה'), { arg: '-1' }), h('button', { class: 'rb txt', type: 'button', 'data-cmd': 'shZoom', 'data-arg': '0', id: 'shZoomPct', title: T('חזרה ל-100%') }, '100%'), rbtn('shZoom', 'add', T('הגדלה'), { arg: '1' })));
   const insert = h('div', { class: 'panel sheet-only', 'data-panel': 'sinsert', hidden: true },
-    group(T('טבלאות'), '', rbtn('shTable', 'table', T('טבלה'), { big: true, title: T('טבלה מהתאים שבחרת: שם, כותרות, פסים, סינון ושורת סיכום') })),
+    group(T('טבלאות'), '', rbtn('shPivot', 'pivot_table_chart', T('טבלת ציר'), { big: true, title: T('סיכום של הנתונים לפי קבוצות: סכומים, ספירות וממוצעים בשורות ובעמודות') }),
+      rbtn('shTable', 'table', T('טבלה'), { big: true, title: T('טבלה מהתאים שבחרת: שם, כותרות, פסים, סינון ושורת סיכום') })),
     group(T('איורים'), '', rbtn('shPic', 'add_photo_alternate', T('תמונה'), { big: true, title: T('תמונה מהמחשב. אפשר גם להדביק תמונה או לגרור קובץ לגיליון') })),
     group(T('גרפים'), '', ...CKS.map(k => rbtn('shChart', CHARTS[k].ic, T(CHARTS[k].n), { big: true, arg: k, title: T('גרף חדש מהתאים שבחרת') }))),
     group(T('קישורים'), '', rbtn('shLink', 'link', T('קישור'), { big: true, title: T('קישור לאתר, למקום בחוברת או לדואר (Ctrl+K)') })),
     group(T('הערות'), '', rbtn('shNote', 'sticky_note_2', T('הערה'), { big: true, title: T('הערה על התא, שמופיעה כשהעכבר עליו (Shift+F2)') })));
-  return [home, insert, formulas, data, viewP, tablePanel()];
+  return [home, insert, formulas, data, viewP, tablePanel(), pivotPanel()];
 }
 const SHEET_TAB_LIST = () => [['shome', T('בית')], ['sinsert', T('הוספה')], ['sformula', T('נוסחאות')], ['sdata', T('נתונים')], ['sview', T('תצוגה@view')]];
 function mount() {
@@ -6205,6 +6250,7 @@ function mount() {
   const tabs = $('#tabs');
   for (const [k, label] of SHEET_TAB_LIST()) tabs.append(h('button', { class: 'tab sheet-only', role: 'tab', 'data-tab': k, 'aria-selected': 'false' }, label));
   tabs.append(V.tblTab = h('button', { class: 'tab ctx sheet-only', role: 'tab', 'data-tab': 'stable', 'aria-selected': 'false', hidden: true }, T('עיצוב טבלה')));   // only while a table's cell is chosen
+  tabs.append(V.pvTab = h('button', { class: 'tab ctx sheet-only', role: 'tab', 'data-tab': 'spivot', 'aria-selected': 'false', hidden: true }, T('ניתוח טבלת ציר')));   // and a pivot table's
   const ribbon = $('#ribbon');
   for (const p of ribbonPanels()) ribbon.append(p);
   if (window.ResizeObserver) { const ro = new ResizeObserver(fitRibbon); ro.observe(V.home); ro.observe(V.fxTab); }   // they change size when shown, and with the window
@@ -6777,7 +6823,7 @@ const COMMANDS = {
   shSort: a => quickSort(a === 'd'), shSortDlg: () => sortDialog(), shFilter: () => toggleFilter(), shFilterClear: () => clearFilter(),
   shDvList: () => dvDialog('list'), shDvMenu: (a, b) => dvMenu(b),
   shNote: () => noteEdit(), shLink: () => linkDialog(), shPic: () => pickPicture(),
-  shTable: () => tableDialog(), shTblGallery: (a, b) => tableGallery(b), shTblStyle: (a, b) => tableGallery(b, true), shTblConvert: () => tableToRange(), shShowF: () => toggleFormulas(), shFxHelp: () => formulaHelp(), shFnDlg: () => fnDialog(), shFnCat: (a, b) => fnCatMenu(a, b), shCfMenu: (a, b) => cfMenu(b),
+  shTable: () => tableDialog(), shPivot: () => pivotDialog(), shPvFields: () => pivotPaneToggle(), shPvGpd: () => { PREFS.shGpd = PREFS.shGpd === false; savePrefs(); pivotTab(); }, shPvSource: () => pivotSourceDialog(), shPvDelete: () => pivotDelete(), shTblGallery: (a, b) => tableGallery(b), shTblStyle: (a, b) => tableGallery(b, true), shTblConvert: () => tableToRange(), shShowF: () => toggleFormulas(), shFxHelp: () => formulaHelp(), shFnDlg: () => fnDialog(), shFnCat: (a, b) => fnCatMenu(a, b), shCfMenu: (a, b) => cfMenu(b),
   shFreezeMenu: (a, b) => freezeMenu(b), shGrid: () => edit(() => setProp(WS, 'gl', !WS.gl)), shDir: () => edit(() => setProp(WS, 'dir', WS.dir === 'rtl' ? 'ltr' : 'rtl')),
   shZoom: a => setZoom(+a === 0 ? 100 : WS.zoom + (+a > 0 ? 10 : -10)),
 };
@@ -6794,6 +6840,7 @@ function selInfo() {
   }
   updateRibbon(x);
   tableTab();
+  pivotTab();
   // sum, average and count of what's chosen, as in Excel's status bar; and a word about a loop or a missing function
   const g = usedPart(selG());
   let cnt = 0, n = 0, sum = 0;
@@ -6911,7 +6958,7 @@ async function readXlsx(buf) {
   if (u8[0] === 0xD0 && u8[1] === 0xCF) throw new Error('locked');
   if (u8[0] !== 0x50 || u8[1] !== 0x4B) throw new Error('notxlsx');
   const names = new TextDecoder('latin1').decode(u8), count = re => (names.match(re) || []).length;
-  const rep = new Map([['pivot', count(/xl\/pivotTables\/pivotTable\d+\.xml/g) / 2 | 0]]), hasCharts = count(/xl\/charts\/chart\d+\.xml/g) > 0 || count(/xl\/media\//g) > 0;   // charts, or pictures
+  const rep = new Map(), hasCharts = count(/xl\/charts\/chart\d+\.xml/g) > 0 || count(/xl\/media\//g) > 0, hasPivots = count(/xl\/pivotTables\/pivotTable\d+\.xml/g) > 0;   // charts, or pictures
   const add = (k, n = 1) => rep.set(k, (rep.get(k) || 0) + n);
   const ExcelJS = await excelLib(), wb = new ExcelJS.Workbook();
   // ExcelJS lists a data validation under every one of its cells, a million for a whole column. The rules are read
@@ -7028,6 +7075,7 @@ async function readXlsx(buf) {
   if (hasCf) await importCf(buf, nb, xlNames, rep, theme);
   await importDv(buf, nb, xlNames, rep);
   await importExtras(buf, nb, xlNames, rep);   // notes and links, which the file's compressed parts hide from a quick look
+  if (hasPivots) await importPivots(buf, nb, xlNames, rep);
   return { book: bookOut(nb), rep };
 }
 /* the file's notes (xl/commentsN.xml, through each sheet's links) and links (the sheet's <hyperlinks>), read here:
@@ -7148,6 +7196,229 @@ async function addXlsxTables(buf) {
   }
   zip.file('[Content_Types].xml', ct);
   return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+}
+/* pivot tables into a workbook ExcelJS wrote, as Excel writes them: for each, a cache (its source's fields, the items of
+   those in its rows, columns and filters, and the records) and its own part (where it stands, its fields in each area,
+   the items a filter lets through, its values and its style), the workbook's <pivotCaches> and the sheet's link to it.
+   The cells it shows are already in the sheet as values; Excel works it out again when it opens the file (refreshOnLoad),
+   so there too it follows its data. One with no room on its sheet, or no source, stays only as the cells it shows */
+async function addXlsxPivots(buf) {
+  const JSZip = await zipLib(), zip = await JSZip.loadAsync(buf);
+  const a = v => xlAttr(String(v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '')).replace(/\r/g, '&#13;').replace(/\t/g, '&#9;');
+  const XH = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n', NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+  const REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/', RELS = XH + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+  const link = (rx, type, target) => { let k = 1; while (rx.includes(`Id="rId${k}"`)) k++; return [rx.replace('</Relationships>', `<Relationship Id="rId${k}" Type="${REL}${type}" Target="${target}"/></Relationships>`), 'rId' + k]; };
+  const item = v => v == null || v === '' ? '<m/>' : typeof v === 'number' ? `<n v="${v}"/>` : typeof v === 'string' ? `<s v="${a(v)}"/>` : typeof v === 'boolean' ? `<b v="${v ? 1 : 0}"/>` : `<e v="${OLD_ERRS.has(v.c) ? v.c : '#VALUE!'}"/>`;
+  let ct = await zip.file('[Content_Types].xml').async('string'), wr = await zip.file(relsOf('xl/workbook.xml')).async('string'), n = 0;
+  const caches = [];
+  for (let si = 0; si < WB.sheets.length; si++) {
+    const s = WB.sheets[si], sp = `xl/worksheets/sheet${si + 1}.xml`;
+    if (!s.pivots.length || !zip.file(sp)) continue;
+    const rp = relsOf(sp), rf = zip.file(rp), names = new Set();
+    let rx = rf ? await rf.async('string') : RELS;
+    for (const p of s.pivots) {
+      const D = pivotData(s, p), R = pivotSrc(s, p), g = s._pva && s._pva.get(p.id);
+      if (!D || !R || !g || g.bad || !D.head.length || D.head.some(h1 => !h1)) continue;
+      n++;
+      // the fields, each with one name (a second "Sales" is Sales2, as Excel names it)
+      const fn = [], low = new Set();
+      for (const h1 of D.head) { let nm = h1.slice(0, 255), k = 2; while (low.has(nm.toLowerCase())) nm = h1.slice(0, 250) + k++; low.add(nm.toLowerCase()); fn.push(nm); }
+      const fi = f => D.head.findIndex(h1 => h1.toLowerCase() === f.toLowerCase());
+      const rows = p.rows.map(fi).filter(i => i >= 0), cols = p.cols.map(fi).filter(i => i >= 0), filt = p.filt.map(f => ({ ...f, i: fi(f.f) })).filter(f => f.i >= 0), vals = p.vals.map(v => ({ ...v, i: fi(v.f) })).filter(v => v.i >= 0);
+      const axis = new Map([...rows.map(i => [i, 'axisRow']), ...cols.map(i => [i, 'axisCol']), ...filt.map(f => [f.i, 'axisPage'])]);
+      // what each field holds (Excel's marks for it), and the items of those in an area: in the order of the records, and
+      // in the order they show
+      const F = D.head.map((h1, j) => {
+        const kinds = new Set(), seen = axis.has(j) ? new Map() : null;
+        let int = true, min = Infinity, max = -Infinity, long = false;
+        for (const rec of D.recs) {
+          const v = rec[j];
+          if (v == null || v === '') kinds.add('m');
+          else if (typeof v === 'number') { kinds.add('n'); if (!Number.isInteger(v)) int = false; if (v < min) min = v; if (v > max) max = v; }
+          else if (typeof v === 'string') { kinds.add('s'); if (v.length > 255) long = true; }
+          else kinds.add(typeof v === 'boolean' ? 'b' : 'e');
+          if (seen) { const k = pvKey(v); if (!seen.has(k)) seen.set(k, v); }
+        }
+        const only = (...k) => [...kinds].every(q => k.includes(q));
+        let at = '';
+        if (kinds.size && only('n')) at += ' containsSemiMixedTypes="0"';
+        if (kinds.has('n') && only('n', 'm')) at += ' containsString="0"';
+        if (kinds.has('m')) at += ' containsBlank="1"';
+        if (['s', 'n', 'b', 'e'].filter(q => kinds.has(q)).length > 1) at += ' containsMixedTypes="1"';
+        if (kinds.has('n')) at += ` containsNumber="1"${int ? ' containsInteger="1"' : ''} minValue="${min}" maxValue="${max}"`;
+        if (long) at += ' longText="1"';
+        if (!seen) return { xml: `<cacheField name="${a(fn[j])}" numFmtId="0"><sharedItems${at}/></cacheField>` };
+        const keys = [...seen.keys()], idx = new Map(keys.map((k, i) => [k, i])), order = keys.slice().sort((p1, q1) => pvCmp(seen.get(p1), seen.get(q1)));
+        return { idx, order, xml: `<cacheField name="${a(fn[j])}" numFmtId="0"><sharedItems${at} count="${keys.length}">${keys.map(k => item(seen.get(k))).join('')}</sharedItems></cacheField>` };
+      });
+      const recs = D.recs.map(rec => '<r>' + rec.map((v, j) => F[j].idx ? `<x v="${F[j].idx.get(pvKey(v))}"/>` : item(v)).join('') + '</r>').join('');
+      // the source: a table, or a name of the workbook, by its name; else the range and its sheet
+      const tb = tableByName(p.src), nm = !tb && (WB.names || NO_NAMES).find(q => !q.s && q.n.toLowerCase() === p.src.toLowerCase());
+      const ws = tb ? `<worksheetSource name="${a(tb.t.name)}"/>` : nm ? `<worksheetSource name="${a(nm.n)}"/>` : `<worksheetSource ref="${rangeA1(R.g)}" sheet="${a(R.s.name)}"/>`;
+      zip.file(`xl/pivotCache/pivotCacheDefinition${n}.xml`, XH + `<pivotCacheDefinition ${NS} r:id="rId1" refreshOnLoad="1" createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="${D.recs.length}">` +
+        `<cacheSource type="worksheet">${ws}</cacheSource><cacheFields count="${F.length}">${F.map(f => f.xml).join('')}</cacheFields></pivotCacheDefinition>`);
+      zip.file(`xl/pivotCache/pivotCacheRecords${n}.xml`, XH + `<pivotCacheRecords ${NS} count="${D.recs.length}">${recs}</pivotCacheRecords>`);
+      zip.file(`xl/pivotCache/_rels/pivotCacheDefinition${n}.xml.rels`, link(RELS, 'pivotCacheRecords', `pivotCacheRecords${n}.xml`)[0]);
+      // the table: each field in its area (a filter's items: the one it shows, or those it hides), and the values with
+      // their captions (Excel shows none without one; one that would repeat a name gets a space after it, as Excel's users do)
+      const pf = D.head.map((h1, j) => {
+        const ax = axis.get(j), dat = vals.some(v => v.i === j) ? ' dataField="1"' : '';
+        if (!ax) return `<pivotField${dat} showAll="0"/>`;
+        const f = ax === 'axisPage' && filt.find(q => q.i === j);
+        let on = f && f.v && f.v.length > 1 ? new Set(f.v) : null;
+        if (on && !F[j].order.some(k => on.has(k))) on = null;
+        return `<pivotField axis="${ax}"${dat}${on ? ' multipleItemSelectionAllowed="1"' : ''} showAll="0"><items count="${F[j].order.length + 1}">${F[j].order.map(k => `<item${on && !on.has(k) ? ' h="1"' : ''} x="${F[j].idx.get(k)}"/>`).join('')}<item t="default"/></items></pivotField>`;
+      }).join('');
+      const taken = new Set(fn.map(q => q.toLowerCase()));
+      const df = vals.map(v => {
+        let cap = (v.n || T(PV_FN[v.fn], v.f)).slice(0, 250);
+        while (taken.has(cap.toLowerCase())) cap += ' ';
+        taken.add(cap.toLowerCase());
+        return `<dataField name="${a(cap)}" fld="${v.i}"${v.fn === 'sum' ? '' : ` subtotal="${v.fn}"`} baseField="0" baseItem="0"/>`;
+      }).join('');
+      const pages = filt.map(f => { const k = f.v && f.v.length === 1 ? F[f.i].order.indexOf(f.v[0]) : -1; return `<pageField fld="${f.i}"${k >= 0 ? ` item="${k}"` : ''} hier="-1"/>`; }).join('');
+      // where it stands: below its filters (and a row between); one with nothing in it yet keeps Excel's empty frame
+      const PG = pivotGrid(s, p), top = g.r1 + (filt.length ? filt.length + 1 : 0), body = PG.rows.slice(filt.length ? filt.length + 1 : 0);
+      const w = Math.max(1, ...body.map(r => r.length)), empty = !rows.length && !cols.length && !vals.length;
+      const loc = empty ? rangeA1({ r1: top, c1: g.c1, r2: Math.min(MAXR - 1, top + 17), c2: Math.min(MAXC - 1, g.c1 + 2) }) : rangeA1({ r1: top, c1: g.c1, r2: Math.max(top, top + body.length - 1), c2: g.c1 + w - 1 });
+      const nc = cols.length + (vals.length > 1 ? 1 : 0), fh = cols.length || vals.length < 2 ? 1 : 0, fd = cols.length ? cols.length + 1 + (vals.length > 1 ? 1 : 0) : 1, fc = rows.length || (cols.length && vals.length < 2) ? 1 : 0;
+      // the layout as Excel writes it (measured): each row and column by its items' places in their fields (x), the ones
+      // it shares with the one before it counted (r), its value field (i), and the subtotals (default) and grand totals
+      const at = (f, key) => F[f].order.indexOf(key), xs = l => l.map(v => v ? `<x v="${v}"/>` : '<x/>').join('');
+      const rowItems = G => {
+        const it = rows.length ? G.rowList.map(l => l ? `<i${l.length > 1 ? ` r="${l.length - 1}"` : ''}>${xs([at(rows[l.length - 1], l[l.length - 1])])}</i>` : '<i t="grand"><x/></i>') : ['<i/>'];
+        return `<rowItems count="${it.length}">${it.join('')}</rowItems>`;
+      };
+      const colItems = G => {
+        if (!cols.length && vals.length < 2) return '<colItems count="1"><i/></colItems>';
+        let prev = [];
+        const it = G.cols.map(c => {
+          const ia = c.j ? ` i="${c.j}"` : '', path = c.path ? c.path.map((q, d) => at(cols[d], q.k)) : [];
+          if (c.grand) { prev = []; return `<i t="grand"${ia}><x/></i>`; }
+          if (c.sub) { prev = path; return `<i t="default"${path.length > 1 ? ` r="${path.length - 1}"` : ''}${ia}>${xs(path.slice(-1))}</i>`; }
+          const l = vals.length > 1 ? [...path, c.j] : path;
+          let r = 0;
+          while (r < l.length - 1 && r < prev.length && prev[r] === l[r]) r++;
+          prev = l;
+          return `<i${r ? ` r="${r}"` : ''}${ia}>${xs(l.slice(r))}</i>`;
+        });
+        return `<colItems count="${it.length}">${it.join('')}</colItems>`;
+      };
+      let name = p.name, k = 2;
+      while (names.has(name.toLowerCase())) name = p.name.slice(0, 250) + k++;
+      names.add(name.toLowerCase());
+      zip.file(`xl/pivotTables/pivotTable${n}.xml`, XH + `<pivotTableDefinition ${NS} name="${a(name)}" cacheId="${n}" applyNumberFormats="0" applyBorderFormats="0" applyFontFormats="0" applyPatternFormats="0" applyAlignmentFormats="0" applyWidthHeightFormats="1"` +
+        ` dataCaption="${a(T('ערכים'))}" updatedVersion="6" minRefreshableVersion="3" useAutoFormatting="1" itemPrintTitles="1" createdVersion="6" indent="0" outline="1" outlineData="1" multipleFieldFilters="0">` +
+        `<location ref="${loc}" firstHeaderRow="${fh}" firstDataRow="${fd}" firstDataCol="${fc}"${filt.length ? ` rowPageCount="${filt.length}" colPageCount="1"` : ''}/>` +
+        `<pivotFields count="${F.length}">${pf}</pivotFields>` +
+        (rows.length ? `<rowFields count="${rows.length}">${rows.map(i => `<field x="${i}"/>`).join('')}</rowFields>` : '') + (empty ? '' : rowItems(PG)) +
+        (nc ? `<colFields count="${nc}">${[...cols, ...(vals.length > 1 ? [-2] : [])].map(i => `<field x="${i}"/>`).join('')}</colFields>` : '') + (empty ? '' : colItems(PG)) +
+        (filt.length ? `<pageFields count="${filt.length}">${pages}</pageFields>` : '') + (vals.length ? `<dataFields count="${vals.length}">${df}</dataFields>` : '') +
+        '<pivotTableStyleInfo name="PivotStyleLight16" showRowHeaders="1" showColHeaders="1" showRowStripes="0" showColStripes="0" showLastColumn="1"/>' +
+        '<extLst><ext uri="{962EF5D1-5CA2-4c93-8EF4-DBF5C05439D2}" xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"><x14:pivotTableDefinition hideValuesRow="1" xmlns:xm="http://schemas.microsoft.com/office/excel/2006/main"/></ext></extLst></pivotTableDefinition>');
+      zip.file(`xl/pivotTables/_rels/pivotTable${n}.xml.rels`, link(RELS, 'pivotCacheDefinition', `../pivotCache/pivotCacheDefinition${n}.xml`)[0]);
+      rx = link(rx, 'pivotTable', `../pivotTables/pivotTable${n}.xml`)[0];
+      let id;
+      [wr, id] = link(wr, 'pivotCacheDefinition', `pivotCache/pivotCacheDefinition${n}.xml`);
+      caches.push(`<pivotCache cacheId="${n}" r:id="${id}"/>`);
+      ct = ct.replace('</Types>', [['pivotCache/pivotCacheDefinition', 'pivotCacheDefinition'], ['pivotCache/pivotCacheRecords', 'pivotCacheRecords'], ['pivotTables/pivotTable', 'pivotTable']].map(([f, t]) =>
+        `<Override PartName="/xl/${f}${n}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.${t}+xml"/>`).join('') + '</Types>');
+    }
+    zip.file(rp, rx);
+  }
+  if (!n) return buf;
+  let wx = await zip.file('xl/workbook.xml').async('string');
+  const at = ['<smartTagPr', '<smartTagTypes', '<webPublishing', '<fileRecoveryPr', '<webPublishObjects', '<extLst', '</workbook>'].map(t => wx.indexOf(t)).filter(q => q >= 0), pos = Math.min(...at);
+  wx = wx.slice(0, pos) + `<pivotCaches>${caches.join('')}</pivotCaches>` + wx.slice(pos);
+  zip.file('xl/workbook.xml', wx);
+  zip.file(relsOf('xl/workbook.xml'), wr);
+  zip.file('[Content_Types].xml', ct);
+  return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+}
+/* the file's pivot tables, each onto its sheet in place of the cells Excel wrote for it, and worked out here from its
+   source. One that this can't show the way Excel does (a source outside the workbook, values in its rows, grouped or
+   calculated fields, items hidden in its rows or columns or put in an order of their own, filters on its labels or
+   values, values shown as a part of something, a layout other than the compact one, no subtotals or grand totals) stays
+   as the cells it showed, and is counted for the report */
+async function importPivots(buf, nb, xlNames, rep) {
+  try {
+    const JSZip = await zipLib(), zip = await JSZip.loadAsync(buf), dp = new DOMParser();
+    const xml = async p => { const f = zip.file(p); return f ? dp.parseFromString(await f.async('string'), 'application/xml') : null; };
+    const wbx = await xml('xl/workbook.xml'), wr = await xml(relsOf('xl/workbook.xml'));
+    if (!wbx || !wr) return;
+    const rels = new Map(xdesc(wr, 'Relationship').map(r => [xat(r, 'Id'), partPath('xl/workbook.xml', xat(r, 'Target') || '')]));
+    const keep = [WB, WS];
+    WB = nb;   // a source names this workbook's sheets, tables and names
+    try {
+      for (const sh of xdesc(wbx, 'sheet')) {
+        const s = nb.sheets[xlNames.indexOf(xat(sh, 'name'))], rid = [...sh.attributes].find(q => q.localName === 'id' && /relationships/.test(q.namespaceURI || '')), path = rid && rels.get(rid.value);
+        const sr = s && path && await xml(relsOf(path));
+        if (!sr) continue;
+        for (const r of xdesc(sr, 'Relationship').filter(r => /\/pivotTable$/.test(xat(r, 'Type') || ''))) {
+          const tp = partPath(path, xat(r, 'Target') || ''), td = await xml(tp), tr = td && await xml(relsOf(tp));
+          const cr = tr && xdesc(tr, 'Relationship').find(q => /\/pivotCacheDefinition$/.test(xat(q, 'Type') || ''));
+          const cd = cr && await xml(partPath(tp, xat(cr, 'Target') || ''));
+          let got = null;
+          try { got = td && cd ? pivotFromXml(td.documentElement, cd.documentElement, xlNames, nb) : null; } catch (e) { console.warn(e); }
+          if (!got || s.pivots.length >= 50 || s.pivots.some(q => q.name.toLowerCase() === got.p.name.toLowerCase())) { rep.set('pivot', (rep.get('pivot') || 0) + 1); continue; }
+          for (const g of got.area) for (let rr = g.r1; rr <= g.r2; rr++) for (let cc = g.c1; cc <= g.c2; cc++) s.cells.delete(KEY(rr, cc));   // Excel's cells for it: it shows its own
+          s.pivots.push(got.p);
+        }
+      }
+    } finally { [WB, WS] = keep; }
+  } catch (e) { console.warn(e); }
+}
+/* one pivot table from its part (e) and its cache's (c): { p: the pivot table, area: the cells Excel wrote for it }, or
+   null for one this keeps as cells */
+function pivotFromXml(e, c, xlNames, nb) {
+  const yes = (el, k) => /^(1|true)$/.test(xat(el, k) || ''), no = (el, k) => /^(0|false)$/.test(xat(el, k) || '');
+  const src = xkid(c, 'cacheSource'), ws = xkid(src, 'worksheetSource'), loc = xkid(e, 'location'), g = loc && parseRange(xat(loc, 'ref') || '');
+  if (!src || (xat(src, 'type') || 'worksheet') !== 'worksheet' || !ws || [...ws.attributes].some(q => q.localName === 'id') || !g) return null;   // another file, or another kind of source
+  let source = xat(ws, 'name');
+  if (!source) { const i = xlNames.indexOf(xat(ws, 'sheet') || ''), sg = parseRange(xat(ws, 'ref') || ''); if (i < 0 || !sg) return null; source = sheetPrefix(nb.sheets[i].name) + absA1(sg); }
+  if (no(e, 'rowGrandTotals') || no(e, 'colGrandTotals') || yes(e, 'dataOnRows') || no(e, 'compact') || no(e, 'compactData') || yes(e, 'gridDropZones') || no(e, 'showHeaders') || xkid(e, 'filters') || +(xat(loc, 'colPageCount') || 1) > 1) return null;
+  const dec = t => (t || '').replace(/_x([0-9a-f]{4})_/gi, (m, hx) => String.fromCharCode(parseInt(hx, 16)));
+  const cfs = xkids(xkid(c, 'cacheFields'), 'cacheField'), pfs = xkids(xkid(e, 'pivotFields'), 'pivotField');
+  if (pfs.length !== cfs.length) return null;
+  const names = cfs.map(f => dec(xat(f, 'name')));
+  const one = el => { const v = xat(el, 'v'); switch (el.localName) { case 's': return v ?? ''; case 'n': return +v; case 'b': return v === '1' || v === 'true'; case 'e': return ERR[v] || E_NA; case 'd': return jsDateSerial(new Date(String(v).replace(/Z?$/, 'Z'))); default: return null; } };
+  const shared = cfs.map(f => xkids(xkid(f, 'sharedItems')).map(one));
+  const plain = i => i >= 0 && i < cfs.length && !xat(cfs[i], 'formula') && !xkid(cfs[i], 'fieldGroup') && xat(cfs[i], 'databaseField') !== '0';   // a field of the source itself
+  const items = i => xkids(xkid(pfs[i], 'items'), 'item').filter(it => !xat(it, 't') && !yes(it, 'm'));
+  const fields = el => xkids(el, 'field').map(f => +xat(f, 'x'));
+  const rows = fields(xkid(e, 'rowFields')), cols0 = fields(xkid(e, 'colFields')), cols = cols0.filter(i => i !== -2), pages = xkids(xkid(e, 'pageFields'), 'pageField');
+  if (rows.includes(-2) || (cols0.includes(-2) && cols0[cols0.length - 1] !== -2)) return null;   // the values in rows, or not innermost
+  // rows and columns: as Excel shows them by itself (sorted, every item, subtotals above)
+  for (const i of [...rows, ...cols]) {
+    const f = pfs[i], its = items(i);
+    if (!plain(i) || no(f, 'compact') || no(f, 'outline') || no(f, 'subtotalTop') || no(f, 'defaultSubtotal') || !no(f, 'showAll') || yes(f, 'insertBlankRow') || xat(f, 'sortType') === 'descending' || xkid(f, 'autoSortScope')) return null;
+    if (['sum', 'countA', 'avg', 'max', 'min', 'product', 'count', 'stdDev', 'stdDevP', 'var', 'varP'].some(k => yes(f, k + 'Subtotal'))) return null;
+    if (its.some(it => yes(it, 'h') || no(it, 'sd'))) return null;
+    const vs = its.map(it => shared[i][+xat(it, 'x')]);
+    if (vs.some((v, j) => j && pvCmp(vs[j - 1], v) > 0)) return null;   // an order of its own
+  }
+  // the filters: the item a filter shows, or those it lets through
+  const filt = [];
+  for (const pg of pages) {
+    const i = +xat(pg, 'fld'), its = plain(i) ? items(i) : null;
+    if (!its) return null;
+    const key = it => pvKey(shared[i][+xat(it, 'x')]), k = xat(pg, 'item');
+    let v = null;
+    if (k != null && k !== '') { const it = its[+k]; if (it) v = [key(it)]; }
+    else if (its.some(it => yes(it, 'h'))) v = its.filter(it => !yes(it, 'h')).map(key);
+    filt.push({ f: names[i], ...(v ? { v } : {}) });
+  }
+  const vals = [];
+  for (const d of xkids(xkid(e, 'dataFields'), 'dataField')) {
+    const i = +xat(d, 'fld'), fn = xat(d, 'subtotal') || 'sum', sda = xat(d, 'showDataAs');
+    if (!plain(i) || !PV_FN[fn] || (sda && sda !== 'normal')) return null;
+    const cap = (xat(d, 'name') || '').trim();
+    vals.push({ f: names[i], fn, ...(cap && cap !== T(PV_FN[fn], names[i]) ? { n: cap } : {}) });   // Excel's own caption, in this language, stays this language's
+  }
+  const r0 = g.r1 - (pages.length ? pages.length + 1 : 0);
+  if (r0 < 0) return null;
+  const p = normPivot({ name: xat(e, 'name') || 'PivotTable1', src: source, at: A1(r0, g.c1), rows: rows.map(i => names[i]), cols: cols.map(i => names[i]), vals, filt });
+  return p && { p, area: [g, ...(pages.length ? [{ r1: r0, c1: g.c1, r2: g.r1 - 1, c2: Math.min(MAXC - 1, g.c1 + 1) }] : [])] };
 }
 /* the file's charts onto its sheets (by the sheet's name in the file); kinds that aren't here are counted for the report */
 async function importCharts(buf, nb, xlNames, rep) {
@@ -7334,7 +7605,7 @@ async function writeXlsx() {
     for (const m of s.merges) ws.mergeCells(m.r1 + 1, m.c1 + 1, m.r2 + 1, m.c2 + 1);
     if (s.af && !s.tables.some(t => meets(t.g, s.af))) ws.autoFilter = { from: { row: s.af.r1 + 1, column: s.af.c1 + 1 }, to: { row: filterEnd(s.af, s) + 1, column: s.af.c2 + 1 } };   // a table's filter is written in the table's own part
   }
-  let buf = await wb.xlsx.writeBuffer();
+  let buf = await xlTheme(await wb.xlsx.writeBuffer());
   if (WB.sheets.some(s => s.charts.length || s.pics.length)) buf = await addXlsxCharts(buf);
   if (dyn) buf = await addDynamic(buf);
   if (WB.sheets.some(s => s.dv.length)) buf = await addXlsxDv(buf);
@@ -7342,7 +7613,19 @@ async function writeXlsx() {
   if (WB.sheets.some(s => { for (const x of s.cells.values()) if (x.k) return true; return false; })) buf = await addXlsxLinks(buf);
   if ((WB.names || NO_NAMES).length) buf = await addXlsxNames(buf);
   if (WB.sheets.some(s => s.tables.length)) buf = await addXlsxTables(buf);
+  if (WB.sheets.some(s => s.pivots.length)) buf = await addXlsxPivots(buf);
   return new Blob([buf], { type: XLSX_MIME });
+}
+/* the file's theme: Excel's own since Office 2013 (its colors are OFFICE_THEME), in place of the older one ExcelJS writes,
+   so the styles of tables and pivot tables, which take their colors from it, look in Excel as they do here */
+async function xlTheme(buf) {
+  const JSZip = await zipLib(), zip = await JSZip.loadAsync(buf), p = 'xl/theme/theme1.xml', f = zip.file(p);
+  if (!f) return buf;
+  const one = (n, i) => `<a:${n}><a:srgbClr val="${OFFICE_THEME[i].slice(1).toUpperCase()}"/></a:${n}>`;
+  const scheme = '<a:clrScheme name="Office"><a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1><a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>' +
+    one('dk2', 3) + one('lt2', 2) + ['accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6', 'hlink', 'folHlink'].map((n, i) => one(n, i + 4)).join('') + '</a:clrScheme>';
+  zip.file(p, (await f.async('string')).replace(/<a:clrScheme[\s\S]*?<\/a:clrScheme>/, () => scheme).replace(/(<a:majorFont>\s*<a:latin typeface=")[^"]*"/, '$1Calibri Light"'));
+  return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
 }
 /* links into each sheet's <hyperlinks>: a web address or an email through the sheet's links (TargetMode External), a
    place in the workbook as location, the way Excel writes them. ExcelJS writes a link only on a cell of text */
@@ -7591,6 +7874,21 @@ function applySpec(book, s, spec, log) {
     if (d.total_row === true) { const y = totalRowOn(s, t); if (y) { setProp(s, 'tables', s.tables.map(o => o === t ? y : o)); t = y; } }
     n++;
   }
+  // pivot tables: { source (a range or a table's name), at, rows, columns, values: [{ field, summarize, name }], filters: [{ field, values }] }
+  const pvNames = new Set(); for (const sh of book.sheets) for (const x of sh.pivots) pvNames.add(x.name.toLowerCase());
+  for (const d of Array.isArray(spec.pivots) ? spec.pivots.slice(0, 20) : []) {
+    if (!d || typeof d !== 'object' || typeof d.source !== 'string' || !d.source.trim()) continue;
+    let srcT = d.source.trim().replace(/^=/, '');
+    const g0 = parseRange(srcT);
+    if (g0) srcT = sheetPrefix(s.name) + absA1(g0);   // a range without its sheet is on this sheet
+    const at = parseA1(String(d.at || '').replace(/^=/, '')) || { r: 0, c: usedEnd(s).c + 1 };
+    let k = 1; while (pvNames.has(('PivotTable' + k).toLowerCase())) k++;
+    const name = typeof d.name === 'string' && d.name.trim() ? d.name.trim() : 'PivotTable' + k;
+    pvNames.add(name.toLowerCase());
+    const fnOf = v => ({ sum: 'sum', count: 'count', average: 'average', avg: 'average', max: 'max', min: 'min', product: 'product', count_numbers: 'countNums', countnums: 'countNums', stddev: 'stdDev', std_dev: 'stdDev', var: 'var', variance: 'var' })[String(v || 'sum').toLowerCase()] || 'sum';
+    const x = normPivot({ name, src: srcT, at: A1(at.r, at.c), rows: d.rows, cols: d.columns, vals: (Array.isArray(d.values) ? d.values : []).map(v => typeof v === 'string' ? { f: v } : v && { f: v.field, fn: fnOf(v.summarize), n: v.name }), filt: (Array.isArray(d.filters) ? d.filters : []).map(f => typeof f === 'string' ? { f } : f && { f: f.field }) });
+    if (x) { setProp(s, 'pivots', [...s.pivots, x]); n++; }
+  }
   if (spec.links && typeof spec.links === 'object') for (const [a, t] of Object.entries(spec.links).slice(0, 5000)) {
     const p = parseA1(a), k = t ? linkOk(/^www\./i.test(String(t).trim()) ? 'https://' + String(t).trim() : t) : null;
     if (!p || p.r >= MAXR || p.c >= MAXC || (t && !k)) continue;
@@ -7743,6 +8041,8 @@ function forAI(args = {}) {
   if (args.range && !g) throw new Error(`"${args.range}" is not a range. Use A1 notation, like A1:D20.`);
   const out = { sheets: WB.sheets.map(x => { const u = usedRange(x); return { name: x.name, used_range: u ? rangeA1(u) : null }; }), sheet: s.name, direction: s.dir };
   if (s.pics.length) out.pictures = s.pics.map(x => ({ at: A1(x.at.r, x.at.c), width: x.w, height: x.h, ...(x.alt ? { alt: x.alt } : {}) }));
+  if (s.pivots.length) out.pivots = s.pivots.map(x => ({ name: x.name, at: A1(x.at.r, x.at.c), source: x.src, rows: x.rows, columns: x.cols, values: x.vals.map(v => v.n || T(PV_FN[v.fn], v.f)), ...(x.filt.length ? { filters: x.filt.map(f => f.f) } : {}),
+    note: 'Its cells show in the rows above (worked out from the source each time); they can not be written over' }));
   if (s.tables.length) out.tables = s.tables.map(t => ({ name: t.name, range: rangeA1(t.g), columns: t.cols.map(c => c.n), style: t.style, ...(t.hr ? {} : { header_row: false }), ...(t.tr ? { total_row: true } : {}),
     note: 'A formula may use its columns: =SUM(' + t.name + '[' + tColEsc(t.cols[t.cols.length - 1].n) + ']), or [@Column] for the same row inside the table' }));
   if (s.charts.length) out.charts = s.charts.map(ch => ({ type: Object.keys(CK_API).find(k => CK_API[k] === ch.ck), ...(ch.ti ? { title: ch.ti } : {}), data: ch.src ? ch.src.ref : ch.ser.map(x => x.v).join(', '), at: A1(ch.at.r, ch.at.c) }));
@@ -8303,12 +8603,14 @@ function eachChart(fn) {
       return c;
     });
     if (any) setProp(sh, 'charts', next);
+    const pv = sh.pivots.map(x => { const t = fn(x.src, sh.name); return t === x.src ? x : { ...x, src: t }; });   // a pivot table's source, written like a chart's range
+    if (pv.some((x, i) => x !== sh.pivots[i])) setProp(sh, 'pivots', pv);
   }
 }
 /* and the charts under or after the change move with their cells */
-function moveCharts(s, axis, at, n) {   // and the pictures
+function moveCharts(s, axis, at, n) {   // and the pictures, and the pivot tables
   const k = axis === 'r' ? 'r' : 'c';
-  for (const key of ['charts', 'pics']) {
+  for (const key of ['charts', 'pics', 'pivots']) {
     let any = false;
     const next = s[key].map(ch => {
       const p = ch.at[k];
@@ -8672,6 +8974,7 @@ function gOut(s) {
   if (s.pics.length) o.pi = s.pics.map(x => { const y = picOut(x), a = rid(x.at.r), b = cid(x.at.c); delete y.dx; delete y.dy; return a && b ? { ...y, at: [a, b, x.at.dx, x.at.dy] } : null; }).filter(Boolean);
   for (const key of RULE_KEYS) if (s[key].length) o[key] = s[key].map(rule => { const x = cfOut(rule), b = rule.g.map(box); delete x.ref; return b.every(Boolean) ? { ...x, g: b } : null; }).filter(Boolean);
   if (s.tables.length) o.tb = s.tables.map(t => { const x = tableOut(t), b = box(t.g); delete x.ref; return b ? { ...x, g: b } : null; }).filter(Boolean);
+  if (s.pivots.length) o.pv = s.pivots.map(x => { const y = pivotOut(x), a = rid(x.at.r), b = cid(x.at.c); delete y.at; return a && b ? { ...y, at: [a, b] } : null; }).filter(Boolean);
   return o;
 }
 /* the same, checked, from someone else */
@@ -8714,6 +9017,8 @@ function gNorm(v) {
     const o2 = tableOut(t); delete o2.ref; return { ...o2, g: b };
   }).filter(Boolean);
   if (tb.length) o.tb = tb;
+  const pv = (Array.isArray(v.pv) ? v.pv : []).slice(0, 50).map(x => { const a = x && Array.isArray(x.at) && x.at.length === 2 && okid(x.at[0]) && okid(x.at[1]) ? x.at : null, q = a && normPivot({ ...x, at: 'A1' }); if (!q) return null; const o2 = pivotOut(q); delete o2.at; return { ...o2, at: [a[0], a[1]] }; }).filter(Boolean);
+  if (pv.length) o.pv = pv;
   for (const key of RULE_KEYS) {
     const rules = (Array.isArray(v[key]) ? v[key] : []).slice(0, key === 'dv' ? DV_MAX : 500).map(x => {
       const g = x && Array.isArray(x.g) ? x.g.map(box).filter(Boolean).slice(0, 50) : [], r = g.length && ruleNorm(key)({ ...x, g: null, ref: 'A1' });
@@ -8746,6 +9051,7 @@ function gIn(s, g, taken) {
   else s.af = null;
   s.charts = (g.ch || []).map(x => { const r = R_(x.at[0]), c = C_(x.at[1]); return r == null || c == null ? null : normSheetChart({ ...x, at: A1(r, c), dx: x.at[2], dy: x.at[3] }); }).filter(Boolean);
   s.pics = (g.pi || []).map(x => { const r = R_(x.at[0]), c = C_(x.at[1]); return r == null || c == null ? null : normPic({ ...x, at: A1(r, c), dx: x.at[2], dy: x.at[3] }); }).filter(Boolean);
+  s.pivots = (g.pv || []).map(x => { const r = R_(x.at[0]), c = C_(x.at[1]); return r == null || c == null ? null : normPivot({ ...x, at: A1(r, c) }); }).filter(Boolean);
   s.tables = [];
   for (const x of g.tb || []) { const gg = box(x.g), t = gg && normTable({ ...x, g: gg }); if (t && !s.tables.some(o => meets(o.g, t.g))) s.tables.push(t); }
   for (const key of RULE_KEYS) s[key] = (g[key] || []).map(x => { const gg = x.g.map(box).filter(Boolean); return gg.length ? ruleNorm(key)({ ...x, g: gg }) : null; }).filter(Boolean);
@@ -9407,6 +9713,397 @@ function tableFill(s, r, c, text) {
   for (let rr = d.r1; rr <= d.r2; rr++) if (rr !== r) { const y = cellAt(s, rr, c); setCell(s, rr, c, { ...(y || {}), f: shiftFormula(x.f, rr - r, 0), v: 0, ...(x.st ? { st: x.st } : {}) }); }
   setProp(s, 'tables', s.tables.map(y => y === t ? { ...t, cols: t.cols.map((q, j) => j === i ? { ...q, cf: x.f } : q) } : y));
 }
+
+/* =========================================================
+   pivot tables, as Excel's: a summary of a range (or a table) by its fields, in rows and columns, with sums, counts,
+   averages and the like, and filters. A sheet's pivot tables are s.pivots: { id, name, src (the source, written like a
+   chart's range or a table's name), at (where it starts on its sheet), rows, cols: field names (a field is in one of
+   rows, columns and filters), vals: [{ f, fn: sum count average max min product countNums stdDev stdDevp var varp,
+   n: its own caption }], filt: [{ f, v: the values it lets through }] }. Its cells are worked out after the formulas, each time, and show where it stands like an array's
+   spill (s._sp, with their look); typing over them is refused, as in Excel, where they would need a refresh
+   ========================================================= */
+const PV_FN = { sum: N_('סכום של {0}'), count: N_('ספירה של {0}'), average: N_('ממוצע של {0}'), max: N_('מקסימום של {0}'), min: N_('מינימום של {0}'), product: N_('מכפלה של {0}'), countNums: N_('ספירה של {0}'),
+  stdDev: N_('סטיית תקן של {0}'), stdDevp: N_('סטיית תקן באוכלוסייה של {0}'), var: N_('שונות של {0}'), varp: N_('שונות של {0}') };   // the captions Excel 2016 in Hebrew gives (measured), the same for count and countNums, and for var and varp
+const PV_FN_WORD = { sum: N_('סכום'), count: N_('ספירה'), average: N_('ממוצע'), max: N_('מקסימום'), min: N_('מינימום'), product: N_('מכפלה'), countNums: N_('ספירת מספרים'), stdDev: N_('סטיית תקן'), stdDevp: N_('סטיית תקן באוכלוסייה'), var: N_('שונות'), varp: N_('שונות באוכלוסייה') };
+function normPivot(x) {
+  if (!x || typeof x !== 'object') return null;
+  const at = typeof x.at === 'string' ? parseA1(x.at) : x.at && Number.isInteger(x.at.r) && Number.isInteger(x.at.c) ? { r: x.at.r, c: x.at.c } : null;
+  const src = typeof x.src === 'string' ? x.src.trim().replace(/^=/, '').slice(0, 300) : '';
+  if (!at || !src || at.r >= MAXR || at.c >= MAXC) return null;
+  const names = l => (Array.isArray(l) ? l : []).filter(v => typeof v === 'string' && v.trim()).map(v => v.trim().slice(0, 255)).slice(0, 16);
+  const vals = (Array.isArray(x.vals) ? x.vals : []).map(v => v && typeof v === 'object' && typeof v.f === 'string' && v.f.trim() ? { f: v.f.trim().slice(0, 255), fn: PV_FN[v.fn] ? v.fn : 'sum', ...(typeof v.n === 'string' && v.n.trim() ? { n: v.n.trim().slice(0, 255) } : {}) } : null).filter(Boolean).slice(0, 16);
+  const seen = new Set(), one = n => !seen.has(n.toLowerCase()) && !!seen.add(n.toLowerCase());   // a field is in one of rows, columns and filters
+  const rows = names(x.rows).filter(one), cols = names(x.cols).filter(one);
+  const filt = (Array.isArray(x.filt) ? x.filt : []).map(v => v && typeof v === 'object' && typeof v.f === 'string' && v.f.trim() ? { f: v.f.trim().slice(0, 255), ...(Array.isArray(v.v) ? { v: v.v.map(String).slice(0, 10000) } : {}) } : null).filter(v => v && one(v.f)).slice(0, 16);
+  const name = typeof x.name === 'string' && x.name.trim() ? x.name.trim().slice(0, 255) : 'PivotTable1';
+  return { id: typeof x.id === 'string' && /^[a-z0-9]{4,24}$/.test(x.id) ? x.id : sid(), name, src, at: { r: at.r, c: at.c }, rows, cols, vals, filt };
+}
+function pivotOut(x) { return { id: x.id, name: x.name, src: x.src, at: A1(x.at.r, x.at.c), rows: x.rows.slice(), cols: x.cols.slice(), vals: x.vals.map(v => ({ ...v })), filt: x.filt.map(v => ({ ...v })) }; }
+/* the source now: a table's name is its header row and data; otherwise a range (or a defined name) like a chart's */
+function pivotSrc(s, x) {
+  const tb = tableByName(x.src);
+  if (tb) { const t = tb.t; return t.hr ? { s: tb.s, g: { r1: t.g.r1, c1: t.g.c1, r2: t.g.r2 - t.tr, c2: t.g.c2 } } : null; }
+  const R = chartRef(s, x.src);
+  return R && R.s ? { s: R.s, g: R.g } : null;
+}
+/* the source's fields (its first row) and records (the rest) */
+function pivotData(s, x) {
+  const R = pivotSrc(s, x);
+  if (!R) return null;
+  const { s: sh, g } = R, w = Math.min(g.c2 - g.c1 + 1, 500), u = usedEnd(sh), r2 = Math.min(g.r2, Math.max(g.r1, u.r - 1), g.r1 + 200000);
+  const head = [];
+  for (let j = 0; j < w; j++) { const v = valAt(sh, g.r1, g.c1 + j); head.push(v == null || v === '' ? '' : isErr(v) ? v.c : String(typeof v === 'boolean' ? (v ? 'TRUE' : 'FALSE') : v)); }
+  const recs = [];
+  for (let r = g.r1 + 1; r <= r2; r++) { const row = []; for (let j = 0; j < w; j++) row.push(valAt(sh, r, g.c1 + j)); recs.push(row); }
+  return { head, recs };
+}
+/* the order of items, as Excel sorts them (measured in Excel 2016, pivot_order.ps1): numbers, then names of days and
+   months in their own order (Excel's custom lists: the eight of an Excel in Hebrew, short and long, in English and in
+   Hebrew; text in any capitals), then other text (Excel's order), FALSE and TRUE, errors (#N/A first: by Excel's codes for
+   them, from the top), and blanks last. Excel's order of names from different lists side by side follows no rule; here
+   it is by their place in their lists */
+const PV_LISTS = ['Sun|Mon|Tue|Wed|Thu|Fri|Sat', 'Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday', 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec',
+  'January|February|March|April|May|June|July|August|September|October|November|December', 'יום א|יום ב|יום ג|יום ד|יום ה|יום ו|שבת',
+  'יום ראשון|יום שני|יום שלישי|יום רביעי|יום חמישי|יום שישי|שבת', 'ינו|פבר|מרץ|אפר|מאי|יונ|יול|אוג|ספט|אוק|נוב|דצמ', 'ינואר|פברואר|מרץ|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר'];
+let PV_POS = null;
+const pvPos = v => {
+  if (!PV_POS) { PV_POS = new Map(); for (const l of PV_LISTS) l.split('|').forEach((w, i) => { if (!PV_POS.has(w.toLowerCase())) PV_POS.set(w.toLowerCase(), i); }); }
+  return PV_POS.get(v.toLowerCase());
+};
+const PV_ERR = { '#NULL!': 0, '#DIV/0!': 7, '#VALUE!': 15, '#REF!': 23, '#NAME?': 29, '#NUM!': 36, '#N/A': 42, '#SPILL!': 45, '#CALC!': 50 };
+const pvRank = v => v == null || v === '' ? 5 : typeof v === 'number' ? 0 : typeof v === 'string' ? (pvPos(v) == null ? 2 : 1) : typeof v === 'boolean' ? 3 : 4;
+const pvCmp = (a, b) => pvRank(a) - pvRank(b) || (typeof a === 'number' ? a - b : typeof a === 'string' ? (pvPos(a) ?? 0) - (pvPos(b) ?? 0) || textCmp(a, b) : typeof a === 'boolean' ? (a ? 1 : 0) - (b ? 1 : 0) : isErr(a) ? (PV_ERR[b.c] ?? -1) - (PV_ERR[a.c] ?? -1) : 0);
+const pvKey = v => v == null || v === '' ? 'b' : isErr(v) ? 'e' + v.c : valKey(v);
+/* an item as its label shows it: Excel writes TRUE, FALSE and errors there as text */
+const pvShow = v => v == null || v === '' ? T('(ריק)') : isErr(v) ? v.c : typeof v === 'boolean' ? (v ? 'TRUE' : 'FALSE') : v;
+/* what a value field gathers from its records: how many values, how many numbers, their sum, product, mean and spread
+   (Welford's way, which keeps its digits), the largest and the smallest */
+const pvAcc = () => ({ n: 0, k: 0, sum: 0, prod: 1, mu: 0, m2: 0, max: -Infinity, min: Infinity });
+function pvAdd(A, y) {
+  if (y == null || y === '') return;
+  A.n++;
+  if (typeof y === 'number') { A.k++; A.sum += y; A.prod *= y; const d = y - A.mu; A.mu += d / A.k; A.m2 += d * (y - A.mu); if (y > A.max) A.max = y; if (y < A.min) A.min = y; }
+}
+/* a value field's answer from what was gathered: Excel's rules (a count counts every value, a sum only numbers) */
+function pvAnswer(fn, a) {
+  if (!a) return null;
+  switch (fn) {
+    case 'count': return a.n;
+    case 'countNums': return a.k;
+    case 'sum': return a.k ? a.sum : 0;
+    case 'product': return a.k ? a.prod : 0;
+    case 'average': return a.k ? a.sum / a.k : E_DIV;
+    case 'max': return a.k ? a.max : 0;
+    case 'min': return a.k ? a.min : 0;
+    case 'stdDev': case 'var': case 'stdDevp': case 'varp': {   // of a sample (n - 1) or of the whole population (n)
+      const d = fn.endsWith('p') ? a.k : a.k - 1;
+      if (d < 1) return E_DIV;
+      return fn[0] === 'v' ? a.m2 / d : Math.sqrt(a.m2 / d);
+    }
+  }
+  return null;
+}
+const PV_HEAD = { bg: '#d9e1f2', b: true }, PV_LINE = '1s#8ea9db', PV_SUB = '#d9d9d9';   // Excel's PivotStyleLight16 (read from Excel; PV_SUB: the subtotal columns of the outer column field)
+/* the cells of a pivot table, Excel's compact form: the filters on top, then the header, the rows with their subtotals
+   above their inner rows, and the grand totals. rows: each cell { v, st }, null for nothing there; and how it is laid
+   out (rowList: the items of each row, cols: each column's items, value field and kind), for a file */
+function pivotGrid(s, x) {
+  const D = pivotData(s, x), out = [];
+  if (!D) return { rows: [[{ v: T('טבלת הציר: המקור שלה לא נמצא'), st: { c: '#c00000' } }]] };
+  const idx = n => D.head.findIndex(h1 => h1.toLowerCase() === n.toLowerCase());
+  const rowF = x.rows.map(idx).filter(i => i >= 0), colF = x.cols.map(idx).filter(i => i >= 0), vals = x.vals.map(v => ({ ...v, i: idx(v.f) })).filter(v => v.i >= 0);
+  const filt = x.filt.map(f => ({ ...f, i: idx(f.f) })).filter(f => f.i >= 0);
+  // the filters, above the rest, and a row between
+  for (const f of filt) {
+    let word = T('(הכל)');
+    if (f.v && f.v.length === 1) { const r = D.recs.find(rec => pvKey(rec[f.i]) === f.v[0]); word = r ? pvShow(r[f.i]) : T('(ריק)'); }
+    else if (f.v) word = T('(פריטים מרובים)');
+    out.push([{ v: D.head[f.i], st: { bg: PV_HEAD.bg, bb: PV_LINE } }, { v: word, st: { bg: PV_HEAD.bg, bb: PV_LINE } }]);
+  }
+  if (filt.length) out.push([]);
+  if (!rowF.length && !colF.length && !vals.length) { out.push([{ v: x.name, st: { b: true } }], [{ v: T('כדי לבנות את טבלת הציר, בוחרים שדות ברשימת השדות'), st: { c: '#595959' } }]); return { rows: out }; }
+  const recs = D.recs.filter(rec => filt.every(f => !f.v || f.v.includes(pvKey(rec[f.i]))));
+  // what each record adds to: every row prefix with every column prefix (the empty prefix is the grand total)
+  const acc = new Map(), tree = () => ({ kids: new Map() }), rT = tree(), cT = tree();
+  const into = (n, vs) => { for (const v of vs) { const k = pvKey(v); if (!n.kids.has(k)) n.kids.set(k, { v, k, kids: new Map() }); n = n.kids.get(k); } };
+  const pre = vs => vs.length + '|' + vs.map(pvKey).join('\u0002');
+  for (const rec of recs) {
+    const rv = rowF.map(i => rec[i]), cv = colF.map(i => rec[i]);
+    into(rT, rv); into(cT, cv);
+    for (let a = 0; a <= rv.length; a++) for (let b = 0; b <= cv.length; b++) {
+      const key = pre(rv.slice(0, a)) + '\u0003' + pre(cv.slice(0, b));
+      vals.forEach((v, j) => {
+        let A = acc.get(key + '\u0001' + j);
+        if (!A) acc.set(key + '\u0001' + j, A = pvAcc());
+        pvAdd(A, rec[v.i]);
+      });
+    }
+  }
+  const sorted = n => [...n.kids.values()].sort((p, q) => pvCmp(p.v, q.v));
+  const cap = v => v.n || T(PV_FN[v.fn], v.f);
+  const cell = (rk, ck, j) => { const A = acc.get(rk + '\u0003' + ck + '\u0001' + j); return A ? pvAnswer(vals[j].fn, A) : null; };
+  // the columns: each column item for each value field, the subtotals of an outer item after its inner ones, and the
+  // grand totals
+  const cols = [], ckey = path => path.length + '|' + path.map(k => k.k).join('\u0002');
+  const walkC = (n, path) => {
+    for (const k of sorted(n)) {
+      const p2 = [...path, k];
+      if (p2.length < colF.length) { walkC(k, p2); vals.forEach((v, j) => cols.push({ ck: ckey(p2), j, path: p2, sub: true })); }
+      else vals.forEach((v, j) => cols.push({ ck: ckey(p2), j, path: p2 }));
+    }
+  };
+  if (colF.length) { walkC(cT, []); vals.forEach((v, j) => cols.push({ ck: '0|', j, grand: true })); }
+  else vals.forEach((v, j) => cols.push({ ck: '0|', j }));
+  // the column of row labels; with values in columns and no rows, Excel leaves it out
+  const lab = rowF.length > 0 || (colF.length > 0 && vals.length < 2), L = c => lab ? [c] : [], H = PV_HEAD, HL = { ...PV_HEAD, bb: PV_LINE }, rl = rowF.length ? T('תוויות שורה') : null;
+  if (colF.length) {
+    out.push([...L({ v: vals.length === 1 && rowF.length ? cap(vals[0]) : null, st: H }), { v: T('תוויות עמודה'), st: H }, ...cols.slice(1).map(() => ({ v: null, st: H }))]);
+    for (let lv = 0; lv < colF.length; lv++) {
+      const st = lv === colF.length - 1 && vals.length === 1 ? HL : H;
+      out.push([...L({ v: st === HL ? rl : null, st }), ...cols.map((c, i) => {
+        if (c.grand) return { v: lv === 0 ? (vals.length === 1 ? T('סכום כולל') : T('סך הכל {0}', cap(vals[c.j]))) : null, st };
+        if (c.sub) return { v: c.path.length === lv + 1 ? (vals.length === 1 ? T('{0} סה"כ', pvShow(c.path[lv].v)) : pvShow(c.path[lv].v) + ' ' + cap(vals[c.j])) : null, st: c.path.length === 1 ? { ...st, bg: PV_SUB } : st };
+        const prev = cols[i - 1], same = prev && !prev.grand && !prev.sub && prev.path.slice(0, lv + 1).every((k, q) => k.k === c.path[q].k);
+        return { v: same ? null : pvShow(c.path[lv].v), st };
+      })]);
+    }
+    if (vals.length > 1) out.push([...L({ v: rl, st: HL }), ...cols.map(c => ({ v: c.grand || c.sub ? null : cap(vals[c.j]), st: c.sub && c.path.length === 1 ? { ...HL, bg: PV_SUB } : HL }))]);
+  } else out.push([...L({ v: rl, st: HL }), ...cols.map(c => ({ v: cap(vals[c.j]), st: HL }))]);
+  // the rows: each item with its subtotals on its own row above its inner items (compact form), then the grand total
+  const look = st => st.b ? { b: true, ...(st.bt ? { bt: st.bt } : {}), ...(st.bb ? { bb: st.bb } : {}), ...(st.bg ? { bg: st.bg } : {}) } : null;
+  const line = (label, rk, st, ind, grand) => out.push([...L({ v: label, st: ind ? { ...st, ind } : st }), ...cols.map(c => ({ v: cell(rk, c.ck, c.j), st: !grand && c.sub && c.path.length === 1 ? { ...(look(st) || {}), bg: PV_SUB } : look(st) }))]);
+  const walkR = (n, path) => {
+    for (const k of sorted(n)) {
+      const p2 = [...path, k], inner = p2.length < rowF.length;
+      rowList.push(p2.map(q => q.k));
+      line(pvShow(k.v), p2.length + '|' + p2.map(q => q.k).join('\u0002'), inner ? (p2.length === 1 ? { b: true, bb: PV_LINE } : { b: true }) : {}, p2.length - 1);
+      if (inner) walkR(k, p2);
+    }
+  };
+  const GT = { bg: PV_HEAD.bg, b: true, bt: PV_LINE };   // the grand total row
+  const rowList = [];   // the items of each row below the header (null: the grand total), for a file
+  if (rowF.length) { walkR(rT, []); rowList.push(null); line(T('סכום כולל'), '0|', GT, 0, true); }
+  else if (vals.length) line(colF.length && vals.length === 1 ? cap(vals[0]) : null, '0|', colF.length && vals.length === 1 ? GT : {}, 0, colF.length && vals.length === 1);   // with no rows, Excel shows the one value's row as its grand total
+  return { rows: out, rowList, cols };
+}
+/* GETPIVOTDATA, as Excel's: what a pivot table shows. data_field: one of its value fields, by its caption or by its
+   field's name; pivot_table: any of its cells; then pairs of one of its row or column fields and an item of it. Fewer
+   pairs give a subtotal, none the grand total. #REF! for what it doesn't show. Its source is worked out first */
+function getPivotData(a) {
+  PV_READ = true;
+  const at = refOf(a[1]), df = argS(a[0]);
+  if (isErr(df)) return df;
+  if (!at || !at.rng) return E_REF;
+  const s = at.s, hit = s._pva && [...s._pva].find(([, g]) => !g.bad && inG(g, at.g.r1, at.g.c1)), x = hit && s.pivots.find(p => p.id === hit[0]);
+  const R = x && pivotSrc(s, x), D = R && pivotData(s, x);
+  if (!D) return E_REF;
+  pointsAt(R);
+  const low = t => String(t).toLowerCase(), idx = n => D.head.findIndex(h1 => low(h1) === low(n));
+  const name = low(str(df)), vals = x.vals.filter(v => idx(v.f) >= 0), v = vals.find(q => low(q.n || T(PV_FN[q.fn], q.f)) === name) || vals.find(q => low(q.f) === name);
+  if (!v || a.length % 2) return E_REF;
+  // an item is named by what its label shows, in any capitals (2.5, TRUE, #N/A, (blank)); a filter's field only by the
+  // one item it shows
+  const cap = y => low(y == null || y === '' ? T('(ריק)') : isErr(y) ? y.c : toStr(y));
+  const filt = x.filt.map(f => ({ ...f, i: idx(f.f) })).filter(f => f.i >= 0 && f.v), recs = D.recs.filter(rec => filt.every(f => f.v.includes(pvKey(rec[f.i]))));
+  const shown = [...x.rows, ...x.cols].map(low), want = [];
+  for (let i = 2; i < a.length; i += 2) {
+    const f = argS(a[i]), it = argS(a[i + 1]);
+    if (isErr(f)) return f;
+    if (isErr(it)) return it;
+    const j = idx(str(f)), t = cap(it), page = j >= 0 && filt.find(q => q.i === j);
+    if (j < 0 || !(shown.includes(low(D.head[j])) || (page && page.v.length === 1))) return E_REF;
+    const rec = recs.find(r1 => cap(r1[j]) === t);
+    if (!rec) return E_REF;   // an item it doesn't show
+    want.push([j, pvKey(rec[j])]);
+  }
+  const vi = idx(v.f), A = pvAcc();
+  let any = false;
+  for (const rec of recs) if (want.every(([j, k]) => pvKey(rec[j]) === k)) { any = true; pvAdd(A, rec[vi]); }
+  return any ? pvAnswer(v.fn, A) : 0;   // items it shows that never meet: an empty cell
+}
+/* the GETPIVOTDATA that names a pivot table's value at (r, c), the way Excel writes it when the value is pointed at
+   while a formula is written (its "Generate GetPivotData", on unless turned off in the pivot table's tab): the value
+   field (by its field's name, or by its caption when that is its own or the field is there twice), the table's first
+   cell, then a filter's one item, and the items of the value's row and column. null for any other cell */
+function pivotRefText(s, r, c) {
+  const x = pivotAt(s, r, c), g = x && s._pva.get(x.id), D = g && !g.bad && pivotData(s, x);
+  if (!D) return null;
+  const low = t => t.toLowerCase(), idx = n => D.head.findIndex(h1 => low(h1) === low(n)), has = n => idx(n) >= 0;
+  const rows = x.rows.filter(has), cols = x.cols.filter(has), vals = x.vals.filter(v => has(v.f)), filt = x.filt.filter(f => has(f.f));
+  const G = pivotGrid(s, x), fr = filt.length ? filt.length + 1 : 0, hr = cols.length ? 1 + cols.length + (vals.length > 1 ? 1 : 0) : 1, lab = rows.length > 0 || (cols.length > 0 && vals.length < 2);
+  const i = r - g.r1 - fr - hr, col = G.cols && G.cols[c - g.c1 - (lab ? 1 : 0)], row = rows.length ? G.rowList[i] : i === 0 ? null : undefined;
+  if (i < 0 || !col || row === undefined || !vals[col.j]) return null;
+  const v = vals[col.j], q = t => '"' + String(t).replace(/"/g, '""') + '"';
+  const item = (f, key) => { const rec = D.recs.find(y => pvKey(y[idx(f)]) === key), y = rec ? rec[idx(f)] : null; return typeof y === 'number' ? String(y) : typeof y === 'boolean' ? (y ? 'TRUE' : 'FALSE') : q(pvShow(y)); };
+  const pairs = [];
+  for (const f of filt) if (f.v && f.v.length === 1) pairs.push(q(f.f), item(f.f, f.v[0]));
+  (row || []).forEach((key, d) => pairs.push(q(rows[d]), item(rows[d], key)));
+  if (col.path) col.path.forEach((n, d) => pairs.push(q(cols[d]), item(cols[d], n.k)));   // (a grand total has none)
+  const name = v.n || (vals.filter(y => low(y.f) === low(v.f)).length > 1 ? T(PV_FN[v.fn], v.f) : v.f);
+  const at = '$' + colName(g.c1) + '$' + (g.r1 + fr + 1), pre = ED.sid && ED.sid !== s.id ? sheetPrefix(s.name) : '';
+  return `GETPIVOTDATA(${[q(name), pre + at, ...pairs].join(',')})`;
+}
+/* where a pivot table's cells are now, and whether (r, c) is one of them */
+const pivotAt = (s, r, c) => { if (!s._pva) return null; for (const [id, g] of s._pva) if (inG(g, r, c)) return s.pivots.find(x => x.id === id) || null; return null; };
+/* its cells into the sheet, like an array's spill; filled cells in the way leave only a word in its first cell */
+function placePivot(s, x) {
+  let G;
+  try { G = pivotGrid(s, x); } catch (e) { console.warn(e); G = { rows: [[{ v: E_VAL }]] }; }
+  const h0 = G.rows.length, w0 = Math.max(1, ...G.rows.map(r => r.length)), g = { r1: x.at.r, c1: x.at.c, r2: Math.min(MAXR - 1, x.at.r + Math.max(1, h0) - 1), c2: Math.min(MAXC - 1, x.at.c + w0 - 1) };
+  let blocked = false;
+  for (let r = g.r1; r <= g.r2 && !blocked; r++) for (let c = g.c1; c <= g.c2; c++) { const k = KEY(r, c); if (hasVal(s.cells.get(k)) || s._sp.has(k) || s.merges.some(m => inG(m, r, c))) { blocked = true; break; } }
+  const key = 'pv:' + x.id;
+  if (blocked) {
+    const k = KEY(x.at.r, x.at.c);
+    if (!hasVal(s.cells.get(k)) && !s._sp.has(k)) { const o = { v: T('טבלת הציר {0} צריכה מקום: יש תאים מלאים בדרך', x.name), a: key, st: { c: '#c00000' } }; s._sp.set(k, o); s._pvc.set(k, o); }
+    s._pva.set(x.id, { r1: x.at.r, c1: x.at.c, r2: x.at.r, c2: x.at.c, bad: true });
+    return;
+  }
+  G.rows.forEach((row, i) => row.forEach((cl, j) => { if (cl && (cl.v != null || cl.st)) { const o = { v: cl.v == null ? '' : cl.v, a: key, ...(cl.st ? { st: cl.st } : {}) }; s._sp.set(KEY(g.r1 + i, g.c1 + j), o); s._pvc.set(KEY(g.r1 + i, g.c1 + j), o); } }));
+  s._pva.set(x.id, g);
+}
+/* Excel's Create PivotTable: the data (the table or the block of cells around the active one), and where it goes: a new
+   sheet (at A3, as Excel puts it) or a cell of this workbook */
+function pivotDialog() {
+  if (!WS || (ED.on && !endEdit(true))) return;
+  const t = tableAt(WS, SEL.r, SEL.c);
+  let g = selG();
+  if (wholeCols(g) || wholeRows(g)) g = usedPart(g);
+  if (g.r1 === g.r2 && g.c1 === g.c2) g = region(WS, SEL.r, SEL.c);
+  const src = h('input', { class: 'field', dir: 'ltr', value: t ? t.name : sheetPrefix(WS.name) + absA1(g), spellcheck: 'false', autocomplete: 'off', 'aria-label': T('הטבלה או הטווח'), autofocus: true });
+  const where = h('select', { class: 'field', 'aria-label': T('איפה לשים את טבלת הציר') }, h('option', { value: 'new', text: T('גיליון חדש') }), h('option', { value: 'here', text: T('גיליון קיים') }));
+  const at = h('input', { class: 'field', dir: 'ltr', value: sheetPrefix(WS.name) + A1(g.r1, g.c2 + 2), spellcheck: 'false', autocomplete: 'off', 'aria-label': T('מיקום') });
+  const atRow = h('label', { class: 'fld', hidden: true }, h('span', { text: T('מיקום') }), at);
+  where.addEventListener('change', () => { atRow.hidden = where.value !== 'here'; });
+  const err = h('p', { class: 'sh-ch-err', role: 'alert', hidden: true });
+  const fail = m => { err.textContent = m; err.hidden = false; return false; };
+  const apply = () => {
+    const x0 = { src: src.value.trim().replace(/^=/, ''), at: 'A1' };
+    if (!x0.src) return fail(T('כותבים את הטווח של הנתונים, עם שורת הכותרות שלהם'));
+    const D = pivotData(WS, x0);
+    if (!D || !D.head.length) return fail(T('זה לא טווח של תאים או שם של טבלה'));
+    if (D.head.some(h1 => !h1)) return fail(T('לכל עמודה של הנתונים צריכה להיות כותרת בשורה הראשונה'));
+    let sh = WS, a = { r: 2, c: 0 };
+    if (where.value === 'here') { const pl = placeOf(at.value.trim().replace(/^=/, '')); if (!pl.g || !pl.s) return fail(T('זו לא כתובת של תא. למשל: B7')); sh = pl.s; a = { r: pl.g.r1, c: pl.g.c1 }; }
+    const taken = new Set(); for (const s2 of WB.sheets) for (const p2 of s2.pivots) taken.add(p2.name.toLowerCase());
+    let k = 1; while (taken.has(('PivotTable' + k).toLowerCase())) k++;
+    const x = normPivot({ name: 'PivotTable' + k, src: x0.src, at: A1(a.r, a.c) });
+    edit(() => {
+      if (where.value === 'new') { sh = newSheet(freeName(sheetWord(WB.sheets.length + 1), takenNames()), WS.dir); bookStep(() => { WB.sheets.splice(WB.sheets.indexOf(WS), 0, sh); }); }
+      setProp(sh, 'pivots', [...sh.pivots, x]);
+    });
+    if (sh !== WS) showSheet(sh, true);
+    SEL = { r: a.r, c: a.c, er: a.r, ec: a.c };
+    PV.open = true;
+    refresh(); after();
+    return true;
+  };
+  const m = modal({ title: T('יצירת טבלת ציר'), body: h('div', { class: 'sh-nmd' }, h('label', { class: 'fld' }, h('span', { text: T('הטבלה או הטווח') }), src), h('label', { class: 'fld' }, h('span', { text: T('איפה לשים את טבלת הציר') }), where), atRow, err),
+    actions: [{ label: T('אישור'), kind: 'primary', run: apply }, { label: T('ביטול'), value: false }], onClose: () => { if (!MODALS.length) focusGrid(); } });
+  for (const i of [src, at]) i.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); if (apply()) m.close(true); } });
+}
+/* one change to a pivot table, as one step */
+function setPivot(s, x, patch) { edit(() => setProp(s, 'pivots', s.pivots.map(y => y.id === x.id ? normPivot({ ...pivotOut(y), ...patch, at: A1(y.at.r, y.at.c) }) || y : y))); }
+/* the field list (Excel's PivotTable Fields pane), beside the sheet while a pivot table's cell is chosen: the source's
+   fields to check, and the four areas (filters, columns, rows, values), each field with its menu */
+const PV = { open: true };
+function pivotPaneToggle() { PV.open = !PV.open; pivotTab(); }
+function pivotPane(x) {
+  if (!V.pvPane) { V.pvPane = h('div', { class: 'sh-pvpane', role: 'complementary', 'aria-label': T('שדות טבלת ציר') }); V.view.querySelector('.sh-wrap').append(V.pvPane); }
+  const pane = V.pvPane;
+  if (!x || !PV.open) { pane.hidden = true; return; }
+  pane.hidden = false;
+  const D = pivotData(WS, x), head = D ? D.head.filter(Boolean) : [];
+  const used = n => [...x.rows, ...x.cols, ...x.filt.map(f => f.f), ...x.vals.map(v => v.f)].some(y => y.toLowerCase() === n.toLowerCase());
+  const numeric = n => { const i = D.head.indexOf(n), k = D.recs.slice(0, 200).filter(r => r[i] != null && r[i] !== ''); return k.length > 0 && k.filter(r => typeof r[i] === 'number').length * 2 > k.length; };
+  const s = WS;
+  const check = n => { const i = h('input', { type: 'checkbox' }); i.checked = used(n); i.addEventListener('change', () => {
+    if (i.checked) { if (numeric(n)) setPivot(s, x, { vals: [...x.vals, { f: n, fn: 'sum' }] }); else setPivot(s, x, { rows: [...x.rows, n] }); }
+    else setPivot(s, x, { rows: x.rows.filter(y => y !== n), cols: x.cols.filter(y => y !== n), filt: x.filt.filter(f => f.f !== n), vals: x.vals.filter(v => v.f !== n) });
+  }); return h('label', { class: 'check sh-pvf' }, i, h('span', { dir: 'auto', text: n })); };
+  const areas = [['filt', T('מסננים'), 'filter_alt'], ['cols', T('עמודות@pivot'), 'view_column'], ['rows', T('שורות@pivot'), 'table_rows'], ['vals', T('ערכים'), 'functions']];
+  const nameOfItem = (key, it) => key === 'vals' ? it.n || T(PV_FN[it.fn], it.f) : key === 'filt' ? it.f : it;
+  const move = (key, i, to) => {
+    const it = x[key][i], f = key === 'vals' || key === 'filt' ? it.f : it, patch = {}, axis = to && to !== 'vals';
+    for (const k2 of ['rows', 'cols', 'filt', 'vals']) patch[k2] = x[k2].filter((y, j) => !(k2 === key && j === i) && !(axis && k2 !== 'vals' && (k2 === 'filt' ? y.f : y).toLowerCase() === f.toLowerCase()));   // a field is in one of rows, columns and filters
+    if (to === 'vals') patch.vals.push({ f, fn: key === 'vals' ? it.fn : 'sum' });
+    else if (to === 'filt') patch.filt.push({ f });
+    else if (to) patch[to].push(f);
+    setPivot(s, x, patch);
+  };
+  const order = (key, i, d) => { const l = x[key].slice(), j = i + d; if (j < 0 || j >= l.length) return; [l[i], l[j]] = [l[j], l[i]]; setPivot(s, x, { [key]: l }); };
+  const chip = (key, it, i) => h('button', { type: 'button', class: 'sh-pvchip', dir: 'auto', onclick: e => menuAt(e.currentTarget, nameOfItem(key, it), [
+    { ic: 'arrow_upward', label: T('הזזה למעלה'), off: i === 0, run: () => order(key, i, -1) },
+    { ic: 'arrow_downward', label: T('הזזה למטה'), off: i === x[key].length - 1, run: () => order(key, i, 1) },
+    '-',
+    ...areas.filter(([k2]) => k2 !== key).map(([k2, label, ic]) => ({ ic, label: T('הזזה אל {0}', label), run: () => move(key, i, k2) })),
+    ...(key === 'vals' ? ['-', ...Object.keys(PV_FN).map(fn => ({ ic: fn === it.fn ? 'check' : 'functions', label: T('סיכום לפי {0}', T(PV_FN_WORD[fn])), run: () => setPivot(s, x, { vals: x.vals.map((v, j) => j === i ? { f: v.f, fn } : v) }) }))] : []),
+    ...(key === 'filt' ? ['-', { ic: 'checklist', label: T('בחירת פריטים…'), run: () => pivotFilterDialog(s, x, i) }] : []),
+    '-',
+    { ic: 'close', label: T('הסרת השדה'), run: () => move(key, i, null) },
+  ]) }, h('span', { text: nameOfItem(key, it) }), icon('arrow_drop_down'));
+  pane.textContent = '';
+  pane.append(
+    h('div', { class: 'sh-pvhead' }, h('b', { text: T('שדות טבלת ציר') }), h('button', { class: 'icon-btn', type: 'button', title: T('סגירה'), 'aria-label': T('סגירה'), onclick: () => pivotPaneToggle() }, icon('close'))),
+    h('p', { class: 'muted small', text: T('מסמנים שדות, ואז מזיזים אותם בין האזורים מהתפריט שלהם') }),
+    h('div', { class: 'sh-pvfields' }, ...(head.length ? head.map(check) : [h('p', { class: 'muted small', text: T('טבלת הציר: המקור שלה לא נמצא') })])),
+    h('div', { class: 'sh-pvareas' }, ...areas.map(([key, label, ic]) => h('div', { class: 'sh-pvarea' }, h('div', { class: 'sh-pvat' }, icon(ic), h('span', { text: label })), ...x[key].map((it, i) => chip(key, it, i))))));
+}
+/* which items a filter field lets through */
+function pivotFilterDialog(s, x, i) {
+  const f = x.filt[i], D = pivotData(s, x);
+  if (!D) return;
+  const col = D.head.findIndex(h1 => h1.toLowerCase() === f.f.toLowerCase());
+  const seen = new Map();
+  for (const r of D.recs) { const k = pvKey(r[col]); if (!seen.has(k)) seen.set(k, r[col]); }
+  const items = [...seen.entries()].sort((a, b) => pvCmp(a[1], b[1]));
+  const boxes = items.map(([k, v]) => { const c = h('input', { type: 'checkbox' }); c.checked = !f.v || f.v.includes(k); return [k, h('label', { class: 'check' }, c, h('span', { dir: 'auto', text: String(pvShow(v)) })), c]; });
+  modal({ title: T('סינון לפי {0}', f.f), body: h('div', { class: 'sh-pvflist' }, ...boxes.map(b => b[1])),
+    actions: [{ label: T('אישור'), kind: 'primary', run: () => { const on = boxes.filter(b => b[2].checked).map(b => b[0]); if (!on.length) return false; setPivot(s, x, { filt: x.filt.map((y, j) => j === i ? (on.length === boxes.length ? { f: y.f } : { f: y.f, v: on }) : y) }); } }, { label: T('ביטול'), value: false }],
+    onClose: () => { if (!MODALS.length) focusGrid(); } });
+}
+function pivotSourceDialog() {
+  const x = pivotAt(WS, SEL.r, SEL.c);
+  if (!x) return;
+  const src = h('input', { class: 'field', dir: 'ltr', value: x.src, spellcheck: 'false', autocomplete: 'off', 'aria-label': T('הטבלה או הטווח'), autofocus: true });
+  modal({ title: T('שינוי מקור הנתונים'), body: h('div', { class: 'sh-nmd' }, h('label', { class: 'fld' }, h('span', { text: T('הטבלה או הטווח') }), src)),
+    actions: [{ label: T('אישור'), kind: 'primary', run: () => { const v = src.value.trim().replace(/^=/, ''); if (!pivotData(WS, { src: v })) { toast(T('זה לא טווח של תאים או שם של טבלה'), { icon: 'error' }); return false; } setPivot(WS, x, { src: v }); } }, { label: T('ביטול'), value: false }],
+    onClose: () => { if (!MODALS.length) focusGrid(); } });
+}
+function pivotDelete() {
+  const x = pivotAt(WS, SEL.r, SEL.c);
+  if (!x) return;
+  edit(() => setProp(WS, 'pivots', WS.pivots.filter(y => y.id !== x.id)));
+  toast(T('טבלת הציר {0} נמחקה', x.name), { icon: 'delete' });
+}
+function pivotPanel() {
+  const name = h('input', { class: 'field sh-tname', dir: 'auto', spellcheck: 'false', autocomplete: 'off', 'aria-label': T('שם טבלת הציר') });
+  const p = h('div', { class: 'panel sheet-only', 'data-panel': 'spivot', hidden: true },
+    group(T('טבלת ציר'), '', h('div', { class: 'sh-tprops' }, h('span', { class: 'muted small', text: T('שם טבלת הציר') }), name)),
+    group(T('הצגה@pivot'), '', rbtn('shPvFields', 'view_sidebar', T('רשימת שדות'), { big: true, id: 'shPvFieldsBtn', title: T('השדות והאזורים של טבלת הציר') })),
+    group(T('נתונים'), '', rbtn('shPvSource', 'database', T('שינוי מקור הנתונים'), { big: true })),
+    group(T('נוסחאות'), '', rbtn('shPvGpd', 'functions', T('צור GetPivotData'), { big: true, id: 'shPvGpdBtn', title: T('לחיצה על ערך של טבלת ציר בזמן כתיבת נוסחה כותבת GETPIVOTDATA במקום כתובת התא') })),
+    group(T('פעולות'), '', rbtn('shPvDelete', 'delete', T('מחיקה'), { big: true, title: T('מחיקת טבלת הציר') })));
+  const rename = () => {
+    const x = pivotAt(WS, SEL.r, SEL.c), n = name.value.trim().slice(0, 255);
+    if (!x || !n || n === x.name) return;
+    if (WS.pivots.some(y => y !== x && y.name.toLowerCase() === n.toLowerCase())) { toast(T('כבר יש בגיליון טבלת ציר בשם הזה'), { icon: 'error' }); name.value = x.name; return; }
+    setPivot(WS, x, { name: n });
+  };
+  name.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); rename(); focusGrid(); } });
+  name.addEventListener('blur', rename);
+  V.pvName = name;
+  return p;
+}
+function pivotTab() {
+  if (!V.pvTab) return;
+  const x = WS && pivotAt(WS, SEL.r, SEL.c), show = !!x;
+  if (V.pvTab.hidden === show) { V.pvTab.hidden = !show; if (!show && S.tab === 'spivot') selectTab('shome'); }
+  if (x && document.activeElement !== V.pvName) V.pvName.value = x.name;
+  const b = document.getElementById('shPvFieldsBtn'); if (b) b.classList.toggle('on', PV.open);
+  const b2 = document.getElementById('shPvGpdBtn'); if (b2) b2.classList.toggle('on', PREFS.shGpd !== false);
+  pivotPane(x);
+}
 /* every formula's structured references to table t, changed by fn(the reference, the formula's cell): what fn gives
    back takes its place (text); null leaves it */
 function mapTrefs(t, fn) {
@@ -9476,7 +10173,7 @@ function renameTable(n) {
   if (!t || n === t.name) return;
   const why = nameProblem(n) || (tableNames().has(n.toLowerCase()) && n.toLowerCase() !== t.name.toLowerCase() ? T('כבר יש שם כזה. אפשר לבחור שם אחר.') : null);
   if (why) { toast(why, { icon: 'error', ms: 6000 }); tableTab(); return; }
-  edit(() => { setTableOpt(t, { name: n }); renameTableRefs(t, n); });
+  edit(() => { setTableOpt(t, { name: n }); renameTableRefs(t, n); for (const sh of WB.sheets) if (sh.pivots.some(x => x.src.toLowerCase() === t.name.toLowerCase())) setProp(sh, 'pivots', sh.pivots.map(x => x.src.toLowerCase() === t.name.toLowerCase() ? { ...x, src: n } : x)); });
   focusGrid();
 }
 /* =========================================================
