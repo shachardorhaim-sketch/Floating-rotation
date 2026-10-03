@@ -2641,7 +2641,15 @@ window.INK_I18N = {
 "שורות@pivot": "Lignes",
 "צור GetPivotData": "Générer GetPivotData",
 "לחיצה על ערך של טבלת ציר בזמן כתיבת נוסחה כותבת GETPIVOTDATA במקום כתובת התא": "Cliquer sur une valeur du tableau croisé dynamique pendant la saisie d'une formule écrit GETPIVOTDATA au lieu de l'adresse de la cellule",
-"הצגה@pivot": "Afficher"
+"הצגה@pivot": "Afficher",
+"אין בחוברת טבלאות ציר": "Ce classeur ne contient aucun tableau croisé dynamique",
+"טבלת הציר לוקחת שוב את הנתונים בכל פעם שהחוברת נפתחת": "Le tableau croisé dynamique reprend ses données à chaque ouverture du classeur",
+"טבלת הציר לוקחת שוב את הנתונים מהמקור שלה (Alt+F5)": "Le tableau croisé dynamique reprend les données de sa source (Alt+F5)",
+"כל טבלאות הציר בחוברת לוקחות שוב את הנתונים (Ctrl+Alt+F5)": "Tous les tableaux croisés dynamiques du classeur reprennent leurs données (Ctrl+Alt+F5)",
+"רענון": "Actualiser",
+"רענון בפתיחה": "Actualiser à l'ouverture",
+"רענון הכל": "Actualiser tout",
+"שאילתות וחיבורים": "Requêtes et connexions"
 },
 "plurals": {
 "{n} מילים": {

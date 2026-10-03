@@ -4775,6 +4775,7 @@ function gridKey(e) {
     return true;
   }
   if (k === 'F2' && e.shiftKey && !mod) { e.preventDefault(); noteEdit(); return true; }
+  if (k === 'F5' && e.altKey && !e.shiftKey) { e.preventDefault(); pivotRefresh(mod); return true; }   // Alt+F5: this pivot table; Ctrl+Alt+F5: all of them
   if (mod && !e.shiftKey && !e.altKey && (k === 'k' || k === 'K' || e.code === 'KeyK')) { e.preventDefault(); linkDialog(); return true; }
   if (k === 'F2') { e.preventDefault(); startEdit('edit'); return true; }
   if (k === 'F3' && e.shiftKey && !mod) { e.preventDefault(); fnDialog(); return true; }
@@ -6229,7 +6230,8 @@ function ribbonPanels() {
     group(T('מיון'), '', rbtn('shSort', 'arrow_upward', T('מהקטן לגדול'), { big: true, arg: 'a', title: T('מיון מהקטן לגדול (א עד ת)') }), rbtn('shSort', 'arrow_downward', T('מהגדול לקטן'), { big: true, arg: 'd', title: T('מיון מהגדול לקטן (ת עד א)') }), rbtn('shSortDlg', 'sort', T('מיון מותאם'), { big: true })),
     group(T('סינון'), '', rbtn('shFilter', 'filter_alt', T('סינון'), { big: true, id: 'shFilterBtn', title: T('כפתורי סינון בשורת הכותרות (Ctrl+Shift+L)') }), rbtn('shFilterClear', 'filter_alt_off', T('ניקוי הסינון'), { big: true })),
     group(T('כלי נתונים'), '', rbtn('shDvList', 'arrow_drop_down', T('רשימה נפתחת'), { big: true, title: T('רשימה של ערכים לבחירה בתוך התא') }),
-      rbtn('shDvMenu', UI_DIR === 'rtl' ? 'checklist_rtl' : 'checklist', T('אימות נתונים'), { big: true, title: T('מה מותר להקליד בתאים, הודעות, וסימון של ערכים לא תקינים') })));
+      rbtn('shDvMenu', UI_DIR === 'rtl' ? 'checklist_rtl' : 'checklist', T('אימות נתונים'), { big: true, title: T('מה מותר להקליד בתאים, הודעות, וסימון של ערכים לא תקינים') })),
+    group(T('שאילתות וחיבורים'), '', rbtn('shPvRefreshAll', 'sync', T('רענון הכל'), { big: true, title: T('כל טבלאות הציר בחוברת לוקחות שוב את הנתונים (Ctrl+Alt+F5)') })));
   const viewP = h('div', { class: 'panel sheet-only', 'data-panel': 'sview', hidden: true },
     group(T('חלון'), '', rbtn('shFreezeMenu', 'ac_unit', T('הקפאה'), { big: true, title: T('השורות והעמודות הראשונות נשארות במקום בגלילה') })),
     group(T('תצוגה@view'), '', rbtn('shGrid', 'grid_on', T('קווי רשת'), { big: true, id: 'shGridBtn' }), rbtn('shDir', 'format_textdirection_r_to_l', T('גיליון מימין לשמאל'), { big: true, id: 'shDirBtn' })),
@@ -6823,7 +6825,7 @@ const COMMANDS = {
   shSort: a => quickSort(a === 'd'), shSortDlg: () => sortDialog(), shFilter: () => toggleFilter(), shFilterClear: () => clearFilter(),
   shDvList: () => dvDialog('list'), shDvMenu: (a, b) => dvMenu(b),
   shNote: () => noteEdit(), shLink: () => linkDialog(), shPic: () => pickPicture(),
-  shTable: () => tableDialog(), shPivot: () => pivotDialog(), shPvFields: () => pivotPaneToggle(), shPvGpd: () => { PREFS.shGpd = PREFS.shGpd === false; savePrefs(); pivotTab(); }, shPvSource: () => pivotSourceDialog(), shPvDelete: () => pivotDelete(), shTblGallery: (a, b) => tableGallery(b), shTblStyle: (a, b) => tableGallery(b, true), shTblConvert: () => tableToRange(), shShowF: () => toggleFormulas(), shFxHelp: () => formulaHelp(), shFnDlg: () => fnDialog(), shFnCat: (a, b) => fnCatMenu(a, b), shCfMenu: (a, b) => cfMenu(b),
+  shTable: () => tableDialog(), shPivot: () => pivotDialog(), shPvFields: () => pivotPaneToggle(), shPvRefresh: () => pivotRefresh(false), shPvRefreshAll: () => pivotRefresh(true), shPvRol: () => { const x = pivotAt(WS, SEL.r, SEL.c); if (x) setPivot(WS, x, { rol: !x.rol }); }, shPvGpd: () => { PREFS.shGpd = PREFS.shGpd === false; savePrefs(); pivotTab(); }, shPvSource: () => pivotSourceDialog(), shPvDelete: () => pivotDelete(), shTblGallery: (a, b) => tableGallery(b), shTblStyle: (a, b) => tableGallery(b, true), shTblConvert: () => tableToRange(), shShowF: () => toggleFormulas(), shFxHelp: () => formulaHelp(), shFnDlg: () => fnDialog(), shFnCat: (a, b) => fnCatMenu(a, b), shCfMenu: (a, b) => cfMenu(b),
   shFreezeMenu: (a, b) => freezeMenu(b), shGrid: () => edit(() => setProp(WS, 'gl', !WS.gl)), shDir: () => edit(() => setProp(WS, 'dir', WS.dir === 'rtl' ? 'ltr' : 'rtl')),
   shZoom: a => setZoom(+a === 0 ? 100 : WS.zoom + (+a > 0 ? 10 : -10)),
 };
@@ -7197,11 +7199,12 @@ async function addXlsxTables(buf) {
   zip.file('[Content_Types].xml', ct);
   return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
 }
-/* pivot tables into a workbook ExcelJS wrote, as Excel writes them: for each, a cache (its source's fields, the items of
-   those in its rows, columns and filters, and the records) and its own part (where it stands, its fields in each area,
-   the items a filter lets through, its values and its style), the workbook's <pivotCaches> and the sheet's link to it.
-   The cells it shows are already in the sheet as values; Excel works it out again when it opens the file (refreshOnLoad),
-   so there too it follows its data. One with no room on its sheet, or no source, stays only as the cells it shows */
+/* pivot tables into a workbook ExcelJS wrote, as Excel writes them: for each, its cache (its copy of the data: the
+   fields, the items of those in its rows, columns and filters, and the records) and its own part (where it stands, its
+   fields in each area with their items, the items a filter lets through, its values and its style), the workbook's
+   <pivotCaches> and the sheet's link to it. The cells it shows are already in the sheet as values; Excel shows the same
+   copy, and refreshes it when the file opens only if it is set to (refreshOnLoad). One with no room on its sheet, or no
+   source, stays only as the cells it shows */
 async function addXlsxPivots(buf) {
   const JSZip = await zipLib(), zip = await JSZip.loadAsync(buf);
   const a = v => xlAttr(String(v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '')).replace(/\r/g, '&#13;').replace(/\t/g, '&#9;');
@@ -7255,7 +7258,7 @@ async function addXlsxPivots(buf) {
       // the source: a table, or a name of the workbook, by its name; else the range and its sheet
       const tb = tableByName(p.src), nm = !tb && (WB.names || NO_NAMES).find(q => !q.s && q.n.toLowerCase() === p.src.toLowerCase());
       const ws = tb ? `<worksheetSource name="${a(tb.t.name)}"/>` : nm ? `<worksheetSource name="${a(nm.n)}"/>` : `<worksheetSource ref="${rangeA1(R.g)}" sheet="${a(R.s.name)}"/>`;
-      zip.file(`xl/pivotCache/pivotCacheDefinition${n}.xml`, XH + `<pivotCacheDefinition ${NS} r:id="rId1" refreshOnLoad="1" createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="${D.recs.length}">` +
+      zip.file(`xl/pivotCache/pivotCacheDefinition${n}.xml`, XH + `<pivotCacheDefinition ${NS} r:id="rId1"${p.rol ? ' refreshOnLoad="1"' : ''} createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="${D.recs.length}">` +
         `<cacheSource type="worksheet">${ws}</cacheSource><cacheFields count="${F.length}">${F.map(f => f.xml).join('')}</cacheFields></pivotCacheDefinition>`);
       zip.file(`xl/pivotCache/pivotCacheRecords${n}.xml`, XH + `<pivotCacheRecords ${NS} count="${D.recs.length}">${recs}</pivotCacheRecords>`);
       zip.file(`xl/pivotCache/_rels/pivotCacheDefinition${n}.xml.rels`, link(RELS, 'pivotCacheRecords', `pivotCacheRecords${n}.xml`)[0]);
@@ -7357,9 +7360,10 @@ async function importPivots(buf, nb, xlNames, rep) {
         for (const r of xdesc(sr, 'Relationship').filter(r => /\/pivotTable$/.test(xat(r, 'Type') || ''))) {
           const tp = partPath(path, xat(r, 'Target') || ''), td = await xml(tp), tr = td && await xml(relsOf(tp));
           const cr = tr && xdesc(tr, 'Relationship').find(q => /\/pivotCacheDefinition$/.test(xat(q, 'Type') || ''));
-          const cd = cr && await xml(partPath(tp, xat(cr, 'Target') || ''));
+          const cp = cr && partPath(tp, xat(cr, 'Target') || ''), cd = cp && await xml(cp), crr = cd && await xml(relsOf(cp));
+          const rr = crr && xdesc(crr, 'Relationship').find(q => /\/pivotCacheRecords$/.test(xat(q, 'Type') || '')), rd = rr && await xml(partPath(cp, xat(rr, 'Target') || ''));   // its copy of the data
           let got = null;
-          try { got = td && cd ? pivotFromXml(td.documentElement, cd.documentElement, xlNames, nb) : null; } catch (e) { console.warn(e); }
+          try { got = td && cd ? pivotFromXml(td.documentElement, cd.documentElement, xlNames, nb, rd && rd.documentElement) : null; } catch (e) { console.warn(e); }
           if (!got || s.pivots.length >= 50 || s.pivots.some(q => q.name.toLowerCase() === got.p.name.toLowerCase())) { rep.set('pivot', (rep.get('pivot') || 0) + 1); continue; }
           for (const g of got.area) for (let rr = g.r1; rr <= g.r2; rr++) for (let cc = g.c1; cc <= g.c2; cc++) s.cells.delete(KEY(rr, cc));   // Excel's cells for it: it shows its own
           s.pivots.push(got.p);
@@ -7368,9 +7372,10 @@ async function importPivots(buf, nb, xlNames, rep) {
     } finally { [WB, WS] = keep; }
   } catch (e) { console.warn(e); }
 }
-/* one pivot table from its part (e) and its cache's (c): { p: the pivot table, area: the cells Excel wrote for it }, or
-   null for one this keeps as cells */
-function pivotFromXml(e, c, xlNames, nb) {
+/* one pivot table from its part (e), its cache's (c) and the cache's records (rc): { p: the pivot table, area: the
+   cells Excel wrote for it }, or null for one this keeps as cells. The records are its copy of the data, which it shows
+   as Excel did; without them it takes its source as it is */
+function pivotFromXml(e, c, xlNames, nb, rc) {
   const yes = (el, k) => /^(1|true)$/.test(xat(el, k) || ''), no = (el, k) => /^(0|false)$/.test(xat(el, k) || '');
   const src = xkid(c, 'cacheSource'), ws = xkid(src, 'worksheetSource'), loc = xkid(e, 'location'), g = loc && parseRange(xat(loc, 'ref') || '');
   if (!src || (xat(src, 'type') || 'worksheet') !== 'worksheet' || !ws || [...ws.attributes].some(q => q.localName === 'id') || !g) return null;   // another file, or another kind of source
@@ -7417,7 +7422,11 @@ function pivotFromXml(e, c, xlNames, nb) {
   }
   const r0 = g.r1 - (pages.length ? pages.length + 1 : 0);
   if (r0 < 0) return null;
-  const p = normPivot({ name: xat(e, 'name') || 'PivotTable1', src: source, at: A1(r0, g.c1), rows: rows.map(i => names[i]), cols: cols.map(i => names[i]), vals, filt });
+  // the records: one value for each field of the source (a calculated one has none), an item's place (x) or the value
+  const db = cfs.map((f, i) => i).filter(i => xat(cfs[i], 'databaseField') !== '0'), recs = [];
+  for (const r of rc ? xkids(rc, 'r').slice(0, 200000) : []) recs.push(xkids(r).slice(0, db.length).map((el, j) => el.localName === 'x' ? shared[db[j]][+xat(el, 'v') || 0] ?? null : one(el)));
+  const cache = rc ? { head: db.map(i => names[i]), recs } : null;
+  const p = normPivot({ name: xat(e, 'name') || 'PivotTable1', src: source, at: A1(r0, g.c1), rows: rows.map(i => names[i]), cols: cols.map(i => names[i]), vals, filt, ...(cache ? { cache: { head: cache.head, recs: cache.recs.map(r => r.map(v => isErr(v) ? { e: v.c } : v)) } } : {}), ...(yes(c, 'refreshOnLoad') ? { rol: true } : {}) });
   return p && { p, area: [g, ...(pages.length ? [{ r1: r0, c1: g.c1, r2: g.r1 - 1, c2: Math.min(MAXC - 1, g.c1 + 1) }] : [])] };
 }
 /* the file's charts onto its sheets (by the sheet's name in the file); kinds that aren't here are counted for the report */
@@ -7958,6 +7967,7 @@ function applySpec(book, s, spec, log) {
     n++;
   }
   if (dv !== s.dv) setProp(s, 'dv', dv.slice(-DV_MAX));
+  if (spec.refresh_pivots === true && book === WB) { recalc(); refreshPivots(); }   // Excel's Refresh All, with what was just written worked out first
   if (spec.freeze_rows != null) setProp(s, 'fr', clamp(Math.round(+spec.freeze_rows) || 0, 0, 200));
   if (spec.freeze_columns != null) setProp(s, 'fc', clamp(Math.round(+spec.freeze_columns) || 0, 0, 60));
   if (spec.direction === 'rtl' || spec.direction === 'ltr') setProp(s, 'dir', spec.direction);
@@ -8042,7 +8052,7 @@ function forAI(args = {}) {
   const out = { sheets: WB.sheets.map(x => { const u = usedRange(x); return { name: x.name, used_range: u ? rangeA1(u) : null }; }), sheet: s.name, direction: s.dir };
   if (s.pics.length) out.pictures = s.pics.map(x => ({ at: A1(x.at.r, x.at.c), width: x.w, height: x.h, ...(x.alt ? { alt: x.alt } : {}) }));
   if (s.pivots.length) out.pivots = s.pivots.map(x => ({ name: x.name, at: A1(x.at.r, x.at.c), source: x.src, rows: x.rows, columns: x.cols, values: x.vals.map(v => v.n || T(PV_FN[v.fn], v.f)), ...(x.filt.length ? { filters: x.filt.map(f => f.f) } : {}),
-    note: 'Its cells show in the rows above (worked out from the source each time); they can not be written over' }));
+    ...(x.rol ? { refresh_on_open: true } : {}), note: 'Its cells show in the rows above, from its copy of the data as it was at its last refresh (as in Excel); they can not be written over. After its data changes, write_cells with refresh_pivots: true refreshes it' }));
   if (s.tables.length) out.tables = s.tables.map(t => ({ name: t.name, range: rangeA1(t.g), columns: t.cols.map(c => c.n), style: t.style, ...(t.hr ? {} : { header_row: false }), ...(t.tr ? { total_row: true } : {}),
     note: 'A formula may use its columns: =SUM(' + t.name + '[' + tColEsc(t.cols[t.cols.length - 1].n) + ']), or [@Column] for the same row inside the table' }));
   if (s.charts.length) out.charts = s.charts.map(ch => ({ type: Object.keys(CK_API).find(k => CK_API[k] === ch.ck), ...(ch.ti ? { title: ch.ti } : {}), data: ch.src ? ch.src.ref : ch.ser.map(x => x.v).join(', '), at: A1(ch.at.r, ch.at.c) }));
@@ -8129,6 +8139,7 @@ function load(body, cur) {
   WS = WB.sheets[WB.active] || WB.sheets[0];
   GEO = null;
   SEL = { r: WS.ac.r, c: WS.ac.c, er: WS.ac.r, ec: WS.ac.c };
+  pivotsOnOpen();
   recalc();
   CHV++; CH.id = null;
   for (const s of WB.sheets) filterRows(s);
@@ -8974,7 +8985,7 @@ function gOut(s) {
   if (s.pics.length) o.pi = s.pics.map(x => { const y = picOut(x), a = rid(x.at.r), b = cid(x.at.c); delete y.dx; delete y.dy; return a && b ? { ...y, at: [a, b, x.at.dx, x.at.dy] } : null; }).filter(Boolean);
   for (const key of RULE_KEYS) if (s[key].length) o[key] = s[key].map(rule => { const x = cfOut(rule), b = rule.g.map(box); delete x.ref; return b.every(Boolean) ? { ...x, g: b } : null; }).filter(Boolean);
   if (s.tables.length) o.tb = s.tables.map(t => { const x = tableOut(t), b = box(t.g); delete x.ref; return b ? { ...x, g: b } : null; }).filter(Boolean);
-  if (s.pivots.length) o.pv = s.pivots.map(x => { const y = pivotOut(x), a = rid(x.at.r), b = cid(x.at.c); delete y.at; return a && b ? { ...y, at: [a, b] } : null; }).filter(Boolean);
+  if (s.pivots.length) o.pv = s.pivots.map(x => { const y = pivotOut(x), a = rid(x.at.r), b = cid(x.at.c); delete y.at; if (x.cache) y.cache = cacheText(x.cache); return a && b ? { ...y, at: [a, b] } : null; }).filter(Boolean);   // its copy of the data as one text
   return o;
 }
 /* the same, checked, from someone else */
@@ -9017,7 +9028,7 @@ function gNorm(v) {
     const o2 = tableOut(t); delete o2.ref; return { ...o2, g: b };
   }).filter(Boolean);
   if (tb.length) o.tb = tb;
-  const pv = (Array.isArray(v.pv) ? v.pv : []).slice(0, 50).map(x => { const a = x && Array.isArray(x.at) && x.at.length === 2 && okid(x.at[0]) && okid(x.at[1]) ? x.at : null, q = a && normPivot({ ...x, at: 'A1' }); if (!q) return null; const o2 = pivotOut(q); delete o2.at; return { ...o2, at: [a[0], a[1]] }; }).filter(Boolean);
+  const pv = (Array.isArray(v.pv) ? v.pv : []).slice(0, 50).map(x => { const a = x && Array.isArray(x.at) && x.at.length === 2 && okid(x.at[0]) && okid(x.at[1]) ? x.at : null, q = a && normPivot({ ...x, at: 'A1' }); if (!q) return null; const o2 = pivotOut(q); delete o2.at; if (q.cache) o2.cache = cacheText(q.cache); return { ...o2, at: [a[0], a[1]] }; }).filter(Boolean);
   if (pv.length) o.pv = pv;
   for (const key of RULE_KEYS) {
     const rules = (Array.isArray(v[key]) ? v[key] : []).slice(0, key === 'dv' ? DV_MAX : 500).map(x => {
@@ -9726,12 +9737,40 @@ function tableFill(s, r, c, text) {
    averages and the like, and filters. A sheet's pivot tables are s.pivots: { id, name, src (the source, written like a
    chart's range or a table's name), at (where it starts on its sheet), rows, cols: field names (a field is in one of
    rows, columns and filters), vals: [{ f, fn: sum count average max min product countNums stdDev stdDevp var varp,
-   n: its own caption }], filt: [{ f, v: the values it lets through }] }. Its cells are worked out after the formulas, each time, and show where it stands like an array's
-   spill (s._sp, with their look); typing over them is refused, as in Excel, where they would need a refresh
+   n: its own caption }], filt: [{ f, v: the values it lets through }], cache: { head, recs }, rol: refresh when the
+   workbook opens }. Like Excel's, it keeps a copy of its data (the cache: the source's field names and records as they
+   were) and shows that copy until it is refreshed (Refresh, Alt+F5; Refresh All, Ctrl+Alt+F5); a change of its fields
+   works the copy out again, without the source. Its cells are worked out after the formulas and show where it stands
+   like an array's spill (s._sp, with their look); typing over them is refused, as in Excel
    ========================================================= */
 const PV_FN = { sum: N_('סכום של {0}'), count: N_('ספירה של {0}'), average: N_('ממוצע של {0}'), max: N_('מקסימום של {0}'), min: N_('מינימום של {0}'), product: N_('מכפלה של {0}'), countNums: N_('ספירה של {0}'),
   stdDev: N_('סטיית תקן של {0}'), stdDevp: N_('סטיית תקן באוכלוסייה של {0}'), var: N_('שונות של {0}'), varp: N_('שונות של {0}') };   // the captions Excel 2016 in Hebrew gives (measured), the same for count and countNums, and for var and varp
 const PV_FN_WORD = { sum: N_('סכום'), count: N_('ספירה'), average: N_('ממוצע'), max: N_('מקסימום'), min: N_('מינימום'), product: N_('מכפלה'), countNums: N_('ספירת מספרים'), stdDev: N_('סטיית תקן'), stdDevp: N_('סטיית תקן באוכלוסייה'), var: N_('שונות'), varp: N_('שונות באוכלוסייה') };
+/* a cache as it is kept: { head: the field names, recs: rows of values (an error is an Err) }. One that was checked
+   already is used as it is (PV_OK), and its form for saving is made once (PV_JSON) */
+const PV_OK = new WeakSet(), PV_JSON = new WeakMap(), PV_STR = new WeakMap(), PV_TXT = new Map();
+const cacheText = c => { let t = PV_STR.get(c); if (t == null) { t = JSON.stringify(cacheOut(c)); PV_STR.set(c, t); } return t; };
+function normCache(c) {
+  if (typeof c === 'string') {   // as a room carries it: the same text gives the same cache
+    let hit = PV_TXT.get(c);
+    if (!hit) { try { hit = normCache(JSON.parse(c)); } catch { hit = null; } if (PV_TXT.size > 16) PV_TXT.delete(PV_TXT.keys().next().value); PV_TXT.set(c, hit); }
+    return hit;
+  }
+  if (!c || typeof c !== 'object') return null;
+  if (PV_OK.has(c)) return c;
+  if (!Array.isArray(c.head) || !c.head.length) return null;
+  const head = c.head.slice(0, 500).map(h1 => typeof h1 === 'string' ? h1.slice(0, 255) : ''), w = head.length;
+  const one = v => v == null ? null : typeof v === 'number' ? (Number.isFinite(v) ? v : null) : typeof v === 'string' ? v.slice(0, 32767) : typeof v === 'boolean' ? v : v && typeof v === 'object' && ERR[v.e] ? ERR[v.e] : null;
+  const recs = (Array.isArray(c.recs) ? c.recs : []).slice(0, 200000).filter(Array.isArray).map(r => { const o = new Array(w); for (let j = 0; j < w; j++) o[j] = one(r[j]); return o; });
+  const out = { head, recs };
+  PV_OK.add(out);
+  return out;
+}
+function cacheOut(c) {
+  let j = PV_JSON.get(c);
+  if (!j) { j = { head: c.head.slice(), recs: c.recs.map(r => r.map(v => isErr(v) ? { e: v.c } : v)) }; PV_JSON.set(c, j); }
+  return j;
+}
 function normPivot(x) {
   if (!x || typeof x !== 'object') return null;
   const at = typeof x.at === 'string' ? parseA1(x.at) : x.at && Number.isInteger(x.at.r) && Number.isInteger(x.at.c) ? { r: x.at.r, c: x.at.c } : null;
@@ -9743,9 +9782,13 @@ function normPivot(x) {
   const rows = names(x.rows).filter(one), cols = names(x.cols).filter(one);
   const filt = (Array.isArray(x.filt) ? x.filt : []).map(v => v && typeof v === 'object' && typeof v.f === 'string' && v.f.trim() ? { f: v.f.trim().slice(0, 255), ...(Array.isArray(v.v) ? { v: v.v.map(String).slice(0, 10000) } : {}) } : null).filter(v => v && one(v.f)).slice(0, 16);
   const name = typeof x.name === 'string' && x.name.trim() ? x.name.trim().slice(0, 255) : 'PivotTable1';
-  return { id: typeof x.id === 'string' && /^[a-z0-9]{4,24}$/.test(x.id) ? x.id : sid(), name, src, at: { r: at.r, c: at.c }, rows, cols, vals, filt };
+  const cache = normCache(x.cache);
+  return { id: typeof x.id === 'string' && /^[a-z0-9]{4,24}$/.test(x.id) ? x.id : sid(), name, src, at: { r: at.r, c: at.c }, rows, cols, vals, filt, ...(cache ? { cache } : {}), ...(x.rol === true ? { rol: true } : {}) };
 }
-function pivotOut(x) { return { id: x.id, name: x.name, src: x.src, at: A1(x.at.r, x.at.c), rows: x.rows.slice(), cols: x.cols.slice(), vals: x.vals.map(v => ({ ...v })), filt: x.filt.map(v => ({ ...v })) }; }
+function pivotOut(x) {
+  return { id: x.id, name: x.name, src: x.src, at: A1(x.at.r, x.at.c), rows: x.rows.slice(), cols: x.cols.slice(), vals: x.vals.map(v => ({ ...v })), filt: x.filt.map(v => ({ ...v })),
+    ...(x.cache ? { cache: cacheOut(x.cache) } : {}), ...(x.rol ? { rol: true } : {}) };
+}
 /* the source now: a table's name is its header row and data; otherwise a range (or a defined name) like a chart's */
 function pivotSrc(s, x) {
   const tb = tableByName(x.src);
@@ -9753,8 +9796,18 @@ function pivotSrc(s, x) {
   const R = chartRef(s, x.src);
   return R && R.s ? { s: R.s, g: R.g } : null;
 }
-/* the source's fields (its first row) and records (the rest) */
-function pivotData(s, x) {
+/* what a pivot table shows: its cache, or (for one that has none yet) its source as it is now */
+const pivotData = (s, x) => x.cache || pivotRead(s, x);
+/* the source as it is now, as a cache to keep: what a pivot table takes when it is made and when it is refreshed */
+function pivotSnap(s, x) {
+  const D = pivotRead(s, x);
+  if (!D || !D.head.length) return null;
+  const c = { head: D.head, recs: D.recs };
+  PV_OK.add(c);
+  return c;
+}
+/* the source's fields (its first row) and records (the rest), now */
+function pivotRead(s, x) {
   const R = pivotSrc(s, x);
   if (!R) return null;
   const { s: sh, g } = R, w = Math.min(g.c2 - g.c1 + 1, 500), u = usedEnd(sh), r2 = Math.min(g.r2, Math.max(g.r1, u.r - 1), g.r1 + 200000);
@@ -9893,18 +9946,17 @@ function pivotGrid(s, x) {
   else if (vals.length) line(colF.length && vals.length === 1 ? cap(vals[0]) : null, '0|', colF.length && vals.length === 1 ? GT : {}, 0, colF.length && vals.length === 1);   // with no rows, Excel shows the one value's row as its grand total
   return { rows: out, rowList, cols };
 }
-/* GETPIVOTDATA, as Excel's: what a pivot table shows. data_field: one of its value fields, by its caption or by its
-   field's name; pivot_table: any of its cells; then pairs of one of its row or column fields and an item of it. Fewer
-   pairs give a subtotal, none the grand total. #REF! for what it doesn't show. Its source is worked out first */
+/* GETPIVOTDATA, as Excel's: what a pivot table shows (from its copy of the data). data_field: one of its value
+   fields, by its caption or by its field's name; pivot_table: any of its cells; then pairs of one of its row or column
+   fields and an item of it. Fewer pairs give a subtotal, none the grand total. #REF! for what it doesn't show */
 function getPivotData(a) {
   PV_READ = true;
   const at = refOf(a[1]), df = argS(a[0]);
   if (isErr(df)) return df;
   if (!at || !at.rng) return E_REF;
   const s = at.s, hit = s._pva && [...s._pva].find(([, g]) => !g.bad && inG(g, at.g.r1, at.g.c1)), x = hit && s.pivots.find(p => p.id === hit[0]);
-  const R = x && pivotSrc(s, x), D = R && pivotData(s, x);
+  const D = x && pivotData(s, x);
   if (!D) return E_REF;
-  pointsAt(R);
   const low = t => String(t).toLowerCase(), idx = n => D.head.findIndex(h1 => low(h1) === low(n));
   const name = low(str(df)), vals = x.vals.filter(v => idx(v.f) >= 0), v = vals.find(q => low(q.n || T(PV_FN[q.fn], q.f)) === name) || vals.find(q => low(q.f) === name);
   if (!v || a.length % 2) return E_REF;
@@ -9954,6 +10006,7 @@ function pivotRefText(s, r, c) {
 const pivotAt = (s, r, c) => { if (!s._pva) return null; for (const [id, g] of s._pva) if (inG(g, r, c)) return s.pivots.find(x => x.id === id) || null; return null; };
 /* its cells into the sheet, like an array's spill; filled cells in the way leave only a word in its first cell */
 function placePivot(s, x) {
+  if (!x.cache) { const c = pivotSnap(s, x); if (c) x.cache = c; }   // its copy of the data, taken once (a new pivot table, or one kept before copies)
   let G;
   try { G = pivotGrid(s, x); } catch (e) { console.warn(e); G = { rows: [[{ v: E_VAL }]] }; }
   const h0 = G.rows.length, w0 = Math.max(1, ...G.rows.map(r => r.length)), g = { r1: x.at.r, c1: x.at.c, r2: Math.min(MAXR - 1, x.at.r + Math.max(1, h0) - 1), c2: Math.min(MAXC - 1, x.at.c + w0 - 1) };
@@ -10009,8 +10062,41 @@ function pivotDialog() {
     actions: [{ label: T('אישור'), kind: 'primary', run: apply }, { label: T('ביטול'), value: false }], onClose: () => { if (!MODALS.length) focusGrid(); } });
   for (const i of [src, at]) i.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); if (apply()) m.close(true); } });
 }
-/* one change to a pivot table, as one step */
-function setPivot(s, x, patch) { edit(() => setProp(s, 'pivots', s.pivots.map(y => y.id === x.id ? normPivot({ ...pivotOut(y), ...patch, at: A1(y.at.r, y.at.c) }) || y : y))); }
+/* one change to a pivot table, as one step (its copy of the data stays) */
+function setPivot(s, x, patch) { edit(() => setProp(s, 'pivots', s.pivots.map(y => y.id === x.id ? normPivot({ ...pivotOut(y), cache: y.cache, ...patch, at: A1(y.at.r, y.at.c) }) || y : y))); }
+/* a pivot table with a fresh copy of its source (src: a new source), as Excel refreshes it: the fields the data no
+   longer has leave it. null when the source isn't there */
+function pivotFresh(s, x, src = x.src) {
+  const c = pivotSnap(s, { src });
+  if (!c) return null;
+  const has = n => c.head.some(h1 => h1.toLowerCase() === n.toLowerCase());
+  return normPivot({ ...pivotOut(x), at: A1(x.at.r, x.at.c), src, rows: x.rows.filter(has), cols: x.cols.filter(has), vals: x.vals.filter(v => has(v.f)), filt: x.filt.filter(f => has(f.f)), cache: c });
+}
+/* inside an edit: the pivot tables (all of them, or the one of id and the others on the same source, which share its
+   copy of the data in Excel and are refreshed with it) take their data again. How many couldn't (their source is gone) */
+function refreshPivots(id) {
+  let lost = 0, src = null;
+  if (id) for (const s of WB.sheets) for (const x of s.pivots) if (x.id === id) src = x.src.toLowerCase();
+  const mine = x => !id || x.id === id || x.src.toLowerCase() === src;
+  for (const s of WB.sheets) {
+    if (!s.pivots.some(mine)) continue;
+    setProp(s, 'pivots', s.pivots.map(x => { if (!mine(x)) return x; const y = pivotFresh(s, x); if (!y) lost++; return y || x; }));
+  }
+  return lost;
+}
+/* Excel's Refresh (the pivot table of the chosen cell, Alt+F5) and Refresh All (every one, Ctrl+Alt+F5) */
+function pivotRefresh(all) {
+  if (!WB || (ED.on && !endEdit(true))) return;
+  const x = all ? null : WS && pivotAt(WS, SEL.r, SEL.c);
+  if (!all && !x) return;
+  if (all && !WB.sheets.some(s => s.pivots.length)) { toast(T('אין בחוברת טבלאות ציר')); return; }
+  let lost = 0;
+  edit(() => { lost = refreshPivots(x && x.id); });
+  if (lost) toast(T('טבלת הציר: המקור שלה לא נמצא'), { icon: 'error' });
+}
+/* when the workbook opens: the pivot tables set to refresh then take their data again (Excel's "Refresh data when
+   opening the file") */
+function pivotsOnOpen() { for (const s of WB.sheets) for (const x of s.pivots) if (x.rol) { const c = pivotSnap(s, x); if (c) x.cache = c; } }
 /* the field list (Excel's PivotTable Fields pane), beside the sheet while a pivot table's cell is chosen: the source's
    fields to check, and the four areas (filters, columns, rows, values), each field with its menu */
 const PV = { open: true };
@@ -10074,7 +10160,11 @@ function pivotSourceDialog() {
   if (!x) return;
   const src = h('input', { class: 'field', dir: 'ltr', value: x.src, spellcheck: 'false', autocomplete: 'off', 'aria-label': T('הטבלה או הטווח'), autofocus: true });
   modal({ title: T('שינוי מקור הנתונים'), body: h('div', { class: 'sh-nmd' }, h('label', { class: 'fld' }, h('span', { text: T('הטבלה או הטווח') }), src)),
-    actions: [{ label: T('אישור'), kind: 'primary', run: () => { const v = src.value.trim().replace(/^=/, ''); if (!pivotData(WS, { src: v })) { toast(T('זה לא טווח של תאים או שם של טבלה'), { icon: 'error' }); return false; } setPivot(WS, x, { src: v }); } }, { label: T('ביטול'), value: false }],
+    actions: [{ label: T('אישור'), kind: 'primary', run: () => {   // a new source: the pivot table is refreshed from it, as in Excel
+      const v = src.value.trim().replace(/^=/, ''), y = v && pivotFresh(WS, x, v);
+      if (!y) { toast(T('זה לא טווח של תאים או שם של טבלה'), { icon: 'error' }); return false; }
+      edit(() => setProp(WS, 'pivots', WS.pivots.map(q => q.id === x.id ? y : q)));
+    } }, { label: T('ביטול'), value: false }],
     onClose: () => { if (!MODALS.length) focusGrid(); } });
 }
 function pivotDelete() {
@@ -10088,7 +10178,10 @@ function pivotPanel() {
   const p = h('div', { class: 'panel sheet-only', 'data-panel': 'spivot', hidden: true },
     group(T('טבלת ציר'), '', h('div', { class: 'sh-tprops' }, h('span', { class: 'muted small', text: T('שם טבלת הציר') }), name)),
     group(T('הצגה@pivot'), '', rbtn('shPvFields', 'view_sidebar', T('רשימת שדות'), { big: true, id: 'shPvFieldsBtn', title: T('השדות והאזורים של טבלת הציר') })),
-    group(T('נתונים'), '', rbtn('shPvSource', 'database', T('שינוי מקור הנתונים'), { big: true })),
+    group(T('נתונים'), '', rbtn('shPvRefresh', 'refresh', T('רענון'), { big: true, title: T('טבלת הציר לוקחת שוב את הנתונים מהמקור שלה (Alt+F5)') }),
+      rbtn('shPvSource', 'database', T('שינוי מקור הנתונים'), { big: true }),
+      rbtn('shPvRefreshAll', 'sync', T('רענון הכל'), { title: T('כל טבלאות הציר בחוברת לוקחות שוב את הנתונים (Ctrl+Alt+F5)') }),
+      rbtn('shPvRol', 'update', T('רענון בפתיחה'), { id: 'shPvRolBtn', title: T('טבלת הציר לוקחת שוב את הנתונים בכל פעם שהחוברת נפתחת') })),
     group(T('נוסחאות'), '', rbtn('shPvGpd', 'functions', T('צור GetPivotData'), { big: true, id: 'shPvGpdBtn', title: T('לחיצה על ערך של טבלת ציר בזמן כתיבת נוסחה כותבת GETPIVOTDATA במקום כתובת התא') })),
     group(T('פעולות'), '', rbtn('shPvDelete', 'delete', T('מחיקה'), { big: true, title: T('מחיקת טבלת הציר') })));
   const rename = () => {
@@ -10109,6 +10202,7 @@ function pivotTab() {
   if (x && document.activeElement !== V.pvName) V.pvName.value = x.name;
   const b = document.getElementById('shPvFieldsBtn'); if (b) b.classList.toggle('on', PV.open);
   const b2 = document.getElementById('shPvGpdBtn'); if (b2) b2.classList.toggle('on', PREFS.shGpd !== false);
+  const b3 = document.getElementById('shPvRolBtn'); if (b3) b3.classList.toggle('on', !!(x && x.rol));
   pivotPane(x);
 }
 /* every formula's structured references to table t, changed by fn(the reference, the formula's cell): what fn gives

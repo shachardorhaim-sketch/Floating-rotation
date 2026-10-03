@@ -2641,7 +2641,15 @@ window.INK_I18N = {
 "שורות@pivot": "Rows",
 "צור GetPivotData": "Generate GetPivotData",
 "לחיצה על ערך של טבלת ציר בזמן כתיבת נוסחה כותבת GETPIVOTDATA במקום כתובת התא": "Clicking a PivotTable value while writing a formula writes GETPIVOTDATA instead of the cell address",
-"הצגה@pivot": "Show"
+"הצגה@pivot": "Show",
+"אין בחוברת טבלאות ציר": "This workbook has no PivotTables",
+"טבלת הציר לוקחת שוב את הנתונים בכל פעם שהחוברת נפתחת": "The PivotTable takes its data again each time the workbook opens",
+"טבלת הציר לוקחת שוב את הנתונים מהמקור שלה (Alt+F5)": "The PivotTable takes its data again from its source (Alt+F5)",
+"כל טבלאות הציר בחוברת לוקחות שוב את הנתונים (Ctrl+Alt+F5)": "Every PivotTable in the workbook takes its data again (Ctrl+Alt+F5)",
+"רענון": "Refresh",
+"רענון בפתיחה": "Refresh on open",
+"רענון הכל": "Refresh All",
+"שאילתות וחיבורים": "Queries & Connections"
 },
 "plurals": {
 "{n} מילים": {

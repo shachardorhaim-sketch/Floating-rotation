@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.12.0';
+const VERSION = '1.13.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -134,7 +134,7 @@ const SHEET = {
     total_row: { type: 'boolean', description: 'A total row under the table (true adds it; the last column is summed).' },
     banded_rows: { type: 'boolean', description: 'true by default.' }, banded_columns: { type: 'boolean' }, first_column: { type: 'boolean', description: 'The first column in bold.' }, last_column: { type: 'boolean' },
     filter_button: { type: 'boolean', description: 'true by default.' } }, required: ['range'] } },
-  pivots: { type: 'array', description: 'Pivot tables, as Excel\'s PivotTable: a summary of a table or a range by its fields (the headings of its first row), worked out again whenever the data changes, in Excel\'s compact layout with subtotals and grand totals. ' +
+  pivots: { type: 'array', description: 'Pivot tables, as Excel\'s PivotTable: a summary of a table or a range by its fields (the headings of its first row), in Excel\'s compact layout with subtotals and grand totals. As in Excel it keeps a copy of the data as it was when it was made, and shows that until it is refreshed: after changing its data, refresh it (write_cells with refresh_pivots). ' +
       'Write the data first (on this sheet or another), then the pivot table where there is room for it. Formulas can read its cells, and GETPIVOTDATA reads one value by its items: =GETPIVOTDATA("Sales",$H$3,"Region","North").', items: { type: 'object', properties: {
     source: { type: 'string', description: 'The data with its heading row: a range like A1:E200 (on this sheet) or Data!A1:E200, or a table\'s name like Sales.' },
     at: { type: 'string', description: 'The cell where the pivot table starts, like H3 (the default is beside the used part of the sheet). Leave room below it and beside it.' },
@@ -178,7 +178,8 @@ const TOOLS = [
     inputSchema: { type: 'object', properties: { id: DOC_ID, sheet: { type: 'string' }, range: { type: 'string', description: 'Like A1:F40.' } } }, annotations: { readOnlyHint: true } },
   { name: 'write_cells', description: 'Write values, formulas and formatting into a spreadsheet (it opens on screen, and the user can undo it with Ctrl+Z). The fields are the same as a sheet in create_spreadsheet. ' +
       '`sheet` picks a sheet by name (a new sheet is added if none has that name; leave out for the sheet on screen), `clear` empties a range first, and `names` defines, changes or deletes defined names.',
-    inputSchema: { type: 'object', properties: { id: DOC_ID, sheet: { type: 'string' }, clear: { type: 'string', description: 'A range to empty before writing, like A1:H50.' }, ...Object.fromEntries(Object.entries(SHEET).filter(([k]) => k !== 'name')), names: NAMES } } },
+    inputSchema: { type: 'object', properties: { id: DOC_ID, sheet: { type: 'string' }, clear: { type: 'string', description: 'A range to empty before writing, like A1:H50.' }, ...Object.fromEntries(Object.entries(SHEET).filter(([k]) => k !== 'name')), names: NAMES,
+      refresh_pivots: { type: 'boolean', description: 'true refreshes every pivot table of the spreadsheet after this call\'s writing (Excel\'s Refresh All): they take their data as it is now.' } } } },
   { name: 'create_document', description: 'Create a new document from Markdown and open it on the user\'s screen. Returns its id.',
     inputSchema: { type: 'object', properties: { title: { type: 'string' }, content: { type: 'string', description: 'Markdown' } }, required: ['title', 'content'] } },
   { name: 'write_in_document', description: 'Add Markdown content to a document (it opens on screen). where: "end" (default), "start", "after_selection" or "replace_selection" (the text the user selected).',

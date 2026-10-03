@@ -2641,7 +2641,15 @@ window.INK_I18N = {
 "שורות@pivot": "Linhas",
 "צור GetPivotData": "Gerar GetPivotData",
 "לחיצה על ערך של טבלת ציר בזמן כתיבת נוסחה כותבת GETPIVOTDATA במקום כתובת התא": "Clicar em um valor da Tabela Dinâmica ao escrever uma fórmula escreve GETPIVOTDATA em vez do endereço da célula",
-"הצגה@pivot": "Mostrar"
+"הצגה@pivot": "Mostrar",
+"אין בחוברת טבלאות ציר": "Esta pasta de trabalho não tem Tabelas Dinâmicas",
+"טבלת הציר לוקחת שוב את הנתונים בכל פעם שהחוברת נפתחת": "A Tabela Dinâmica busca os dados novamente sempre que a pasta de trabalho é aberta",
+"טבלת הציר לוקחת שוב את הנתונים מהמקור שלה (Alt+F5)": "A Tabela Dinâmica busca os dados novamente na fonte (Alt+F5)",
+"כל טבלאות הציר בחוברת לוקחות שוב את הנתונים (Ctrl+Alt+F5)": "Todas as Tabelas Dinâmicas da pasta de trabalho buscam os dados novamente (Ctrl+Alt+F5)",
+"רענון": "Atualizar",
+"רענון בפתיחה": "Atualizar ao abrir",
+"רענון הכל": "Atualizar Tudo",
+"שאילתות וחיבורים": "Consultas e Conexões"
 },
 "plurals": {
 "{n} מילים": {
