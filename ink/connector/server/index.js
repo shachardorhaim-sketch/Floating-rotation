@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.11.0';
+const VERSION = '1.12.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -67,7 +67,7 @@ const SHEET = {
   rows: { type: 'array', items: { type: 'array', items: {} }, description: 'Rows of cells from start, the first row first, the first column first. Each value is a number, text, true/false, or null for an empty cell. ' +
     'Text that starts with = is a formula, in English with commas as in Excel: =SUM(B2:B9), =AVERAGE(B2:D2), =IF(E2>=55,"pass","fail"), =B2*C2, =\'Sheet 2\'!B7. ' +
     'About 150 Excel functions work: SUM, SUMIF(S), SUMPRODUCT, ROUND, AVERAGE, COUNTIF(S), MAXIFS, MEDIAN, RANK, IF, IFS, AND, OR, IFERROR, SWITCH, TEXT, LEFT, MID, TEXTJOIN, SUBSTITUTE, TODAY, DATE, EDATE, DATEDIF, NETWORKDAYS, XLOOKUP, VLOOKUP, INDEX, MATCH and more, with + - * / ^ %, & (joining text), comparisons, cells and ranges. ' +
-    'As in Excel 365, a formula whose answer is several values spills them into the cells below and beside it: =SORT(A2:B20,2,-1), =FILTER(A2:C20,C2:C20>50), =UNIQUE(A2:A20), =SEQUENCE(10); leave those cells empty, and refer to the whole spill as A2#. INDIRECT and OFFSET work, and so do defined names (see names): =SUM(Prices). LET, LAMBDA and financial functions are not there yet (they show #NAME?). Write plain numbers (1200), and set their look with formats. ' +
+    'As in Excel 365, a formula whose answer is several values spills them into the cells below and beside it: =SORT(A2:B20,2,-1), =FILTER(A2:C20,C2:C20>50), =UNIQUE(A2:A20), =SEQUENCE(10); leave those cells empty, and refer to the whole spill as A2#. INDIRECT and OFFSET work, and so do defined names (see names): =SUM(Prices). So do LET and LAMBDA (with MAP, REDUCE, SCAN, BYROW, BYCOL and MAKEARRAY), Excel\'s financial functions (PMT, FV, NPV, IRR, XIRR, RATE and the rest), HYPERLINK, and a table\'s columns by name (see tables): =SUM(Sales[Price]). Write plain numbers (1200), and set their look with formats. ' +
     'One call takes up to 5,000 rows of up to 500 cells; for more, call write_cells again with a later start.' },
   cells: { type: 'object', additionalProperties: {}, description: 'Single cells by address, like {"B2": 1200, "C2": "=B2*2"}; the same values as rows.' },
   formats: { type: 'array', description: 'Formatting for ranges, applied in order (up to 500, each range up to 100,000 cells).', items: { type: 'object', properties: {
@@ -105,9 +105,11 @@ const SHEET = {
     colors: { type: 'array', items: { type: 'string' }, description: 'For color_scale: 2 or 3 colors #rrggbb, from the lowest values to the highest (red, yellow, green by default).' },
     icons: { type: 'string', enum: ['arrows', 'triangles', 'traffic_lights', 'signs', 'symbols', 'flags', 'stars', 'ratings', 'quarters'], description: 'For icon_set.' },
     reverse: { type: 'boolean', description: 'For icon_set: the icons the other way around.' }, hide_values: { type: 'boolean', description: 'For data_bar and icon_set: show only the bar or the icon.' },
+    border: { type: 'string', enum: ['all', 'top', 'bottom'], description: 'A thin line around each cell the rule changes (all), or above or below it, as Excel\'s rules allow.' },
+    border_style: { type: 'string', enum: ['solid', 'dashed', 'dotted'] }, border_color: { type: 'string', description: '#rrggbb (black by default).' },
     stop_if_true: { type: 'boolean' } }, required: ['range', 'type'] } },
   validations: { type: 'array', description: 'Data validation, as in Excel: a drop-down list in cells, or a limit on what a person may type into them (it follows the cells when they move, and is saved in Excel files). ' +
-      'A rule takes the place of any rule its cells had. It checks only what a person types: values you write are not stopped, and write_cells tells you which of them a rule does not allow.', items: { type: 'object', properties: {
+      'A rule takes the place of any rule its cells had. It checks only what a person types: values you write are not stopped, and write_cells tells you which of them a rule does not allow. A rule over a table\'s column reaches the rows a person adds to the table.', items: { type: 'object', properties: {
     range: { type: 'string', description: 'The cells, like B2:B50 (several ranges with spaces between them; B:B is a whole column).' },
     type: { type: 'string', enum: ['list', 'whole_number', 'decimal', 'date', 'time', 'text_length', 'custom', 'any', 'none'], description: 'list: a drop-down list. whole_number, decimal, date, time and text_length compare with operator and value. custom: a formula that must be true. any: no limit, only the input message. none: takes the rules of these cells away.' },
     values: { type: 'array', items: {}, description: 'For list: the items written out, like ["Yes", "No", "Maybe"] (no commas inside an item, up to 255 characters in all; for a longer list write the items in cells and give source).' },
@@ -122,6 +124,28 @@ const SHEET = {
     error_style: { type: 'string', enum: ['stop', 'warning', 'information'], description: 'What happens when a person types a value that is not valid. stop (the default): the value is refused. warning: they are asked whether to keep it. information: they are told, and the value goes in.' },
     error_title: { type: 'string', description: 'Up to 32 characters.' }, error_message: { type: 'string', description: 'The alert\'s text (up to 225 characters); a short default is used without it.' },
     show_error: { type: 'boolean', description: 'false: no alert at all, anything can be typed (true by default).' } }, required: ['range', 'type'] } },
+  notes: { type: 'object', additionalProperties: { type: 'string' }, description: 'Notes on cells, as Excel\'s notes (a red corner, shown when the pointer is over the cell): {"B2": "Checked with the bank"}. An empty text takes a note away.' },
+  links: { type: 'object', additionalProperties: { type: 'string' }, description: 'Links on cells: {"A2": "https://example.com"}, an email as "mailto:name@example.com", or a place in this workbook as "#Sheet2!A1". The cell keeps its value (write the text to show in it); an empty text takes the link away. A formula can also make one: =HYPERLINK("https://example.com","Site").' },
+  tables: { type: 'array', description: 'Formatted tables, as Excel\'s Format as Table: bands of color, a filter button on each heading, and a name. Write the cells first (rows), with the headings in the range\'s first row. ' +
+      'Formulas may use the table\'s columns by name: =SUM(Sales[Price]), =Sales[@Price]*Sales[@Qty] (the same row), or [@Price] inside the table; a formula written into an empty column fills the whole column. A row typed right below a table joins it.', items: { type: 'object', properties: {
+    range: { type: 'string', description: 'The table with its heading row, like A1:D20.' },
+    name: { type: 'string', description: 'Letters, digits and _, starting with a letter (Hebrew too), and not like a cell address; like Sales. Leave out for Table1, Table2...' },
+    style: { type: 'string', description: 'One of Excel\'s 60 table styles: Light1 to Light21, Medium1 to Medium28, Dark1 to Dark11 (Medium2, blue, by default).' },
+    total_row: { type: 'boolean', description: 'A total row under the table (true adds it; the last column is summed).' },
+    banded_rows: { type: 'boolean', description: 'true by default.' }, banded_columns: { type: 'boolean' }, first_column: { type: 'boolean', description: 'The first column in bold.' }, last_column: { type: 'boolean' },
+    filter_button: { type: 'boolean', description: 'true by default.' } }, required: ['range'] } },
+  pivots: { type: 'array', description: 'Pivot tables, as Excel\'s PivotTable: a summary of a table or a range by its fields (the headings of its first row), worked out again whenever the data changes, in Excel\'s compact layout with subtotals and grand totals. ' +
+      'Write the data first (on this sheet or another), then the pivot table where there is room for it. Formulas can read its cells, and GETPIVOTDATA reads one value by its items: =GETPIVOTDATA("Sales",$H$3,"Region","North").', items: { type: 'object', properties: {
+    source: { type: 'string', description: 'The data with its heading row: a range like A1:E200 (on this sheet) or Data!A1:E200, or a table\'s name like Sales.' },
+    at: { type: 'string', description: 'The cell where the pivot table starts, like H3 (the default is beside the used part of the sheet). Leave room below it and beside it.' },
+    name: { type: 'string', description: 'Leave out for PivotTable1, PivotTable2...' },
+    rows: { type: 'array', items: { type: 'string' }, description: 'Fields whose items become rows, the outer one first, like ["Region", "Product"].' },
+    columns: { type: 'array', items: { type: 'string' }, description: 'Fields whose items become columns.' },
+    values: { type: 'array', description: 'The fields to summarize, each a field\'s name or {field, summarize, name}.', items: { anyOf: [{ type: 'string' }, { type: 'object', properties: {
+      field: { type: 'string' }, summarize: { type: 'string', enum: ['sum', 'count', 'average', 'max', 'min', 'product', 'count_numbers', 'stddev', 'stddevp', 'var', 'varp'], description: 'sum by default; count counts every value, count_numbers only numbers.' },
+      name: { type: 'string', description: 'The caption over its column (the default is like Excel\'s: Sum of Sales, in the user\'s language).' } }, required: ['field'] }] } },
+    filters: { type: 'array', description: 'Fields that filter the whole pivot table, shown above it: a field\'s name, or {field, values} with the items it lets through.', items: { anyOf: [{ type: 'string' }, { type: 'object', properties: {
+      field: { type: 'string' }, values: { type: 'array', items: {} } }, required: ['field'] }] } } }, required: ['source'] } },
 };
 const NAMES = { type: 'array', description: 'Defined names, as in Excel: a name for a range of cells, a number or a formula, to write in formulas (=SUM(Prices)), as a list\'s source and in conditional formatting. ' +
     'They follow their cells when rows, columns or sheets change, and are saved in Excel files. A name that is already there takes the new meaning. ' +
@@ -150,7 +174,7 @@ const TOOLS = [
   { name: 'create_spreadsheet', description: 'Create a new spreadsheet (like Excel) and open it on the user\'s screen: one or more sheets of cells with values, formulas and formatting. ' +
       'Use it for tables, budgets, schedules, lists with totals and anything the user wants to calculate. Put a header row on top (bold, with a fill, frozen), give numbers a number_format, and total with formulas. Returns its id.',
     inputSchema: { type: 'object', properties: { title: { type: 'string' }, direction: SHEET.direction, sheets: { type: 'array', items: { type: 'object', properties: SHEET } }, names: NAMES }, required: ['title', 'sheets'] } },
-  { name: 'read_spreadsheet', description: 'Read a spreadsheet: the names of its sheets, its defined names, and for one sheet (the one on screen, or `sheet`) what each cell shows, the formulas in it, and its charts, conditional formatting and data validation (drop-down lists and limits on what may be typed). Without a range, reads the part that is used.',
+  { name: 'read_spreadsheet', description: 'Read a spreadsheet: the names of its sheets, its defined names, and for one sheet (the one on screen, or `sheet`) what each cell shows (the cells of pivot tables too), the formulas, notes and links in it, and its tables, pivot tables, pictures, charts, conditional formatting and data validation (drop-down lists and limits on what may be typed). Without a range, reads the part that is used.',
     inputSchema: { type: 'object', properties: { id: DOC_ID, sheet: { type: 'string' }, range: { type: 'string', description: 'Like A1:F40.' } } }, annotations: { readOnlyHint: true } },
   { name: 'write_cells', description: 'Write values, formulas and formatting into a spreadsheet (it opens on screen, and the user can undo it with Ctrl+Z). The fields are the same as a sheet in create_spreadsheet. ' +
       '`sheet` picks a sheet by name (a new sheet is added if none has that name; leave out for the sheet on screen), `clear` empties a range first, and `names` defines, changes or deletes defined names.',

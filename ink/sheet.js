@@ -7874,7 +7874,7 @@ function applySpec(book, s, spec, log) {
     if (d.total_row === true) { const y = totalRowOn(s, t); if (y) { setProp(s, 'tables', s.tables.map(o => o === t ? y : o)); t = y; } }
     n++;
   }
-  // pivot tables: { source (a range or a table's name), at, rows, columns, values: [{ field, summarize, name }], filters: [{ field, values }] }
+  // pivot tables: { source (a range or a table's name), at, rows, columns, values: [{ field, summarize, name }], filters: [{ field, values: the items it lets through }] }
   const pvNames = new Set(); for (const sh of book.sheets) for (const x of sh.pivots) pvNames.add(x.name.toLowerCase());
   for (const d of Array.isArray(spec.pivots) ? spec.pivots.slice(0, 20) : []) {
     if (!d || typeof d !== 'object' || typeof d.source !== 'string' || !d.source.trim()) continue;
@@ -7885,8 +7885,8 @@ function applySpec(book, s, spec, log) {
     let k = 1; while (pvNames.has(('PivotTable' + k).toLowerCase())) k++;
     const name = typeof d.name === 'string' && d.name.trim() ? d.name.trim() : 'PivotTable' + k;
     pvNames.add(name.toLowerCase());
-    const fnOf = v => ({ sum: 'sum', count: 'count', average: 'average', avg: 'average', max: 'max', min: 'min', product: 'product', count_numbers: 'countNums', countnums: 'countNums', stddev: 'stdDev', std_dev: 'stdDev', var: 'var', variance: 'var' })[String(v || 'sum').toLowerCase()] || 'sum';
-    const x = normPivot({ name, src: srcT, at: A1(at.r, at.c), rows: d.rows, cols: d.columns, vals: (Array.isArray(d.values) ? d.values : []).map(v => typeof v === 'string' ? { f: v } : v && { f: v.field, fn: fnOf(v.summarize), n: v.name }), filt: (Array.isArray(d.filters) ? d.filters : []).map(f => typeof f === 'string' ? { f } : f && { f: f.field }) });
+    const fnOf = v => ({ sum: 'sum', count: 'count', average: 'average', avg: 'average', max: 'max', min: 'min', product: 'product', count_numbers: 'countNums', countnums: 'countNums', stddev: 'stdDev', std_dev: 'stdDev', stddevp: 'stdDevp', std_dev_p: 'stdDevp', var: 'var', variance: 'var', varp: 'varp', var_p: 'varp' })[String(v || 'sum').toLowerCase()] || 'sum';
+    const x = normPivot({ name, src: srcT, at: A1(at.r, at.c), rows: d.rows, cols: d.columns, vals: (Array.isArray(d.values) ? d.values : []).map(v => typeof v === 'string' ? { f: v } : v && { f: v.field, fn: fnOf(v.summarize), n: v.name }), filt: (Array.isArray(d.filters) ? d.filters : []).map(f => typeof f === 'string' ? { f } : f && { f: f.field, ...(Array.isArray(f.values) && f.values.length ? { v: f.values.map(pvKey) } : {}) }) });
     if (x) { setProp(s, 'pivots', [...s.pivots, x]); n++; }
   }
   if (spec.links && typeof spec.links === 'object') for (const [a, t] of Object.entries(spec.links).slice(0, 5000)) {
