@@ -65,7 +65,7 @@ const DEF_FONT = 'Arial', DEF_FS = 10, DEF_W = 100, DEF_H = 21;
 const sid = () => { let s = ''; while (s.length < 8) s += Math.random().toString(36).slice(2); return s.slice(0, 8); };
 function newSheet(name, dir) {
   return { id: sid(), name, dir, cells: new Map(), cw: new Map(), rh: new Map(), hc: new Set(), hr: new Set(), cs: new Map(), rs: new Map(), ds: null,
-    fr: 0, fc: 0, merges: [], af: null, gl: true, tab: null, dw: DEF_W, dh: DEF_H, ac: { r: 0, c: 0 }, zoom: 100, charts: [], pics: [], cf: [], dv: [] };
+    fr: 0, fc: 0, merges: [], af: null, gl: true, tab: null, dw: DEF_W, dh: DEF_H, ac: { r: 0, c: 0 }, zoom: 100, charts: [], pics: [], tables: [], cf: [], dv: [] };
 }
 /* pictures: a sheet's pics say where each one sits (as a chart does: a cell, the distance from its corner, a size) and
    which image it shows (img); the images themselves are the workbook's (WB.imgs), each under a key made from its data,
@@ -178,6 +178,9 @@ function normSheet(x, dir, taken) {
   if (+x.zoom >= 25 && +x.zoom <= 400) s.zoom = Math.round(+x.zoom);
   s.charts = (Array.isArray(x.charts) ? x.charts : []).slice(0, 50).map(normSheetChart).filter(Boolean);
   s.pics = (Array.isArray(x.pics) ? x.pics : []).slice(0, 100).map(normPic).filter(Boolean);
+  s.tables = [];
+  for (const t of (Array.isArray(x.tables) ? x.tables : []).slice(0, 100).map(normTable)) if (t && !s.tables.some(o => meets(o.g, t.g))) s.tables.push(headsOf(s, t));
+  if (!s.af) { const t = s.tables.find(y => y.fb && y.hr); if (t) s.af = { r1: t.g.r1, c1: t.g.c1, r2: t.g.r2 - t.tr, c2: t.g.c2, hide: {} }; }   // a table's filter buttons, when the sheet has no filter of its own
   s.cf = (Array.isArray(x.cf) ? x.cf : []).slice(0, 500).map(normCf).filter(Boolean);
   s.dv = (Array.isArray(x.dv) ? x.dv : []).slice(0, DV_MAX).map(normDv).filter(Boolean);
   // in a shared room: the ids of its rows and columns (see the rooms, at the end)
@@ -196,6 +199,9 @@ function normBook(j) {
   book.active = clamp(Math.round(+o.active || 0), 0, book.sheets.length - 1);
   book.names = normNames(o.names, book.sheets);
   book.imgs = normImgs(o.imgs);
+  // a table's name is the workbook's, like a defined name's: one taken already gets a free one
+  const tn = new Set((book.names || []).map(x => x.n.toLowerCase()));
+  for (const sh of book.sheets) for (const t of sh.tables) { if (tn.has(t.name.toLowerCase())) t.name = freeTableName(t.name, tn); tn.add(t.name.toLowerCase()); }
   // a formula kept as the file had it, because it used what wasn't here then (INDIRECT, a name): worked out from now on,
   // the way a plain formula of an Excel file is
   for (const s of book.sheets) for (const c of s.cells.values()) if (c.x && !missingIn(c.f, s, book)) { delete c.x; if (olderWay(c.f)) c.l = true; }
@@ -236,6 +242,7 @@ function sheetOut(s) {
   if (s.zoom !== 100) o.zoom = s.zoom;
   if (s.charts.length) o.charts = s.charts.map(chartOut);
   if (s.pics.length) o.pics = s.pics.map(picOut);
+  if (s.tables.length) o.tables = s.tables.map(tableOut);
   if (s.cf.length) o.cf = s.cf.map(cfOut);
   if (s.dv.length) o.dv = s.dv.map(cfOut);
   if (s.ri && s.ri.length) o.ri = packIds(s.ri, s.id + '/ri');
@@ -606,6 +613,42 @@ const RX = {
   open: /\s*\(/y,
 };
 const execAt = (re, s, i) => { re.lastIndex = i; return re.exec(s); };
+/* a structured reference, Excel's grammar: [Col], [@Col], [@[Col 1]:[Col 2]], [@], [#Totals], [[#Headers],[Col]],
+   [[Col 1]:[Col 2]], [] (the table's data). ' before [ ] # ' @ makes it part of a column's name. src[i] is the [ */
+const T_SPEC = { '#all': 'all', '#data': 'data', '#headers': 'hdr', '#totals': 'tot', '#this row': 'row' };
+function trefScan(src, i) {
+  let p = i + 1;
+  const sp = {}, cols = [];
+  const text = () => { let t = ''; while (p < src.length && src[p] !== ']') { if (src[p] === "'" && p + 1 < src.length) p++; t += src[p++]; } return src[p] === ']' ? t : null; };
+  const item = () => { if (src[p] !== '[') return null; p++; const t = text(); if (t == null) return null; p++; return t; };
+  const ws = () => { while (src[p] === ' ') p++; };
+  const word = t => { const k = T_SPEC[t.trim().toLowerCase()]; if (k) sp[k] = true; return !!k; };
+  const pair = () => { const a = item(); if (a == null) return false; cols.push(a); ws(); if (src[p] === ':') { p++; ws(); const b = item(); if (b == null) return false; cols.push(b); } return true; };
+  ws();
+  if (src[p] === ']') return { end: p + 1, sp, cols };
+  if (src[p] === '@') {
+    sp.row = true; p++;
+    if (src[p] === ']') return { end: p + 1, sp, cols };
+    if (src[p] === '[') { if (!pair()) return null; ws(); return src[p] === ']' ? { end: p + 1, sp, cols } : null; }
+    const t = text(); if (t == null) return null;
+    cols.push(t);
+    return { end: p + 1, sp, cols };
+  }
+  if (src[p] === '[') {
+    for (;;) {
+      const at = p, a = item();
+      if (a == null) return null;
+      if (!word(a)) { p = at; if (!pair()) return null; }
+      ws();
+      if (src[p] === ',') { p++; ws(); continue; }
+      return src[p] === ']' && cols.length <= 2 ? { end: p + 1, sp, cols } : null;
+    }
+  }
+  const t = text();
+  if (t == null) return null;
+  if (!word(t)) cols.push(t);
+  return { end: p + 1, sp, cols };
+}
 /* a reference at position j: one cell (k 'c'), an area (k 'a'), whole columns (k 'C') or whole rows (k 'R').
    a: whether each part is fixed with $: [row1, col1, row2, col2] */
 function refAt(src, j) {
@@ -650,12 +693,17 @@ function tokenize(src) {
     if (sheet != null && (m = execAt(RX.name, src, j)) && !execAt(RX.open, src, j + m[0].length)) { const end = j + m[0].length; toks.push({ t: 'name', s: src.slice(i, end), n: m[0], sheet, q, p: i }); i = end; continue; }
     if ((m = execAt(RX.num, src, i))) { toks.push({ t: 'num', s: m[0], v: +m[0], p: i }); i += m[0].length; continue; }
     if ((m = execAt(RX.fn, src, i))) { toks.push({ t: 'fn', s: m[0], n: m[0].replace(/^(?:_xl(?:fn|ws)\.)+/i, '').toUpperCase(), p: i }); i += m[0].length; continue; }
+    if ((m = execAt(RX.name, src, i)) && src[i + m[0].length] === '[') {   // a table's name and its [ ]
+      const q = trefScan(src, i + m[0].length);
+      if (q) { toks.push({ t: 'tref', s: src.slice(i, q.end), tbl: m[0], sp: q.sp, cols: q.cols, p: i }); i = q.end; continue; }
+    }
     if ((m = execAt(RX.name, src, i))) { const u = m[0].toUpperCase(); toks.push(u === 'TRUE' || u === 'FALSE' ? { t: 'bool', s: m[0], v: u === 'TRUE', p: i } : { t: 'name', s: m[0], n: m[0], sheet: null, p: i }); i += m[0].length; continue; }
     if ((m = execAt(RX.op, src, i))) { toks.push({ t: 'op', s: m[0], p: i }); i += m[0].length; continue; }
     if (ch === '{' || ch === '}') { brace = Math.max(0, brace + (ch === '{' ? 1 : -1)); toks.push({ t: ch, s: ch, p: i }); i++; continue; }
     if (ch === ';') { toks.push({ t: brace ? ';' : ',', s: ch, p: i }); i++; continue; }
     if ('(),'.includes(ch)) { toks.push({ t: ch, s: ch, p: i }); i++; continue; }
-    if (ch === '[' && (m = execAt(RX.opt, src, i))) { toks.push({ t: 'opt', s: m[0], n: m[1], p: i }); i += m[0].length; continue; }   // [name]: a LAMBDA's parameter that may be left out
+    if (ch === '[' && (m = execAt(RX.opt, src, i))) { toks.push({ t: 'opt', s: m[0], n: m[1], p: i }); i += m[0].length; continue; }   // [name]: a LAMBDA's parameter that may be left out, or a column of the table the formula is in
+    if (ch === '[') { const q = trefScan(src, i); if (q) { toks.push({ t: 'tref', s: src.slice(i, q.end), tbl: null, sp: q.sp, cols: q.cols, p: i }); i = q.end; continue; } }
     toks.push({ t: 'bad', s: ch, p: i }); bad = true; i++;
   }
   toks.bad = bad;
@@ -668,7 +716,7 @@ const BIN = { '=': 1, '<>': 1, '<': 1, '>': 1, '<=': 1, '>=': 1, '&': 2, '+': 3,
    a name, another such range, and the functions that can answer with a reference. Excel takes nothing else there when
    a formula is typed (A1:SUM(B2) is refused), and so does this; a function nobody knows passes, and is #NAME? */
 const REF_FN = new Set(['INDEX', 'OFFSET', 'INDIRECT', 'IF', 'CHOOSE', 'XLOOKUP']);
-const refSide = n => n.t === 'ref' || n.t === 'name' || n.t === 'span' || n.t === 'err' || (n.t === 'fn' && (REF_FN.has(n.n) || !FUNCS[n.n]));
+const refSide = n => n.t === 'ref' || n.t === 'name' || n.t === 'span' || n.t === 'err' || n.t === 'tref' || n.t === 'opt' || (n.t === 'fn' && (REF_FN.has(n.n) || !FUNCS[n.n]));
 function parseFormula(src) {
   const all = tokenize(src);
   if (all.bad) throw new Error('bad');
@@ -714,6 +762,7 @@ function parseFormula(src) {
       case 'name': return { t: 'name', n: t.n, sheet: t.sheet };
       case 'fn': expect('('); return called({ t: 'fn', n: t.n, args: argList() });
       case 'opt': return { t: 'opt', n: t.n };
+      case 'tref': return { t: 'tref', tbl: t.tbl, sp: t.sp, cols: t.cols };
       case '{': {
         const rows = [[]];
         for (;;) {
@@ -864,7 +913,7 @@ function ev(n) {
   switch (n.t) {
     case 'num': case 'str': case 'bool': case 'err': case 'arr': case 'val': return n.v;
     case 'miss': return null;
-    case 'opt': return E_VAL;
+    case 'opt': case 'tref': return trefVal(n, KEEP);
     case 'call': {
       const keep = KEEP;
       KEEP = false;
@@ -905,6 +954,53 @@ function ev(n) {
 /* a row or column number moved by d inside a rule's formula: past the sheet's edge it comes round the other side, as
    Excel has it for conditional formatting and data validation (a part fixed with $ stays) */
 const wrapAt = (v, d, fixed, max) => fixed ? v : ((v + d) % max + max) % max;
+/* the cells a structured reference names now: its table (by its name, or the one the formula's cell is in), its columns
+   (all of them when none is named), its rows: #All, #Data (also when nothing is said), #Headers, #Totals, or the
+   formula's own row (@, #This Row), which must be one of the table's data rows on the same sheet */
+function trefRange(n, si, r, c) {
+  const x = n.t === 'opt' ? { tbl: null, sp: {}, cols: [n.n] } : n, here = WB.sheets[si];
+  let s = here, t = null;
+  if (x.tbl != null) { const f = tableByName(x.tbl); if (!f) return E_REF; s = f.s; t = f.t; }
+  else if (!(t = here && tableAt(here, r, c))) return E_REF;
+  const g = t.g, d = dataRows(t), idx = nm => t.cols.findIndex(y => y.n.toLowerCase() === nm.toLowerCase());
+  let c1 = g.c1, c2 = g.c2;
+  if (x.cols.length) { const a = idx(x.cols[0]), b = x.cols.length > 1 ? idx(x.cols[1]) : a; if (a < 0 || b < 0) return E_REF; c1 = g.c1 + Math.min(a, b); c2 = g.c1 + Math.max(a, b); }
+  const sp = x.sp;
+  let r1, r2;
+  if (sp.row) { if (s !== here || r < d.r1 || r > d.r2) return E_VAL; r1 = r2 = r; }
+  else if (sp.all) { r1 = g.r1; r2 = g.r2; }
+  else {
+    const rows = [];
+    if (sp.hdr) { if (!t.hr) return E_REF; rows.push(g.r1); }
+    if (sp.data || (!sp.hdr && !sp.tot)) rows.push(d.r1, d.r2);
+    if (sp.tot) { if (!t.tr) return E_REF; rows.push(g.r2); }
+    r1 = Math.min(...rows); r2 = Math.max(...rows);
+  }
+  return { rng: true, s, g: { r1, c1, r2, c2 } };
+}
+function trefVal(n, keep) {
+  const R = trefRange(n, CTX.si, CTX.r, CTX.c);
+  if (isErr(R)) return R;
+  return !keep && R.g.r1 === R.g.r2 && R.g.c1 === R.g.c2 ? valAt(R.s, R.g.r1, R.g.c1) : R;
+}
+/* a structured reference written back: the way it shows (inside its own table without the table's name, and @ for the
+   formula's own row), or the way a file keeps it (always with the name, and [#This Row]) */
+const T_WORD = { all: '#All', hdr: '#Headers', data: '#Data', tot: '#Totals' };   // in Excel's order
+const tColEsc = n => n.replace(/['#[\]@]/g, m => "'" + m);
+const tNeedBr = n => /[\t\n\r,:.[\]#'"{}$^&*+=\-<>/]/.test(n) || /^\s|\s$/.test(n);   // Excel's marks that need the column in [ ] of its own
+function trefText(x, own, file) {
+  const name = file ? (x.tbl || own || '') : x.tbl && !(own && x.tbl.toLowerCase() === own.toLowerCase()) ? x.tbl : '';
+  const cols = x.cols.map(tColEsc), words = Object.keys(T_WORD).filter(k => x.sp[k]);
+  const pair = cols.length > 1 ? `[${cols[0]}]:[${cols[1]}]` : cols.length ? `[${cols[0]}]` : '';
+  let body;
+  if (x.sp.row) {
+    if (file) body = '[' + ['[#This Row]', pair].filter(Boolean).join(',') + ']';
+    else body = cols.length === 1 && !tNeedBr(x.cols[0]) && !/\s/.test(x.cols[0]) ? `[@${cols[0]}]` : `[@${pair}]`;
+  } else if (!words.length) { if (!cols.length && name && !file) return name; body = !cols.length ? '[]' : cols.length === 1 && !tNeedBr(x.cols[0]) ? `[${cols[0]}]` : `[${pair}]`; }   // Sales[] shows as Sales
+  else if (words.length === 1 && !cols.length) body = `[${T_WORD[words[0]]}]`;
+  else body = '[' + [...words.map(k => `[${T_WORD[k]}]`), pair].filter(Boolean).join(',') + ']';
+  return name + body;
+}
 /* a reference's value: one cell's value, or the range itself (keep: even for one cell, the way SUM and its family want it) */
 function refVal(n, keep) {
   const s = sheetNamed(n.sheet);
@@ -931,6 +1027,7 @@ const NAMING = [];
 function nameVal(n, keep) {
   if (ENV && n.sheet == null) { const b = envGet(n.n); if (b !== undefined) return b === OMITTED ? null : keep ? b : one(b); }   // a name LET or a LAMBDA gave
   const nm = nameOf(n, WB.sheets[CTX.si]), ast = nm ? astOf(nm.f) : null;
+  if (!nm && n.sheet == null && tableByName(n.n)) return trefVal({ tbl: n.n, sp: {}, cols: [] }, keep);   // a table's name alone: its data
   if (!ast || NAMING.includes(nm)) return E_NAME;
   const was = [OFF, AX];
   NAMING.push(nm);
@@ -948,6 +1045,7 @@ function nameVal(n, keep) {
 let KEEP = false, XKEEP = false;
 function refOf(n) {
   if (n.t === 'ref') return refVal(n, true);
+  if (n.t === 'tref' || n.t === 'opt') return trefVal(n, true);
   if (n.t === 'name') return nameVal(n, true);
   KEEP = n.t === 'fn' || n.t === 'call';
   try { return ev(n); } finally { KEEP = false; }
@@ -1167,6 +1265,7 @@ function argS(n) { const v = one(ev(n)); return !AX && v && v.rng ? scal(v) : v;
 /* an argument that takes arrays: a reference stays a reference (even to one cell), and math in it is done cell by cell */
 function argA(n) {
   if (n.t === 'ref') return refVal(n, true);
+  if (n.t === 'tref' || n.t === 'opt') return trefVal(n, true);
   if (n.t === 'name') return nameVal(n, true);
   const k = AX;
   AX = true;
@@ -2832,7 +2931,8 @@ function missingIn(f, s, book = WB, used) {
   const a = astOf(f);
   if (!a) return { fn: '?' };
   let bad = null;
-  const named = n => {   // a defined name: there, and nothing missing inside it
+  const named = n => {   // a defined name: there, and nothing missing inside it (a table's name is one too)
+    if (book && n.sheet == null && book.sheets.some(sh => sh.tables && sh.tables.some(t => t.name.toLowerCase() === String(n.n).toLowerCase()))) return true;
     const nm = book ? nameOf(n, s, book) : null;
     if (nm && !(used && used.has(nm))) bad = missingIn(nm.f, s, book, new Set(used || []).add(nm));
     return !!nm;
@@ -2895,6 +2995,9 @@ function readsOf(ast, si, r, c, byName, fn, used) {
     if (x.t === 'ref') {
       const ti = x.sheet == null ? si : byName.get(x.sheet.toLowerCase());
       if (ti != null) fn(ti, used ? G4(wrapAt(x.r1, r, x.ab[0], MAXR), wrapAt(x.c1, c, x.ab[1], MAXC), wrapAt(x.r2, r, x.ab[2], MAXR), wrapAt(x.c2, c, x.ab[3], MAXC)) : x.g);
+    } else if (x.t === 'tref' || x.t === 'opt' || (x.t === 'name' && x.sheet == null && !nameOf(x, WB.sheets[si]) && tableByName(x.n))) {
+      const R = trefRange(x.t === 'name' ? { tbl: x.n, sp: {}, cols: [] } : x, si, r, c);
+      if (!isErr(R)) fn(WB.sheets.indexOf(R.s), R.g);
     } else if (x.t === 'name' || (x.t === 'fn' && !FUNCS[x.n])) {   // a defined name, also one called as a function (a name LET gave isn't one: nameOf finds none, or one that adds what it reads)
       const nm = nameOf(x.t === 'name' ? x : { n: x.n, sheet: null }, WB.sheets[si]), a = nm && !(used && used.has(nm)) ? astOf(nm.f) : null;
       if (a) readsOf(a, si, r, c, byName, fn, new Set(used || []).add(nm));
@@ -3466,7 +3569,7 @@ const selSnap = () => ({ sid: WS.id, ...SEL });
 function edit(fn) {
   if (TX) { fn(); return true; }
   const tx = TX = { cells: new Map(), props: new Map(), book: null, names: undefined, sel0: selSnap() };
-  try { fn(); } finally { TX = null; }
+  try { fn(); if (tx.cells.size) headersWritten(tx); } finally { TX = null; }
   const cells = [], props = [];
   for (const x of tx.cells.values()) { const after = x.s.cells.get(x.k) || null; if (after !== x.before) cells.push({ ...x, after }); }
   for (const x of tx.props.values()) { const after = x.s[x.name]; if (after !== x.before) props.push({ ...x, after }); }
@@ -3688,13 +3791,13 @@ function drawCells(L, rr, cc) {
         if (done.has(m)) continue;
         done.add(m);
         const a = cellAt(s, m.r1, m.c1);
-        drawCell(L, 'm' + m.r1 + ',' + m.c1, a, a ? a.st : emptyLook(s, m.r1, m.c1), colX(m.c1), rowY(m.r1), spanW(m.c1, m.c2), spanH(m.r1, m.r2), null, true, cfAt(s, m.r1, m.c1));
+        drawCell(L, 'm' + m.r1 + ',' + m.c1, a, underTable(s, m.r1, m.c1, a ? a.st : emptyLook(s, m.r1, m.c1)), colX(m.c1), rowY(m.r1), spanW(m.c1, m.c2), spanH(m.r1, m.r2), null, true, cfAt(s, m.r1, m.c1));
         if (a && a.n) noteMark(L, m.r1, m.c1, colX(m.c1), rowY(m.r1), spanW(m.c1, m.c2));
         continue;
       }
       let x = cellAt(s, r, c);
       if (sp && (!x || x.v === undefined) && sp.has(KEY(r, c))) x = cellSp(s, r, c);
-      const st = x ? x.st : looks ? emptyLook(s, r, c) : null, cf = cfAt(s, r, c);
+      const st = underTable(s, r, c, x ? x.st : looks ? emptyLook(s, r, c) : null), cf = cfAt(s, r, c);
       if (!x && !(st && st.bg) && !cf) continue;
       drawCell(L, 'c' + r + ',' + c, x, st, colX(c), rowY(r), w, hh, { r, c }, false, cf);
       if (x && x.n) noteMark(L, r, c, colX(c), rowY(r), w);
@@ -3790,7 +3893,7 @@ function drawBorders(L, rr, cc) {
     if (!rowH(r)) continue;
     for (let c = cc[0]; c <= cc[1]; c++) {
       if (!colW(c)) continue;
-      const x = cellAt(s, r, c), st = x ? x.st : looks ? emptyLook(s, r, c) : null, cf = cfAt(s, r, c), cb = cf && cf.st;   // a rule's border wins on its side
+      const x = cellAt(s, r, c), st = underTable(s, r, c, x ? x.st : looks ? emptyLook(s, r, c) : null), cf = cfAt(s, r, c), cb = cf && cf.st;   // a rule's border wins on its side
       if (!(st && (st.bt || st.bb || st.bs || st.be)) && !(cb && (cb.bt || cb.bb || cb.bs || cb.be))) continue;
       for (const k of BD_SIDES) {
         const b = (cb && cb[k]) || (st && st[k]);
@@ -3935,7 +4038,7 @@ function endEdit(commit, move, force) {
     const s = WB.sheets.find(x => x.id === ED.sid) || WS, g = ED.all ? selG() : null, r = ED.r, c = ED.c;
     const rule = force ? null : dvAt(s, r, c);
     ED.on = false;
-    const did = edit(() => { writeInput(s, r, c, text, g); widenFor(s, r, c); });
+    const did = edit(() => { writeInput(s, r, c, text, g); if (s.tables.length && !g) { tableGrow(s, r, c); tableFill(s, r, c, text); } widenFor(s, r, c); });
     if (did && rule && rule.t !== 'any' && !rule.ne && !dvOk(s, rule, r, c)) {
       // the cell's rule doesn't take this (a formula is judged by its answer, once everything is worked out): it
       // comes out again, and the alert asks what to do with it
@@ -4654,8 +4757,8 @@ function gridKey(e) {
       KeyZ: () => e.shiftKey ? redo() : undo(), KeyY: redo, KeyB: () => toggleLook('b'), KeyI: () => toggleLook('i'), KeyU: () => toggleLook('u'), Digit5: () => toggleLook('s'),
       KeyA: selectAll, KeyD: () => fillDir('d'), KeyR: () => fillDir('r'), Backquote: toggleFormulas, KeyF: () => openFind(false), KeyH: () => openFind(true),
       Semicolon: () => startEdit('enter', editText({ v: todaySerial(), st: { nf: DATE_NF } })),
-      Space: () => { const g = selG(); selectCols(g.c1, g.c2); },
-    }[c] || (c === 'KeyL' && e.shiftKey ? toggleFilter : null);
+      Space: () => { const g = selG(); selectCols(g.c1, g.c2); }, KeyT: () => tableDialog(),
+    }[c] || (c === 'KeyL' ? (e.shiftKey ? toggleFilter : () => tableDialog()) : null);
     if (c === 'KeyV' && e.shiftKey) { PASTE_AS = 'v'; setTimeout(() => { PASTE_AS = null; }, 1000); return false; }   // the browser's own paste event follows
     if (act) { e.preventDefault(); act(); return true; }
     return false;
@@ -4919,6 +5022,7 @@ function spliceSheet(axis, at, n) {
     // a name follows its cells too; a part of it without $ is a distance from the cell that uses the name, and stays
     eachName(f => mapRefs(f, t => (R ? t.a[0] && t.a[2] : t.a[1] && t.a[3]) ? spliceFormula(t.s, '', s.name, axis, at, n) : null));
     moveCharts(s, axis, at, n);
+    if (s.tables.length) spliceTables(s, axis, at, n);
     for (const key of RULE_KEYS) {
       spliceRules(s, key, axis, at, n);
       for (const sh of WB.sheets) if (sh !== s) eachRuleOf(sh, key, f => spliceFormula(f, sh.name, s.name, axis, at, n));
@@ -5338,12 +5442,14 @@ async function deleteSheet(s = WS) {
 }
 function dupSheet(s = WS) {
   // each formula's cell is its own in the copy: its answer is written onto it, and the copy's answer may differ
-  const c = { ...s, id: sid(), name: freeName(s.name.slice(0, 26) + ' (2)', takenNames()), cells: new Map([...s.cells].map(([k, x]) => [k, x.f != null ? { ...x } : x])), cw: new Map(s.cw), rh: new Map(s.rh), hc: new Set(s.hc), hr: new Set(s.hr), cs: new Map(s.cs), rs: new Map(s.rs), merges: s.merges.map(m => ({ ...m })), af: s.af ? { ...s.af, hide: { ...s.af.hide } } : null, ac: { ...s.ac }, _sc: null, _fh: null, ri: undefined, ci: undefined, _ri: null, _ci: null, charts: s.charts.map(ch => ({ ...bare(ch), id: sid() })), pics: s.pics.map(x => ({ ...x, id: sid() })) };
+  const c = { ...s, id: sid(), name: freeName(s.name.slice(0, 26) + ' (2)', takenNames()), cells: new Map([...s.cells].map(([k, x]) => [k, x.f != null ? { ...x } : x])), cw: new Map(s.cw), rh: new Map(s.rh), hc: new Set(s.hc), hr: new Set(s.hr), cs: new Map(s.cs), rs: new Map(s.rs), merges: s.merges.map(m => ({ ...m })), af: s.af ? { ...s.af, hide: { ...s.af.hide } } : null, ac: { ...s.ac }, _sc: null, _fh: null, ri: undefined, ci: undefined, _ri: null, _ci: null, charts: s.charts.map(ch => ({ ...bare(ch), id: sid() })), pics: s.pics.map(x => ({ ...x, id: sid() })), tables: [] };
   edit(() => {
     bookStep(() => { WB.sheets.splice(WB.sheets.indexOf(s) + 1, 0, c); });
     // as Excel does: the copy gets its own names, for the sheet's own and for every name that points at the sheet
     const own = (WB.names || NO_NAMES).filter(x => x.s === s.id || (!x.s && renameInFormula(x.f, s.name, c.name) !== x.f)).map(x => ({ ...x, s: c.id, f: renameInFormula(x.f, s.name, c.name) }));
     if (own.length) setNames([...(WB.names || NO_NAMES), ...own]);
+    // its tables come too, each under a name of its own, as Excel names them
+    if (s.tables.length) { const taken = tableNames(); setProp(c, 'tables', s.tables.map(t => { const n = freeTableName(t.name, taken); taken.add(n.toLowerCase()); return { ...t, id: sid(), name: n, cols: t.cols.map(y => ({ ...y })) }; })); }
     showSheet(c, true);
   });
   WB.active = WB.sheets.indexOf(c);
@@ -5709,7 +5815,7 @@ function tableEl(s, g, o = {}) {
   const cg = h('colgroup');
   for (const c of cols) { const w = s.cw.get(c) ?? s.dw; W += w; cg.append(h('col', { style: { width: w + 'px' } })); }
   const t = h('table', { dir: s.dir, cellspacing: '0', cellpadding: '0', style: { borderCollapse: 'collapse', tableLayout: 'fixed', width: W + 'px', fontFamily: `"${DEF_FONT}", Arial, sans-serif`, fontSize: DEF_FS + 'pt', color: '#000', background: '#fff' } }, cg);
-  const look = (r, c) => { const x = s.cells.get(KEY(r, c)), st = x ? x.st : emptyLook(s, r, c), cf = cfAt(s, r, c); return cf && cf.st ? { ...(st || {}), ...cf.st } : st; };
+  const look = (r, c) => { const x = s.cells.get(KEY(r, c)), st = underTable(s, r, c, x ? x.st : emptyLook(s, r, c)), cf = cfAt(s, r, c); return cf && cf.st ? { ...(st || {}), ...cf.st } : st; };
   const tb = h('tbody');
   for (const r of rows) {
     const tr = h('tr', { style: { height: (s.rh.get(r) ?? s.dh) + 'px' } });
@@ -5717,7 +5823,7 @@ function tableEl(s, g, o = {}) {
       const k = KEY(r, c);
       if (covered.has(k)) continue;
       const x = cellSp(s, r, c), cf = cfAt(s, r, c), vw = x ? view(x) : { t: '', k: '' }, m = anchors.get(k);
-      let st = x ? x.st : emptyLook(s, r, c);
+      let st = underTable(s, r, c, x ? x.st : emptyLook(s, r, c));
       if (cf && cf.st) st = { ...(st || {}), ...cf.st };
       if (cf && cf.hide) vw.t = '';
       const td = h('td');
@@ -5908,6 +6014,16 @@ const CSS = `
 .sh-chart{z-index:8;background:#fff;border:1px solid #d9d9d9;box-sizing:border-box;cursor:move;touch-action:none}
 .sh-chart.on{outline:2px solid #2743d8;outline-offset:0}
 .sh-pic{background:none;border:0}
+.sh-tgal{max-height:min(70vh,520px);overflow:auto;width:300px}
+.sh-tgal-row{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+.sh-tgal-b{padding:3px;border:1px solid transparent;border-radius:6px;background:none;cursor:pointer}
+.sh-tgal-b:hover,.sh-tgal-b.on{border-color:#2743d8;background:var(--hover,#eef2ff)}
+.sh-tsw{display:grid;grid-template-columns:repeat(4,10px);grid-auto-rows:7px;direction:ltr}
+.sh-tsw i{display:block;box-sizing:border-box}
+.sh-rchk{display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;cursor:pointer}
+.sh-topts{display:grid;grid-template-columns:repeat(3,auto);gap:4px 12px;align-content:center;padding:2px 4px}
+.sh-tprops{display:flex;flex-direction:column;gap:3px;justify-content:center;padding:0 4px}
+.sh-tname{width:128px;height:28px;padding:2px 6px}
 .sh-pic-img{display:block;width:100%;height:100%;pointer-events:none;user-select:none;-webkit-user-drag:none}
 .sh-ch-in{position:absolute;inset:0;overflow:hidden;pointer-events:none;direction:ltr;color:#404040}
 .sh-ch-in svg{position:absolute;inset:0;width:100%;height:100%}
@@ -5984,10 +6100,10 @@ const CSS = `
 .sh-sel-size{width:58px}
 .sh-cur{font:600 15px var(--ui);min-width:30px}
 .sh-num{font:600 12px var(--ui);direction:ltr}
-.panel.fit1 .fit-a>.gb,.panel.fit2 .fit-b>.gb{display:grid;grid-template-rows:repeat(2,30px);grid-auto-flow:column;align-content:center;gap:4px 3px}
-.panel.fit1 .fit-a .rb.big,.panel.fit2 .fit-b .rb.big{flex-direction:row;height:30px;min-width:30px;padding:0 5px}
-.panel.fit1 .fit-a .rb.big>span:not(.ms),.panel.fit2 .fit-b .rb.big>span:not(.ms){display:none}
-.panel.fit1 .fit-a .rb.big .ms,.panel.fit2 .fit-b .rb.big .ms{font-size:20px}
+.panel.fit1 .fit-a>.gb,.panel.fit2 .fit-b>.gb,.panel.fit3 .fit-c>.gb{display:grid;grid-template-rows:repeat(2,30px);grid-auto-flow:column;align-content:center;gap:4px 3px}
+.panel.fit1 .fit-a .rb.big,.panel.fit2 .fit-b .rb.big,.panel.fit3 .fit-c .rb.big{flex-direction:row;height:30px;min-width:30px;padding:0 5px}
+.panel.fit1 .fit-a .rb.big>span:not(.ms),.panel.fit2 .fit-b .rb.big>span:not(.ms),.panel.fit3 .fit-c .rb.big>span:not(.ms){display:none}
+.panel.fit1 .fit-a .rb.big .ms,.panel.fit2 .fit-b .rb.big .ms,.panel.fit3 .fit-c .rb.big .ms{font-size:20px}
 .mi .sh-sample{margin-inline-start:auto;color:var(--text-3);font-size:12px;padding-inline-start:16px;direction:ltr}
 .sh-bdrow{display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
 .sh-bdrow .opt{min-width:36px;height:28px}
@@ -6024,8 +6140,8 @@ function fitRibbon() {
   for (const p of [V.home, V.fxTab]) {
     const r = p && p.parentNode;
     if (!r || p.hidden) continue;
-    p.classList.remove('fit1', 'fit2');
-    for (const c of ['fit1', 'fit2']) { if (r.scrollWidth <= r.clientWidth) break; p.classList.add(c); }
+    p.classList.remove('fit1', 'fit2', 'fit3');
+    for (const c of ['fit1', 'fit2', 'fit3']) { if (r.scrollWidth <= r.clientWidth) break; p.classList.add(c); }
   }
 }
 function ribbonPanels() {
@@ -6051,7 +6167,8 @@ function ribbonPanels() {
     group(T('מספר'), 'col', row(V.nf),
       row(split('shCur', 'shCurMenu', h('span', { class: 'sh-cur', text: CUR }), T('מטבע'), { menuTitle: T('בחירת מטבע') }), rbtn('shPct', 'percent', T('אחוזים')), rbtn('shComma', h('span', { class: 'sh-num', text: '000' }), T('מפריד אלפים')),
         rbtn('shDec', 'decimal_increase', T('עוד ספרות אחרי הנקודה'), { arg: '1' }), rbtn('shDec', 'decimal_decrease', T('פחות ספרות אחרי הנקודה'), { arg: '-1' }))),
-    tag(group(T('סגנונות'), '', rbtn('shCfMenu', 'palette', T('עיצוב מותנה'), { big: true, title: T('צביעת תאים לפי הערכים שלהם, פסי נתונים, סולמות צבעים וסמלים') })), 'sh-styles'),
+    tag(tag(group(T('סגנונות'), '', rbtn('shCfMenu', 'palette', T('עיצוב מותנה'), { big: true, title: T('צביעת תאים לפי הערכים שלהם, פסי נתונים, סולמות צבעים וסמלים') }),
+      rbtn('shTblGallery', 'table_view', T('עיצוב כטבלה'), { big: true, title: T('טבלה בסגנון שבוחרים מתוך 60 הסגנונות של אקסל') })), 'sh-styles'), 'fit-c'),   // the third to shrink
     tag(group(T('תאים'), '', rbtn('shInsMenu', 'add_row_above', T('הוספה'), { big: true, title: T('הוספת שורות או עמודות') }), rbtn('shDelMenu', 'delete', T('מחיקה'), { big: true, title: T('מחיקת שורות או עמודות') }), rbtn('shCellMenu', 'width', T('גודל'), { big: true, title: T('רוחב עמודות, גובה שורות, הסתרה') })), 'fit-b'),
     tag(group(T('עריכה'), '', split('shSum', 'shSumMenu', 'functions', T('סכום אוטומטי (Alt+=)'), { menuTitle: T('פונקציות נוספות'), big: false }),
       rbtn('shSortMenu', 'sort', T('מיון וסינון'), { big: true }), rbtn('shClearMenu', 'ink_eraser', T('ניקוי'), { big: true }), rbtn('shFind', 'search', T('חיפוש'), { big: true, title: T('חיפוש והחלפה (Ctrl+F)') })), 'fit-a'));
@@ -6074,11 +6191,12 @@ function ribbonPanels() {
     group(T('תצוגה@view'), '', rbtn('shGrid', 'grid_on', T('קווי רשת'), { big: true, id: 'shGridBtn' }), rbtn('shDir', 'format_textdirection_r_to_l', T('גיליון מימין לשמאל'), { big: true, id: 'shDirBtn' })),
     group(T('זום'), '', rbtn('shZoom', 'remove', T('הקטנה'), { arg: '-1' }), h('button', { class: 'rb txt', type: 'button', 'data-cmd': 'shZoom', 'data-arg': '0', id: 'shZoomPct', title: T('חזרה ל-100%') }, '100%'), rbtn('shZoom', 'add', T('הגדלה'), { arg: '1' })));
   const insert = h('div', { class: 'panel sheet-only', 'data-panel': 'sinsert', hidden: true },
+    group(T('טבלאות'), '', rbtn('shTable', 'table', T('טבלה'), { big: true, title: T('טבלה מהתאים שבחרת: שם, כותרות, פסים, סינון ושורת סיכום') })),
     group(T('איורים'), '', rbtn('shPic', 'add_photo_alternate', T('תמונה'), { big: true, title: T('תמונה מהמחשב. אפשר גם להדביק תמונה או לגרור קובץ לגיליון') })),
     group(T('גרפים'), '', ...CKS.map(k => rbtn('shChart', CHARTS[k].ic, T(CHARTS[k].n), { big: true, arg: k, title: T('גרף חדש מהתאים שבחרת') }))),
     group(T('קישורים'), '', rbtn('shLink', 'link', T('קישור'), { big: true, title: T('קישור לאתר, למקום בחוברת או לדואר (Ctrl+K)') })),
     group(T('הערות'), '', rbtn('shNote', 'sticky_note_2', T('הערה'), { big: true, title: T('הערה על התא, שמופיעה כשהעכבר עליו (Shift+F2)') })));
-  return [home, insert, formulas, data, viewP];
+  return [home, insert, formulas, data, viewP, tablePanel()];
 }
 const SHEET_TAB_LIST = () => [['shome', T('בית')], ['sinsert', T('הוספה')], ['sformula', T('נוסחאות')], ['sdata', T('נתונים')], ['sview', T('תצוגה@view')]];
 function mount() {
@@ -6086,6 +6204,7 @@ function mount() {
   document.head.append(h('style', { id: 'sheetcss' }, CSS));
   const tabs = $('#tabs');
   for (const [k, label] of SHEET_TAB_LIST()) tabs.append(h('button', { class: 'tab sheet-only', role: 'tab', 'data-tab': k, 'aria-selected': 'false' }, label));
+  tabs.append(V.tblTab = h('button', { class: 'tab ctx sheet-only', role: 'tab', 'data-tab': 'stable', 'aria-selected': 'false', hidden: true }, T('עיצוב טבלה')));   // only while a table's cell is chosen
   const ribbon = $('#ribbon');
   for (const p of ribbonPanels()) ribbon.append(p);
   if (window.ResizeObserver) { const ro = new ResizeObserver(fitRibbon); ro.observe(V.home); ro.observe(V.fxTab); }   // they change size when shown, and with the window
@@ -6657,7 +6776,8 @@ const COMMANDS = {
   shSortMenu: (a, b) => sortMenu(b), shClearMenu: (a, b) => clearMenu(b), shFind: () => openFind(false),
   shSort: a => quickSort(a === 'd'), shSortDlg: () => sortDialog(), shFilter: () => toggleFilter(), shFilterClear: () => clearFilter(),
   shDvList: () => dvDialog('list'), shDvMenu: (a, b) => dvMenu(b),
-  shNote: () => noteEdit(), shLink: () => linkDialog(), shPic: () => pickPicture(), shShowF: () => toggleFormulas(), shFxHelp: () => formulaHelp(), shFnDlg: () => fnDialog(), shFnCat: (a, b) => fnCatMenu(a, b), shCfMenu: (a, b) => cfMenu(b),
+  shNote: () => noteEdit(), shLink: () => linkDialog(), shPic: () => pickPicture(),
+  shTable: () => tableDialog(), shTblGallery: (a, b) => tableGallery(b), shTblStyle: (a, b) => tableGallery(b, true), shTblConvert: () => tableToRange(), shShowF: () => toggleFormulas(), shFxHelp: () => formulaHelp(), shFnDlg: () => fnDialog(), shFnCat: (a, b) => fnCatMenu(a, b), shCfMenu: (a, b) => cfMenu(b),
   shFreezeMenu: (a, b) => freezeMenu(b), shGrid: () => edit(() => setProp(WS, 'gl', !WS.gl)), shDir: () => edit(() => setProp(WS, 'dir', WS.dir === 'rtl' ? 'ltr' : 'rtl')),
   shZoom: a => setZoom(+a === 0 ? 100 : WS.zoom + (+a > 0 ? 10 : -10)),
 };
@@ -6673,6 +6793,7 @@ function selInfo() {
     V.bar.classList.toggle('ghost', !!from);
   }
   updateRibbon(x);
+  tableTab();
   // sum, average and count of what's chosen, as in Excel's status bar; and a word about a loop or a missing function
   const g = usedPart(selG());
   let cnt = 0, n = 0, sum = 0;
@@ -6807,6 +6928,9 @@ async function readXlsx(buf) {
   wb.eachSheet(ws => { if (ws.state !== 'veryHidden') ids.set(ws.name, sid()); });
   const known = { sheets: [...ids].map(([name, id]) => ({ id, name })), names: NO_NAMES };
   try { const xn = await readXlsxNames(buf); known.names = normNames(xn.names.map(x => ({ ...x, ...(x.li == null ? {} : { s: ids.get(xn.sheets[x.li]) || '?' }) })), known.sheets); } catch (e) { console.warn(e); }
+  let xt = new Map();
+  try { xt = await readXlsxTables(buf); } catch (e) { console.warn(e); }
+  for (const ks of known.sheets) ks.tables = xt.get(ks.name) || [];
   wb.eachSheet(ws => {
     if (ws.state === 'veryHidden') return;
     if (ws.state === 'hidden') add('hidden');
@@ -6848,6 +6972,7 @@ async function readXlsx(buf) {
             x.v = xlResult(cell.result);   // not v.result: the library's copy of the value leaves out an answer of 0 or FALSE
             if (f) {
               x.f = fromXl(String(f).replace(/^=/, ''));
+              if (x.f.includes('[')) { const tt = (xt.get(ws.name) || []).find(t => inG(t.g, r, c)); x.f = trefShow(x.f, tt && tt.name); }   // Sales[[#This Row],[Price]] shows [@Price] in its own table
               if (missingIn(x.f, s, known)) { x.x = true; add('fn'); }
               else if (v.shareType === 'array') { const g = parseRange(v.ref); if (g && (g.r1 !== g.r2 || g.c1 !== g.c2)) arrays.push(g); }
               else if (olderWay(x.f) && tokenize(x.f).some(t => (t.t === 'ref' && t.k !== 'c') || t.t === 'name' || (t.t === 'op' && t.s === ':') || (t.t === 'fn' && (t.n === 'INDIRECT' || t.n === 'OFFSET')))) x.l = true;   // an older formula: a range alone in it (or what a name, INDIRECT or OFFSET gives) takes one cell
@@ -6877,7 +7002,6 @@ async function readXlsx(buf) {
     if (af) { const g = typeof af === 'string' ? parseRange(af) : af.from && af.to ? G4(af.from.row - 1, af.from.column - 1, af.to.row - 1, af.to.column - 1) : null; if (g && !wholeCols(g) && !wholeRows(g)) s.af = { ...g, hide: {} }; }
     const cf = ws.conditionalFormattings || (ws.model && ws.model.conditionalFormattings);
     if (cf && cf.length) hasCf = true;
-    if (ws.tables && Object.keys(ws.tables).length) add('table');
     book.sheets.push(sheetOut(s));
     xlNames.push(ws.name);
   });
@@ -6887,6 +7011,19 @@ async function readXlsx(buf) {
   book.dir = anyRtl ? 'rtl' : anyRtl === false ? 'ltr' : UI_DIR;
   book.names = known.names.map(nameOut);
   const nb = normBook(book);
+  // the tables onto their sheets, each with a name of its own in the workbook; a table's filter is the sheet's when the
+  // sheet has none of its own
+  const tn = new Set((nb.names || []).map(x => x.n.toLowerCase()));
+  nb.sheets.forEach((s, i) => {
+    for (const t of xt.get(xlNames[i]) || []) {
+      if (s.tables.some(o => meets(o.g, t.g)) || s.merges.some(m => meets(m, t.g))) { add('table'); continue; }
+      if (tn.has(t.name.toLowerCase())) t.name = freeTableName(t.name, tn);
+      tn.add(t.name.toLowerCase());
+      s.tables.push(t);
+      if (t._af && !s.af) s.af = { r1: t.g.r1, c1: t.g.c1, r2: t.g.r2 - t.tr, c2: t.g.c2, hide: {} };
+      delete t._af;
+    }
+  });
   if (hasCharts) await importCharts(buf, nb, xlNames, rep);
   if (hasCf) await importCf(buf, nb, xlNames, rep, theme);
   await importDv(buf, nb, xlNames, rep);
@@ -6931,6 +7068,87 @@ async function importExtras(buf, nb, xlNames, rep) {
     }
   } catch (e) { console.warn(e); }
 }
+/* structured references the way they show (Sales[[#This Row],[Price]] is [@Price] inside Sales) */
+const trefShow = (f, own) => tokenize(f).map(t => t.t === 'tref' ? trefText(t, own, false) : t.s).join('');
+/* the file's tables (xl/tables/tableN.xml, through each sheet's links): sheet's name → its tables. A style of the file's
+   own (not one of Excel's 60) gives the default look */
+async function readXlsxTables(buf) {
+  const JSZip = await zipLib(), zip = await JSZip.loadAsync(buf), dp = new DOMParser(), out = new Map();
+  const xml = async p => { const f = zip.file(p); return f ? dp.parseFromString(await f.async('string'), 'application/xml') : null; };
+  const wbx = await xml('xl/workbook.xml'), wr = await xml(relsOf('xl/workbook.xml'));
+  if (!wbx || !wr) return out;
+  const rels = new Map(xdesc(wr, 'Relationship').map(r => [xat(r, 'Id'), partPath('xl/workbook.xml', xat(r, 'Target') || '')]));
+  for (const sh of xdesc(wbx, 'sheet')) {
+    const rid = [...sh.attributes].find(a => a.localName === 'id' && /relationships/.test(a.namespaceURI || '')), path = rid && rels.get(rid.value), sr = path && await xml(relsOf(path));
+    if (!sr) continue;
+    const list = [];
+    for (const r of xdesc(sr, 'Relationship').filter(r => /\/table$/.test(xat(r, 'Type') || ''))) {
+      const d = await xml(partPath(path, xat(r, 'Target') || '')), e = d && d.documentElement;
+      if (!e || e.localName !== 'table') continue;
+      const num = (k, dflt) => { const v = xat(e, k); return v == null || v === '' ? dflt : +v; };
+      const si = xkid(e, 'tableStyleInfo'), on = k => !!si && (xat(si, k) === '1' || xat(si, k) === 'true');
+      const cols = xkids(xkid(e, 'tableColumns'), 'tableColumn').map(c => {
+        const o = { n: (xat(c, 'name') || '').replace(/_x([0-9a-f]{4})_/gi, (m, hx) => String.fromCharCode(parseInt(hx, 16))) };
+        const fn = xat(c, 'totalsRowFunction'), lbl = xat(c, 'totalsRowLabel'), cf = xkid(c, 'calculatedColumnFormula');
+        if (fn && fn !== 'none' && fn !== 'custom') o.fn = fn;
+        if (lbl) o.lbl = lbl;
+        if (cf && cf.textContent.trim()) o.cf = cf.textContent.trim();
+        return o;
+      });
+      const t = normTable({ name: xat(e, 'displayName') || xat(e, 'name') || '', ref: xat(e, 'ref') || '', hr: num('headerRowCount', 1) ? 1 : 0, tr: num('totalsRowCount', 0) ? 1 : 0,
+        style: si ? xat(si, 'name') : TS_DEF, sr: si ? on('showRowStripes') : true, sc: on('showColumnStripes'), fc: on('showFirstColumn'), lc: on('showLastColumn'), fb: !!xkid(e, 'autoFilter'), cols });
+      if (!t) continue;
+      t.cols.forEach(c => { if (c.cf) c.cf = trefShow(fromXl(c.cf), t.name); });
+      t._af = !!xkid(e, 'autoFilter') && t.hr;
+      list.push(t);
+    }
+    if (list.length) out.set(xat(sh, 'name'), list);
+  }
+  return out;
+}
+/* the tables into a workbook ExcelJS wrote: a part for each (with its columns, its total row, its filter and its style)
+   and the sheet's <tableParts>, as Excel writes them */
+async function addXlsxTables(buf) {
+  const JSZip = await zipLib(), zip = await JSZip.loadAsync(buf), x = v => esc(String(v));
+  let ct = await zip.file('[Content_Types].xml').async('string'), id = 0, tn = 0;
+  for (let i = 0; i < WB.sheets.length; i++) {
+    const s = WB.sheets[i], sp = `xl/worksheets/sheet${i + 1}.xml`, sf = zip.file(sp);
+    if (!s.tables.length || !sf) continue;
+    const rp = relsOf(sp), rf = zip.file(rp);
+    let rx = rf ? await rf.async('string') : '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+    const parts = [];
+    for (const t of s.tables) {
+      id++;
+      do tn++; while (zip.file(`xl/tables/table${tn}.xml`));
+      const cols = t.cols.map((c, j) => {
+        const tc = t.tr ? cellAt(s, t.g.r2, t.g.c1 + j) : null;
+        let attrs = '', inner = '';
+        if (t.tr && c.fn) attrs += ` totalsRowFunction="${c.fn}"`;
+        else if (t.tr && tc && tc.f == null && typeof tc.v === 'string' && tc.v) attrs += ` totalsRowLabel="${x(tc.v)}"`;
+        else if (t.tr && tc && tc.f != null) { attrs += ' totalsRowFunction="custom"'; inner += `<totalsRowFormula>${x(xlFormula(tc.f, false, t.name))}</totalsRowFormula>`; }
+        if (c.cf) inner = `<calculatedColumnFormula>${x(xlFormula(c.cf, false, t.name))}</calculatedColumnFormula>` + inner;
+        return `<tableColumn id="${j + 1}" name="${x(c.n)}"${attrs}${inner ? '>' + inner + '</tableColumn>' : '/>'}`;
+      }).join('');
+      const af = t.hr && t.fb ? `<autoFilter ref="${rangeA1({ ...t.g, r2: t.g.r2 - t.tr })}"/>` : '';
+      const xmlT = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" id="${id}" name="${x(t.name)}" displayName="${x(t.name)}" ref="${rangeA1(t.g)}"` +
+        `${t.hr ? '' : ' headerRowCount="0"'}${t.tr ? ' totalsRowCount="1"' : ' totalsRowShown="0"'}>${af}<tableColumns count="${t.cols.length}">${cols}</tableColumns>` +
+        `<tableStyleInfo name="${x(t.style)}" showFirstColumn="${t.fc ? 1 : 0}" showLastColumn="${t.lc ? 1 : 0}" showRowStripes="${t.sr ? 1 : 0}" showColumnStripes="${t.sc ? 1 : 0}"/></table>`;
+      zip.file(`xl/tables/table${tn}.xml`, xmlT);
+      ct = ct.replace('</Types>', `<Override PartName="/xl/tables/table${tn}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml"/></Types>`);
+      let k = 1; while (rx.includes(`Id="rId${k}"`)) k++;
+      rx = rx.replace('</Relationships>', `<Relationship Id="rId${k}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/table" Target="../tables/table${tn}.xml"/></Relationships>`);
+      parts.push(`<tablePart r:id="rId${k}"/>`);
+    }
+    zip.file(rp, rx);
+    let sx = await sf.async('string');
+    if (!/xmlns:r=/.test(sx.slice(0, 600))) sx = sx.replace('<worksheet ', '<worksheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ');
+    const at = ['<extLst', '</worksheet>'].map(t => sx.indexOf(t)).filter(q => q >= 0), pos = Math.min(...at);
+    sx = sx.slice(0, pos) + `<tableParts count="${parts.length}">${parts.join('')}</tableParts>` + sx.slice(pos);
+    zip.file(sp, sx);
+  }
+  zip.file('[Content_Types].xml', ct);
+  return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+}
 /* the file's charts onto its sheets (by the sheet's name in the file); kinds that aren't here are counted for the report */
 async function importCharts(buf, nb, xlNames, rep) {
   let found;
@@ -6966,7 +7184,7 @@ const XLWS = new Set(['FILTER', 'SORT']);
    one of them as a value (measured in Excel 2016): they are written #VALUE!, and the formula gives the real one again */
 const OLD_ERRS = new Set(['#NULL!', '#DIV/0!', '#VALUE!', '#REF!', '#NAME?', '#NUM!', '#N/A']);
 const xlErr = v => ({ error: OLD_ERRS.has(v.c) ? v.c : '#VALUE!' });
-function xlFormula(f, arr) {
+function xlFormula(f, arr, tbl) {
   const toks = tokenize(f), out = [];
   // LET and LAMBDA: inside their brackets the names they give are written _xlpm.name, and [name] _xlop.name, as Excel
   // keeps them. scopes: each one's bracket depth, which argument the walk is in, and its names
@@ -6985,6 +7203,8 @@ function xlFormula(f, arr) {
       continue;
     }
     if ((t.t === 'name' && t.sheet == null && given(t.n)) || (t.t === 'fn' && !FUNCS[t.n] && given(t.s))) { out.push('_xlpm.' + t.s); continue; }
+    if (t.t === 'tref' || t.t === 'opt') { out.push(trefText(t.t === 'opt' ? { tbl: null, sp: {}, cols: [t.n] } : t, tbl, true)); continue; }
+    if (t.t === 'name' && t.sheet == null && WB && !nameOf(t, null) && tableByName(t.n)) { out.push(t.s + '[]'); continue; }   // a table's name alone: Sales[]
     if (t.t === 'fn' && !/^_xl/i.test(t.s)) out.push((XLWS.has(t.n) ? '_xlfn._xlws.' : NEW_FNS.has(t.n) ? '_xlfn.' : '') + t.s);
     else if (t.t === 'ref' && t.sp) out.push('_xlfn.ANCHORARRAY(' + t.s.slice(0, -1) + ')');
     else if (t.t === 'op' && t.s === '@') {
@@ -6999,7 +7219,7 @@ function xlFormula(f, arr) {
       const j = skip(i + 1);
       let end = endOf(j);
       for (let k = skip(end + 1); toks[k] && toks[k].t === 'op' && toks[k].s === ':'; k = skip(end + 1)) end = endOf(skip(k + 1));
-      out.push('_xlfn.SINGLE(' + xlFormula(toks.slice(j, end + 1).map(x => x.s).join(''), true) + ')');
+      out.push('_xlfn.SINGLE(' + xlFormula(toks.slice(j, end + 1).map(x => x.s).join(''), true, tbl) + ')');
       i = end;
     }
     else out.push(t.t === ',' ? ',' : t.s);
@@ -7094,7 +7314,8 @@ async function writeXlsx() {
       else if (x.f != null) {
         // an array answer (or math done cell by cell) is written the way Excel 365 writes it: an array formula over the cells it fills
         const area =!x.l && !x.x && s._sa && s._sa.get(k), arr = !x.l && !x.x && !!(area || x.dx), result = isErr(x.v) ? xlErr(x.v) : x.v ?? 0;
-        cell.value = arr ? { formula: xlFormula(x.f, true), result, shareType: 'array', ref: area ? rangeA1(area) : A1(kr(k), kc(k)) } : { formula: xlFormula(x.f), result };
+        const tb = s.tables.length ? tableAt(s, kr(k), kc(k)) : null;   // [Col] inside a table is its column
+        cell.value = arr ? { formula: xlFormula(x.f, true, tb && tb.name), result, shareType: 'array', ref: area ? rangeA1(area) : A1(kr(k), kc(k)) } : { formula: xlFormula(x.f, false, tb && tb.name), result };
         if (arr) dyn = true;
       }
       else if (isErr(x.v)) cell.value = xlErr(x.v);
@@ -7111,7 +7332,7 @@ async function writeXlsx() {
       if (!x) cell.style = xlStyleOut(emptyLook(s, kr(k), kc(k)));
     }
     for (const m of s.merges) ws.mergeCells(m.r1 + 1, m.c1 + 1, m.r2 + 1, m.c2 + 1);
-    if (s.af) ws.autoFilter = { from: { row: s.af.r1 + 1, column: s.af.c1 + 1 }, to: { row: filterEnd(s.af, s) + 1, column: s.af.c2 + 1 } };
+    if (s.af && !s.tables.some(t => meets(t.g, s.af))) ws.autoFilter = { from: { row: s.af.r1 + 1, column: s.af.c1 + 1 }, to: { row: filterEnd(s.af, s) + 1, column: s.af.c2 + 1 } };   // a table's filter is written in the table's own part
   }
   let buf = await wb.xlsx.writeBuffer();
   if (WB.sheets.some(s => s.charts.length || s.pics.length)) buf = await addXlsxCharts(buf);
@@ -7120,6 +7341,7 @@ async function writeXlsx() {
   if (WB.sheets.some(s => s.cf.length)) buf = await addXlsxCf(buf);
   if (WB.sheets.some(s => { for (const x of s.cells.values()) if (x.k) return true; return false; })) buf = await addXlsxLinks(buf);
   if ((WB.names || NO_NAMES).length) buf = await addXlsxNames(buf);
+  if (WB.sheets.some(s => s.tables.length)) buf = await addXlsxTables(buf);
   return new Blob([buf], { type: XLSX_MIME });
 }
 /* links into each sheet's <hyperlinks>: a web address or an email through the sheet's links (TargetMode External), a
@@ -7358,6 +7580,17 @@ function applySpec(book, s, spec, log) {
     setCell(s, p.r, p.c, m.f != null || m.v !== undefined || m.st || m.n ? m : null);
     n++;
   }
+  // formatted tables: the range's first row is the header row (its names); a total row takes the next row when it is free
+  for (const d of Array.isArray(spec.tables) ? spec.tables.slice(0, 50) : []) {
+    const g = d && typeof d === 'object' ? parseRange(String(d.range || '').replace(/^=/, '')) : null;
+    if (!g || wholeCols(g) || wholeRows(g) || s.tables.some(t => meets(t.g, g)) || s.merges.some(m => meets(m, g))) continue;
+    const taken = new Set((book.names || []).map(x => x.n.toLowerCase()));
+    for (const sh of book.sheets) for (const t of sh.tables) taken.add(t.name.toLowerCase());
+    const st = String(d.style || '').replace(/\s+/g, ''), style = tsOf(/^TableStyle/i.test(st) ? 'TableStyle' + st.slice(10).replace(/^./, m => m.toUpperCase()) : 'TableStyle' + st.replace(/^./, m => m.toUpperCase()));
+    let t = tableOn(s, g, { name: d.name, style, sr: d.banded_rows !== false, sc: d.banded_columns === true, fc: d.first_column === true, lc: d.last_column === true, fb: d.filter_button !== false }, taken);
+    if (d.total_row === true) { const y = totalRowOn(s, t); if (y) { setProp(s, 'tables', s.tables.map(o => o === t ? y : o)); t = y; } }
+    n++;
+  }
   if (spec.links && typeof spec.links === 'object') for (const [a, t] of Object.entries(spec.links).slice(0, 5000)) {
     const p = parseA1(a), k = t ? linkOk(/^www\./i.test(String(t).trim()) ? 'https://' + String(t).trim() : t) : null;
     if (!p || p.r >= MAXR || p.c >= MAXC || (t && !k)) continue;
@@ -7510,6 +7743,8 @@ function forAI(args = {}) {
   if (args.range && !g) throw new Error(`"${args.range}" is not a range. Use A1 notation, like A1:D20.`);
   const out = { sheets: WB.sheets.map(x => { const u = usedRange(x); return { name: x.name, used_range: u ? rangeA1(u) : null }; }), sheet: s.name, direction: s.dir };
   if (s.pics.length) out.pictures = s.pics.map(x => ({ at: A1(x.at.r, x.at.c), width: x.w, height: x.h, ...(x.alt ? { alt: x.alt } : {}) }));
+  if (s.tables.length) out.tables = s.tables.map(t => ({ name: t.name, range: rangeA1(t.g), columns: t.cols.map(c => c.n), style: t.style, ...(t.hr ? {} : { header_row: false }), ...(t.tr ? { total_row: true } : {}),
+    note: 'A formula may use its columns: =SUM(' + t.name + '[' + tColEsc(t.cols[t.cols.length - 1].n) + ']), or [@Column] for the same row inside the table' }));
   if (s.charts.length) out.charts = s.charts.map(ch => ({ type: Object.keys(CK_API).find(k => CK_API[k] === ch.ck), ...(ch.ti ? { title: ch.ti } : {}), data: ch.src ? ch.src.ref : ch.ser.map(x => x.v).join(', '), at: A1(ch.at.r, ch.at.c) }));
   if (s.cf.length) out.conditional_formats = s.cf.map(r => ({ range: r.g.map(rangeA1).join(' '), rule: cfDesc(r).replace(/[\u2066-\u2069]/g, '') }));
   if (s.dv.length) out.validations = s.dv.map(dvToSpec);
@@ -8436,6 +8671,7 @@ function gOut(s) {
   if (s.charts.length) o.ch = s.charts.map(ch => { const x = chartOut(ch), a = rid(ch.at.r), b = cid(ch.at.c); delete x.dx; delete x.dy; return a && b ? { ...x, at: [a, b, ch.at.dx, ch.at.dy] } : null; }).filter(Boolean);
   if (s.pics.length) o.pi = s.pics.map(x => { const y = picOut(x), a = rid(x.at.r), b = cid(x.at.c); delete y.dx; delete y.dy; return a && b ? { ...y, at: [a, b, x.at.dx, x.at.dy] } : null; }).filter(Boolean);
   for (const key of RULE_KEYS) if (s[key].length) o[key] = s[key].map(rule => { const x = cfOut(rule), b = rule.g.map(box); delete x.ref; return b.every(Boolean) ? { ...x, g: b } : null; }).filter(Boolean);
+  if (s.tables.length) o.tb = s.tables.map(t => { const x = tableOut(t), b = box(t.g); delete x.ref; return b ? { ...x, g: b } : null; }).filter(Boolean);
   return o;
 }
 /* the same, checked, from someone else */
@@ -8472,6 +8708,12 @@ function gNorm(v) {
     return { ...o2, at: [a[0], a[1], q.at.dx, q.at.dy] };
   }).filter(Boolean);
   if (pi.length) o.pi = pi;
+  const tb = (Array.isArray(v.tb) ? v.tb : []).slice(0, 100).map(x => {   // checked over a stand-in range of its own width (its place comes by ids)
+    const b = x && box(x.g), w = clamp(Array.isArray(x.cols) ? x.cols.length : 1, 1, 16384), t = b && normTable({ ...x, g: { r1: 0, c1: 0, r2: 3, c2: w - 1 } });
+    if (!t) return null;
+    const o2 = tableOut(t); delete o2.ref; return { ...o2, g: b };
+  }).filter(Boolean);
+  if (tb.length) o.tb = tb;
   for (const key of RULE_KEYS) {
     const rules = (Array.isArray(v[key]) ? v[key] : []).slice(0, key === 'dv' ? DV_MAX : 500).map(x => {
       const g = x && Array.isArray(x.g) ? x.g.map(box).filter(Boolean).slice(0, 50) : [], r = g.length && ruleNorm(key)({ ...x, g: null, ref: 'A1' });
@@ -8504,6 +8746,8 @@ function gIn(s, g, taken) {
   else s.af = null;
   s.charts = (g.ch || []).map(x => { const r = R_(x.at[0]), c = C_(x.at[1]); return r == null || c == null ? null : normSheetChart({ ...x, at: A1(r, c), dx: x.at[2], dy: x.at[3] }); }).filter(Boolean);
   s.pics = (g.pi || []).map(x => { const r = R_(x.at[0]), c = C_(x.at[1]); return r == null || c == null ? null : normPic({ ...x, at: A1(r, c), dx: x.at[2], dy: x.at[3] }); }).filter(Boolean);
+  s.tables = [];
+  for (const x of g.tb || []) { const gg = box(x.g), t = gg && normTable({ ...x, g: gg }); if (t && !s.tables.some(o => meets(o.g, t.g))) s.tables.push(t); }
   for (const key of RULE_KEYS) s[key] = (g[key] || []).map(x => { const gg = x.g.map(box).filter(Boolean); return gg.length ? ruleNorm(key)({ ...x, g: gg }) : null; }).filter(Boolean);
 }
 /* an entry from someone else, checked the way a workbook from storage is (undefined: not taken) */
@@ -8799,6 +9043,442 @@ function drawPeers(L, rr, cc) {
   }
 }
 
+
+/* =========================================================
+   formatted tables, as Excel's (Insert → Table, Home → Format as Table): a range with a name, its columns named in its
+   header row, a look from Excel's 60 table styles, banded rows, a total row and filter buttons. A sheet's tables are
+   s.tables: { id, name, g (with the header and total rows), hr (the header row shows), tr (a total row), style, sr sc
+   (banded rows and columns), fc lc (the first and last column stand out), fb (filter buttons), cols: [{ n: its name,
+   fn: what the total row works out (sum, average, count...), lbl: the total row's words, cf: the formula that fills
+   the column }] }. A name is the workbook's, like a defined name's
+   ========================================================= */
+/* Excel's built-in table styles, read from Excel itself (tstyle_dump.ps1 in the development): for each part of a table
+   (w the whole table, h the header row, t the total row, f and l the first and last columns, r1 r2 the row stripes, c1
+   c2 the column stripes, fh lh ft lt the corner cells) its fill, text color and bold, and its borders: bt bb bs be its
+   outer sides (bs toward column A), bv bh the lines inside it; n a stripe's size */
+const TSTYLES = {Light1:{w:{c:"#000000",bt:"1s#000000",bb:"1s#000000"},h:{c:"#000000",b:1,bb:"1s#000000"},t:{c:"#000000",b:1,bt:"1s#000000"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#d9d9d9"},c1:{bg:"#d9d9d9"}},Light2:{w:{c:"#305496",bt:"1s#4472c4",bb:"1s#4472c4"},h:{c:"#305496",b:1,bb:"1s#4472c4"},t:{c:"#305496",b:1,bt:"1s#4472c4"},f:{c:"#305496",b:1},l:{c:"#305496",b:1},r1:{bg:"#d9e1f2"},c1:{bg:"#d9e1f2"}},Light3:{w:{c:"#c65911",bt:"1s#ed7d31",bb:"1s#ed7d31"},h:{c:"#c65911",b:1,bb:"1s#ed7d31"},t:{c:"#c65911",b:1,bt:"1s#ed7d31"},f:{c:"#c65911",b:1},l:{c:"#c65911",b:1},r1:{bg:"#fce4d6"},c1:{bg:"#fce4d6"}},Light4:{w:{c:"#7b7b7b",bt:"1s#a5a5a5",bb:"1s#a5a5a5"},h:{c:"#7b7b7b",b:1,bb:"1s#a5a5a5"},t:{c:"#7b7b7b",b:1,bt:"1s#a5a5a5"},f:{c:"#7b7b7b",b:1},l:{c:"#7b7b7b",b:1},r1:{bg:"#ededed"},c1:{bg:"#ededed"}},Light5:{w:{c:"#bf8f00",bt:"1s#ffc000",bb:"1s#ffc000"},h:{c:"#bf8f00",b:1,bb:"1s#ffc000"},t:{c:"#bf8f00",b:1,bt:"1s#ffc000"},f:{c:"#bf8f00",b:1},l:{c:"#bf8f00",b:1},r1:{bg:"#fff2cc"},c1:{bg:"#fff2cc"}},Light6:{w:{c:"#2f75b5",bt:"1s#5b9bd5",bb:"1s#5b9bd5"},h:{c:"#2f75b5",b:1,bb:"1s#5b9bd5"},t:{c:"#2f75b5",b:1,bt:"1s#5b9bd5"},f:{c:"#2f75b5",b:1},l:{c:"#2f75b5",b:1},r1:{bg:"#ddebf7"},c1:{bg:"#ddebf7"}},Light7:{w:{c:"#548235",bt:"1s#70ad47",bb:"1s#70ad47"},h:{c:"#548235",b:1,bb:"1s#70ad47"},t:{c:"#548235",b:1,bt:"1s#70ad47"},f:{c:"#548235",b:1},l:{c:"#548235",b:1},r1:{bg:"#e2efda"},c1:{bg:"#e2efda"}},Light8:{w:{c:"#000000",bt:"1s#000000",bb:"1s#000000",bs:"1s#000000",be:"1s#000000"},h:{bg:"#000000",c:"#ffffff",b:1},t:{c:"#000000",b:1,bt:"1=#000000"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bt:"1s#000000"},r2:{bt:"1s#000000"},c1:{bs:"1s#000000"},c2:{bs:"1s#000000"}},Light9:{w:{c:"#000000",bt:"1s#4472c4",bb:"1s#4472c4",bs:"1s#4472c4",be:"1s#4472c4"},h:{bg:"#4472c4",c:"#ffffff",b:1},t:{c:"#000000",b:1,bt:"1=#4472c4"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bt:"1s#4472c4"},r2:{bt:"1s#4472c4"},c1:{bs:"1s#4472c4"},c2:{bs:"1s#4472c4"}},Light10:{w:{c:"#000000",bt:"1s#ed7d31",bb:"1s#ed7d31",bs:"1s#ed7d31",be:"1s#ed7d31"},h:{bg:"#ed7d31",c:"#ffffff",b:1},t:{c:"#000000",b:1,bt:"1=#ed7d31"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bt:"1s#ed7d31"},r2:{bt:"1s#ed7d31"},c1:{bs:"1s#ed7d31"},c2:{bs:"1s#ed7d31"}},Light11:{w:{c:"#000000",bt:"1s#a5a5a5",bb:"1s#a5a5a5",bs:"1s#a5a5a5",be:"1s#a5a5a5"},h:{bg:"#a5a5a5",c:"#ffffff",b:1},t:{c:"#000000",b:1,bt:"1=#a5a5a5"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bt:"1s#a5a5a5"},r2:{bt:"1s#a5a5a5"},c1:{bs:"1s#a5a5a5"},c2:{bs:"1s#a5a5a5"}},Light12:{w:{c:"#000000",bt:"1s#ffc000",bb:"1s#ffc000",bs:"1s#ffc000",be:"1s#ffc000"},h:{bg:"#ffc000",c:"#ffffff",b:1},t:{c:"#000000",b:1,bt:"1=#ffc000"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bt:"1s#ffc000"},r2:{bt:"1s#ffc000"},c1:{bs:"1s#ffc000"},c2:{bs:"1s#ffc000"}},Light13:{w:{c:"#000000",bt:"1s#5b9bd5",bb:"1s#5b9bd5",bs:"1s#5b9bd5",be:"1s#5b9bd5"},h:{bg:"#5b9bd5",c:"#ffffff",b:1},t:{c:"#000000",b:1,bt:"1=#5b9bd5"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bt:"1s#5b9bd5"},r2:{bt:"1s#5b9bd5"},c1:{bs:"1s#5b9bd5"},c2:{bs:"1s#5b9bd5"}},Light14:{w:{c:"#000000",bt:"1s#70ad47",bb:"1s#70ad47",bs:"1s#70ad47",be:"1s#70ad47"},h:{bg:"#70ad47",c:"#ffffff",b:1},t:{c:"#000000",b:1,bt:"1=#70ad47"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bt:"1s#70ad47"},r2:{bt:"1s#70ad47"},c1:{bs:"1s#70ad47"},c2:{bs:"1s#70ad47"}},Light15:{w:{c:"#000000",bt:"1s#000000",bb:"1s#000000",bs:"1s#000000",be:"1s#000000",bv:"1s#000000",bh:"1s#000000"},h:{c:"#000000",b:1,bb:"2s#000000"},t:{c:"#000000",b:1,bt:"1=#000000"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#d9d9d9"},c1:{bg:"#d9d9d9"}},Light16:{w:{c:"#000000",bt:"1s#4472c4",bb:"1s#4472c4",bs:"1s#4472c4",be:"1s#4472c4",bv:"1s#4472c4",bh:"1s#4472c4"},h:{c:"#000000",b:1,bb:"2s#4472c4"},t:{c:"#000000",b:1,bt:"1=#4472c4"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#d9e1f2"},c1:{bg:"#d9e1f2"}},Light17:{w:{c:"#000000",bt:"1s#ed7d31",bb:"1s#ed7d31",bs:"1s#ed7d31",be:"1s#ed7d31",bv:"1s#ed7d31",bh:"1s#ed7d31"},h:{c:"#000000",b:1,bb:"2s#ed7d31"},t:{c:"#000000",b:1,bt:"1=#ed7d31"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#fce4d6"},c1:{bg:"#fce4d6"}},Light18:{w:{c:"#000000",bt:"1s#a5a5a5",bb:"1s#a5a5a5",bs:"1s#a5a5a5",be:"1s#a5a5a5",bv:"1s#a5a5a5",bh:"1s#a5a5a5"},h:{c:"#000000",b:1,bb:"2s#a5a5a5"},t:{c:"#000000",b:1,bt:"1=#a5a5a5"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#ededed"},c1:{bg:"#ededed"}},Light19:{w:{c:"#000000",bt:"1s#ffc000",bb:"1s#ffc000",bs:"1s#ffc000",be:"1s#ffc000",bv:"1s#ffc000",bh:"1s#ffc000"},h:{c:"#000000",b:1,bb:"2s#ffc000"},t:{c:"#000000",b:1,bt:"1=#ffc000"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#fff2cc"},c1:{bg:"#fff2cc"}},Light20:{w:{c:"#000000",bt:"1s#5b9bd5",bb:"1s#5b9bd5",bs:"1s#5b9bd5",be:"1s#5b9bd5",bv:"1s#5b9bd5",bh:"1s#5b9bd5"},h:{c:"#000000",b:1,bb:"2s#5b9bd5"},t:{c:"#000000",b:1,bt:"1=#5b9bd5"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#ddebf7"},c1:{bg:"#ddebf7"}},Light21:{w:{c:"#000000",bt:"1s#70ad47",bb:"1s#70ad47",bs:"1s#70ad47",be:"1s#70ad47",bv:"1s#70ad47",bh:"1s#70ad47"},h:{c:"#000000",b:1,bb:"2s#70ad47"},t:{c:"#000000",b:1,bt:"1=#70ad47"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#e2efda"},c1:{bg:"#e2efda"}},Medium1:{w:{c:"#000000",bt:"1s#000000",bb:"1s#000000",bs:"1s#000000",be:"1s#000000",bh:"1s#000000"},h:{bg:"#000000",c:"#ffffff",b:1},t:{c:"#000000",b:1,bt:"1=#000000"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#d9d9d9"},c1:{bg:"#d9d9d9"}},Medium2:{w:{c:"#000000",bt:"1s#8ea9db",bb:"1s#8ea9db",bs:"1s#8ea9db",be:"1s#8ea9db",bh:"1s#8ea9db"},h:{bg:"#4472c4",c:"#ffffff",b:1},t:{c:"#000000",b:1,bt:"1=#4472c4"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#d9e1f2"},c1:{bg:"#d9e1f2"}},Medium3:{w:{c:"#000000",bt:"1s#f4b084",bb:"1s#f4b084",bs:"1s#f4b084",be:"1s#f4b084",bh:"1s#f4b084"},h:{bg:"#ed7d31",c:"#ffffff",b:1},t:{c:"#000000",b:1,bt:"1=#ed7d31"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#fce4d6"},c1:{bg:"#fce4d6"}},Medium4:{w:{c:"#000000",bt:"1s#c9c9c9",bb:"1s#c9c9c9",bs:"1s#c9c9c9",be:"1s#c9c9c9",bh:"1s#c9c9c9"},h:{bg:"#a5a5a5",c:"#ffffff",b:1},t:{c:"#000000",b:1,bt:"1=#a5a5a5"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#ededed"},c1:{bg:"#ededed"}},Medium5:{w:{c:"#000000",bt:"1s#ffd966",bb:"1s#ffd966",bs:"1s#ffd966",be:"1s#ffd966",bh:"1s#ffd966"},h:{bg:"#ffc000",c:"#ffffff",b:1},t:{c:"#000000",b:1,bt:"1=#ffc000"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#fff2cc"},c1:{bg:"#fff2cc"}},Medium6:{w:{c:"#000000",bt:"1s#9bc2e6",bb:"1s#9bc2e6",bs:"1s#9bc2e6",be:"1s#9bc2e6",bh:"1s#9bc2e6"},h:{bg:"#5b9bd5",c:"#ffffff",b:1},t:{c:"#000000",b:1,bt:"1=#5b9bd5"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#ddebf7"},c1:{bg:"#ddebf7"}},Medium7:{w:{c:"#000000",bt:"1s#a9d08e",bb:"1s#a9d08e",bs:"1s#a9d08e",be:"1s#a9d08e",bh:"1s#a9d08e"},h:{bg:"#70ad47",c:"#ffffff",b:1},t:{c:"#000000",b:1,bt:"1=#70ad47"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#e2efda"},c1:{bg:"#e2efda"}},Medium8:{w:{bg:"#d9d9d9",c:"#000000",bv:"1s#ffffff",bh:"1s#ffffff"},h:{bg:"#000000",c:"#ffffff",b:1,bb:"3s#ffffff"},t:{bg:"#000000",c:"#ffffff",b:1,bt:"3s#ffffff"},f:{bg:"#000000",c:"#ffffff",b:1},l:{bg:"#000000",c:"#ffffff",b:1},r1:{bg:"#a6a6a6"},c1:{bg:"#a6a6a6"}},Medium9:{w:{bg:"#d9e1f2",c:"#000000",bv:"1s#ffffff",bh:"1s#ffffff"},h:{bg:"#4472c4",c:"#ffffff",b:1,bb:"3s#ffffff"},t:{bg:"#4472c4",c:"#ffffff",b:1,bt:"3s#ffffff"},f:{bg:"#4472c4",c:"#ffffff",b:1},l:{bg:"#4472c4",c:"#ffffff",b:1},r1:{bg:"#b4c6e7"},c1:{bg:"#b4c6e7"}},Medium10:{w:{bg:"#fce4d6",c:"#000000",bv:"1s#ffffff",bh:"1s#ffffff"},h:{bg:"#ed7d31",c:"#ffffff",b:1,bb:"3s#ffffff"},t:{bg:"#ed7d31",c:"#ffffff",b:1,bt:"3s#ffffff"},f:{bg:"#ed7d31",c:"#ffffff",b:1},l:{bg:"#ed7d31",c:"#ffffff",b:1},r1:{bg:"#f8cbad"},c1:{bg:"#f8cbad"}},Medium11:{w:{bg:"#ededed",c:"#000000",bv:"1s#ffffff",bh:"1s#ffffff"},h:{bg:"#a5a5a5",c:"#ffffff",b:1,bb:"3s#ffffff"},t:{bg:"#a5a5a5",c:"#ffffff",b:1,bt:"3s#ffffff"},f:{bg:"#a5a5a5",c:"#ffffff",b:1},l:{bg:"#a5a5a5",c:"#ffffff",b:1},r1:{bg:"#dbdbdb"},c1:{bg:"#dbdbdb"}},Medium12:{w:{bg:"#fff2cc",c:"#000000",bv:"1s#ffffff",bh:"1s#ffffff"},h:{bg:"#ffc000",c:"#ffffff",b:1,bb:"3s#ffffff"},t:{bg:"#ffc000",c:"#ffffff",b:1,bt:"3s#ffffff"},f:{bg:"#ffc000",c:"#ffffff",b:1},l:{bg:"#ffc000",c:"#ffffff",b:1},r1:{bg:"#ffe699"},c1:{bg:"#ffe699"}},Medium13:{w:{bg:"#ddebf7",c:"#000000",bv:"1s#ffffff",bh:"1s#ffffff"},h:{bg:"#5b9bd5",c:"#ffffff",b:1,bb:"3s#ffffff"},t:{bg:"#5b9bd5",c:"#ffffff",b:1,bt:"3s#ffffff"},f:{bg:"#5b9bd5",c:"#ffffff",b:1},l:{bg:"#5b9bd5",c:"#ffffff",b:1},r1:{bg:"#bdd7ee"},c1:{bg:"#bdd7ee"}},Medium14:{w:{bg:"#e2efda",c:"#000000",bv:"1s#ffffff",bh:"1s#ffffff"},h:{bg:"#70ad47",c:"#ffffff",b:1,bb:"3s#ffffff"},t:{bg:"#70ad47",c:"#ffffff",b:1,bt:"3s#ffffff"},f:{bg:"#70ad47",c:"#ffffff",b:1},l:{bg:"#70ad47",c:"#ffffff",b:1},r1:{bg:"#c6e0b4"},c1:{bg:"#c6e0b4"}},Medium15:{w:{c:"#000000",bt:"2s#000000",bb:"2s#000000",bs:"1s#000000",be:"1s#000000",bv:"1s#000000",bh:"1s#000000"},h:{bg:"#000000",c:"#ffffff",b:1,bb:"2s#000000"},t:{bt:"1=#000000"},f:{bg:"#000000",c:"#ffffff",b:1},l:{bg:"#000000",c:"#ffffff",b:1},r1:{bg:"#d9d9d9"},c1:{bg:"#d9d9d9"}},Medium16:{w:{c:"#000000",bt:"2s#000000",bb:"2s#000000"},h:{bg:"#4472c4",c:"#ffffff",b:1,bb:"2s#000000"},t:{bt:"1=#000000"},f:{bg:"#4472c4",c:"#ffffff",b:1},l:{bg:"#4472c4",c:"#ffffff",b:1},r1:{bg:"#d9d9d9"},c1:{bg:"#d9d9d9"}},Medium17:{w:{c:"#000000",bt:"2s#000000",bb:"2s#000000"},h:{bg:"#ed7d31",c:"#ffffff",b:1,bb:"2s#000000"},t:{bt:"1=#000000"},f:{bg:"#ed7d31",c:"#ffffff",b:1},l:{bg:"#ed7d31",c:"#ffffff",b:1},r1:{bg:"#d9d9d9"},c1:{bg:"#d9d9d9"}},Medium18:{w:{c:"#000000",bt:"2s#000000",bb:"2s#000000"},h:{bg:"#a5a5a5",c:"#ffffff",b:1,bb:"2s#000000"},t:{bt:"1=#000000"},f:{bg:"#a5a5a5",c:"#ffffff",b:1},l:{bg:"#a5a5a5",c:"#ffffff",b:1},r1:{bg:"#d9d9d9"},c1:{bg:"#d9d9d9"}},Medium19:{w:{c:"#000000",bt:"2s#000000",bb:"2s#000000"},h:{bg:"#ffc000",c:"#ffffff",b:1,bb:"2s#000000"},t:{bt:"1=#000000"},f:{bg:"#ffc000",c:"#ffffff",b:1},l:{bg:"#ffc000",c:"#ffffff",b:1},r1:{bg:"#d9d9d9"},c1:{bg:"#d9d9d9"}},Medium20:{w:{c:"#000000",bt:"2s#000000",bb:"2s#000000"},h:{bg:"#5b9bd5",c:"#ffffff",b:1,bb:"2s#000000"},t:{bt:"1=#000000"},f:{bg:"#5b9bd5",c:"#ffffff",b:1},l:{bg:"#5b9bd5",c:"#ffffff",b:1},r1:{bg:"#d9d9d9"},c1:{bg:"#d9d9d9"}},Medium21:{w:{c:"#000000",bt:"2s#000000",bb:"2s#000000"},h:{bg:"#70ad47",c:"#ffffff",b:1,bb:"2s#000000"},t:{bt:"1=#000000"},f:{bg:"#70ad47",c:"#ffffff",b:1},l:{bg:"#70ad47",c:"#ffffff",b:1},r1:{bg:"#d9d9d9"},c1:{bg:"#d9d9d9"}},Medium22:{w:{bg:"#d9d9d9",c:"#000000",bt:"1s#000000",bb:"1s#000000",bs:"1s#000000",be:"1s#000000",bv:"1s#000000",bh:"1s#000000"},h:{c:"#000000",b:1},t:{c:"#000000",b:1,bt:"2s#000000"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#a6a6a6"},c1:{bg:"#a6a6a6"}},Medium23:{w:{bg:"#d9e1f2",c:"#000000",bt:"1s#8ea9db",bb:"1s#8ea9db",bs:"1s#8ea9db",be:"1s#8ea9db",bv:"1s#8ea9db",bh:"1s#8ea9db"},h:{c:"#000000",b:1},t:{c:"#000000",b:1,bt:"2s#4472c4"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#b4c6e7"},c1:{bg:"#b4c6e7"}},Medium24:{w:{bg:"#fce4d6",c:"#000000",bt:"1s#f4b084",bb:"1s#f4b084",bs:"1s#f4b084",be:"1s#f4b084",bv:"1s#f4b084",bh:"1s#f4b084"},h:{c:"#000000",b:1},t:{c:"#000000",b:1,bt:"2s#ed7d31"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#f8cbad"},c1:{bg:"#f8cbad"}},Medium25:{w:{bg:"#ededed",c:"#000000",bt:"1s#c9c9c9",bb:"1s#c9c9c9",bs:"1s#c9c9c9",be:"1s#c9c9c9",bv:"1s#c9c9c9",bh:"1s#c9c9c9"},h:{c:"#000000",b:1},t:{c:"#000000",b:1,bt:"2s#a5a5a5"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#dbdbdb"},c1:{bg:"#dbdbdb"}},Medium26:{w:{bg:"#fff2cc",c:"#000000",bt:"1s#ffd966",bb:"1s#ffd966",bs:"1s#ffd966",be:"1s#ffd966",bv:"1s#ffd966",bh:"1s#ffd966"},h:{c:"#000000",b:1},t:{c:"#000000",b:1,bt:"2s#ffc000"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#ffe699"},c1:{bg:"#ffe699"}},Medium27:{w:{bg:"#ddebf7",c:"#000000",bt:"1s#9bc2e6",bb:"1s#9bc2e6",bs:"1s#9bc2e6",be:"1s#9bc2e6",bv:"1s#9bc2e6",bh:"1s#9bc2e6"},h:{c:"#000000",b:1},t:{c:"#000000",b:1,bt:"2s#5b9bd5"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#bdd7ee"},c1:{bg:"#bdd7ee"}},Medium28:{w:{bg:"#e2efda",c:"#000000",bt:"1s#a9d08e",bb:"1s#a9d08e",bs:"1s#a9d08e",be:"1s#a9d08e",bv:"1s#a9d08e",bh:"1s#a9d08e"},h:{c:"#000000",b:1},t:{c:"#000000",b:1,bt:"2s#70ad47"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#c6e0b4"},c1:{bg:"#c6e0b4"}},Dark1:{w:{bg:"#737373",c:"#ffffff"},h:{bg:"#000000",c:"#ffffff",b:1,bb:"2s#ffffff"},t:{bg:"#262626",c:"#ffffff",b:1,bt:"2s#ffffff"},f:{bg:"#404040",c:"#ffffff",b:1,be:"2s#ffffff"},l:{bg:"#404040",c:"#ffffff",b:1,bs:"2s#ffffff"},r1:{bg:"#404040"},c1:{bg:"#404040"}},Dark2:{w:{bg:"#4472c4",c:"#ffffff"},h:{bg:"#000000",c:"#ffffff",b:1,bb:"2s#ffffff"},t:{bg:"#203764",c:"#ffffff",b:1,bt:"2s#ffffff"},f:{bg:"#305496",c:"#ffffff",b:1,be:"2s#ffffff"},l:{bg:"#305496",c:"#ffffff",b:1,bs:"2s#ffffff"},r1:{bg:"#305496"},c1:{bg:"#305496"}},Dark3:{w:{bg:"#ed7d31",c:"#ffffff"},h:{bg:"#000000",c:"#ffffff",b:1,bb:"2s#ffffff"},t:{bg:"#833c0c",c:"#ffffff",b:1,bt:"2s#ffffff"},f:{bg:"#c65911",c:"#ffffff",b:1,be:"2s#ffffff"},l:{bg:"#c65911",c:"#ffffff",b:1,bs:"2s#ffffff"},r1:{bg:"#c65911"},c1:{bg:"#c65911"}},Dark4:{w:{bg:"#a5a5a5",c:"#ffffff"},h:{bg:"#000000",c:"#ffffff",b:1,bb:"2s#ffffff"},t:{bg:"#525252",c:"#ffffff",b:1,bt:"2s#ffffff"},f:{bg:"#7b7b7b",c:"#ffffff",b:1,be:"2s#ffffff"},l:{bg:"#7b7b7b",c:"#ffffff",b:1,bs:"2s#ffffff"},r1:{bg:"#7b7b7b"},c1:{bg:"#7b7b7b"}},Dark5:{w:{bg:"#ffc000",c:"#ffffff"},h:{bg:"#000000",c:"#ffffff",b:1,bb:"2s#ffffff"},t:{bg:"#806000",c:"#ffffff",b:1,bt:"2s#ffffff"},f:{bg:"#bf8f00",c:"#ffffff",b:1,be:"2s#ffffff"},l:{bg:"#bf8f00",c:"#ffffff",b:1,bs:"2s#ffffff"},r1:{bg:"#bf8f00"},c1:{bg:"#bf8f00"}},Dark6:{w:{bg:"#5b9bd5",c:"#ffffff"},h:{bg:"#000000",c:"#ffffff",b:1,bb:"2s#ffffff"},t:{bg:"#1f4e78",c:"#ffffff",b:1,bt:"2s#ffffff"},f:{bg:"#2f75b5",c:"#ffffff",b:1,be:"2s#ffffff"},l:{bg:"#2f75b5",c:"#ffffff",b:1,bs:"2s#ffffff"},r1:{bg:"#2f75b5"},c1:{bg:"#2f75b5"}},Dark7:{w:{bg:"#70ad47",c:"#ffffff"},h:{bg:"#000000",c:"#ffffff",b:1,bb:"2s#ffffff"},t:{bg:"#375623",c:"#ffffff",b:1,bt:"2s#ffffff"},f:{bg:"#548235",c:"#ffffff",b:1,be:"2s#ffffff"},l:{bg:"#548235",c:"#ffffff",b:1,bs:"2s#ffffff"},r1:{bg:"#548235"},c1:{bg:"#548235"}},Dark8:{w:{bg:"#d9d9d9"},h:{bg:"#000000",c:"#ffffff"},t:{c:"#000000",b:1,bt:"1=#000000"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#a6a6a6"},c1:{bg:"#a6a6a6"}},Dark9:{w:{bg:"#d9e1f2"},h:{bg:"#ed7d31",c:"#ffffff"},t:{c:"#000000",b:1,bt:"1=#000000"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#b4c6e7"},c1:{bg:"#b4c6e7"}},Dark10:{w:{bg:"#ededed"},h:{bg:"#ffc000",c:"#ffffff"},t:{c:"#000000",b:1,bt:"1=#000000"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#dbdbdb"},c1:{bg:"#dbdbdb"}},Dark11:{w:{bg:"#ddebf7"},h:{bg:"#70ad47",c:"#ffffff"},t:{c:"#000000",b:1,bt:"1=#000000"},f:{c:"#000000",b:1},l:{c:"#000000",b:1},r1:{bg:"#bdd7ee"},c1:{bg:"#bdd7ee"}}};
+const TS_DEF = 'TableStyleMedium2';
+const tsOf = name => TSTYLES[String(name || '').replace(/^TableStyle/, '')] ? name : TS_DEF;
+const TOT_FN = { sum: 109, average: 101, count: 103, countNums: 102, max: 104, min: 105, stdDev: 107, var: 110 };
+function normTable(x) {
+  if (!x || typeof x !== 'object') return null;
+  const g = x.g && typeof x.g === 'object' ? { r1: x.g.r1, c1: x.g.c1, r2: x.g.r2, c2: x.g.c2 } : parseRange(String(x.ref || ''));
+  if (!g || ![g.r1, g.c1, g.r2, g.c2].every(Number.isInteger) || g.r1 < 0 || g.c1 < 0 || g.r2 >= MAXR || g.c2 >= MAXC || g.r2 < g.r1 || g.c2 < g.c1) return null;
+  const hr = x.hr === 0 || x.hr === false ? 0 : 1, tr = x.tr ? 1 : 0;
+  if (g.r2 - g.r1 + 1 < hr + tr + 1) return null;   // a data row at least, as Excel keeps
+  const name = typeof x.name === 'string' ? x.name.trim() : '';
+  if (!name || name.length > 255 || nameProblem(name)) return null;
+  const cols = [];
+  for (let i = 0; i <= g.c2 - g.c1; i++) {
+    const y = Array.isArray(x.cols) && x.cols[i] && typeof x.cols[i] === 'object' ? x.cols[i] : {}, c = { n: typeof y.n === 'string' ? y.n.replace(/[\r\n]+/g, ' ').trim().slice(0, 255) : '' };
+    if (TOT_FN[y.fn] || y.fn === 'custom') c.fn = y.fn;
+    if (typeof y.lbl === 'string' && y.lbl) c.lbl = y.lbl.slice(0, 255);
+    if (typeof y.cf === 'string' && y.cf.trim()) c.cf = y.cf.trim().replace(/^=/, '').slice(0, 8000);
+    cols.push(c);
+  }
+  return { id: typeof x.id === 'string' && /^[a-z0-9]{4,24}$/.test(x.id) ? x.id : sid(), name, g, hr, tr, style: tsOf(x.style), sr: x.sr !== false, sc: x.sc === true, fc: x.fc === true, lc: x.lc === true, fb: x.fb !== false, cols: uniqueCols(cols) };
+}
+function tableOut(t) {
+  const o = { id: t.id, name: t.name, ref: rangeA1(t.g) };
+  if (!t.hr) o.hr = 0;
+  if (t.tr) o.tr = 1;
+  if (t.style !== TS_DEF) o.style = t.style;
+  if (!t.sr) o.sr = false;
+  for (const k of ['sc', 'fc', 'lc']) if (t[k]) o[k] = true;
+  if (!t.fb) o.fb = false;
+  o.cols = t.cols.map(c => ({ ...c }));
+  return o;
+}
+/* the header row is where the names are: a header cell with something in it names its column, and an empty one says
+   its column's name (a table described without its columns' names, or one whose cells came apart from it) */
+function headsOf(s, t) {
+  if (!t.hr) return t;
+  const cols = t.cols.map((c, i) => { const x = s.cells.get(KEY(t.g.r1, t.g.c1 + i)), v = x && x.v; return { ...c, n: v != null && v !== '' && !isErr(v) ? String(typeof v === 'boolean' ? (v ? 'TRUE' : 'FALSE') : v).replace(/[\r\n]+/g, ' ').trim().slice(0, 255) : c.n }; });
+  uniqueCols(cols);
+  cols.forEach((c, i) => { const k = KEY(t.g.r1, t.g.c1 + i), x = s.cells.get(k); if (!x || x.v !== c.n || x.f != null) { const o = { ...(x || {}), v: c.n }; delete o.f; delete o.x; delete o.l; s.cells.set(k, o); } });
+  return { ...t, cols };
+}
+/* a column without a name is עמודה and its place, and a name taken already gets a number after it, as in Excel */
+function uniqueCols(cols) {
+  const seen = new Set();
+  cols.forEach((c, i) => {
+    let n = c.n || T('עמודה{0}', i + 1);
+    if (seen.has(n.toLowerCase())) { let k = 2; while (seen.has((n + k).toLowerCase())) k++; n += k; }
+    seen.add(n.toLowerCase());
+    c.n = n;
+  });
+  return cols;
+}
+const tableNames = () => { const t = new Set((WB.names || NO_NAMES).map(x => x.n.toLowerCase())); for (const sh of WB.sheets) for (const x of sh.tables) t.add(x.name.toLowerCase()); return t; };
+function freeTableName(base, taken) {
+  const b = String(base || '').replace(/\d+$/, '') || T('טבלה{0}', '');
+  for (let k = 1; ; k++) { const n = b + k; if (!taken.has(n.toLowerCase())) return n; }
+}
+const tableAt = (s, r, c) => s.tables.find(t => inG(t.g, r, c)) || null;
+const tableByName = n => { const low = String(n).toLowerCase(); for (const sh of WB.sheets) for (const t of sh.tables) if (t.name.toLowerCase() === low) return { s: sh, t }; return null; };
+const dataRows = t => ({ r1: t.g.r1 + t.hr, r2: t.g.r2 - t.tr });
+/* a cell's look from its table's style, under its own look (what the cell has itself wins, as in Excel). Worked out once
+   for each change of the workbook */
+function underTable(s, r, c, st) {
+  if (!s.tables.length) return st;
+  if (s._tlv !== CHV || s._tlr !== s.tables) { s._tlc = new Map(); s._tlv = CHV; s._tlr = s.tables; }
+  const k = KEY(r, c);
+  let tl = s._tlc.get(k);
+  if (tl === undefined) { const t = tableAt(s, r, c); tl = t ? tableLook(t, r, c) : null; if (s._tlc.size > 50000) s._tlc.clear(); s._tlc.set(k, tl); }
+  return tl ? (st ? { ...tl, ...st } : tl) : st;
+}
+/* the parts of the style over cell (r, c), in Excel's order: the whole table, the column stripes, the row stripes, the
+   last and the first column, the header and total rows, then their corner cells. A part's border is on the outer side
+   of the cells it covers, or between them inside it */
+function tableLook(t, r, c) {
+  const S = TSTYLES[t.style.replace(/^TableStyle/, '')] || TSTYLES.Medium2, g = t.g, d = dataRows(t), out = {};
+  const put = (E, R) => {
+    if (!E || !inG(R, r, c)) return;
+    if (E.bg) out.bg = E.bg;
+    if (E.c) out.c = E.c;
+    if (E.b) out.b = true;
+    const side = (k, edge, inner) => { const v = E[edge ? k : inner]; if (v) out[k] = v; };
+    side('bt', r === R.r1, 'bh'); side('bb', r === R.r2, 'bh'); side('bs', c === R.c1, 'bv'); side('be', c === R.c2, 'bv');
+  };
+  const band = (i, a, b) => { const n = (a && a.n) || 1, m = (b && b.n) || 1, k = i % (n + m); return k < n ? [a, i - k, n] : [b, i - k + n, m]; };
+  put(S.w, g);
+  if (r >= d.r1 && r <= d.r2) {
+    if (t.sc) { const [E, i0, w] = band(c - g.c1, S.c1, S.c2); put(E, { r1: d.r1, r2: d.r2, c1: g.c1 + i0, c2: Math.min(g.c2, g.c1 + i0 + w - 1) }); }
+    if (t.sr) { const [E, i0, w] = band(r - d.r1, S.r1, S.r2); put(E, { r1: d.r1 + i0, r2: Math.min(d.r2, d.r1 + i0 + w - 1), c1: g.c1, c2: g.c2 }); }
+  }
+  if (t.lc) put(S.l, { ...g, c1: g.c2 });
+  if (t.fc) put(S.f, { ...g, c2: g.c1 });
+  if (t.hr) put(S.h, { ...g, r2: g.r1 });
+  if (t.tr) put(S.t, { ...g, r1: g.r2 });
+  const one = (rr, cc) => ({ r1: rr, r2: rr, c1: cc, c2: cc });
+  if (t.hr && t.fc) put(S.fh, one(g.r1, g.c1));
+  if (t.hr && t.lc) put(S.lh, one(g.r1, g.c2));
+  if (t.tr && t.fc) put(S.ft, one(g.r2, g.c1));
+  if (t.tr && t.lc) put(S.lt, one(g.r2, g.c2));
+  return Object.keys(out).length ? out : null;
+}
+/* what a header cell says as a column's name: its text as it shows */
+const headText = x => { if (!x) return ''; const v = view(x).t; return String(v ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, 255); };
+/* header cells written in this step: their columns take the new names (an empty one gets עמודה and its place), and the
+   cell says the name as text, as Excel does */
+function headersWritten(tx) {
+  for (const { s, k } of [...tx.cells.values()]) {
+    if (!s.tables || !s.tables.length) continue;
+    const r = kr(k), c = kc(k), t = s.tables.find(y => y.hr && r === y.g.r1 && c >= y.g.c1 && c <= y.g.c2);
+    if (!t) continue;
+    const i = c - t.g.c1, x = s.cells.get(k), want = headText(x);
+    const others = t.cols.filter((y, j) => j !== i).map(y => y.n.toLowerCase());
+    let n = want || T('עמודה{0}', i + 1);
+    if (others.includes(n.toLowerCase())) { let m = 2; while (others.includes((n + m).toLowerCase())) m++; n += m; }
+    if (n !== t.cols[i].n) { setProp(s, 'tables', s.tables.map(y => y === t ? { ...t, cols: t.cols.map((q, j) => j === i ? { ...q, n } : q) } : y)); renameColRefs(t, t.cols[i].n, n); }
+    if (!x || x.f != null || x.v !== n) { const o = { ...(x || {}), v: n }; delete o.f; delete o.x; delete o.l; setCell(s, r, c, o); }
+  }
+}
+/* rows or columns in or out: the table grows, shrinks or moves with them. A column put in gets a name (and its header
+   cell says it); a column taken out takes its name; the header or total row taken out leaves the table without it */
+function spliceTables(s, axis, at, n) {
+  const R = axis === 'r', out = [];
+  for (const t of s.tables) {
+    const g = shiftRange(t.g, axis, at, n);
+    if (!g) continue;
+    const x = { ...t, g, cols: t.cols.map(c => ({ ...c })) };
+    if (R && n < 0) {
+      if (t.hr && t.g.r1 >= at && t.g.r1 < at - n) x.hr = 0;
+      if (t.tr && t.g.r2 >= at && t.g.r2 < at - n) x.tr = 0;
+    }
+    if (!R) {
+      if (n > 0 && at > t.g.c1 && at <= t.g.c2) x.cols.splice(at - t.g.c1, 0, ...Array.from({ length: n }, () => ({ n: '' })));
+      if (n < 0) { const a = Math.max(at, t.g.c1), b = Math.min(at - n - 1, t.g.c2); if (b >= a) { trefsToCells(t, null, t.cols.slice(a - t.g.c1, b - t.g.c1 + 1).map(y => y.n.toLowerCase())); x.cols.splice(a - t.g.c1, b - a + 1); } }
+      uniqueCols(x.cols);
+    }
+    const y = normTable(x);
+    if (!y) continue;
+    out.push(y);
+    if (!R && n > 0 && y.hr) y.cols.forEach((c, i) => { const cc = y.g.c1 + i, cell = cellAt(s, y.g.r1, cc); if (!cell || cell.v !== c.n) setCell(s, y.g.r1, cc, { ...(cell || {}), v: c.n }); });
+  }
+  setProp(s, 'tables', out);
+}
+/* Excel's guess for a new table's header row: the first row is all text, and the next row has something that isn't */
+function guessHeaders(s, g) {
+  const txt = (r, c) => { const v = valAt(s, r, c); return typeof v === 'string' && v !== ''; };
+  for (let c = g.c1; c <= g.c2; c++) if (!txt(g.r1, c)) return false;
+  if (g.r2 === g.r1) return true;
+  for (let c = g.c1; c <= g.c2; c++) if (!txt(g.r1 + 1, c)) return true;
+  return false;
+}
+/* a new table over g: without a header row, a row is put in above it for one, as Excel does (Excel moves only the
+   table's own columns down); the names come from the header cells */
+function createTable(g, hdr, style) {
+  const s = WS;
+  if (g.r2 - g.r1 > 1e6 || g.c2 - g.c1 >= 16384) return false;
+  if (s.tables.some(t => meets(t.g, g))) { toast(T('טבלה לא יכולה לחפוף לטבלה אחרת'), { icon: 'error' }); return false; }
+  if (s.merges.some(m => meets(m, g))) { toast(T('אי אפשר ליצור טבלה באזור שיש בו תאים ממוזגים'), { icon: 'error' }); return false; }
+  let t = null;
+  edit(() => {
+    if (!hdr) { spliceSheet('r', g.r1, 1); g = { ...g, r2: g.r2 + 1 }; }
+    t = tableOn(s, g, { style, blank: !hdr }, tableNames());
+    g = t.g;
+  });
+  if (t) { SEL = { r: g.r1, c: g.c1, er: g.r2, ec: g.c2 }; after(); }
+  return !!t;
+}
+/* the table itself on sheet s over g, its first row the header row (blank: its names are עמודה and a number): the names,
+   the header cells saying them, the options, and its filter when the sheet has none (or has one over these cells) */
+function tableOn(s, g, o, taken) {
+  const cols = uniqueCols(span(g.c1, g.c2).map(c => ({ n: o.blank ? '' : headText(cellAt(s, g.r1, c)) })));
+  if (g.r2 === g.r1) g = { ...g, r2: g.r1 + 1 };   // a data row at least
+  const name = typeof o.name === 'string' && o.name.trim() && !nameProblem(o.name.trim()) && !taken.has(o.name.trim().toLowerCase()) ? o.name.trim() : freeTableName(T('טבלה{0}', ''), taken);
+  taken.add(name.toLowerCase());
+  const t = { id: sid(), name, g, hr: 1, tr: 0, style: tsOf(o.style), sr: o.sr !== false, sc: !!o.sc, fc: !!o.fc, lc: !!o.lc, fb: o.fb !== false, cols };
+  cols.forEach((c, i) => { const x = cellAt(s, g.r1, g.c1 + i); if (!x || x.v !== c.n || x.f != null) { const y = { ...(x || {}), v: c.n }; delete y.f; delete y.x; delete y.l; setCell(s, g.r1, g.c1 + i, y); } });
+  setProp(s, 'tables', [...s.tables, t]);
+  if (t.fb && (!s.af || meets(s.af, g))) setProp(s, 'af', { r1: g.r1, c1: g.c1, r2: g.r2, c2: g.c2, hide: {} });
+  return t;
+}
+/* a total row for table t: the sheet's next row (put in first when it isn't free, on the sheet on screen), Excel's
+   words in the first column and a total for the last. false when there is no room */
+function totalRowOn(s, t) {
+  const r = t.g.r2 + 1, free = r < MAXR && span(t.g.c1, t.g.c2).every(c => !hasVal(cellAt(s, r, c))) && !s.tables.some(o => o !== t && inG(o.g, r, t.g.c1));
+  if (!free) { if (s !== WS) return null; spliceSheet('r', r, 1); }
+  const next = { ...t, tr: 1, g: { ...t.g, r2: r }, cols: t.cols.map(c => ({ ...c })) };
+  const last = next.cols.length - 1, num = typeof valAt(s, t.g.r2, t.g.c2) === 'number';
+  if (!next.cols[0].fn) next.cols[0].lbl = next.cols[0].lbl || T('סה"כ');
+  if (last > 0 && !next.cols[last].fn && !next.cols[last].lbl) next.cols[last].fn = num ? 'sum' : 'count';
+  next.cols.forEach((c, i) => { const cc = t.g.c1 + i; setCell(s, r, cc, totalCell(next, c, cellAt(s, r, cc))); });
+  return next;
+}
+/* Excel's Create Table: where the data is, and whether its first row is the header row */
+function tableDialog(style) {
+  if (!WS || (ED.on && !endEdit(true))) return;
+  const cur = tableAt(WS, SEL.r, SEL.c);
+  if (cur) { if (style) setTableOpt(cur, { style }); else toast(T('התא הזה כבר בתוך הטבלה {0}', cur.name), { icon: 'info' }); return; }
+  let g = selG();
+  if (wholeCols(g) || wholeRows(g)) g = usedPart(g);
+  if (g.r1 === g.r2 && g.c1 === g.c2) g = region(WS, SEL.r, SEL.c);
+  const ref = h('input', { class: 'field', dir: 'ltr', value: '=' + rangeA1(g), spellcheck: 'false', autocomplete: 'off', 'aria-label': T('איפה הנתונים של הטבלה?'), autofocus: true });
+  const chk = h('input', { type: 'checkbox' }); chk.checked = guessHeaders(WS, g);
+  const err = h('p', { class: 'sh-ch-err', role: 'alert', hidden: true });
+  const apply = () => {
+    const gg = parseRange(ref.value.trim().replace(/^=/, '').replace(/^.*!/, ''));
+    if (!gg || wholeCols(gg) || wholeRows(gg)) { err.textContent = T('כותבים טווח של תאים, כמו A1:D20'); err.hidden = false; return false; }
+    return createTable(gg, chk.checked, style);
+  };
+  const m = modal({ title: T('יצירת טבלה'), body: h('div', { class: 'sh-nmd' }, h('label', { class: 'fld' }, h('span', { text: T('איפה הנתונים של הטבלה?') }), ref), h('label', { class: 'check' }, chk, h('span', { text: T('לטבלה שלי יש כותרות') })), err),
+    actions: [{ label: T('אישור'), kind: 'primary', run: apply }, { label: T('ביטול'), value: false }], onClose: () => { if (!MODALS.length) focusGrid(); } });
+  ref.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); if (apply()) m.close(true); } });
+}
+/* the 60 styles, light, medium and dark, each as a small picture of a table; on a table's cell it changes that table */
+function tableGallery(anchor, only) {
+  if (!WS) return;
+  const cur = tableAt(WS, SEL.r, SEL.c);
+  const pic = name => {
+    const t = { g: { r1: 0, c1: 0, r2: 4, c2: 3 }, hr: 1, tr: 0, style: name, sr: true, sc: false, fc: false, lc: false }, box = h('span', { class: 'sh-tsw' });
+    for (let r = 0; r <= 4; r++) for (let c = 0; c <= 3; c++) {
+      const l = tableLook(t, r, c) || {}, e = h('i');
+      e.style.background = l.bg || '#fff';
+      for (const [k, css] of [['bt', 'borderTop'], ['bb', 'borderBottom'], ['bs', UI_DIR === 'rtl' ? 'borderRight' : 'borderLeft'], ['be', UI_DIR === 'rtl' ? 'borderLeft' : 'borderRight']]) if (l[k]) e.style[css] = '1px solid ' + l[k].slice(2);
+      if (r === 0 && l.c) e.style.boxShadow = 'inset 0 -2px 0 ' + l.c + '55';
+      box.append(e);
+    }
+    return box;
+  };
+  const kinds = [['Light', 21, T('בהיר')], ['Medium', 28, T('בינוני')], ['Dark', 11, T('כהה')]];
+  const body = h('div', { class: 'sh-tgal' }, ...kinds.map(([k, n, label]) => h('div', {}, h('div', { class: 'pop-t sub', text: label }),
+    h('div', { class: 'sh-tgal-row' }, ...Array.from({ length: n }, (_, i) => { const name = 'TableStyle' + k + (i + 1); return h('button', { type: 'button', class: 'sh-tgal-b' + (cur && cur.style === name ? ' on' : ''), title: k === 'Light' ? T('בהיר {0}', i + 1) : k === 'Medium' ? T('בינוני {0}', i + 1) : T('כהה {0}', i + 1), onclick: () => { closePopover(); if (cur) setTableOpt(cur, { style: name }); else if (!only) tableDialog(name); } }, pic(name)); })))));
+  openPop(anchor, h('div', {}, h('div', { class: 'pop-t', text: cur ? T('סגנון הטבלה {0}', cur.name) : T('עיצוב כטבלה') }), body));
+}
+/* one of a table's options (or its style, or its name), as one step */
+function setTableOpt(t, patch) {
+  const s = WB.sheets.find(sh => sh.tables.includes(t));
+  if (!s) return;
+  const next = { ...t, ...patch, cols: t.cols.map(c => ({ ...c })) };
+  edit(() => {
+    if ('tr' in patch && patch.tr !== t.tr) {
+      // the total row (totalRowOn); taken away, its cells go (their look stays) and the table ends above it
+      if (patch.tr) { const y = totalRowOn(s, t); if (y) Object.assign(next, { g: y.g, cols: y.cols }); }
+      else {   // the total row goes, and its cells with it (their look stays)
+        for (let c = t.g.c1; c <= t.g.c2; c++) { const x = cellAt(s, t.g.r2, c); if (x) setCell(s, t.g.r2, c, x.st ? { st: x.st } : null); }
+        next.g = { ...t.g, r2: t.g.r2 - 1 };
+      }
+    }
+    if ('hr' in patch && patch.hr !== t.hr) {
+      // the header row: shown, it takes the row above the data (put in when that row isn't free); hidden, the names stay
+      if (patch.hr) {
+        const r = t.g.r1 - 1, free = r >= 0 && span(t.g.c1, t.g.c2).every(c => !hasVal(cellAt(s, r, c))) && !s.tables.some(o => o !== t && inG(o.g, r, t.g.c1));
+        if (!free) { spliceSheet('r', t.g.r1, 1); next.g = { ...next.g, r1: t.g.r1, r2: next.g.r2 + 1 }; }
+        else next.g = { ...next.g, r1: r };
+        next.cols.forEach((c, i) => { const x = cellAt(s, next.g.r1, t.g.c1 + i); setCell(s, next.g.r1, t.g.c1 + i, { ...(x || {}), v: c.n }); });
+      } else {
+        for (let c = t.g.c1; c <= t.g.c2; c++) { const x = cellAt(s, t.g.r1, c); if (x) setCell(s, t.g.r1, c, x.st ? { st: x.st } : null); }
+        next.g = { ...next.g, r1: t.g.r1 + 1 };
+      }
+    }
+    if ('name' in patch) next.name = patch.name;
+    const y = normTable(next);
+    if (!y) return;
+    setProp(s, 'tables', s.tables.map(o => o === t ? y : o));
+    // the filter buttons follow the table: with its header row and its data, never its total row
+    const f = y.hr && y.fb ? { r1: y.g.r1, c1: y.g.c1, r2: y.g.r2 - y.tr, c2: y.g.c2 } : null;
+    if (s.af && meets(s.af, t.g)) setProp(s, 'af', f ? { ...f, hide: s.af.hide } : null);
+    else if (!s.af && f && 'fb' in patch) setProp(s, 'af', { ...f, hide: {} });
+  });
+  refresh();
+}
+/* a cell of the total row: its words, or SUBTOTAL over the column (so the rows a filter hides are left out, as in Excel) */
+function totalCell(t, c, x) {
+  const st = x && x.st ? { st: x.st } : {};
+  if (c.fn && TOT_FN[c.fn]) return { ...st, f: `SUBTOTAL(${TOT_FN[c.fn]},[${tableColRef(c.n)}])`, v: 0 };
+  if (c.lbl) return { ...st, v: c.lbl };
+  return x && x.f != null ? x : st.st ? st : null;
+}
+/* a column's name inside [ ], with ' before the marks that would end it, as Excel writes it */
+const tableColRef = n => n.replace(/['#[\]@]/g, m => "'" + m);
+/* the table back into plain cells (Excel's Convert to Range): its look stays where it is drawn now */
+function tableToRange(t = tableAt(WS, SEL.r, SEL.c)) {
+  if (!t) return;
+  const s = WS;
+  edit(() => {
+    for (let r = t.g.r1; r <= t.g.r2; r++) for (let c = t.g.c1; c <= t.g.c2; c++) {
+      const l = tableLook(t, r, c);
+      if (!l) continue;
+      const x = cellAt(s, r, c), st = normStyle({ ...l, ...((x && x.st) || {}) });
+      if (st) setCell(s, r, c, { ...(x || {}), st });
+    }
+    trefsToCells(t);
+    setProp(s, 'tables', s.tables.filter(o => o !== t));
+    if (s.af && meets(s.af, t.g)) setProp(s, 'af', null);
+  });
+  toast(T('הטבלה {0} היא עכשיו תאים רגילים', t.name), { icon: 'table' });
+}
+
+/* a table's total row at (r, c): the table and the column */
+function totAt(s, r, c) { const t = s.tables.find(y => y.tr && r === y.g.r2 && c >= y.g.c1 && c <= y.g.c2); return t ? { t, i: c - t.g.c1 } : null; }
+const TOT_LIST = [[null, N_('ללא')], ['average', N_('ממוצע')], ['count', N_('ספירה')], ['countNums', N_('ספירת מספרים')], ['max', N_('מקסימום')], ['min', N_('מינימום')], ['sum', N_('סכום')], ['stdDev', N_('סטיית תקן')], ['var', N_('שונות')]];
+function openTotalList(d) {
+  const { t, i } = d.tot, m = d.m, cur = t.cols[i].fn || null;
+  const sc = V.scroll.getBoundingClientRect(), vis = V.vis, x = colX(m.c) - (m.c >= WS.fc ? vis.sx : 0), y = rowY(m.r) - (m.r >= WS.fr ? vis.sy : 0), w = spanW(m.c, m.c2) + (d.out ? d.size : 0);
+  Object.assign(V.anchor.style, { left: (WS.dir === 'rtl' ? sc.right - x - w : sc.left + x) + 'px', top: sc.top + y + 'px', width: w + 'px', height: spanH(m.r, m.r2) + 'px' });
+  menuAt(V.anchor, T('בשורת הסיכום'), [...TOT_LIST.map(([fn, label]) => ({ ic: fn === cur ? 'check' : 'functions', label: T(label), run: () => setTotal(t, i, fn) })), '-',
+    { ic: 'function', label: T('עוד פונקציות…'), run: () => { selectCell(m.r, m.c); startEdit('enter', '=SUBTOTAL(109,[' + tableColRef(t.cols[i].n) + '])'); edChanged(); } }]);
+  Object.assign(V.anchor.style, { width: '1px', height: '1px' });
+  return true;
+}
+/* what a column of the total row works out: SUBTOTAL over the column, or nothing (Excel's choices) */
+function setTotal(t, i, fn) {
+  const s = WB.sheets.find(sh => sh.tables.includes(t));
+  if (!s) return;
+  const cols = t.cols.map((c, j) => { if (j !== i) return { ...c }; const o = { n: c.n }; if (c.cf) o.cf = c.cf; if (fn) o.fn = fn; return o; });
+  const nt = { ...t, cols }, r = t.g.r2, c = t.g.c1 + i, x = cellAt(s, r, c);
+  edit(() => {
+    setProp(s, 'tables', s.tables.map(y => y === t ? nt : y));
+    setCell(s, r, c, fn ? totalCell(nt, cols[i], x) : x && x.st ? { st: x.st } : null);
+  });
+  focusGrid();
+}
+/* typed just below a table, or just after its last column: the table takes the new row or column in, as Excel does
+   (not past a total row). A column filled by one formula gets it in its new row */
+function tableGrow(s, r, c) {
+  for (const t of s.tables) {
+    const g = t.g;
+    let ng = null, cols = t.cols;
+    if (!t.tr && r === g.r2 + 1 && c >= g.c1 && c <= g.c2 && !s.tables.some(o => o !== t && inG(o.g, r, c))) ng = { ...g, r2: r };
+    else if (c === g.c2 + 1 && r >= g.r1 && r <= g.r2 && !s.tables.some(o => o !== t && meets(o.g, { r1: g.r1, c1: c, r2: g.r2, c2: c }))) {
+      ng = { ...g, c2: c };
+      cols = uniqueCols([...t.cols.map(y => ({ ...y })), { n: t.hr && r === g.r1 ? headText(cellAt(s, r, c)) : '' }]);
+    }
+    if (!ng) continue;
+    const nt = { ...t, g: ng, cols };
+    setProp(s, 'tables', s.tables.map(y => y === t ? nt : y));
+    if (s.af && meets(s.af, g)) setProp(s, 'af', { ...s.af, r1: ng.r1, c1: ng.c1, r2: ng.r2 - nt.tr, c2: ng.c2, hide: s.af.hide });
+    if (ng.c2 > g.c2 && nt.hr) { const x = cellAt(s, g.r1, c), n = cols[cols.length - 1].n; if (!x || x.v !== n) setCell(s, g.r1, c, { ...(x || {}), v: n }); }
+    if (ng.r2 > g.r2) cols.forEach((y, j) => { if (!y.cf || j === c - g.c1) return; const cc = g.c1 + j, x = cellAt(s, r, cc); if (!x || !hasVal(x)) setCell(s, r, cc, { ...(x || {}), f: y.cf, v: 0 }); });
+    return nt;
+  }
+  return null;
+}
+/* a formula typed into an empty column of a table fills the whole column, and the column keeps it for new rows (Excel's
+   calculated column) */
+function tableFill(s, r, c, text) {
+  const t = tableAt(s, r, c), d = t && dataRows(t);
+  if (!t || text[0] !== '=' || r < d.r1 || r > d.r2) return;
+  const i = c - t.g.c1, x = cellAt(s, r, c);
+  if (!x || x.f == null) return;
+  for (let rr = d.r1; rr <= d.r2; rr++) if (rr !== r && hasVal(cellAt(s, rr, c))) return;   // a column with something in it stays as it is
+  for (let rr = d.r1; rr <= d.r2; rr++) if (rr !== r) { const y = cellAt(s, rr, c); setCell(s, rr, c, { ...(y || {}), f: shiftFormula(x.f, rr - r, 0), v: 0, ...(x.st ? { st: x.st } : {}) }); }
+  setProp(s, 'tables', s.tables.map(y => y === t ? { ...t, cols: t.cols.map((q, j) => j === i ? { ...q, cf: x.f } : q) } : y));
+}
+/* every formula's structured references to table t, changed by fn(the reference, the formula's cell): what fn gives
+   back takes its place (text); null leaves it */
+function mapTrefs(t, fn) {
+  const low = t.name.toLowerCase();
+  for (const sh of WB.sheets) for (const [k, x] of [...sh.cells]) {
+    if (x.f == null || (!x.f.includes('[') && !x.f.toLowerCase().includes(low))) continue;
+    const r = kr(k), c = kc(k), own = tableAt(sh, r, c), mine = own && own.id === t.id;
+    let any = false;
+    const f = tokenize(x.f).map(tok => {
+      const ref = tok.t === 'tref' ? tok : tok.t === 'opt' ? { tbl: null, sp: {}, cols: [tok.n] } : tok.t === 'name' && tok.sheet == null && tok.n.toLowerCase() === low && !nameOf(tok, sh) ? { tbl: tok.n, sp: {}, cols: [], bare: true } : null;
+      if (!ref || (ref.tbl ? ref.tbl.toLowerCase() !== low : !mine)) return tok.s;
+      const y = fn(ref, sh, r, c, own);
+      if (y == null) return tok.s;
+      any = true;
+      return y;
+    }).join('');
+    if (any) setCell(sh, r, c, { ...x, f });
+  }
+}
+const renameTableRefs = (t, n) => mapTrefs(t, ref => ref.tbl ? (ref.bare ? n : trefText({ ...ref, tbl: n }, null, false)) : null);
+function renameColRefs(t, from, to) {
+  mapTrefs(t, (ref, sh, r, c, own) => {
+    const i = ref.cols.findIndex(y => y.toLowerCase() === from.toLowerCase());
+    if (i < 0) return null;
+    const cols = ref.cols.slice(); cols[i] = to;
+    return trefText({ ...ref, cols }, own && own.name, false);
+  });
+}
+/* turned into plain cells (or a column taken out): its references become addresses, as Excel makes them (#REF! for a
+   column that is gone) */
+function trefsToCells(t, sheetOf, gone) {
+  mapTrefs(t, (ref, sh, r, c) => {
+    if (gone && ref.cols.some(y => gone.includes(y.toLowerCase()))) return '#REF!';
+    if (gone) return null;
+    const R = trefRange(ref, WB.sheets.indexOf(sh), r, c);
+    if (isErr(R)) return R.c;
+    const pre = R.s === sh ? '' : sheetPrefix(R.s.name), g = R.g;
+    return pre + (ref.sp.row ? '$' + colName(g.c1) + (g.r1 + 1) + (g.c2 !== g.c1 ? ':$' + colName(g.c2) + (g.r1 + 1) : '') : absA1(g));
+  });
+}
+/* the table's own tab: shown while a cell of a table is chosen, with its name, options and style */
+function tablePanel() {
+  const opt = (k, label) => h('label', { class: 'sh-rchk' }, h('input', { type: 'checkbox', 'data-topt': k }), h('span', { text: label }));
+  const name = h('input', { class: 'field sh-tname', dir: 'auto', spellcheck: 'false', autocomplete: 'off', 'aria-label': T('שם הטבלה') });
+  const p = h('div', { class: 'panel sheet-only', 'data-panel': 'stable', hidden: true },
+    group(T('מאפיינים'), '', h('div', { class: 'sh-tprops' }, h('span', { class: 'muted small', text: T('שם הטבלה') }), name), rbtn('shTblConvert', 'grid_off', T('המרה לטווח'), { big: true, title: T('הטבלה חוזרת להיות תאים רגילים, עם המראה שלה') })),
+    group(T('אפשרויות סגנון'), '', h('div', { class: 'sh-topts' }, opt('hr', T('שורת כותרות')), opt('tr', T('שורת סיכום')), opt('sr', T('שורות מפוספסות')), opt('fc', T('עמודה ראשונה')), opt('lc', T('עמודה אחרונה')), opt('sc', T('עמודות מפוספסות')), opt('fb', T('לחצן סינון')))),
+    group(T('סגנונות טבלה'), '', rbtn('shTblStyle', 'table_view', T('סגנון'), { big: true, title: T('סגנון אחר לטבלה') })));
+  p.addEventListener('change', e => { const k = e.target.dataset && e.target.dataset.topt, t = tableAt(WS, SEL.r, SEL.c), on = e.target.checked; if (k && t) setTableOpt(t, { [k]: k === 'hr' || k === 'tr' ? (on ? 1 : 0) : on }); });
+  name.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); renameTable(name.value); } else if (e.key === 'Escape') { e.preventDefault(); tableTab(); focusGrid(); } });
+  name.addEventListener('blur', () => { const t = WS && tableAt(WS, SEL.r, SEL.c); if (t && name.value.trim() !== t.name) renameTable(name.value); });
+  V.tblPanel = p; V.tblName = name;
+  return p;
+}
+function tableTab() {
+  if (!V.tblTab) return;
+  const t = WS && tableAt(WS, SEL.r, SEL.c), show = !!t;
+  if (V.tblTab.hidden === show) { V.tblTab.hidden = !show; if (!show && S.tab === 'stable') selectTab('shome'); }
+  if (!t) return;
+  if (document.activeElement !== V.tblName) V.tblName.value = t.name;
+  for (const i of V.tblPanel.querySelectorAll('[data-topt]')) i.checked = !!t[i.dataset.topt];
+}
+/* a table's new name: the rules of a defined name, and none of the workbook's names or tables has it */
+function renameTable(n) {
+  const t = tableAt(WS, SEL.r, SEL.c);
+  n = String(n || '').trim();
+  if (!t || n === t.name) return;
+  const why = nameProblem(n) || (tableNames().has(n.toLowerCase()) && n.toLowerCase() !== t.name.toLowerCase() ? T('כבר יש שם כזה. אפשר לבחור שם אחר.') : null);
+  if (why) { toast(why, { icon: 'error', ms: 6000 }); tableTab(); return; }
+  edit(() => { setTableOpt(t, { name: n }); renameTableRefs(t, n); });
+  focusGrid();
+}
 /* =========================================================
    conditional formatting, as in Excel: rules that color cells by their values (greater than, text that contains,
    dates, top and bottom, above average, duplicates, a formula of your own), data bars, color scales and icon sets.
@@ -10006,12 +10686,16 @@ const dvCell = () => { const m = mergeAt(WS, SEL.r, SEL.c); return m ? { r: m.r1
 /* the arrow of the active cell's list: after the cell on its end side, or inside it where there is no room for that
    (the edge of the view, or the last frozen column) */
 function dvArrow() {
-  if (!WS.dv.length || !V.vis) return null;
-  const m = dvCell(), rule = dvAt(WS, m.r, m.c);
+  if (!V.vis) return null;
+  const m = dvCell(), tot = WS.tables.length ? totAt(WS, m.r, m.c) : null, rule = !tot && WS.dv.length ? dvAt(WS, m.r, m.c) : null;
+  if (tot) return { tot, ...arrowAt(m) };   // a table's total row
   if (!rule || rule.t !== 'list' || rule.nd) return null;
+  return { rule, ...arrowAt(m) };
+}
+function arrowAt(m) {
   const size = Math.round(Math.min(spanH(m.r, m.r2), 20 * Z)), end = colX(m.c2 + 1);
   const out = m.c2 + 1 < EXT.cols && (m.c2 < WS.fc ? m.c2 + 1 < WS.fc : end - V.vis.sx + size <= V.vis.vw);
-  return { rule, m, size, out, x: out ? end : end - size - 1, y: rowY(m.r2 + 1) - size - 1 };
+  return { m, size, out, x: out ? end : end - size - 1, y: rowY(m.r2 + 1) - size - 1 };
 }
 /* an item chosen from a list goes into the cell: its value as the list has it, with its number format when the cell has none */
 function dvPut(r, c, it) {
@@ -10024,6 +10708,7 @@ function dvPut(r, c, it) {
 function openDvList() {
   const d = dvArrow();
   if (!d) return false;
+  if (d.tot) return openTotalList(d);
   const { rule, m } = d, L = dvItems(WS, rule, m.r, m.c), cur = valAt(WS, m.r, m.c), items = L ? L.items.filter(it => it.t !== '').slice(0, 2000) : [];
   const box = h('div', { class: 'sh-dvl', role: 'listbox', tabindex: '-1', 'aria-label': T('רשימה נפתחת') });
   let at = L && cur != null ? items.findIndex(it => dvInList({ lit: L.lit, items: [it] }, cur)) : -1;
