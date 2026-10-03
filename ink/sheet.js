@@ -65,7 +65,41 @@ const DEF_FONT = 'Arial', DEF_FS = 10, DEF_W = 100, DEF_H = 21;
 const sid = () => { let s = ''; while (s.length < 8) s += Math.random().toString(36).slice(2); return s.slice(0, 8); };
 function newSheet(name, dir) {
   return { id: sid(), name, dir, cells: new Map(), cw: new Map(), rh: new Map(), hc: new Set(), hr: new Set(), cs: new Map(), rs: new Map(), ds: null,
-    fr: 0, fc: 0, merges: [], af: null, gl: true, tab: null, dw: DEF_W, dh: DEF_H, ac: { r: 0, c: 0 }, zoom: 100, charts: [], cf: [], dv: [] };
+    fr: 0, fc: 0, merges: [], af: null, gl: true, tab: null, dw: DEF_W, dh: DEF_H, ac: { r: 0, c: 0 }, zoom: 100, charts: [], pics: [], cf: [], dv: [] };
+}
+/* pictures: a sheet's pics say where each one sits (as a chart does: a cell, the distance from its corner, a size) and
+   which image it shows (img); the images themselves are the workbook's (WB.imgs), each under a key made from its data,
+   so one image is kept once, travels once in a room, and moving a picture moves only a few numbers. PNG, JPEG and GIF,
+   which every Excel shows; anything else is turned into one of them when it comes in */
+const IMG_RE = /^data:image\/(?:png|jpeg|gif);base64,[A-Za-z0-9+/]+=*$/, IMG_MAX = 6e6, IMG_KEY = /^i[0-9a-z]{1,20}$/;
+const imgKey = d => 'i' + hash53(d);
+const okImg = d => typeof d === 'string' && d.length <= IMG_MAX && IMG_RE.test(d);
+function normPic(x) {
+  if (!x || typeof x !== 'object' || typeof x.img !== 'string' || !IMG_KEY.test(x.img)) return null;
+  const at = parseA1(x.at);
+  if (!at) return null;
+  const n = (v, lo, hi, d) => Number.isFinite(+v) ? clamp(Math.round(+v), lo, hi) : d;
+  const pic = { id: typeof x.id === 'string' && /^[a-z0-9]{4,24}$/.test(x.id) ? x.id : sid(), img: x.img, at: { r: at.r, c: at.c, dx: n(x.dx, 0, 5000, 0), dy: n(x.dy, 0, 5000, 0) }, w: n(x.w, 8, 4000, 200), h: n(x.h, 8, 4000, 150) };
+  if (typeof x.alt === 'string' && x.alt.trim()) pic.alt = x.alt.trim().slice(0, 1000);   // what a screen reader says for it
+  return pic;
+}
+function picOut(x) {
+  const o = { id: x.id, img: x.img, at: A1(x.at.r, x.at.c), w: x.w, h: x.h };
+  if (x.at.dx) o.dx = x.at.dx;
+  if (x.at.dy) o.dy = x.at.dy;
+  if (x.alt) o.alt = x.alt;
+  return o;
+}
+function normImgs(o) {
+  const m = new Map();
+  if (o && typeof o === 'object') for (const [k, d] of Object.entries(o)) if (IMG_KEY.test(k) && okImg(d)) m.set(k, d);
+  return m;
+}
+/* only the images some picture shows */
+function imgsOut(b) {
+  const o = {};
+  for (const sh of b.sheets) for (const x of sh.pics || []) { const d = b.imgs && b.imgs.get(x.img); if (d) o[x.img] = d; }
+  return Object.keys(o).length ? { imgs: o } : {};
 }
 const sheetWord = n => T('גיליון{0}', n);
 /* Excel's rules for a sheet's name: up to 31 letters, none of : \ / ? * [ ], no ' at either end */
@@ -143,6 +177,7 @@ function normSheet(x, dir, taken) {
   const ac = parseA1(x.ac); if (ac) s.ac = ac;
   if (+x.zoom >= 25 && +x.zoom <= 400) s.zoom = Math.round(+x.zoom);
   s.charts = (Array.isArray(x.charts) ? x.charts : []).slice(0, 50).map(normSheetChart).filter(Boolean);
+  s.pics = (Array.isArray(x.pics) ? x.pics : []).slice(0, 100).map(normPic).filter(Boolean);
   s.cf = (Array.isArray(x.cf) ? x.cf : []).slice(0, 500).map(normCf).filter(Boolean);
   s.dv = (Array.isArray(x.dv) ? x.dv : []).slice(0, DV_MAX).map(normDv).filter(Boolean);
   // in a shared room: the ids of its rows and columns (see the rooms, at the end)
@@ -160,6 +195,7 @@ function normBook(j) {
   if (!book.sheets.length) book.sheets.push(newSheet(sheetWord(1), dir));
   book.active = clamp(Math.round(+o.active || 0), 0, book.sheets.length - 1);
   book.names = normNames(o.names, book.sheets);
+  book.imgs = normImgs(o.imgs);
   // a formula kept as the file had it, because it used what wasn't here then (INDIRECT, a name): worked out from now on,
   // the way a plain formula of an Excel file is
   for (const s of book.sheets) for (const c of s.cells.values()) if (c.x && !missingIn(c.f, s, book)) { delete c.x; if (olderWay(c.f)) c.l = true; }
@@ -199,6 +235,7 @@ function sheetOut(s) {
   if (ac.r || ac.c) o.ac = A1(ac.r, ac.c);
   if (s.zoom !== 100) o.zoom = s.zoom;
   if (s.charts.length) o.charts = s.charts.map(chartOut);
+  if (s.pics.length) o.pics = s.pics.map(picOut);
   if (s.cf.length) o.cf = s.cf.map(cfOut);
   if (s.dv.length) o.dv = s.dv.map(cfOut);
   if (s.ri && s.ri.length) o.ri = packIds(s.ri, s.id + '/ri');
@@ -206,7 +243,7 @@ function sheetOut(s) {
   return o;
 }
 const bookOut = b => ({ v: 1, dir: b.dir, active: b.sheets.includes(WS) ? b.sheets.indexOf(WS) : clamp(b.active | 0, 0, b.sheets.length - 1), sheets: b.sheets.map(sheetOut),
-  ...(b.names && b.names.length ? { names: b.names.map(nameOut) } : {}) });
+  ...(b.names && b.names.length ? { names: b.names.map(nameOut) } : {}), ...imgsOut(b) });
 
 /* =========================================================
    numbers and dates the way this language writes them, and Excel's number formats
@@ -4498,7 +4535,7 @@ function onUp(e) {
 }
 function onDbl(e) {
   const ce = chartAt(e);
-  if (ce) { openChartDialog(ce.dataset.id); return; }
+  if (ce) { objDialog(ce.dataset.id); return; }
   const hh = hit(e);
   if (!hh) return;
   if (hh.kind === 'colb') autoFit('c', hh.i);
@@ -5301,7 +5338,7 @@ async function deleteSheet(s = WS) {
 }
 function dupSheet(s = WS) {
   // each formula's cell is its own in the copy: its answer is written onto it, and the copy's answer may differ
-  const c = { ...s, id: sid(), name: freeName(s.name.slice(0, 26) + ' (2)', takenNames()), cells: new Map([...s.cells].map(([k, x]) => [k, x.f != null ? { ...x } : x])), cw: new Map(s.cw), rh: new Map(s.rh), hc: new Set(s.hc), hr: new Set(s.hr), cs: new Map(s.cs), rs: new Map(s.rs), merges: s.merges.map(m => ({ ...m })), af: s.af ? { ...s.af, hide: { ...s.af.hide } } : null, ac: { ...s.ac }, _sc: null, _fh: null, ri: undefined, ci: undefined, _ri: null, _ci: null, charts: s.charts.map(ch => ({ ...bare(ch), id: sid() })) };
+  const c = { ...s, id: sid(), name: freeName(s.name.slice(0, 26) + ' (2)', takenNames()), cells: new Map([...s.cells].map(([k, x]) => [k, x.f != null ? { ...x } : x])), cw: new Map(s.cw), rh: new Map(s.rh), hc: new Set(s.hc), hr: new Set(s.hr), cs: new Map(s.cs), rs: new Map(s.rs), merges: s.merges.map(m => ({ ...m })), af: s.af ? { ...s.af, hide: { ...s.af.hide } } : null, ac: { ...s.ac }, _sc: null, _fh: null, ri: undefined, ci: undefined, _ri: null, _ci: null, charts: s.charts.map(ch => ({ ...bare(ch), id: sid() })), pics: s.pics.map(x => ({ ...x, id: sid() })) };
   edit(() => {
     bookStep(() => { WB.sheets.splice(WB.sheets.indexOf(s) + 1, 0, c); });
     // as Excel does: the copy gets its own names, for the sheet's own and for every name that points at the sheet
@@ -5388,6 +5425,9 @@ function onPaste(e) {
   PASTE_AS = null;
   const dt = e.clipboardData, own = dt.getData(CELLS_MIME);
   if (own) { try { const j = JSON.parse(own); if (j && j.app === 'floating-ink') { pastePack(j, what); return; } } catch {} }
+  // a picture alone on the clipboard (a screenshot, an image copied from a program) becomes a picture on the sheet
+  const file = [...(dt.files || [])].find(f => /^image\//.test(f.type));
+  if (file && what === 'all' && !dt.getData('text/plain')) { insertPicture(file); return; }
   pasteData(dt.getData('text/html'), dt.getData('text/plain'), what);
 }
 /* the ribbon's paste (and paste values / formats only): what the clipboard has, or this app's last copy */
@@ -5867,6 +5907,8 @@ const CSS = `
 .sh-peer{z-index:4;border:2px solid var(--pc);pointer-events:none}
 .sh-chart{z-index:8;background:#fff;border:1px solid #d9d9d9;box-sizing:border-box;cursor:move;touch-action:none}
 .sh-chart.on{outline:2px solid #2743d8;outline-offset:0}
+.sh-pic{background:none;border:0}
+.sh-pic-img{display:block;width:100%;height:100%;pointer-events:none;user-select:none;-webkit-user-drag:none}
 .sh-ch-in{position:absolute;inset:0;overflow:hidden;pointer-events:none;direction:ltr;color:#404040}
 .sh-ch-in svg{position:absolute;inset:0;width:100%;height:100%}
 .sh-ch-in .ch-l{position:absolute;white-space:nowrap;line-height:1.2}
@@ -6032,6 +6074,7 @@ function ribbonPanels() {
     group(T('תצוגה@view'), '', rbtn('shGrid', 'grid_on', T('קווי רשת'), { big: true, id: 'shGridBtn' }), rbtn('shDir', 'format_textdirection_r_to_l', T('גיליון מימין לשמאל'), { big: true, id: 'shDirBtn' })),
     group(T('זום'), '', rbtn('shZoom', 'remove', T('הקטנה'), { arg: '-1' }), h('button', { class: 'rb txt', type: 'button', 'data-cmd': 'shZoom', 'data-arg': '0', id: 'shZoomPct', title: T('חזרה ל-100%') }, '100%'), rbtn('shZoom', 'add', T('הגדלה'), { arg: '1' })));
   const insert = h('div', { class: 'panel sheet-only', 'data-panel': 'sinsert', hidden: true },
+    group(T('איורים'), '', rbtn('shPic', 'add_photo_alternate', T('תמונה'), { big: true, title: T('תמונה מהמחשב. אפשר גם להדביק תמונה או לגרור קובץ לגיליון') })),
     group(T('גרפים'), '', ...CKS.map(k => rbtn('shChart', CHARTS[k].ic, T(CHARTS[k].n), { big: true, arg: k, title: T('גרף חדש מהתאים שבחרת') }))),
     group(T('קישורים'), '', rbtn('shLink', 'link', T('קישור'), { big: true, title: T('קישור לאתר, למקום בחוברת או לדואר (Ctrl+K)') })),
     group(T('הערות'), '', rbtn('shNote', 'sticky_note_2', T('הערה'), { big: true, title: T('הערה על התא, שמופיעה כשהעכבר עליו (Shift+F2)') })));
@@ -6072,6 +6115,15 @@ function mount() {
   sc.addEventListener('pointercancel', () => { cancelAnimationFrame(SCROLLER); if (DRAG && DRAG.line) DRAG.line.remove(); DRAG = null; });
   sc.addEventListener('dblclick', onDbl);
   sc.addEventListener('pointerleave', () => noteHover(null));
+  // an image file dropped on the sheet: a picture where it fell
+  sc.addEventListener('dragover', e => { if (WS && [...(e.dataTransfer.items || [])].some(i => i.kind === 'file' && /^image\//.test(i.type))) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
+  sc.addEventListener('drop', e => {
+    const f = WS && [...(e.dataTransfer.files || [])].find(x => /^image\//.test(x.type));
+    if (!f) return;
+    e.preventDefault(); e.stopPropagation();
+    const hh = hit(e);
+    insertPicture(f, hh && hh.kind === 'cell' ? { r: hh.r, c: hh.c } : null);
+  });
   sc.addEventListener('contextmenu', e => { if (!WS) return; e.preventDefault(); const ce = chartAt(e); if (ce) { CH.id = ce.dataset.id; renderSoon(); openChartMenu(e.clientX, e.clientY); return; } const hh = hit(e); if (hh && hh.kind === 'filt') return; openCellMenu(e.clientX, e.clientY); });
   sc.addEventListener('scroll', () => { renderSoon(); if (AC.box && !AC.box.hidden) requestAnimationFrame(acShow); }, { passive: true });
   sc.addEventListener('wheel', e => { if (!(e.ctrlKey || e.metaKey) || !WS) return; e.preventDefault(); setZoom(WS.zoom + (e.deltaY < 0 ? 10 : -10)); }, { passive: false });
@@ -6605,7 +6657,7 @@ const COMMANDS = {
   shSortMenu: (a, b) => sortMenu(b), shClearMenu: (a, b) => clearMenu(b), shFind: () => openFind(false),
   shSort: a => quickSort(a === 'd'), shSortDlg: () => sortDialog(), shFilter: () => toggleFilter(), shFilterClear: () => clearFilter(),
   shDvList: () => dvDialog('list'), shDvMenu: (a, b) => dvMenu(b),
-  shNote: () => noteEdit(), shLink: () => linkDialog(), shShowF: () => toggleFormulas(), shFxHelp: () => formulaHelp(), shFnDlg: () => fnDialog(), shFnCat: (a, b) => fnCatMenu(a, b), shCfMenu: (a, b) => cfMenu(b),
+  shNote: () => noteEdit(), shLink: () => linkDialog(), shPic: () => pickPicture(), shShowF: () => toggleFormulas(), shFxHelp: () => formulaHelp(), shFnDlg: () => fnDialog(), shFnCat: (a, b) => fnCatMenu(a, b), shCfMenu: (a, b) => cfMenu(b),
   shFreezeMenu: (a, b) => freezeMenu(b), shGrid: () => edit(() => setProp(WS, 'gl', !WS.gl)), shDir: () => edit(() => setProp(WS, 'dir', WS.dir === 'rtl' ? 'ltr' : 'rtl')),
   shZoom: a => setZoom(+a === 0 ? 100 : WS.zoom + (+a > 0 ? 10 : -10)),
 };
@@ -6738,7 +6790,7 @@ async function readXlsx(buf) {
   if (u8[0] === 0xD0 && u8[1] === 0xCF) throw new Error('locked');
   if (u8[0] !== 0x50 || u8[1] !== 0x4B) throw new Error('notxlsx');
   const names = new TextDecoder('latin1').decode(u8), count = re => (names.match(re) || []).length;
-  const rep = new Map([['pivot', count(/xl\/pivotTables\/pivotTable\d+\.xml/g) / 2 | 0]]), hasCharts = count(/xl\/charts\/chart\d+\.xml/g) > 0;
+  const rep = new Map([['pivot', count(/xl\/pivotTables\/pivotTable\d+\.xml/g) / 2 | 0]]), hasCharts = count(/xl\/charts\/chart\d+\.xml/g) > 0 || count(/xl\/media\//g) > 0;   // charts, or pictures
   const add = (k, n = 1) => rep.set(k, (rep.get(k) || 0) + n);
   const ExcelJS = await excelLib(), wb = new ExcelJS.Workbook();
   // ExcelJS lists a data validation under every one of its cells, a million for a whole column. The rules are read
@@ -6823,7 +6875,6 @@ async function readXlsx(buf) {
     }
     const af = ws.autoFilter;
     if (af) { const g = typeof af === 'string' ? parseRange(af) : af.from && af.to ? G4(af.from.row - 1, af.from.column - 1, af.to.row - 1, af.to.column - 1) : null; if (g && !wholeCols(g) && !wholeRows(g)) s.af = { ...g, hide: {} }; }
-    if (ws.getImages && ws.getImages().length) add('img', ws.getImages().length);
     const cf = ws.conditionalFormattings || (ws.model && ws.model.conditionalFormattings);
     if (cf && cf.length) hasCf = true;
     if (ws.tables && Object.keys(ws.tables).length) add('table');
@@ -6891,6 +6942,7 @@ async function importCharts(buf, nb, xlNames, rep) {
       const s = nb.sheets[xlNames.indexOf(name)];
       if (!s) continue;
       for (const x of list) {
+        if ('pic' in x) { const q = x.pic ? placeXlsxPic(s, nb, x) : null; if (q && s.pics.length < 100) s.pics.push(q); else rep.set('img', (rep.get('img') || 0) + 1); continue; }
         const ch = x.chart ? placeXlsxChart(s, x) : null;
         if (ch && s.charts.length < 50) s.charts.push(ch); else rep.set('chart', (rep.get('chart') || 0) + 1);
       }
@@ -7018,7 +7070,7 @@ async function writeXlsx() {
   for (const s of WB.sheets) {
     const view = { rightToLeft: s.dir === 'rtl', showGridLines: s.gl, activeCell: A1(s.ac.r, s.ac.c), zoomScale: s.zoom };
     if (s.fr || s.fc) Object.assign(view, { state: 'frozen', xSplit: s.fc, ySplit: s.fr, topLeftCell: A1(s.fr, s.fc) });
-    const ws = wb.addWorksheet(s.name, { views: [view], properties: { defaultRowHeight: +(s.dh * 0.75).toFixed(2), ...(s.tab ? { tabColor: { argb: 'FF' + s.tab.slice(1).toUpperCase() } } : {}) } });
+    const ws = wb.addWorksheet(s.name, { views: [view], properties: { defaultRowHeight: +(s.dh * 0.75).toFixed(2), defaultColWidth: pxToChars(s.dw), ...(s.tab ? { tabColor: { argb: 'FF' + s.tab.slice(1).toUpperCase() } } : {}) } });
     const u = usedEnd(s);
     let lastC = u.c;
     for (const c of s.cw.keys()) lastC = Math.max(lastC, c + 1);
@@ -7062,7 +7114,7 @@ async function writeXlsx() {
     if (s.af) ws.autoFilter = { from: { row: s.af.r1 + 1, column: s.af.c1 + 1 }, to: { row: filterEnd(s.af, s) + 1, column: s.af.c2 + 1 } };
   }
   let buf = await wb.xlsx.writeBuffer();
-  if (WB.sheets.some(s => s.charts.length)) buf = await addXlsxCharts(buf);
+  if (WB.sheets.some(s => s.charts.length || s.pics.length)) buf = await addXlsxCharts(buf);
   if (dyn) buf = await addDynamic(buf);
   if (WB.sheets.some(s => s.dv.length)) buf = await addXlsxDv(buf);
   if (WB.sheets.some(s => s.cf.length)) buf = await addXlsxCf(buf);
@@ -7457,6 +7509,7 @@ function forAI(args = {}) {
   let g = args.range ? parseRange(args.range) : used;
   if (args.range && !g) throw new Error(`"${args.range}" is not a range. Use A1 notation, like A1:D20.`);
   const out = { sheets: WB.sheets.map(x => { const u = usedRange(x); return { name: x.name, used_range: u ? rangeA1(u) : null }; }), sheet: s.name, direction: s.dir };
+  if (s.pics.length) out.pictures = s.pics.map(x => ({ at: A1(x.at.r, x.at.c), width: x.w, height: x.h, ...(x.alt ? { alt: x.alt } : {}) }));
   if (s.charts.length) out.charts = s.charts.map(ch => ({ type: Object.keys(CK_API).find(k => CK_API[k] === ch.ck), ...(ch.ti ? { title: ch.ti } : {}), data: ch.src ? ch.src.ref : ch.ser.map(x => x.v).join(', '), at: A1(ch.at.r, ch.at.c) }));
   if (s.cf.length) out.conditional_formats = s.cf.map(r => ({ range: r.g.map(rangeA1).join(' '), rule: cfDesc(r).replace(/[\u2066-\u2069]/g, '') }));
   if (s.dv.length) out.validations = s.dv.map(dvToSpec);
@@ -7742,14 +7795,30 @@ function paintChart(box, ch, d, w, hh, k = 1) {
 }
 const chartBox = ch => ({ x: colX(ch.at.c) + ch.at.dx * Z, y: rowY(ch.at.r) + ch.at.dy * Z, w: ch.w * Z, h: ch.h * Z });
 /* on the sheet: each chart where it sits, drawn again only when its numbers, look or size changed */
+const HANDLES = ['ts', 't', 'te', 's', 'e', 'bs', 'b', 'be'];
+/* a chart or a picture of the sheet on screen, by its id */
+const objOf = id => { const ch = WS.charts.find(x => x.id === id); if (ch) return { o: ch, pic: false }; const pc = WS.pics.find(x => x.id === id); return pc ? { o: pc, pic: true } : null; };
+function drawPics() {
+  for (const x of WS.pics) {
+    const b = DRAG && DRAG.kind === 'chart' && DRAG.id === x.id && DRAG.box ? DRAG.box : chartBox(x);
+    const e = part(V.body, 'pic:' + x.id, 'sh-chart sh-pic');
+    if (!e._in) { e._in = h('img', { class: 'sh-pic-img', alt: '', draggable: 'false' }); e.append(e._in, ...HANDLES.map(k => h('div', { class: 'sh-hd h-' + k, 'data-h': k }))); }
+    e.dataset.id = x.id;
+    place(e, b.x, b.y, b.w, b.h);
+    if (e._img !== x.img) { const d = WB.imgs.get(x.img); if (d) { e._img = x.img; e._in.src = d; } }   // an image still on its way in a room comes later
+    if (e._in.alt !== (x.alt || '')) e._in.alt = x.alt || '';
+    e.classList.toggle('on', CH.id === x.id);
+  }
+}
 function drawCharts() {
-  if (CH.id && !WS.charts.some(x => x.id === CH.id)) CH.id = null;
+  if (CH.id && !objOf(CH.id)) CH.id = null;
+  drawPics();
   for (const ch of WS.charts) {
     const p = DRAG && DRAG.kind === 'chart' && DRAG.id === ch.id && DRAG.box ? DRAG.box : chartBox(ch);
     const e = part(V.body, 'chart:' + ch.id, 'sh-chart');
     if (!e._in) {
       e._in = h('div', { class: 'sh-ch-in' });
-      e.append(e._in, ...['ts', 't', 'te', 's', 'e', 'bs', 'b', 'be'].map(k => h('div', { class: 'sh-hd h-' + k, 'data-h': k })));
+      e.append(e._in, ...HANDLES.map(k => h('div', { class: 'sh-hd h-' + k, 'data-h': k })));
     }
     e.dataset.id = ch.id;
     place(e, p.x, p.y, p.w, p.h);
@@ -7766,7 +7835,7 @@ function chartAt(e) {
 }
 /* choosing, moving and resizing a chart with the pointer */
 function chartDown(e, ce) {
-  const ch = WS.charts.find(x => x.id === ce.dataset.id);
+  const ob = objOf(ce.dataset.id), ch = ob && ob.o;
   if (!ch) return;
   e.preventDefault();
   if (ED.on && !endEdit(true)) return;
@@ -7774,7 +7843,7 @@ function chartDown(e, ce) {
   if (CH.id !== ch.id) { CH.id = ch.id; renderSoon(); }
   focusGrid();
   if (e.button !== 0) return;
-  DRAG = { kind: 'chart', id: ch.id, h: e.target.dataset.h || null, x0: e.clientX, y0: e.clientY, b0: chartBox(ch), box: null };
+  DRAG = { kind: 'chart', id: ch.id, pic: ob.pic, h: e.target.dataset.h || null, x0: e.clientX, y0: e.clientY, b0: chartBox(ch), box: null };
   V.scroll.setPointerCapture(e.pointerId);
 }
 function chartMove(e) {
@@ -7791,32 +7860,103 @@ function chartMove(e) {
     if (en) w += dx;
     if (w < min) { if (st) x -= min - w; w = min; }
     if (hh < min) { if (top) y -= min - hh; hh = min; }
+    if (d.pic && k.length === 2) {   // a picture's corner keeps its shape, as in Excel
+      const b = d.b0, f = Math.max(w / b.w, hh / b.h);
+      w = b.w * f; hh = b.h * f;
+      if (st) x = b.x + b.w - w;
+      if (top) y = b.y + b.h - hh;
+    }
   }
   d.box = { x: Math.max(RHW, x), y: Math.max(CHH, y), w, h: hh };
   renderSoon();
 }
 function chartUp(d) {
-  const ch = WS.charts.find(x => x.id === d.id);
-  if (!ch || !d.box) { renderSoon(); return; }
+  const ob = objOf(d.id);
+  if (!ob || !d.box) { renderSoon(); return; }
   const b = d.box, c = colAtX(b.x), r = rowAtY(b.y);
-  setChart(ch.id, { at: { r, c, dx: Math.max(0, Math.round((b.x - colX(c)) / Z)), dy: Math.max(0, Math.round((b.y - rowY(r)) / Z)) }, w: Math.round(b.w / Z), h: Math.round(b.h / Z) });
+  const patch = { at: { r, c, dx: Math.max(0, Math.round((b.x - colX(c)) / Z)), dy: Math.max(0, Math.round((b.y - rowY(r)) / Z)) }, w: Math.round(b.w / Z), h: Math.round(b.h / Z) };
+  if (ob.pic) setPic(d.id, patch); else setChart(d.id, patch);
 }
 function chartKey(e) {
   const k = e.key, mod = e.ctrlKey || e.metaKey;
   if (k === 'Delete' || k === 'Backspace') { e.preventDefault(); deleteChart(CH.id); return true; }
   if (k === 'Escape') { e.preventDefault(); CH.id = null; renderSoon(); return true; }
-  if ((k === 'Enter' || k === 'F2') && !mod) { e.preventDefault(); openChartDialog(CH.id); return true; }
+  if ((k === 'Enter' || k === 'F2') && !mod) { e.preventDefault(); objDialog(CH.id); return true; }
   if (/^Arrow/.test(k) && !mod) { e.preventDefault(); return true; }
   if (k.length === 1 && !mod && !e.altKey) { e.preventDefault(); return true; }   // letters don't go into the cell under the chart
   return false;
 }
 /* one step for undo */
 function setChart(id, patch, s = WS) { edit(() => setProp(s, 'charts', s.charts.map(x => x.id === id ? { ...bare(x), ...patch } : x))); }
-function deleteChart(id, s = WS) {
-  if (!s.charts.some(x => x.id === id)) return;
-  edit(() => setProp(s, 'charts', s.charts.filter(x => x.id !== id)));
+function setPic(id, patch, s = WS) { edit(() => setProp(s, 'pics', s.pics.map(x => x.id === id ? { ...x, ...patch } : x))); }
+/* a chart's window, or a picture's words for a screen reader */
+const objDialog = id => { const ob = objOf(id); if (ob && ob.pic) picAltDialog(id); else if (ob) openChartDialog(id); };
+function deleteChart(id, s = WS) {   // a picture too
+  const key = s.charts.some(x => x.id === id) ? 'charts' : s.pics.some(x => x.id === id) ? 'pics' : null;
+  if (!key) return;
+  edit(() => setProp(s, key, s[key].filter(x => x.id !== id)));
   if (CH.id === id) CH.id = null;
   focusGrid();
+}
+/* an image file as data the workbook keeps: PNG, JPEG or GIF as it is when it is small enough; a bigger one (or another
+   kind) drawn again, at most 2000 pixels on its long side */
+async function imageData(file) {
+  if (!/^image\//.test(file.type) || /svg/.test(file.type)) throw new Error('type');
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('type')); i.src = url; });
+    const W0 = img.naturalWidth, H0 = img.naturalHeight, k = Math.min(1, 2000 / Math.max(W0, H0, 1));
+    let d = null;
+    if (k === 1 && file.size <= 1.5e6 && /^image\/(png|jpeg|gif)$/.test(file.type)) d = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file); });
+    if (!okImg(d)) {
+      const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(W0 * k)); c.height = Math.max(1, Math.round(H0 * k));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      d = c.toDataURL(/png|gif|webp|bmp/.test(file.type) ? 'image/png' : 'image/jpeg', 0.88);
+      if (d.length > 3e6) d = c.toDataURL('image/jpeg', 0.8);
+    }
+    if (!okImg(d)) throw new Error('big');
+    return { d, w: W0, h: H0 };
+  } finally { URL.revokeObjectURL(url); }
+}
+/* the picture at the active cell (or the cell it was dropped on), at its own size up to 640 by 480, as one step */
+async function insertPicture(file, at) {
+  if (!WS || (ED.on && !endEdit(true))) return;
+  let got;
+  try { got = await imageData(file); } catch (e) { toast(e.message === 'big' ? T('התמונה גדולה מדי') : T('אפשר להוסיף כאן תמונות מסוג PNG, ‏JPEG או GIF (וגם WebP ו-BMP, שנשמרות כ-PNG)'), { icon: 'error', ms: 6000 }); return; }
+  const key = imgKey(got.d), k = Math.min(1, 640 / got.w, 480 / got.h);
+  WB.imgs.set(key, got.d);
+  const m = at || { r: SEL.r, c: SEL.c }, x = { id: sid(), img: key, at: { r: m.r, c: m.c, dx: 0, dy: 0 }, w: Math.max(8, Math.round(got.w * k)), h: Math.max(8, Math.round(got.h * k)) };
+  if (WS.pics.length >= 100) { toast(T('בגיליון יש כבר 100 תמונות'), { icon: 'error' }); return; }
+  edit(() => setProp(WS, 'pics', [...WS.pics, x]));
+  CH.id = x.id;
+  refresh();
+  const b = chartBox(x), sc = V.scroll, sx = Math.abs(sc.scrollLeft);
+  if (b.x + b.w > sx + sc.clientWidth) { const to = Math.max(0, b.x + b.w - sc.clientWidth + 20); sc.scrollLeft = WS.dir === 'rtl' ? -to : to; }
+  if (b.y + b.h > sc.scrollTop + sc.clientHeight) sc.scrollTop = Math.max(0, b.y + b.h - sc.clientHeight + 20);
+  focusGrid();
+}
+function pickPicture() {
+  const inp = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/gif,image/webp,image/bmp' });
+  inp.addEventListener('change', () => { const f = inp.files && inp.files[0]; if (f) insertPicture(f); });
+  inp.click();
+}
+/* the words a screen reader says for a picture (Excel's Alt Text) */
+function picAltDialog(id) {
+  const x = WS.pics.find(y => y.id === id);
+  if (!x) return;
+  const ta = h('textarea', { class: 'field', dir: 'auto', rows: '3', maxlength: '1000', 'aria-label': T('טקסט חלופי'), autofocus: true });
+  ta.value = x.alt || '';
+  modal({ title: T('טקסט חלופי'), body: h('div', { class: 'sh-nmd' }, h('p', { class: 'muted small', text: T('מה רואים בתמונה, במילים, בשביל מי שלא רואה אותה') }), ta),
+    actions: [{ label: T('אישור'), kind: 'primary', run: () => { const t = ta.value.trim().slice(0, 1000); if (t !== (x.alt || '')) { const n = { ...x }; if (t) n.alt = t; else delete n.alt; edit(() => setProp(WS, 'pics', WS.pics.map(y => y.id === id ? n : y))); } } }, { label: T('ביטול'), value: false }],
+    onClose: () => { if (!MODALS.length) focusGrid(); } });
+}
+/* back to the image's own size (Excel's Reset Picture and Size) */
+function picOwnSize(id) {
+  const x = WS.pics.find(y => y.id === id), d = x && WB.imgs.get(x.img);
+  if (!d) return;
+  const img = new Image();
+  img.onload = () => setPic(id, { w: clamp(img.naturalWidth, 8, 4000), h: clamp(img.naturalHeight, 8, 4000) });
+  img.src = d;
 }
 /* a new chart from the chosen cells (or the block of filled cells around the active one), beside them */
 function insertChart(ck) {
@@ -7843,8 +7983,17 @@ function insertChart(ck) {
   focusGrid();
 }
 function openChartMenu(x, y) {
-  const id = CH.id;
-  if (!id) return;
+  const id = CH.id, ob = id && objOf(id);
+  if (!ob) return;
+  if (ob.pic) {
+    menuAtPoint(x, y, [
+      { ic: 'text_fields', label: T('טקסט חלופי…'), key: 'Enter', run: () => picAltDialog(id) },
+      { ic: 'aspect_ratio', label: T('הגודל המקורי'), run: () => picOwnSize(id) },
+      '-',
+      { ic: 'delete', label: T('מחיקת התמונה'), key: 'Delete', run: () => deleteChart(id), danger: true },
+    ]);
+    return;
+  }
   menuAtPoint(x, y, [
     { ic: 'edit', label: T('עריכת הגרף…'), key: 'Enter', run: () => openChartDialog(id) },
     '-',
@@ -7922,16 +8071,18 @@ function eachChart(fn) {
   }
 }
 /* and the charts under or after the change move with their cells */
-function moveCharts(s, axis, at, n) {
+function moveCharts(s, axis, at, n) {   // and the pictures
   const k = axis === 'r' ? 'r' : 'c';
-  let any = false;
-  const next = s.charts.map(ch => {
-    const p = ch.at[k];
-    if (p < at) return ch;
-    any = true;
-    return { ...bare(ch), at: { ...ch.at, [k]: n < 0 && p < at - n ? at : Math.max(0, p + n) } };
-  });
-  if (any) setProp(s, 'charts', next);
+  for (const key of ['charts', 'pics']) {
+    let any = false;
+    const next = s[key].map(ch => {
+      const p = ch.at[k];
+      if (p < at) return ch;
+      any = true;
+      return { ...bare(ch), at: { ...ch.at, [k]: n < 0 && p < at - n ? at : Math.max(0, p + n) } };
+    });
+    if (any) setProp(s, key, next);
+  }
 }
 
 /* --- Excel files: charts in, and charts out. ExcelJS reads and writes neither, so the file's parts are read and
@@ -7965,10 +8116,19 @@ async function readXlsxCharts(buf) {
       const dx = await xml(r.target); if (!dx) continue;
       const drels = await rels(r.target);
       for (const an of xkids(dx.documentElement).filter(e => /Anchor$/.test(e.localName))) {
+        const num = (e, k) => +((xkid(e, k) || {}).textContent || 0) || 0, pos = e => e && { c: num(e, 'col'), co: num(e, 'colOff'), r: num(e, 'row'), ro: num(e, 'rowOff') };
+        const pe = xkid(an, 'pic');
+        if (pe) {
+          const bl = xdesc(pe, 'blip')[0], er = bl && [...bl.attributes].find(a => a.localName === 'embed'), mp = er && drels.get(er.value), nv = xdesc(pe, 'cNvPr')[0];
+          const kind = mp && /\.(png|jpe?g|gif)$/i.exec(mp.target), f = kind && zip.file(mp.target);
+          const d = f ? 'data:image/' + (/^jpe?g$/i.test(kind[1]) ? 'jpeg' : kind[1].toLowerCase()) + ';base64,' + await f.async('base64') : null;
+          const xf = xdesc(pe, 'xfrm')[0], pext = xf && xkid(xf, 'ext');   // its size (not the blip's own extLst)
+          list.push({ pic: okImg(d) ? { d, alt: (nv && (xat(nv, 'descr') || '')) || '' } : null, from: pos(xkid(an, 'from')), to: pos(xkid(an, 'to')), ext: pext && { cx: +xat(pext, 'cx') || 0, cy: +xat(pext, 'cy') || 0 } });
+          continue;
+        }
         const ce = xdesc(an, 'chart')[0], cr = ce && [...ce.attributes].find(a => a.localName === 'id');
         const cp = cr && drels.get(cr.value);
         if (!cp) continue;
-        const num = (e, k) => +((xkid(e, k) || {}).textContent || 0) || 0, pos = e => e && { c: num(e, 'col'), co: num(e, 'colOff'), r: num(e, 'row'), ro: num(e, 'rowOff') };
         const from = pos(xkid(an, 'from')), to = pos(xkid(an, 'to')), ext = xkid(an, 'ext');
         list.push({ chart: chartFromXml(await xml(cp.target)), from, to, ext: ext && { cx: +xat(ext, 'cx') || 0, cy: +xat(ext, 'cy') || 0 } });
       }
@@ -8005,9 +8165,8 @@ function chartFromXml(doc) {
   if (xdesc(ty, 'showVal').some(e => xat(e, 'val') === '1') || xdesc(ty, 'showPercent').some(e => xat(e, 'val') === '1')) ch.lab = true;
   return ch;
 }
-/* a chart from a file on sheet s: where it sits by its anchor, and its references as one range when they make one */
-function placeXlsxChart(s, x) {
-  const c = x.chart;
+/* where a drawing's object sits on sheet s, by its anchor: its cell, the distance from the cell's corner, its size */
+function anchorBox(s, x) {
   const wOf = i => s.hc.has(i) ? 0 : s.cw.get(i) ?? s.dw, hOf = i => s.hr.has(i) ? 0 : s.rh.get(i) ?? s.dh;
   const f = x.from || { c: 0, co: 0, r: 0, ro: 0 };
   let w = 480, hh = 288;
@@ -8015,7 +8174,18 @@ function placeXlsxChart(s, x) {
     w = -f.co / EMU; for (let i = f.c; i < x.to.c && i < f.c + 500; i++) w += wOf(i); w += x.to.co / EMU;
     hh = -f.ro / EMU; for (let i = f.r; i < x.to.r && i < f.r + 5000; i++) hh += hOf(i); hh += x.to.ro / EMU;
   } else if (x.ext && x.ext.cx) { w = x.ext.cx / EMU; hh = x.ext.cy / EMU; }
-  const ch = normSheetChart({ ...c, id: sid(), at: A1(f.r, f.c), dx: f.co / EMU, dy: f.ro / EMU, w, h: hh });
+  return { at: A1(f.r, f.c), dx: f.co / EMU, dy: f.ro / EMU, w, h: hh };
+}
+/* a picture from a file: its image into the workbook's images */
+function placeXlsxPic(s, nb, x) {
+  const key = imgKey(x.pic.d);
+  nb.imgs.set(key, x.pic.d);
+  return normPic({ ...anchorBox(s, x.ext && x.ext.cx ? { ...x, to: null } : x), img: key, alt: x.pic.alt });   // its own size when the file says it: the cells it covers have other widths here
+}
+/* a chart from a file on sheet s: where it sits by its anchor, and its references as one range when they make one */
+function placeXlsxChart(s, x) {
+  const c = x.chart;
+  const ch = normSheetChart({ ...c, id: sid(), ...anchorBox(s, x) });
   if (!ch) return null;
   if (c.tiSer) { const d = dataOfSeries(s, ch); if (d.ser[0] && d.ser[0].n) ch.ti = d.ser[0].n; }
   const src = toSrc(s, ch);
@@ -8109,20 +8279,19 @@ function xlChartXml(s, ch) {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><c:roundedCorners val="0"/><c:chart>${title}<c:autoTitleDeleted val="${ch.ti ? 0 : 1}"/><c:plotArea><c:layout/>${body}</c:plotArea>${ch.leg ? '<c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend>' : ''}<c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"><a:latin typeface="${DEF_FONT}"/><a:cs typeface="${DEF_FONT}"/></a:defRPr></a:pPr><a:endParaRPr lang="he-IL"/></a:p></c:txPr></c:chartSpace>`;
 }
 /* where a chart sits, as Excel keeps it: from a cell to a cell, each with a distance in EMU */
-function xlAnchor(s, ch) {
-  const wOf = i => s.hc.has(i) ? 0 : s.cw.get(i) ?? s.dw, hOf = i => s.hr.has(i) ? 0 : s.rh.get(i) ?? s.dh;
-  const walk = (i, off, len, size) => { let left = off + len; while (left > size(i) && i < 20000) { left -= size(i); i++; } return [i, Math.round(left * EMU)]; };
-  const [c2, co2] = walk(ch.at.c, ch.at.dx, ch.w, wOf), [r2, ro2] = walk(ch.at.r, ch.at.dy, ch.h, hOf);
-  return `<xdr:from><xdr:col>${ch.at.c}</xdr:col><xdr:colOff>${Math.round(ch.at.dx * EMU)}</xdr:colOff><xdr:row>${ch.at.r}</xdr:row><xdr:rowOff>${Math.round(ch.at.dy * EMU)}</xdr:rowOff></xdr:from><xdr:to><xdr:col>${c2}</xdr:col><xdr:colOff>${co2}</xdr:colOff><xdr:row>${r2}</xdr:row><xdr:rowOff>${ro2}</xdr:rowOff></xdr:to>`;
+/* where a chart or a picture starts: its cell and the distance from the cell's corner. Its size goes into the file as
+   it is (oneCellAnchor's ext), so Excel shows it at the same size whatever width its columns turn out to have there */
+function xlFrom(ch) {
+  return `<xdr:from><xdr:col>${ch.at.c}</xdr:col><xdr:colOff>${Math.round(ch.at.dx * EMU)}</xdr:colOff><xdr:row>${ch.at.r}</xdr:row><xdr:rowOff>${Math.round(ch.at.dy * EMU)}</xdr:rowOff></xdr:from>`;
 }
 /* the charts into a workbook ExcelJS wrote: a drawing for each sheet that has some, and a chart part for each chart */
-async function addXlsxCharts(buf) {
+async function addXlsxCharts(buf) {   // and the pictures, in the same drawing
   const JSZip = await zipLib(), zip = await JSZip.loadAsync(buf);
-  let ct = await zip.file('[Content_Types].xml').async('string'), dn = 0, cn = 0;
-  const used = p => !!zip.file(p);
+  let ct = await zip.file('[Content_Types].xml').async('string'), dn = 0, cn = 0, mn = 0;
+  const used = p => !!zip.file(p), media = new Map();
   for (let i = 0; i < WB.sheets.length; i++) {
-    const s = WB.sheets[i], charts = s.charts.map(ch => [ch, xlChartXml(s, ch)]).filter(x => x[1]);
-    if (!charts.length) continue;
+    const s = WB.sheets[i], charts = s.charts.map(ch => [ch, xlChartXml(s, ch)]).filter(x => x[1]), pics = s.pics.filter(x => WB.imgs.get(x.img));
+    if (!charts.length && !pics.length) continue;
     const sp = `xl/worksheets/sheet${i + 1}.xml`, sf = zip.file(sp);
     if (!sf) continue;
     do dn++; while (used(`xl/drawings/drawing${dn}.xml`));
@@ -8132,7 +8301,23 @@ async function addXlsxCharts(buf) {
       zip.file(`xl/charts/chart${cn}.xml`, xml);
       ct = ct.replace('</Types>', `<Override PartName="/xl/charts/chart${cn}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/></Types>`);
       drels.push(`<Relationship Id="rId${j + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart${cn}.xml"/>`);
-      anchors.push(`<xdr:twoCellAnchor editAs="oneCell">${xlAnchor(s, ch)}<xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="${j + 2}" name="${esc(T('גרף {0}', j + 1))}"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId${j + 1}"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor>`);
+      anchors.push(`<xdr:oneCellAnchor>${xlFrom(ch)}<xdr:ext cx="${Math.round(ch.w * EMU)}" cy="${Math.round(ch.h * EMU)}"/><xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="${j + 2}" name="${esc(T('גרף {0}', j + 1))}"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId${j + 1}"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:oneCellAnchor>`);
+    });
+    pics.forEach((x, j) => {
+      const d = WB.imgs.get(x.img), m = /^data:image\/(png|jpeg|gif);base64,/.exec(d), ext = m[1], rid = charts.length + j + 1;
+      let path = media.get(x.img);   // one image is one file, also when several pictures show it
+      if (!path) {
+        do mn++; while (used(`xl/media/image${mn}.${ext}`));
+        path = `xl/media/image${mn}.${ext}`;
+        zip.file(path, d.slice(m[0].length), { base64: true });
+        media.set(x.img, path);
+        if (!new RegExp(`Extension="${ext}"`, 'i').test(ct)) ct = ct.replace('<Default ', `<Default Extension="${ext}" ContentType="image/${ext}"/><Default `);
+      }
+      drels.push(`<Relationship Id="rId${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/${path.split('/').pop()}"/>`);
+      // its own size in the file (oneCellAnchor), not the cells it covers: Excel measures columns in letters of its font
+      anchors.push(`<xdr:oneCellAnchor>${xlFrom(x)}<xdr:ext cx="${Math.round(x.w * EMU)}" cy="${Math.round(x.h * EMU)}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${charts.length + j + 2}" name="${esc(T('תמונה {0}', j + 1))}"${x.alt ? ` descr="${esc(x.alt)}"` : ''}/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr>` +
+        `<xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId${rid}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>` +
+        `<xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${Math.round(x.w * EMU)}" cy="${Math.round(x.h * EMU)}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`);
     });
     zip.file(`xl/drawings/drawing${dn}.xml`, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">${anchors.join('')}</xdr:wsDr>`);
     zip.file(`xl/drawings/_rels/drawing${dn}.xml.rels`, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${drels.join('')}</Relationships>`);
@@ -8154,7 +8339,11 @@ async function addXlsxCharts(buf) {
   return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
 }
 /* printing and PDF: the charts after the table, each at its size (or the page's width) */
-function chartEls(s, maxW) {
+function chartEls(s, maxW) {   // and the pictures after them
+  const pics = s.pics.map(x => { const d = WB.imgs.get(x.img), k = Math.min(1, maxW / x.w); return d ? h('img', { src: d, alt: x.alt || '', style: { display: 'block', width: x.w * k + 'px', height: x.h * k + 'px' } }) : null; }).filter(Boolean);
+  return [...chartBoxes(s, maxW), ...pics];
+}
+function chartBoxes(s, maxW) {
   return s.charts.map(ch => {
     const k = Math.min(1, maxW / ch.w), w = ch.w * k, hh = ch.h * k;
     const box = h('div', { class: 'sh-ch-in sh-ch-print', style: { position: 'relative', width: w + 'px', height: hh + 'px', background: '#fff', border: '1px solid #d9d9d9', direction: 'ltr' } });
@@ -8245,6 +8434,7 @@ function gOut(s) {
   if (s.merges.length) o.mg = s.merges.map(box).filter(Boolean);
   if (s.af) { const b = box(s.af); if (b) o.af = { g: b, hide: Object.entries(s.af.hide).map(([c, v]) => [cid(+c), v]).filter(p => p[0]) }; }
   if (s.charts.length) o.ch = s.charts.map(ch => { const x = chartOut(ch), a = rid(ch.at.r), b = cid(ch.at.c); delete x.dx; delete x.dy; return a && b ? { ...x, at: [a, b, ch.at.dx, ch.at.dy] } : null; }).filter(Boolean);
+  if (s.pics.length) o.pi = s.pics.map(x => { const y = picOut(x), a = rid(x.at.r), b = cid(x.at.c); delete y.dx; delete y.dy; return a && b ? { ...y, at: [a, b, x.at.dx, x.at.dy] } : null; }).filter(Boolean);
   for (const key of RULE_KEYS) if (s[key].length) o[key] = s[key].map(rule => { const x = cfOut(rule), b = rule.g.map(box); delete x.ref; return b.every(Boolean) ? { ...x, g: b } : null; }).filter(Boolean);
   return o;
 }
@@ -8275,6 +8465,13 @@ function gNorm(v) {
     return { ...o2, at: [a[0], a[1], c.at.dx, c.at.dy] };
   }).filter(Boolean);
   if (ch.length) o.ch = ch;
+  const pi = (Array.isArray(v.pi) ? v.pi : []).slice(0, 100).map(x => {
+    const a = x && Array.isArray(x.at) && x.at.length === 4 && okid(x.at[0]) && okid(x.at[1]) ? x.at : null, q = a && normPic({ ...x, at: 'A1', dx: a[2], dy: a[3] });
+    if (!q) return null;
+    const o2 = picOut(q); delete o2.dx; delete o2.dy;
+    return { ...o2, at: [a[0], a[1], q.at.dx, q.at.dy] };
+  }).filter(Boolean);
+  if (pi.length) o.pi = pi;
   for (const key of RULE_KEYS) {
     const rules = (Array.isArray(v[key]) ? v[key] : []).slice(0, key === 'dv' ? DV_MAX : 500).map(x => {
       const g = x && Array.isArray(x.g) ? x.g.map(box).filter(Boolean).slice(0, 50) : [], r = g.length && ruleNorm(key)({ ...x, g: null, ref: 'A1' });
@@ -8306,6 +8503,7 @@ function gIn(s, g, taken) {
   if (af) { const hide = {}; for (const [id, v] of g.af.hide || []) { const c = C_(id); if (c != null && c >= af.c1 && c <= af.c2) hide[c] = v; } s.af = { ...af, hide }; }
   else s.af = null;
   s.charts = (g.ch || []).map(x => { const r = R_(x.at[0]), c = C_(x.at[1]); return r == null || c == null ? null : normSheetChart({ ...x, at: A1(r, c), dx: x.at[2], dy: x.at[3] }); }).filter(Boolean);
+  s.pics = (g.pi || []).map(x => { const r = R_(x.at[0]), c = C_(x.at[1]); return r == null || c == null ? null : normPic({ ...x, at: A1(r, c), dx: x.at[2], dy: x.at[3] }); }).filter(Boolean);
   for (const key of RULE_KEYS) s[key] = (g[key] || []).map(x => { const gg = x.g.map(box).filter(Boolean); return gg.length ? ruleNorm(key)({ ...x, g: gg }) : null; }).filter(Boolean);
 }
 /* an entry from someone else, checked the way a workbook from storage is (undefined: not taken) */
@@ -8318,7 +8516,13 @@ function roomNorm(k, v) {
   if (c === 'r' || c === 'k') return unpackIds(v, 'x', c === 'r' ? RMAX : CMAX) ? v : undefined;
   if (c === 'c') { const x = normCell(v); return x ? recOut(x) : undefined; }
   if (c === 'n') { const x = normName(v, null); return x && k === 'n/' + nameId(x) ? nameOut(x) : undefined; }
+  if (c === 'i') return okImg(v) && k === 'i/' + imgKey(v) ? v : undefined;   // an image: its key is made from its data
   return undefined;
+}
+/* the images the pictures of these sheets show, each once */
+function imgEntries(sheets, each) {
+  const seen = new Set();
+  for (const sh of sheets) for (const x of sh.pics) { const d = WB.imgs.get(x.img); if (d && !seen.has(x.img)) { seen.add(x.img); each('i/' + x.img, () => d, b => b === d); } }
 }
 /* a defined name's entry is n/ and letters made from its scope and its name, so the same name is the same entry for everyone */
 const nameId = x => ('n' + hash53(nameKey(x))).padEnd(6, '0');
@@ -8360,6 +8564,7 @@ function roomEntries(each) {
   bookEntries(each);
   nameEntries(each);
   for (const s of WB.sheets) sheetEntries(s, each);
+  imgEntries(WB.sheets, each);
 }
 /* what changed since the last look, into look(); what is gone, into gone(key) */
 function roomChanges(look, gone, base) {
@@ -8400,6 +8605,7 @@ function roomChanges(look, gone, base) {
     for (const [k, b] of base) if (b != null && k.startsWith(pre)) { const p = k.split('/'); if (!rs.has(p[2]) || !cs.has(p[3])) gone(k); }
   }
   for (const s of WB.sheets) if (RM.lists.has(s.id) || RM.full.has(s.id)) listEntries(s, look);
+  imgEntries(WB.sheets.filter(s => RM.full.has(s.id) || RM.props.has(s.id)), look);   // a picture's image goes before the others need it
   RM.cells.clear(); RM.props.clear(); RM.lists.clear(); RM.full.clear(); RM.book = RM.all = false;
 }
 /* an entry's value here, the way this browser writes it (after something came in, so it doesn't go back out) */
@@ -8407,6 +8613,7 @@ function roomValue(k) {
   if (!WB) return null;
   if (k === 'm') return { dir: WB.dir };
   if (k === 'o') return WB.sheets.map(s => s.id);
+  if (k[0] === 'i' && k[1] === '/') return WB.imgs.get(k.slice(2)) || null;
   const p = k.split('/'), s = WB.sheets.find(x => x.id === p[1]);
   if (p[0] === 'n') { const x = (WB.names || NO_NAMES).find(y => nameId(y) === p[1]); return x ? nameOut(x) : null; }
   if (!s) return null;
@@ -8479,6 +8686,7 @@ function roomApply(acc, st) {
     else if (k[0] === 'g') props.add(k.slice(2));
     else if (k[0] === 'c') put.add(k);
     else if (k[0] === 'n') named.add(k);
+    else if (k[0] === 'i') { const v = val(k); if (okImg(v)) WB.imgs.set(k.slice(2), v); }   // an image: the pictures that show it draw it now
   }
   const keep = anchorNow();
   if (whole) {
@@ -8552,6 +8760,7 @@ function roomBook(st) {
   const m = st.get('m'), dir = m && m[0] ? m[0].dir : UI_DIR, book = { v: 1, dir, active: 0, sheets: [] }, taken = new Set();
   for (const id of sheetIds(st)) { const s = Object.assign(newSheet('', dir), { id }); buildSheet(s, st, taken); book.sheets.push(s); }
   book.names = normNames([...st].filter(([k, x]) => k[0] === 'n' && k[1] === '/' && x[0] != null).map(([, x]) => x[0]), book.sheets);
+  book.imgs = new Map([...st].filter(([k, x]) => k[0] === 'i' && k[1] === '/' && okImg(x[0])).map(([k, x]) => [k.slice(2), x[0]]));
   return book.sheets.length ? JSON.stringify(bookOut(book)) : null;
 }
 /* --- the others --- */

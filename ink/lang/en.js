@@ -2532,7 +2532,17 @@ window.INK_I18N = {
 "קישור: מראה את השם שבוחרים, ולחיצה עליו פותחת את הכתובת (או מקום בחוברת, עם # לפניו)": "A link: shows the name you choose, and a click opens the address (or a place in the workbook, with # before it)",
 "קישורים": "Links",
 "שם_להצגה": "friendly_name",
-"תא או שם": "Cell or name"
+"תא או שם": "Cell or name",
+"איורים": "Illustrations",
+"אפשר להוסיף כאן תמונות מסוג PNG, ‏JPEG או GIF (וגם WebP ו-BMP, שנשמרות כ-PNG)": "You can add PNG, JPEG or GIF pictures here (and WebP and BMP, which are kept as PNG)",
+"בגיליון יש כבר 100 תמונות": "This sheet already has 100 pictures",
+"הגודל המקורי": "Original size",
+"התמונה גדולה מדי": "The picture is too big",
+"טקסט חלופי": "Alt text",
+"טקסט חלופי…": "Alt text…",
+"מה רואים בתמונה, במילים, בשביל מי שלא רואה אותה": "What the picture shows, in words, for someone who can't see it",
+"תמונה {0}": "Picture {0}",
+"תמונה מהמחשב. אפשר גם להדביק תמונה או לגרור קובץ לגיליון": "A picture from your computer. You can also paste a picture or drag a file onto the sheet"
 },
 "plurals": {
 "{n} מילים": {

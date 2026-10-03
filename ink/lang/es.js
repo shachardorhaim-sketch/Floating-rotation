@@ -2532,7 +2532,17 @@ window.INK_I18N = {
 "קישור: מראה את השם שבוחרים, ולחיצה עליו פותחת את הכתובת (או מקום בחוברת, עם # לפניו)": "Un vínculo: muestra el nombre que eliges y al hacer clic abre la dirección (o un lugar del libro, con # delante)",
 "קישורים": "Vínculos",
 "שם_להצגה": "nombre_descriptivo",
-"תא או שם": "Celda o nombre"
+"תא או שם": "Celda o nombre",
+"איורים": "Ilustraciones",
+"אפשר להוסיף כאן תמונות מסוג PNG, ‏JPEG או GIF (וגם WebP ו-BMP, שנשמרות כ-PNG)": "Aquí puedes añadir imágenes PNG, JPEG o GIF (y también WebP y BMP, que se guardan como PNG)",
+"בגיליון יש כבר 100 תמונות": "Esta hoja ya tiene 100 imágenes",
+"הגודל המקורי": "Tamaño original",
+"התמונה גדולה מדי": "La imagen es demasiado grande",
+"טקסט חלופי": "Texto alternativo",
+"טקסט חלופי…": "Texto alternativo…",
+"מה רואים בתמונה, במילים, בשביל מי שלא רואה אותה": "Lo que muestra la imagen, en palabras, para quien no puede verla",
+"תמונה {0}": "Imagen {0}",
+"תמונה מהמחשב. אפשר גם להדביק תמונה או לגרור קובץ לגיליון": "Una imagen del equipo. También puedes pegar una imagen o arrastrar un archivo a la hoja"
 },
 "plurals": {
 "{n} מילים": {
