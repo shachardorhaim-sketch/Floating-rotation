@@ -6074,8 +6074,8 @@ const CSS = `
 .sh-ch-in svg{position:absolute;inset:0;width:100%;height:100%}
 .sh-ch-in .ch-l{position:absolute;white-space:nowrap;line-height:1.2}
 .sh-ch-none{position:absolute;inset:0;display:grid;place-items:center;padding:12px;text-align:center;color:#8a8f98;font:13px var(--ui)}
-.sh-hd{position:absolute;width:9px;height:9px;background:#fff;border:1.5px solid #2743d8;border-radius:50%;display:none;z-index:1}
-.sh-chart.on .sh-hd{display:block}
+.sh-grip{position:absolute;width:9px;height:9px;background:#fff;border:1.5px solid #2743d8;border-radius:50%;display:none;z-index:1}
+.sh-chart.on .sh-grip{display:block}
 .h-ts,.h-t,.h-te{top:-5px}.h-bs,.h-b,.h-be{bottom:-5px}.h-s,.h-e{top:calc(50% - 5px)}
 .h-ts,.h-s,.h-bs{inset-inline-start:-5px}.h-te,.h-e,.h-be{inset-inline-end:-5px}.h-t,.h-b{inset-inline-start:calc(50% - 5px)}
 .h-ts,.h-be{cursor:nwse-resize}.h-te,.h-bs{cursor:nesw-resize}.h-t,.h-b{cursor:ns-resize}.h-s,.h-e{cursor:ew-resize}
@@ -8348,7 +8348,7 @@ function drawPics() {
   for (const x of WS.pics) {
     const b = DRAG && DRAG.kind === 'chart' && DRAG.id === x.id && DRAG.box ? DRAG.box : chartBox(x);
     const e = part(V.body, 'pic:' + x.id, 'sh-chart sh-pic');
-    if (!e._in) { e._in = h('img', { class: 'sh-pic-img', alt: '', draggable: 'false' }); e.append(e._in, ...HANDLES.map(k => h('div', { class: 'sh-hd h-' + k, 'data-h': k }))); }
+    if (!e._in) { e._in = h('img', { class: 'sh-pic-img', alt: '', draggable: 'false' }); e.append(e._in, ...HANDLES.map(k => h('div', { class: 'sh-grip h-' + k, 'data-h': k }))); }
     e.dataset.id = x.id;
     place(e, b.x, b.y, b.w, b.h);
     if (e._img !== x.img) { const d = WB.imgs.get(x.img); if (d) { e._img = x.img; e._in.src = d; } }   // an image still on its way in a room comes later
@@ -8364,7 +8364,7 @@ function drawCharts() {
     const e = part(V.body, 'chart:' + ch.id, 'sh-chart');
     if (!e._in) {
       e._in = h('div', { class: 'sh-ch-in' });
-      e.append(e._in, ...HANDLES.map(k => h('div', { class: 'sh-hd h-' + k, 'data-h': k })));
+      e.append(e._in, ...HANDLES.map(k => h('div', { class: 'sh-grip h-' + k, 'data-h': k })));
     }
     e.dataset.id = ch.id;
     place(e, p.x, p.y, p.w, p.h);
