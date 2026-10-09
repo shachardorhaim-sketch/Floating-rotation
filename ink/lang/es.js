@@ -2754,7 +2754,58 @@ window.INK_I18N = {
 "תמונה מהמחשב, בשכבה חדשה. אפשר גם להדביק תמונה או לגרור קובץ לציור": "Una imagen del ordenador, en una capa nueva. También puedes pegar una imagen o arrastrar un archivo al dibujo",
 "תמונה קטנה יותר. רקע שקוף נהיה לבן": "Una imagen más pequeña. Un fondo transparente se vuelve blanco",
 "תמונת JPG": "Imagen JPG",
-"תמונת PNG": "Imagen PNG"
+"תמונת PNG": "Imagen PNG",
+"GIF זז לבד בכל מקום: בהודעות, באתרים ובמצגות. רקע שקוף נשאר שקוף.": "Un GIF se mueve solo en cualquier sitio: en mensajes, páginas web y presentaciones. Un fondo transparente sigue transparente.",
+"{0} שניות": "{0} segundos",
+"אין מספיק זיכרון במכשיר בשביל עוד שכבות או פריימים בגודל הזה. אפשר למחוק שכבות או פריימים, או לבחור קנבס קטן יותר.": "No hay suficiente memoria en el dispositivo para más capas o fotogramas de este tamaño. Puedes eliminar capas o fotogramas, o elegir un lienzo más pequeño.",
+"אין מקום בזיכרון של המכשיר לעוד שכבה. התמונה נכנסת לשכבה שבחרת.": "No hay espacio en la memoria del dispositivo para otra capa. La imagen va en la capa que elegiste.",
+"אנימציה כסרטון MP4, למשל ליוטיוב": "La animación como vídeo MP4, por ejemplo para YouTube",
+"אנימציה כתמונה שזזה לבד, לשליחה ולשיתוף": "La animación como una imagen que se mueve sola, para enviar y compartir",
+"אפשר למזג רק שתי שכבות נעוצות, או שתי שכבות שאינן נעוצות.": "Solo puedes combinar dos capas fijadas, o dos capas sin fijar.",
+"באנימציה צריך להיות לפחות פריים אחד": "Una animación necesita al menos un fotograma",
+"בלולאה": "En bucle",
+"הדפדפן הזה לא יודע ליצור סרטונים. אפשר לשמור כ-GIF.": "Este navegador no puede crear vídeos. Puedes guardarlo como GIF.",
+"הזזה אחורה": "Mover atrás",
+"הזזה קדימה": "Mover adelante",
+"הלוך וחזור": "Ida y vuelta",
+"הפריימים שלפני ושאחרי מופיעים חלש מתחת לפריים, כדי שיהיה קל לצייר את הצעד הבא": "Los fotogramas de antes y de después se ven tenues bajo el fotograma, para que sea fácil dibujar el siguiente paso",
+"השכבה מופיעה עכשיו בכל הפריימים": "La capa ahora aparece en todos los fotogramas",
+"השכבה מופיעה עכשיו רק בפריים הזה": "La capa ahora aparece solo en este fotograma",
+"כדי לנגן צריך לפחות שני פריימים. \"פריים חדש\" מוסיף אחד.": "Para reproducir hacen falta al menos dos fotogramas. \"Fotograma nuevo\" añade uno.",
+"כדי לשמור אנימציה צריך לפחות שני פריימים. \"פריים חדש\" בלשונית אנימציה מוסיף אחד.": "Para guardar una animación hacen falta al menos dos fotogramas. \"Fotograma nuevo\" en la pestaña Animación añade uno.",
+"כמה זמן הפריים מוצג": "Cuánto tiempo se muestra el fotograma",
+"כמה פעמים לנגן": "Cuántas veces reproducir",
+"כמה פריימים מאחרי מופיעים, בירוק": "Cuántos fotogramas de después se ven, en verde",
+"כמה פריימים מוצגים בשנייה": "Cuántos fotogramas se muestran por segundo",
+"כמה פריימים מלפני מופיעים, באדום": "Cuántos fotogramas de antes se ven, en rojo",
+"מה קורה כשהאנימציה נגמרת": "Qué pasa cuando termina la animación",
+"מחיקת הפריים": "Eliminar fotograma",
+"מכין את ה-GIF…": "Preparando el GIF…",
+"מכין את הסרטון…": "Preparando el vídeo…",
+"ניגון": "Reproducir",
+"נעוצה: מופיעה בכל הפריימים. לחיצה משחררת": "Fijada: aparece en todos los fotogramas. Haz clic para soltarla",
+"נעיצה בכל הפריימים": "Fijar en todos los fotogramas",
+"נעיצה: השכבה תופיע בכל הפריימים, כמו רקע": "Fijar: la capa aparecerá en todos los fotogramas, como un fondo",
+"סרטון": "Vídeo",
+"סרטון MP4 נפתח בכל טלפון ומחשב, ואפשר להעלות אותו ליוטיוב. רקע שקוף נהיה לבן.": "Un vídeo MP4 se abre en cualquier móvil y ordenador, y puedes subirlo a YouTube. Un fondo transparente se vuelve blanco.",
+"סרטון MP4, למשל ליוטיוב": "Un vídeo MP4, por ejemplo para YouTube",
+"עותק של הפריים הזה אחריו, כדי לשנות בו רק מעט": "Una copia de este fotograma justo después, para cambiar solo un poco",
+"פעולות על הפריים": "Acciones del fotograma",
+"פעם אחת": "Una vez",
+"פריים {0}": "Fotograma {0}",
+"פריים {0} מתוך {1}": "Fotograma {0} de {1}",
+"פריים חדש": "Fotograma nuevo",
+"פריים ריק אחרי הפריים הזה. הפריים הקודם מופיע בו בשקיפות, כדי לצייר את הצעד הבא": "Un fotograma vacío después de este. El fotograma anterior se ve tenue en él, para dibujar el siguiente paso",
+"פריים ריק אחריו": "Fotograma vacío después",
+"פריימים": "Fotogramas",
+"שכבה שצריכה להופיע בכל הפריימים, כמו רקע, נועצים בחלונית השכבות.": "Una capa que debe aparecer en todos los fotogramas, como un fondo, se fija en el panel de capas.",
+"שכבות בצל": "Papel cebolla",
+"שכפול הפריים": "Duplicar fotograma",
+"שמירה כ-GIF": "Guardar como GIF",
+"שמירה כסרטון": "Guardar como vídeo",
+"שמירת האנימציה": "Guardar la animación",
+"תמונה שזזה לבד, לשליחה ולשיתוף": "Una imagen que se mueve sola, para enviar y compartir",
+"חזרה@loop": "Repetir"
 },
 "plurals": {
 "{n} מילים": {
@@ -2977,13 +3028,17 @@ window.INK_I18N = {
 "one": "una capa",
 "other": "{n} capas"
 },
-"בציור בגודל הזה אפשר עד {n} שכבות": {
-"one": "Un dibujo de este tamaño puede tener hasta {n} capa",
-"other": "Un dibujo de este tamaño puede tener hasta {n} capas"
+"{n} בשנייה": {
+"one": "{n} por segundo",
+"other": "{n} por segundo"
 },
-"בציור בגודל הזה אפשר עד {n} שכבות. התמונה נכנסת לשכבה שבחרת.": {
-"one": "Un dibujo de este tamaño puede tener hasta {n} capa. La imagen va en la capa que elegiste.",
-"other": "Un dibujo de este tamaño puede tener hasta {n} capas. La imagen va en la capa que elegiste."
+"{n} פעמים": {
+"one": "una vez",
+"other": "{n} veces"
+},
+"{n} פריימים": {
+"one": "un fotograma",
+"other": "{n} fotogramas"
 }
 },
 "welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>¡Bienvenido a Floating Ink!</h1><p>Este es un documento de ejemplo que muestra lo que puedes hacer aquí. Puedes editarlo, eliminarlo o hacer clic en <b>Documento nuevo</b> para empezar desde una página en blanco.</p><div class=\"callout callout-note\"><p><b>Totalmente privado.</b> Los documentos se guardan solo en tu dispositivo, y no se envía nada a ningún servidor. Para no perderlos nunca, activa la copia automática: <b>Archivo → Copia de seguridad</b>.</p></div><h2>Qué hay aquí</h2><ul><li><b>Formato como en Word:</b> fuentes, colores, <span style=\"background-color: #ffe45c\">resaltador</span>, títulos, listas y tablas.</li><li><b>Insertar:</b> imágenes, dibujo a mano, símbolos matemáticos, emoji, fecha y tabla de contenido.</li><li><b>Herramientas:</b> buscar y reemplazar, recuento de palabras, meta de palabras, lectura en voz alta, calculadora y corrección de idioma del teclado.</li><li><b>Archivos:</b> guardar como Word y como PDF, importar desde Word, versiones anteriores y papelera de reciclaje.</li></ul><h2>Tareas de ejemplo</h2><ul class=\"checklist\"><li data-checked=\"true\">Abrir Floating Ink</li><li>Instalarlo en el equipo o el teléfono</li><li>Agregar una tabla o un dibujo</li></ul><h2>Cómo instalarlo</h2><ul><li><b>En el equipo (Chrome o Edge):</b> botón <b>Instalar</b> arriba, o el icono de instalación junto a la barra de direcciones.</li><li><b>En Android:</b> menú ⋮ → Instalar la aplicación.</li><li><b>En iPhone:</b> en Safari, botón de compartir → Agregar a pantalla de inicio.</li></ul><p>Después de instalarlo, Floating Ink se abre como un programa normal, incluso sin internet.</p><h2>Atajos de teclado</h2><table><tbody><tr><th>Atajo</th><th>Qué hace</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Negrita / cursiva / subrayado</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Deshacer / rehacer</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Buscar / buscar y reemplazar</td></tr><tr><td>Ctrl+K</td><td>Insertar enlace</td></tr><tr><td>Ctrl+Shift+X</td><td>Corregir idioma del teclado</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Título 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Guardar (Floating Ink también guarda solo)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Consejo:</b> ¿Tienes que escribir una cantidad de palabras? Activa una meta de palabras y verás tu progreso en la barra de estado.</p></div><p style=\"text-align: center\"><small>Floating Ink es parte de <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",

@@ -2754,7 +2754,58 @@ window.INK_I18N = {
 "תמונה מהמחשב, בשכבה חדשה. אפשר גם להדביק תמונה או לגרור קובץ לציור": "Ein Bild vom Computer, auf einer neuen Ebene. Du kannst auch ein Bild einfügen oder eine Datei auf die Zeichnung ziehen",
 "תמונה קטנה יותר. רקע שקוף נהיה לבן": "Ein kleineres Bild. Ein transparenter Hintergrund wird weiß",
 "תמונת JPG": "JPG-Bild",
-"תמונת PNG": "PNG-Bild"
+"תמונת PNG": "PNG-Bild",
+"GIF זז לבד בכל מקום: בהודעות, באתרים ובמצגות. רקע שקוף נשאר שקוף.": "Ein GIF bewegt sich überall von selbst: in Nachrichten, auf Websites und in Präsentationen. Ein transparenter Hintergrund bleibt transparent.",
+"{0} שניות": "{0} Sekunden",
+"אין מספיק זיכרון במכשיר בשביל עוד שכבות או פריימים בגודל הזה. אפשר למחוק שכבות או פריימים, או לבחור קנבס קטן יותר.": "Auf dem Gerät ist nicht genug Speicher für weitere Ebenen oder Bilder in dieser Größe. Du kannst Ebenen oder Bilder löschen oder eine kleinere Leinwand wählen.",
+"אין מקום בזיכרון של המכשיר לעוד שכבה. התמונה נכנסת לשכבה שבחרת.": "Im Speicher des Geräts ist kein Platz für eine weitere Ebene. Das Bild kommt auf die Ebene, die du gewählt hast.",
+"אנימציה כסרטון MP4, למשל ליוטיוב": "Die Animation als MP4-Video, zum Beispiel für YouTube",
+"אנימציה כתמונה שזזה לבד, לשליחה ולשיתוף": "Die Animation als Bild, das sich von selbst bewegt, zum Verschicken und Teilen",
+"אפשר למזג רק שתי שכבות נעוצות, או שתי שכבות שאינן נעוצות.": "Du kannst nur zwei angeheftete Ebenen zusammenführen oder zwei, die nicht angeheftet sind.",
+"באנימציה צריך להיות לפחות פריים אחד": "Eine Animation braucht mindestens ein Bild",
+"בלולאה": "In Schleife",
+"הדפדפן הזה לא יודע ליצור סרטונים. אפשר לשמור כ-GIF.": "Dieser Browser kann keine Videos erstellen. Du kannst als GIF speichern.",
+"הזזה אחורה": "Nach vorne verschieben",
+"הזזה קדימה": "Nach hinten verschieben",
+"הלוך וחזור": "Hin und zurück",
+"הפריימים שלפני ושאחרי מופיעים חלש מתחת לפריים, כדי שיהיה קל לצייר את הצעד הבא": "Die Bilder davor und danach erscheinen blass unter dem Bild, damit du den nächsten Schritt leicht zeichnen kannst",
+"השכבה מופיעה עכשיו בכל הפריימים": "Die Ebene erscheint jetzt in allen Bildern",
+"השכבה מופיעה עכשיו רק בפריים הזה": "Die Ebene erscheint jetzt nur in diesem Bild",
+"כדי לנגן צריך לפחות שני פריימים. \"פריים חדש\" מוסיף אחד.": "Zum Abspielen brauchst du mindestens zwei Bilder. „Neues Bild“ fügt eins hinzu.",
+"כדי לשמור אנימציה צריך לפחות שני פריימים. \"פריים חדש\" בלשונית אנימציה מוסיף אחד.": "Zum Speichern einer Animation brauchst du mindestens zwei Bilder. „Neues Bild“ im Tab Animation fügt eins hinzu.",
+"כמה זמן הפריים מוצג": "Wie lange das Bild gezeigt wird",
+"כמה פעמים לנגן": "Wie oft abspielen",
+"כמה פריימים מאחרי מופיעים, בירוק": "Wie viele Bilder danach erscheinen, in Grün",
+"כמה פריימים מוצגים בשנייה": "Wie viele Bilder pro Sekunde gezeigt werden",
+"כמה פריימים מלפני מופיעים, באדום": "Wie viele Bilder davor erscheinen, in Rot",
+"מה קורה כשהאנימציה נגמרת": "Was passiert, wenn die Animation endet",
+"מחיקת הפריים": "Bild löschen",
+"מכין את ה-GIF…": "GIF wird erstellt…",
+"מכין את הסרטון…": "Video wird erstellt…",
+"ניגון": "Abspielen",
+"נעוצה: מופיעה בכל הפריימים. לחיצה משחררת": "Angeheftet: erscheint in allen Bildern. Klick zum Lösen",
+"נעיצה בכל הפריימים": "An alle Bilder anheften",
+"נעיצה: השכבה תופיע בכל הפריימים, כמו רקע": "Anheften: Die Ebene erscheint in allen Bildern, wie ein Hintergrund",
+"סרטון": "Video",
+"סרטון MP4 נפתח בכל טלפון ומחשב, ואפשר להעלות אותו ליוטיוב. רקע שקוף נהיה לבן.": "Ein MP4-Video lässt sich auf jedem Handy und Computer öffnen, und du kannst es auf YouTube hochladen. Ein transparenter Hintergrund wird weiß.",
+"סרטון MP4, למשל ליוטיוב": "Ein MP4-Video, zum Beispiel für YouTube",
+"עותק של הפריים הזה אחריו, כדי לשנות בו רק מעט": "Eine Kopie dieses Bildes direkt danach, um nur wenig zu ändern",
+"פעולות על הפריים": "Aktionen für das Bild",
+"פעם אחת": "Einmal",
+"פריים {0}": "Bild {0}",
+"פריים {0} מתוך {1}": "Bild {0} von {1}",
+"פריים חדש": "Neues Bild",
+"פריים ריק אחרי הפריים הזה. הפריים הקודם מופיע בו בשקיפות, כדי לצייר את הצעד הבא": "Ein leeres Bild nach diesem. Das vorige Bild erscheint blass darin, damit du den nächsten Schritt zeichnen kannst",
+"פריים ריק אחריו": "Leeres Bild danach",
+"פריימים": "Bilder",
+"שכבה שצריכה להופיע בכל הפריימים, כמו רקע, נועצים בחלונית השכבות.": "Eine Ebene, die in allen Bildern erscheinen soll, wie ein Hintergrund, heftest du im Ebenen-Bereich an.",
+"שכבות בצל": "Zwiebelschicht",
+"שכפול הפריים": "Bild duplizieren",
+"שמירה כ-GIF": "Als GIF speichern",
+"שמירה כסרטון": "Als Video speichern",
+"שמירת האנימציה": "Animation speichern",
+"תמונה שזזה לבד, לשליחה ולשיתוף": "Ein Bild, das sich von selbst bewegt, zum Verschicken und Teilen",
+"חזרה@loop": "Wiederholen"
 },
 "plurals": {
 "{n} מילים": {
@@ -2977,13 +3028,17 @@ window.INK_I18N = {
 "one": "{n} Ebene",
 "other": "{n} Ebenen"
 },
-"בציור בגודל הזה אפשר עד {n} שכבות": {
-"one": "Eine Zeichnung dieser Größe kann bis zu {n} Ebene haben",
-"other": "Eine Zeichnung dieser Größe kann bis zu {n} Ebenen haben"
+"{n} בשנייה": {
+"one": "{n} pro Sekunde",
+"other": "{n} pro Sekunde"
 },
-"בציור בגודל הזה אפשר עד {n} שכבות. התמונה נכנסת לשכבה שבחרת.": {
-"one": "Eine Zeichnung dieser Größe kann bis zu {n} Ebene haben. Das Bild kommt auf die Ebene, die du gewählt hast.",
-"other": "Eine Zeichnung dieser Größe kann bis zu {n} Ebenen haben. Das Bild kommt auf die Ebene, die du gewählt hast."
+"{n} פעמים": {
+"one": "einmal",
+"other": "{n}-mal"
+},
+"{n} פריימים": {
+"one": "{n} Bild",
+"other": "{n} Bilder"
 }
 },
 "welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Willkommen bei Floating Ink</h1><p>Das ist ein Beispieldokument, das zeigt, was du hier machen kannst. Du kannst es bearbeiten, löschen oder auf <b>Neues Dokument</b> klicken und mit einer leeren Seite beginnen.</p><div class=\"callout callout-note\"><p><b>Komplett privat.</b> Die Dokumente werden nur auf deinem Gerät gespeichert, und nichts wird an irgendeinen Server gesendet. Damit sie nie verloren gehen, schalte die automatische Sicherung ein: <b>Datei → Sicherung</b>.</p></div><h2>Was es hier gibt</h2><ul><li><b>Formatierung wie in Word:</b> Schriftarten, Farben, <span style=\"background-color: #ffe45c\">Textmarker</span>, Überschriften, Listen und Tabellen.</li><li><b>Einfügen:</b> Bilder, Zeichnungen von Hand, Mathesymbole, Emoji, Datum und Inhaltsverzeichnis.</li><li><b>Werkzeuge:</b> Suchen und Ersetzen, Wörter zählen, Wortziel, Vorlesen, Rechner und Tastaturlayout-Korrektur.</li><li><b>Dateien:</b> Speichern als Word und als PDF, Import aus Word, frühere Versionen und Papierkorb.</li></ul><h2>Beispielaufgaben</h2><ul class=\"checklist\"><li data-checked=\"true\">Floating Ink öffnen</li><li>Es auf dem Computer oder Handy installieren</li><li>Eine Tabelle oder Zeichnung hinzufügen</li></ul><h2>So installierst du es</h2><ul><li><b>Am Computer (Chrome oder Edge):</b> Der Button <b>Installieren</b> oben, oder das Installationssymbol neben der Adressleiste.</li><li><b>Auf Android:</b> Menü ⋮ → App installieren.</li><li><b>Auf dem iPhone:</b> In Safari: Teilen-Symbol → Zum Home-Bildschirm.</li></ul><p>Nach der Installation öffnet sich Floating Ink wie eine normale Software, auch ohne Internet.</p><h2>Tastenkombinationen</h2><table><tbody><tr><th>Tastenkombination</th><th>Was sie macht</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Fett / Kursiv / Unterstrichen</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Rückgängig / Wiederholen</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Suchen / Suchen und Ersetzen</td></tr><tr><td>Ctrl+K</td><td>Link einfügen</td></tr><tr><td>Ctrl+Shift+X</td><td>Tastaturlayout (Hebräisch/Englisch)</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Überschrift 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Speichern (Floating Ink speichert auch von selbst)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Tipp:</b> Du kannst dir ein Wortziel setzen. Deinen Fortschritt siehst du dann unten in der Statusleiste.</p></div><p style=\"text-align: center\"><small>Floating Ink ist Teil von <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",

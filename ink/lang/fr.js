@@ -2754,7 +2754,58 @@ window.INK_I18N = {
 "תמונה מהמחשב, בשכבה חדשה. אפשר גם להדביק תמונה או לגרור קובץ לציור": "Une image de l'ordinateur, sur un nouveau calque. Tu peux aussi coller une image ou glisser un fichier sur le dessin",
 "תמונה קטנה יותר. רקע שקוף נהיה לבן": "Une image plus légère. Un fond transparent devient blanc",
 "תמונת JPG": "Image JPG",
-"תמונת PNG": "Image PNG"
+"תמונת PNG": "Image PNG",
+"GIF זז לבד בכל מקום: בהודעות, באתרים ובמצגות. רקע שקוף נשאר שקוף.": "Un GIF bouge tout seul partout : dans les messages, sur les sites et dans les présentations. Un fond transparent reste transparent.",
+"{0} שניות": "{0} secondes",
+"אין מספיק זיכרון במכשיר בשביל עוד שכבות או פריימים בגודל הזה. אפשר למחוק שכבות או פריימים, או לבחור קנבס קטן יותר.": "Il n'y a pas assez de mémoire sur l'appareil pour plus de calques ou d'images à cette taille. Tu peux supprimer des calques ou des images, ou choisir une toile plus petite.",
+"אין מקום בזיכרון של המכשיר לעוד שכבה. התמונה נכנסת לשכבה שבחרת.": "Il n'y a plus de place en mémoire pour un autre calque. L'image va sur le calque que tu as choisi.",
+"אנימציה כסרטון MP4, למשל ליוטיוב": "L'animation en vidéo MP4, par exemple pour YouTube",
+"אנימציה כתמונה שזזה לבד, לשליחה ולשיתוף": "L'animation en image qui bouge toute seule, à envoyer et partager",
+"אפשר למזג רק שתי שכבות נעוצות, או שתי שכבות שאינן נעוצות.": "Tu ne peux fusionner que deux calques épinglés, ou deux calques qui ne le sont pas.",
+"באנימציה צריך להיות לפחות פריים אחד": "Une animation a besoin d'au moins une image",
+"בלולאה": "En boucle",
+"הדפדפן הזה לא יודע ליצור סרטונים. אפשר לשמור כ-GIF.": "Ce navigateur ne sait pas créer de vidéos. Tu peux l'enregistrer en GIF.",
+"הזזה אחורה": "Reculer",
+"הזזה קדימה": "Avancer",
+"הלוך וחזור": "Aller-retour",
+"הפריימים שלפני ושאחרי מופיעים חלש מתחת לפריים, כדי שיהיה קל לצייר את הצעד הבא": "Les images d'avant et d'après apparaissent en transparence sous l'image, pour dessiner facilement l'étape suivante",
+"השכבה מופיעה עכשיו בכל הפריימים": "Le calque apparaît maintenant dans toutes les images",
+"השכבה מופיעה עכשיו רק בפריים הזה": "Le calque n'apparaît plus que dans cette image",
+"כדי לנגן צריך לפחות שני פריימים. \"פריים חדש\" מוסיף אחד.": "Pour lire, il faut au moins deux images. « Nouvelle image » en ajoute une.",
+"כדי לשמור אנימציה צריך לפחות שני פריימים. \"פריים חדש\" בלשונית אנימציה מוסיף אחד.": "Pour enregistrer une animation, il faut au moins deux images. « Nouvelle image » dans l'onglet Animation en ajoute une.",
+"כמה זמן הפריים מוצג": "Durée d'affichage de l'image",
+"כמה פעמים לנגן": "Combien de fois lire",
+"כמה פריימים מאחרי מופיעים, בירוק": "Combien d'images d'après apparaissent, en vert",
+"כמה פריימים מוצגים בשנייה": "Combien d'images par seconde",
+"כמה פריימים מלפני מופיעים, באדום": "Combien d'images d'avant apparaissent, en rouge",
+"מה קורה כשהאנימציה נגמרת": "Ce qui se passe à la fin de l'animation",
+"מחיקת הפריים": "Supprimer l'image",
+"מכין את ה-GIF…": "Préparation du GIF…",
+"מכין את הסרטון…": "Préparation de la vidéo…",
+"ניגון": "Lire",
+"נעוצה: מופיעה בכל הפריימים. לחיצה משחררת": "Épinglé : apparaît dans toutes les images. Clique pour le détacher",
+"נעיצה בכל הפריימים": "Épingler à toutes les images",
+"נעיצה: השכבה תופיע בכל הפריימים, כמו רקע": "Épingler : le calque apparaîtra dans toutes les images, comme un fond",
+"סרטון": "Vidéo",
+"סרטון MP4 נפתח בכל טלפון ומחשב, ואפשר להעלות אותו ליוטיוב. רקע שקוף נהיה לבן.": "Une vidéo MP4 s'ouvre sur n'importe quel téléphone ou ordinateur, et tu peux la mettre sur YouTube. Un fond transparent devient blanc.",
+"סרטון MP4, למשל ליוטיוב": "Une vidéo MP4, par exemple pour YouTube",
+"עותק של הפריים הזה אחריו, כדי לשנות בו רק מעט": "Une copie de cette image juste après, pour n'y changer qu'un peu",
+"פעולות על הפריים": "Actions sur l'image",
+"פעם אחת": "Une fois",
+"פריים {0}": "Image {0}",
+"פריים {0} מתוך {1}": "Image {0} sur {1}",
+"פריים חדש": "Nouvelle image",
+"פריים ריק אחרי הפריים הזה. הפריים הקודם מופיע בו בשקיפות, כדי לצייר את הצעד הבא": "Une image vide après celle-ci. L'image précédente y apparaît en transparence, pour dessiner l'étape suivante",
+"פריים ריק אחריו": "Image vide après",
+"פריימים": "Images",
+"שכבה שצריכה להופיע בכל הפריימים, כמו רקע, נועצים בחלונית השכבות.": "Un calque qui doit apparaître dans toutes les images, comme un fond, s'épingle dans le panneau des calques.",
+"שכבות בצל": "Pelure d'oignon",
+"שכפול הפריים": "Dupliquer l'image",
+"שמירה כ-GIF": "Enregistrer en GIF",
+"שמירה כסרטון": "Enregistrer en vidéo",
+"שמירת האנימציה": "Enregistrer l'animation",
+"תמונה שזזה לבד, לשליחה ולשיתוף": "Une image qui bouge toute seule, à envoyer et partager",
+"חזרה@loop": "Répétition"
 },
 "plurals": {
 "{n} מילים": {
@@ -2977,13 +3028,17 @@ window.INK_I18N = {
 "one": "{n} calque",
 "other": "{n} calques"
 },
-"בציור בגודל הזה אפשר עד {n} שכבות": {
-"one": "Un dessin de cette taille peut avoir jusqu'à {n} calque",
-"other": "Un dessin de cette taille peut avoir jusqu'à {n} calques"
+"{n} בשנייה": {
+"one": "{n} par seconde",
+"other": "{n} par seconde"
 },
-"בציור בגודל הזה אפשר עד {n} שכבות. התמונה נכנסת לשכבה שבחרת.": {
-"one": "Un dessin de cette taille peut avoir jusqu'à {n} calque. L'image va sur le calque que tu as choisi.",
-"other": "Un dessin de cette taille peut avoir jusqu'à {n} calques. L'image va sur le calque que tu as choisi."
+"{n} פעמים": {
+"one": "une fois",
+"other": "{n} fois"
+},
+"{n} פריימים": {
+"one": "{n} image",
+"other": "{n} images"
 }
 },
 "welcome": "<img src=\"floating-ink.webp\" alt=\"Floating Ink\" class=\"img-center\" style=\"width: 62%\"><h1>Bienvenue dans Floating Ink</h1><p>C'est un document d'exemple qui montre ce qu'on peut faire ici. Tu peux le modifier, le supprimer, ou cliquer sur <b>Nouveau document</b> pour commencer sur une page vierge.</p><div class=\"callout callout-note\"><p><b>Totalement privé.</b> Les documents sont enregistrés uniquement sur ton appareil, rien n'est envoyé à un serveur. Pour ne jamais les perdre, active la sauvegarde automatique : <b>Fichier → Sauvegarde</b>.</p></div><h2>Ce qu'on trouve ici</h2><ul><li><b>Mise en forme comme dans Word :</b> polices, couleurs, <span style=\"background-color: #ffe45c\">surligneur</span>, titres, listes et tableaux.</li><li><b>Insertion :</b> images, dessin à main levée, symboles mathématiques, emoji, date et table des matières.</li><li><b>Outils :</b> rechercher et remplacer, nombre de mots, objectif de mots, lecture à voix haute, calculatrice et correction du clavier hébreu-anglais.</li><li><b>Fichiers :</b> enregistrement au format Word et PDF, importation depuis Word, versions précédentes et corbeille.</li></ul><h2>Tâches d'exemple</h2><ul class=\"checklist\"><li data-checked=\"true\">Ouvrir Floating Ink</li><li>L'installer sur l'ordinateur ou le téléphone</li><li>Ajouter un tableau ou un dessin</li></ul><h2>Comment installer</h2><ul><li><b>Sur ordinateur (Chrome ou Edge) :</b> bouton <b>Installer</b> en haut, ou l'icône d'installation à côté de la barre d'adresse.</li><li><b>Sur Android :</b> menu ⋮ → Installer l'application.</li><li><b>Sur iPhone :</b> dans Safari, bouton de partage → Sur l'écran d'accueil.</li></ul><p>Une fois installé, Floating Ink s'ouvre comme un logiciel classique, même sans internet.</p><h2>Raccourcis clavier</h2><table><tbody><tr><th>Raccourci</th><th>Ce qu'il fait</th></tr><tr><td>Ctrl+B / Ctrl+I / Ctrl+U</td><td>Gras / Italique / Souligné</td></tr><tr><td>Ctrl+Z / Ctrl+Y</td><td>Annuler / Rétablir</td></tr><tr><td>Ctrl+F / Ctrl+H</td><td>Rechercher / Rechercher et remplacer</td></tr><tr><td>Ctrl+K</td><td>Insérer un lien</td></tr><tr><td>Ctrl+Shift+X</td><td>Correction clavier hébreu-anglais</td></tr><tr><td>Ctrl+Alt+1 / 2 / 3</td><td>Titre 1 / 2 / 3</td></tr><tr><td>Ctrl+S</td><td>Enregistrer (Floating Ink enregistre aussi tout seul)</td></tr></tbody></table><div class=\"callout callout-tip\"><p><b>Astuce :</b> Floating Ink enregistre tout seul au fur et à mesure, tu n'as rien à faire.</p></div><p style=\"text-align: center\"><small>Floating Ink fait partie de <a href=\"https://floatingrotations.com\">Floating rotation</a></small></p>",

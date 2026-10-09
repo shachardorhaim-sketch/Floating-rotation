@@ -23,6 +23,7 @@ const PRESETS = () => [
   { k: 'a4l', ic: 'crop_landscape', n: T('A4 לרוחב'), w: 1754, h: 1240 },
   { k: 'wide', ic: 'computer', n: T('מסך רחב'), w: 1920, h: 1080 },
   { k: 'square', ic: 'crop_square', n: T('ריבוע'), w: 1500, h: 1500 },
+  { k: 'anim', ic: 'movie', n: T('אנימציה'), w: 1280, h: 720 },   // lighter, so many frames fit, even on a phone
 ];
 /* brush: draws with the pointer; shape: drawn by dragging from corner to corner; key: its keyboard letter (by place, so a Hebrew keyboard works too) */
 const TOOLS = {
@@ -83,7 +84,7 @@ const now = () => performance.now();
 /* =========================================================
    state
    ========================================================= */
-let D = null, LOADED = null, GEN = 0;   // the drawing on screen: { w, h, bg, layers, active }, and the app's S.cur it belongs to
+let D = null, LOADED = null, GEN = 0;   // the drawing on screen: { w, h, bg, layers, active, frames, f, fps, loop }, and the app's S.cur it belongs to
 let TOOL = 'pen', BEFORE_PICK = null;
 let COLOR = '#000000';
 const VIEW = { z: 1, x: 0, y: 0 };   // the paper is at x, y in the viewport, z screen pixels to a drawing pixel
@@ -95,6 +96,7 @@ let SEL = null;   // the selection: { path: [[x, y]...] (a closed outline in dra
 let FL = null;    // pixels being moved or placed: { L, cv, x, y, w, h, ow, oh, kind: 'lift' | 'paste' | 'layer', from, once, pre }
 let TX = null;    // the text being written: { x, y, el, grip }
 let CLIP = null;  // what Ctrl+C copied here: a canvas
+let PLAY = null;  // the animation playing: { seq, n, next, raf }
 const HX = { bk: null, st: null, tmp: null };   // helper canvases the drawing's size: the layer as it was, the stroke alone, a scratch copy
 const HIST = { steps: [], at: 0, bytes: 0 };
 let REV = 0, DONE_REV = 0, BODY = null, ENCODING = false, AGAIN = false;
@@ -107,13 +109,39 @@ function helper(k) {
   if (!c || c.width !== D.w || c.height !== D.h) { freeCanvas(c); c = HX[k] = newCanvas(D.w, D.h); }
   return c;
 }
-function makeLayer(name, w, h, o = {}) {
-  const cv = newCanvas(w, h);
-  cv.className = 'dw-lc';
-  return { id: o.id || lid(), name: String(name), op: typeof o.op === 'number' ? clamp(o.op, 0, 1) : 1, vis: o.vis !== false, cv, cx: cv.getContext('2d'), ver: 1, enc: null };
+/* a layer's pixels in one frame (or in every frame, for a layer pinned to all of them): a canvas, how many times it was
+   drawn on (0: never, so it can go when its frame is left) and its last PNG */
+function newCell(w = D.w, hh = D.h) { const cv = newCanvas(w, hh); cv.className = 'dw-lc'; return { cv, cx: cv.getContext('2d'), ver: 0, enc: null }; }
+/* a layer: its settings, and its cells by frame id ('*' when it is pinned to every frame). cv and cx are always its cell
+   of the frame on screen (bind), so everything that draws works on the frame being drawn */
+function makeLayer(name, o = {}) {
+  return { id: o.id || lid(), name: String(name), op: typeof o.op === 'number' ? clamp(o.op, 0, 1) : 1, vis: o.vis !== false, fx: !!o.fx, cells: new Map(), cell: null, cv: null, cx: null };
+}
+const fid = () => 'F' + Math.random().toString(36).slice(2, 9);
+const keyOf = (L, i = D.f) => L.fx ? '*' : D.frames[i].id;
+const cellAt = (L, i = D.f) => L.cells.get(keyOf(L, i)) || null;
+function bind(L) {
+  const k = keyOf(L);
+  let c = L.cells.get(k);
+  if (!c || !c.cv.width) { c = newCell(); L.cells.set(k, c); }
+  L.cell = c; L.cv = c.cv; L.cx = c.cx;
+}
+const bindAll = () => { for (const L of D.layers) bind(L); };
+/* the cells of the frame on screen that were never drawn on go, before another frame comes */
+function freeUnused() {
+  for (const L of D.layers) {
+    const c = L.cell;
+    if (L.fx || !c || c.ver) continue;
+    const k = keyOf(L);
+    if (L.cells.get(k) === c) L.cells.delete(k);
+    freeCanvas(c.cv); L.cell = L.cv = L.cx = null;
+  }
 }
 const layerOf = (id = D && D.active) => D && (D.layers.find(L => L.id === id) || D.layers[D.layers.length - 1]);
-const maxLayers = () => clamp(Math.floor(PX_BUDGET / (D.w * D.h)), 2, 60);
+/* every cell is a canvas the drawing's size, so the device's memory decides how many layers and frames fit */
+const cellCount = () => D.layers.reduce((n, L) => n + L.cells.size, 0);
+const room = n => (cellCount() + n) * D.w * D.h <= PX_BUDGET;
+const fullMsg = () => toast(T('אין מספיק זיכרון במכשיר בשביל עוד שכבות או פריימים בגודל הזה. אפשר למחוק שכבות או פריימים, או לבחור קנבס קטן יותר.'), { ms: 7000 });
 const layerName = n => T('שכבה {0}', n);
 function nextLayerName() {
   let n = D.layers.length + 1;
@@ -125,35 +153,84 @@ function nextLayerName() {
 /* =========================================================
    the body: read, written, and turned into one picture
    ========================================================= */
+const SRC_RE = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
+const okSrc = s => typeof s === 'string' && SRC_RE.test(s) ? s : '';
+const LOOPS = ['loop', 'ping', 'once'];
+/* any body, checked and in one shape: frames [{ id, d }] (at least one; d is how many ticks it shows), and each layer's
+   pictures by frame id, or by '*' when it is pinned to every frame. A drawing of one frame is stored the way it was before
+   animation came: each layer's picture in src */
 function parseBody(body) {
   let j = null;
   try { j = typeof body === 'string' ? JSON.parse(body) : body; } catch {}
   if (!j || typeof j !== 'object') j = {};
   const w = clamp(Math.round(+j.w) || 1920, MIN_SIDE, MAX_SIDE), hh = clamp(Math.round(+j.h) || 1080, MIN_SIDE, MAX_SIDE);
-  const bg = j.bg === '' ? '' : hex6(j.bg) || '#ffffff', seen = new Set();
+  const bg = j.bg === '' ? '' : hex6(j.bg) || '#ffffff', seen = new Set(), seenF = new Set();
+  let frames = (Array.isArray(j.frames) ? j.frames : []).filter(f => f && typeof f.id === 'string' && /^[\w-]{1,24}$/.test(f.id) && !seenF.has(f.id) && seenF.add(f.id))
+    .slice(0, 3000).map(f => ({ id: f.id, d: clamp(Math.round(+f.d) || 1, 1, 60) }));
+  const anim = frames.length > 0;
+  if (!anim) frames = [{ id: 'F1', d: 1 }];
   const layers = (Array.isArray(j.layers) ? j.layers : []).filter(l => l && typeof l === 'object').slice(0, 60).map((l, i) => {
     let id = typeof l.id === 'string' && /^[\w-]{1,24}$/.test(l.id) ? l.id : lid();
     if (seen.has(id)) id = lid();
     seen.add(id);
-    return { id, name: String(l.name || '').trim().slice(0, 60) || layerName(i + 1), op: typeof l.op === 'number' && isFinite(l.op) ? clamp(l.op, 0, 1) : 1, vis: l.vis !== false,
-      src: typeof l.src === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(l.src) ? l.src : '' };
+    const fx = !!l.fx, cells = {};
+    if (fx) cells['*'] = okSrc(l.src);
+    else if (anim && l.cells && typeof l.cells === 'object') { for (const f of frames) { const s = okSrc(l.cells[f.id]); if (s) cells[f.id] = s; } }
+    else cells[frames[0].id] = okSrc(l.src);
+    return { id, name: String(l.name || '').trim().slice(0, 60) || layerName(i + 1), op: typeof l.op === 'number' && isFinite(l.op) ? clamp(l.op, 0, 1) : 1, vis: l.vis !== false, fx, cells };
   });
-  if (!layers.length) layers.push({ id: lid(), name: layerName(1), op: 1, vis: true, src: '' });
+  if (!layers.length) layers.push({ id: lid(), name: layerName(1), op: 1, vis: true, fx: false, cells: {} });
   const active = layers.some(l => l.id === j.active) ? j.active : layers[layers.length - 1].id;
-  return { v: 1, w, h: hh, bg, active, layers };
+  return { w, h: hh, bg, active, layers, frames, f: clamp(Math.round(+j.f) || 0, 0, frames.length - 1), fps: clamp(Math.round(+j.fps) || 12, 1, 30), loop: LOOPS.includes(j.loop) ? j.loop : 'loop' };
 }
-const norm = body => JSON.stringify(parseBody(body));
+/* the body in its stored shape; srcOf(layer, key) gives a cell's picture */
+function bodyFrom(d, srcOf) {
+  const anim = d.frames.length > 1, o = { v: anim ? 2 : 1, w: d.w, h: d.h, bg: d.bg, active: d.active, fps: d.fps, loop: d.loop };
+  if (anim) Object.assign(o, { f: d.f, frames: d.frames.map(f => ({ id: f.id, d: f.d })) });
+  o.layers = d.layers.map(L => {
+    const x = { id: L.id, name: L.name, op: L.op, vis: L.vis };
+    if (L.fx) x.fx = true;
+    if (L.fx || !anim) x.src = srcOf(L, L.fx ? '*' : d.frames[0].id) || '';
+    else { x.cells = {}; for (const f of d.frames) { const s = srcOf(L, f.id); if (s) x.cells[f.id] = s; } }
+    return x;
+  });
+  return JSON.stringify(o);
+}
+const norm = body => bodyFrom(parseBody(body), (l, k) => l.cells[k]);
 /* a new drawing: one empty layer on a background of one color, or on nothing at all */
 const blankBody = (w, hh, bg) => JSON.stringify({ v: 1, w, h: hh, bg, active: 'L1', layers: [{ id: 'L1', name: layerName(1), op: 1, vis: true, src: '' }] });
-const bodyOf = d => JSON.stringify({ v: 1, w: d.w, h: d.h, bg: d.bg, active: d.active, layers: d.layers.map(L => ({ id: L.id, name: L.name, op: L.op, vis: L.vis, src: L.enc ? L.enc.src : '' })) });
-/* a body's layers as canvases, for a picture of it without opening it */
-async function layersOf(j) {
-  const out = [];
-  for (const l of j.layers) {
-    if (!l.vis || !l.src || l.op <= 0) continue;
-    try { out.push({ op: l.op, im: await loadImg(l.src) }); } catch {}
+const bodyOf = d => bodyFrom(d, (L, k) => { const c = L.cells.get(k); return c && c.ver > 0 && c.enc ? c.enc.src : ''; });
+/* the order the frames play in: forward, and for "back and forth" back again (without showing the ends twice) */
+const seqOf = (n, loop) => { const a = [...Array(n).keys()]; return loop === 'ping' && n > 2 ? a.concat(a.slice(1, -1).reverse()) : a; };
+/* each frame as a picture, from the drawing on screen or from any body: { w, h, bg, frames, fps, loop, draw(cx, i, cw, ch) }.
+   A body's pictures are decoded as they are needed; only the pinned layers' are kept */
+async function framesOf(body) {
+  if (body == null) {
+    commitPending();
+    const d = D;
+    return { w: d.w, h: d.h, bg: d.bg, frames: d.frames.map(f => ({ ...f })), fps: d.fps, loop: d.loop, done() {},
+      async draw(cx, i, cw, ch) {
+        for (const L of d.layers) {
+          const c = L.vis && L.op > 0 && cellAt(L, i);
+          if (!c || (!c.ver && c !== L.cell)) continue;
+          cx.globalAlpha = L.op; cx.drawImage(c.cv, 0, 0, d.w, d.h, 0, 0, cw, ch);
+        }
+        cx.globalAlpha = 1;
+      } };
   }
-  return out;
+  const j = parseBody(body), kept = new Map();
+  return { w: j.w, h: j.h, bg: j.bg, frames: j.frames, fps: j.fps, loop: j.loop, done() { kept.clear(); },
+    async draw(cx, i, cw, ch) {
+      for (const l of j.layers) {
+        const s = l.vis && l.op > 0 && l.cells[l.fx ? '*' : j.frames[i].id];
+        if (!s) continue;
+        let im = kept.get(s);
+        if (!im) { im = await loadImg(s).catch(() => null); if (im && l.fx) kept.set(s, im); }
+        if (!im) continue;
+        cx.globalAlpha = l.op; cx.drawImage(im, 0, 0, j.w, j.h, 0, 0, cw, ch);
+      }
+      cx.globalAlpha = 1;
+    } };
 }
 /* everything that shows, on one canvas: the background (white for a JPEG, when there is none), then each layer that isn't hidden */
 function flatTo(c, w, hh, bg, list) {
@@ -166,12 +243,15 @@ function flatTo(c, w, hh, bg, list) {
   return c;
 }
 const fitSize = (w, hh, max) => { const k = max ? Math.min(1, max / Math.max(w, hh)) : 1; return [Math.max(1, Math.round(w * k)), Math.max(1, Math.round(hh * k))]; };
-/* the open drawing, or any body, as one picture. type 'image/png' keeps see-through parts; a JPEG gets white behind them */
+/* the open drawing, or any body, as one picture: the frame on screen, or the one the body was left at.
+   type 'image/png' keeps see-through parts; a JPEG gets white behind them */
 async function flatten(body, { type = 'image/png', max = 0, q = 0.92 } = {}) {
-  let w, hh, bg, list;
-  if (body == null && D) { commitPending(); ({ w, h: hh, bg } = D); list = D.layers.filter(L => L.vis && L.op > 0).map(L => ({ op: L.op, cv: L.cv })); }
-  else { const j = parseBody(body); ({ w, h: hh, bg } = j); list = await layersOf(j); }
-  const [cw, ch] = fitSize(w, hh, max), c = flatTo(newCanvas(cw, ch), w, hh, bg || (type === 'image/png' ? '' : '#ffffff'), list);
+  const src = await framesOf(body), i = body == null ? D.f : parseBody(body).f;
+  const [cw, ch] = fitSize(src.w, src.h, max), c = newCanvas(cw, ch), x = c.getContext('2d'), bg = src.bg || (type === 'image/png' ? '' : '#ffffff');
+  if (bg) { x.fillStyle = bg; x.fillRect(0, 0, cw, ch); }
+  x.imageSmoothingQuality = 'high';
+  await src.draw(x, i, cw, ch);
+  src.done();
   const blob = await new Promise(r => c.toBlob(r, type, q));
   freeCanvas(c);
   if (!blob) throw new Error('blob');
@@ -184,29 +264,31 @@ function preview(body) {
   return h('div', { class: 'dw-verbox' }, img);
 }
 
-/* --- saving: each layer is written as a PNG only when it changed since the last time, and in the background
+/* --- saving: each cell is written as a PNG only when it changed since the last time, and in the background
    (toBlob), so drawing never waits for it. The app saves BODY a moment later, as it saves any document --- */
 const encodeSoon = debounce(() => encodeNow(), 450);
-function changed(L) {
-  if (L) L.ver++;
+function changed(L, cell) {
+  if (L) (cell || L.cell).ver++;
   REV++;
   if (LOADED && S.cur === LOADED && !S.cur.isSample) setSave('dirty');
   encodeSoon();
-  thumbsSoon();
+  thumbsSoon(); framesSoon();
   stat();
 }
-async function encodeLayer(L) {
-  if (L.enc && L.enc.ver === L.ver) return;
-  const ver = L.ver, blob = await new Promise(r => L.cv.toBlob(r, 'image/png'));
+async function encodeCell(c) {
+  if (c.enc && c.enc.ver === c.ver) return;
+  const ver = c.ver, blob = await new Promise(r => c.cv.toBlob(r, 'image/png'));
   if (!blob) throw new Error('blob');
   const src = await blobToDataURL(blob);
-  if (L.ver === ver) L.enc = { ver, src };
+  if (c.ver === ver) c.enc = { ver, src };
 }
+const cellsOf = d => d.layers.flatMap(L => [...L.cells.values()]);
+const stale = c => c.ver > 0 && (!c.enc || c.enc.ver !== c.ver);
 function metaOf(d, cur) {
   if (!cur) return;
-  Object.assign(cur.meta, { layers: d.layers.length, w: d.w, h: d.h });
-  // the small picture shown when choosing a drawing to put in a document or a presentation
-  const [tw, th] = fitSize(d.w, d.h, 160), c = flatTo(newCanvas(tw, th), d.w, d.h, d.bg || '#ffffff', d.layers.filter(L => L.vis && L.op > 0).map(L => ({ op: L.op, cv: L.cv })));
+  Object.assign(cur.meta, { layers: d.layers.length, frames: d.frames.length, w: d.w, h: d.h });
+  // the small picture shown when choosing a drawing to put in a document or a presentation: the frame on screen
+  const [tw, th] = fitSize(d.w, d.h, 160), c = flatTo(newCanvas(tw, th), d.w, d.h, d.bg || '#ffffff', d.layers.filter(L => L.vis && L.op > 0 && L.cv).map(L => ({ op: L.op, cv: L.cv })));
   cur.meta.thumb = c.toDataURL('image/jpeg', 0.72);
   freeCanvas(c);
 }
@@ -216,9 +298,9 @@ async function encodeNow() {
   ENCODING = true;
   const d = D, cur = LOADED, rev = REV;
   try {
-    for (const L of d.layers) await encodeLayer(L);
+    for (const c of cellsOf(d)) if (stale(c)) await encodeCell(c);
     if (D !== d || S.cur !== cur) return;
-    if (d.layers.some(L => !L.enc || L.enc.ver !== L.ver)) { AGAIN = true; return; }   // drawn on while it was being written
+    if (cellsOf(d).some(stale)) { AGAIN = true; return; }   // drawn on while it was being written
     BODY = bodyOf(d); DONE_REV = rev;
     metaOf(d, cur);
     markDirty();
@@ -231,13 +313,13 @@ function flush() {
   commitPending();
   if (REV === DONE_REV) return false;
   encodeSoon.cancel();
-  for (const L of D.layers) if (!L.enc || L.enc.ver !== L.ver) L.enc = { ver: L.ver, src: L.cv.toDataURL('image/png') };
+  for (const c of cellsOf(D)) if (stale(c)) c.enc = { ver: c.ver, src: c.cv.toDataURL('image/png') };
   BODY = bodyOf(D); DONE_REV = REV;
   metaOf(D, LOADED);
   markDirty();
   return true;
 }
-/* what the app saves: the body as of the last time the layers were written (a newer change is written a moment later, and saved then) */
+/* what the app saves: the body as of the last time the cells were written (a newer change is written a moment later, and saved then) */
 const body = cur => D && LOADED === cur ? BODY : null;
 
 /* =========================================================
@@ -252,33 +334,45 @@ function push(step) {
 }
 function pxStep(L, R, before) {
   let after = null;
+  const cell = L.cell, fk = L.fx ? null : D.frames[D.f].id;
+  // a change on another frame is undone there: that frame comes on screen first
+  const show = () => { if (fk && D.frames[D.f].id !== fk) { const i = D.frames.findIndex(f => f.id === fk); if (i >= 0) goFrame(i, true); } };
   const st = {
     bytes: R.w * R.h * 4,
-    undo() { if (!after) { after = L.cx.getImageData(R.x, R.y, R.w, R.h); st.bytes *= 2; HIST.bytes += R.w * R.h * 4; } L.cx.putImageData(before, R.x, R.y); changed(L); },
-    redo() { L.cx.putImageData(after, R.x, R.y); changed(L); },
+    undo() { show(); if (!after) { after = cell.cx.getImageData(R.x, R.y, R.w, R.h); st.bytes *= 2; HIST.bytes += R.w * R.h * 4; } cell.cx.putImageData(before, R.x, R.y); changed(L, cell); },
+    redo() { show(); cell.cx.putImageData(after, R.x, R.y); changed(L, cell); },
   };
   return st;
 }
-const snapLayers = () => ({ layers: D.layers.slice(), props: D.layers.map(L => [L.name, L.op, L.vis]), active: D.active, bg: D.bg, w: D.w, h: D.h });
+/* the layers, their cells and the frames as they are now (the canvases themselves, so nothing is copied) */
+const snapLayers = () => ({ layers: D.layers.slice(), props: D.layers.map(L => [L.name, L.op, L.vis, L.fx, new Map(L.cells)]), active: D.active, bg: D.bg, w: D.w, h: D.h,
+  frames: D.frames.map(f => ({ ...f })), f: D.f, fps: D.fps, loop: D.loop });
 function setLayers(s) {
+  stopPlay();
   D.layers = s.layers.slice();
-  s.layers.forEach((L, i) => { [L.name, L.op, L.vis] = s.props[i]; });
-  D.active = s.active; D.bg = s.bg;
+  s.layers.forEach((L, i) => { const [name, op, vis, fx, cells] = s.props[i]; Object.assign(L, { name, op, vis, fx }); L.cells = new Map(cells); });
+  D.active = s.active; D.bg = s.bg; D.frames = s.frames.map(f => ({ ...f })); D.f = clamp(s.f, 0, D.frames.length - 1); D.fps = s.fps; D.loop = s.loop;
   if (D.w !== s.w || D.h !== s.h) { D.w = s.w; D.h = s.h; for (const k of Object.keys(HX)) { freeCanvas(HX[k]); HX[k] = null; } fit(); }
-  paintPaper(); layersUI(); canvasUI();
+  // a cell let go when its frame was left (it had never been drawn on) comes back empty
+  for (const L of D.layers) for (const [k, c] of L.cells) if (!c.cv.width) L.cells.delete(k);
+  bindAll(); paintPaper(); layersUI(); canvasUI(); framesUI(); onionSoon();
 }
-const layersBytes = list => list.reduce((n, L) => n + L.cv.width * L.cv.height * 4, 0);
-/* a change to the list of layers or their settings, as one step: fn changes D, and may return pixel steps that belong to it */
+const cellsBytes = list => list.reduce((n, c) => n + c.cv.width * c.cv.height * 4, 0);
+/* a change to the layers, the frames or their settings, as one step: fn changes D, and may return pixel steps that belong to it */
 function struct(fn) {
   commitPending();
-  const a = snapLayers(), kept = new Set(a.layers), parts = [].concat(fn() || []), b = snapLayers();
-  const gone = a.layers.filter(L => !b.layers.includes(L)), added = b.layers.filter(L => !kept.has(L));
+  const a = snapLayers(), parts = [].concat(fn() || []);
+  bindAll();
+  const b = snapLayers();
+  // what the step holds on to: the cells that are in one of its two states and not in the other
+  const inA = new Set(a.props.flatMap(p => [...p[4].values()])), inB = new Set(b.props.flatMap(p => [...p[4].values()]));
+  const only = [...inA].filter(c => !inB.has(c)).concat([...inB].filter(c => !inA.has(c)));
   push({
-    bytes: layersBytes(gone) + layersBytes(added) + parts.reduce((n, p) => n + p.bytes, 0),
+    bytes: cellsBytes(only) + parts.reduce((n, p) => n + p.bytes, 0),
     undo() { for (const p of parts.slice().reverse()) p.undo(); setLayers(a); changed(); },
     redo() { setLayers(b); for (const p of parts) p.redo(); changed(); },
   });
-  paintPaper(); layersUI(); changed();
+  paintPaper(); layersUI(); framesUI(); onionSoon(); changed();
 }
 function undo() {
   if (ACT) return;
@@ -405,13 +499,43 @@ const CSS = `
 .dw-dl .mi .ms{color:var(--text-3)}
 .dw-dl .mi small{margin-inline-start:auto;color:var(--text-3);font-size:12px}
 .dw-new{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.dw-stage{flex:1;min-height:0;position:relative;display:flex;flex-direction:column}
+.dw-paper.playing canvas.dw-lc{visibility:hidden!important}
+.dw-time{flex:none;display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface);border-top:1px solid var(--line);min-width:0}
+.dw-time[hidden]{display:none}
+.dw-tplay{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:var(--shadow);padding:0}
+.dw-tplay.on{background:#cf3727}
+.dw-tplay .ms{font-size:26px}
+.dw-tadd{flex:none;width:40px;height:62px;border:1.5px dashed var(--line);border-radius:8px;background:none;color:var(--text-2);display:grid;place-items:center;cursor:pointer;padding:0}
+.dw-tadd:hover{border-color:var(--accent);color:var(--accent)}
+.dw-frs{flex:1;min-width:0;display:flex;align-items:stretch;gap:6px;overflow-x:auto;overflow-y:hidden;padding:3px 2px;scrollbar-width:thin}
+.dw-fr{position:relative;flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:3px;border:2px solid transparent;border-radius:8px;cursor:pointer;user-select:none;-webkit-user-select:none;background:var(--surface-2)}
+.dw-fr:hover{border-color:var(--line)}
+.dw-fr.on{border-color:var(--accent);background:var(--accent-soft)}
+.dw-fr.pl{border-color:#cf3727}
+.dw-fr.drag{opacity:.4}
+.dw-fr.drop{box-shadow:0 0 0 2px var(--accent)}
+.dw-fth{display:grid;place-items:center;width:72px;height:50px;border-radius:4px;overflow:hidden}
+.dw-fth canvas{display:block;max-width:72px;max-height:50px;background:#fff conic-gradient(#e2e5eb 25%,#fff 0 50%,#e2e5eb 0 75%,#fff 0) 0 0/10px 10px;box-shadow:0 0 0 1px var(--line)}
+.dw-fn{font-size:11px;line-height:1.1;color:var(--text-2);font-variant-numeric:tabular-nums}
+.dw-fd{position:absolute;top:5px;inset-inline-start:5px;font-size:10.5px;font-weight:700;line-height:1.5;background:var(--accent);color:#fff;border-radius:6px;padding:0 4px}
+.dw-fm{position:absolute;top:2px;inset-inline-end:2px;width:22px;height:22px;border-radius:6px;border:0;background:var(--surface);box-shadow:var(--shadow);display:grid;place-items:center;padding:0;cursor:pointer;color:var(--text)}
+.dw-fm .ms{font-size:16px}
+.dw-durs{display:flex;gap:4px;padding:2px 8px 8px}
+.dw-durs .opt{min-width:36px;height:28px;border:1px solid var(--line);border-radius:6px;background:var(--surface);font-weight:600;font-size:12.5px;color:var(--text);cursor:pointer}
+.dw-durs .opt.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.dw-col{display:flex;flex-direction:column;justify-content:center;gap:6px}
+.dw-col .sel{height:28px}
+.dw-pin .ms{font-size:18px}
+.dw-pin.on{color:var(--accent)}
 #drawPrint{display:none}
 @media print{
   html.draw-print #app{display:none!important}
   html.draw-print #drawPrint{display:block}
-  #drawPrint img{display:block;width:100vw;height:100vh;object-fit:contain}
+  #drawPrint img{display:block;width:100vw;height:100vh;object-fit:contain;break-after:page}
+  #drawPrint img:last-child{break-after:auto}
 }
-@media (max-width:700px){.dw-side{position:absolute;inset-block:0;inset-inline-end:0;z-index:6;box-shadow:var(--pop);width:min(84vw,280px)}.dw-zoom{bottom:8px;inset-inline-end:8px}}
+@media (max-width:700px){.dw-fth{width:56px;height:40px}.dw-fth canvas{max-width:56px;max-height:40px}.dw-tplay{width:40px;height:40px}.dw-tadd{height:52px}.dw-side{position:absolute;inset-block:0;inset-inline-end:0;z-index:6;box-shadow:var(--pop);width:min(84vw,280px)}.dw-zoom{bottom:8px;inset-inline-end:8px}}
 `;
 
 /* =========================================================
@@ -441,13 +565,25 @@ function ribbonPanels() {
     group(T('שמירה כקובץ'), '', rbtn('exportAs', 'image', T('תמונת PNG'), { big: true, arg: 'png', title: T('שומר את מה שרואים כתמונה. רקע שקוף נשאר שקוף') }),
       rbtn('exportAs', 'imagesmode', T('תמונת JPG'), { big: true, arg: 'jpg', title: T('תמונה קטנה יותר. רקע שקוף נהיה לבן') }), rbtn('exportAs', 'picture_as_pdf', 'PDF', { big: true, arg: 'pdf', title: T('שמירה כ-PDF') })),
     group(T('שימוש בציור'), '', rbtn('dwSend', 'input', T('הכנסה למסמך או למצגת'), { big: true, title: T('הציור נכנס כתמונה למסמך או למצגת שבוחרים') })));
-  return [V.home, V.canvasP];
+  const sel = (label, title, opts) => h('select', { class: 'sel', 'aria-label': label, title }, opts.map(([v, t]) => h('option', { value: v, text: t })));
+  V.fps = sel(T('מהירות'), T('כמה פריימים מוצגים בשנייה'), FPS_LIST.map(v => [v, TN('{n} בשנייה', v)]));
+  V.loop = sel(T('חזרה@loop'), T('מה קורה כשהאנימציה נגמרת'), [['loop', T('בלולאה')], ['ping', T('הלוך וחזור')], ['once', T('פעם אחת')]]);
+  V.onBf = sel(T('לפני'), T('כמה פריימים מלפני מופיעים, באדום'), [0, 1, 2, 3].map(n => [n, String(n)]));
+  V.onAf = sel(T('אחרי'), T('כמה פריימים מאחרי מופיעים, בירוק'), [0, 1, 2, 3].map(n => [n, String(n)]));
+  V.animP = h('div', { class: 'panel draw-only', 'data-panel': 'dwanim', hidden: true },
+    group(T('פריימים'), '', rbtn('dwFrameAdd', 'add_box', T('פריים חדש'), { big: true, title: T('פריים ריק אחרי הפריים הזה. הפריים הקודם מופיע בו בשקיפות, כדי לצייר את הצעד הבא') }),
+      rbtn('dwFrameDup', 'content_copy', T('שכפול הפריים'), { big: true, title: T('עותק של הפריים הזה אחריו, כדי לשנות בו רק מעט') }), rbtn('dwFrameDel', 'delete', T('מחיקת הפריים'), { big: true })),
+    group(T('ניגון'), '', rbtn('dwPlay', 'play_arrow', T('ניגון'), { big: true }), h('div', { class: 'dw-col' }, h('label', { class: 'dw-sl' }, h('span', { text: T('מהירות') }), V.fps), h('label', { class: 'dw-sl' }, h('span', { text: T('חזרה@loop') }), V.loop))),
+    group(T('שכבות בצל'), '', rbtn('dwOnion', 'auto_awesome_motion', T('שכבות בצל'), { big: true, title: T('הפריימים שלפני ושאחרי מופיעים חלש מתחת לפריים, כדי שיהיה קל לצייר את הצעד הבא') }),
+      h('div', { class: 'dw-col' }, h('label', { class: 'dw-sl' }, h('span', { text: T('לפני') }), V.onBf), h('label', { class: 'dw-sl' }, h('span', { text: T('אחרי') }), V.onAf))),
+    group(T('שמירה כקובץ'), '', rbtn('dwAnimExport', 'gif', 'GIF', { big: true, arg: 'gif', title: T('תמונה שזזה לבד, לשליחה ולשיתוף') }), rbtn('dwAnimExport', 'movie', T('סרטון'), { big: true, arg: 'video', title: T('סרטון MP4, למשל ליוטיוב') })));
+  return [V.home, V.canvasP, V.animP];
 }
 function mount() {
   if (V.vp) return;
   document.head.append(h('style', { id: 'drawcss' }, CSS));
   const tabs = $('#tabs');
-  for (const [k, label] of [['dwhome', T('ציור')], ['dwcanvas', T('קנבס')]]) tabs.append(h('button', { class: 'tab draw-only', role: 'tab', 'data-tab': k, 'aria-selected': 'false' }, label));
+  for (const [k, label] of [['dwhome', T('ציור')], ['dwcanvas', T('קנבס')], ['dwanim', T('אנימציה')]]) tabs.append(h('button', { class: 'tab draw-only', role: 'tab', 'data-tab': k, 'aria-selected': 'false' }, label));
   const ribbon = $('#ribbon');
   for (const p of ribbonPanels()) ribbon.append(p);
   const view = $('#drawView');
@@ -461,7 +597,14 @@ function mount() {
   V.zp = h('button', { class: 'rb dw-zp', type: 'button', 'data-cmd': 'dwZoom', 'data-arg': '1', title: T('גודל אמיתי (Ctrl+1)') }, '100%');
   V.zoom = h('div', { class: 'dw-zoom' }, h('button', { class: 'rb dw-ltog', type: 'button', 'data-cmd': 'dwLayers', title: T('שכבות'), 'aria-label': T('שכבות') }, icon('layers')), h('i'),
     rbtn('dwZoom', 'remove', T('הקטנה'), { arg: 'out' }), V.zp, rbtn('dwZoom', 'add', T('הגדלה@zoom'), { arg: 'in' }), rbtn('dwZoom', 'fit_screen', T('כל הציור'), { arg: 'fit' }));
-  V.main = h('div', { class: 'dw-main' }, V.vp, V.zoom, V.wait);
+  V.stage = h('div', { class: 'dw-stage' }, V.vp, V.zoom, V.wait);
+  // the frames, under the drawing
+  V.onion = newCanvas(1, 1); V.onion.className = 'dw-on';
+  V.frs = h('div', { class: 'dw-frs', role: 'listbox', 'aria-label': T('פריימים') });
+  V.time = h('div', { class: 'dw-time', hidden: true },
+    h('button', { class: 'dw-tplay', type: 'button', 'data-cmd': 'dwPlay', title: T('ניגון'), 'aria-label': T('ניגון') }, icon('play_arrow')), V.frs,
+    h('button', { class: 'dw-tadd', type: 'button', 'data-cmd': 'dwFrameAdd', title: T('פריים חדש'), 'aria-label': T('פריים חדש') }, icon('add')));
+  V.main = h('div', { class: 'dw-main' }, V.stage, V.time);
   // the layers, at the side
   V.list = h('div', { class: 'dw-list', role: 'listbox', 'aria-label': T('שכבות') });
   V.lop = h('input', { type: 'range', min: '0', max: '100', 'aria-label': T('שקיפות השכבה') });   // transparency: 0 is the layer as it is
@@ -501,9 +644,10 @@ function mount() {
     const row = e.target.closest('.dw-row');
     if (!row || e.target.closest('input')) return;
     if (e.target.closest('.dw-eye')) { toggleVis(row.dataset.id); return; }
+    if (e.target.closest('.dw-pin')) { toggleFix(row.dataset.id); return; }
     setActive(row.dataset.id);
   });
-  V.list.addEventListener('dblclick', e => { const row = e.target.closest('.dw-row'); if (row && !e.target.closest('.dw-eye')) renameLayer(row.dataset.id); });
+  V.list.addEventListener('dblclick', e => { const row = e.target.closest('.dw-row'); if (row && !e.target.closest('.dw-eye,.dw-pin')) renameLayer(row.dataset.id); });
   let opBefore = null;
   V.lop.addEventListener('input', () => {
     const L = layerOf(); if (!L) return;
@@ -517,6 +661,34 @@ function mount() {
     push({ bytes: 0, undo() { setLayers(a); changed(); }, redo() { setLayers(b); changed(); } });
     changed(); V.lop.blur();
   });
+  // the frames: a click goes to one, dragging moves it, its menu (or a right click) does the rest
+  V.frs.addEventListener('pointerdown', e => {
+    const el = e.target.closest('.dw-fr');
+    if (!el || e.button > 0 || e.target.closest('.dw-fm')) return;
+    const i = +el.dataset.i, x0 = e.clientX;
+    let drag = false, to = i;
+    if (e.pointerType !== 'touch') try { V.frs.setPointerCapture(e.pointerId); } catch {}
+    const mv = ev => {
+      if (!drag && (ev.pointerType === 'touch' || Math.abs(ev.clientX - x0) < 8)) return;   // a finger scrolls the strip
+      drag = true; el.classList.add('drag');
+      const over = [...V.frs.children].find(it => { const r = it.getBoundingClientRect(); return ev.clientX >= r.left && ev.clientX <= r.right; });
+      if (over) to = +over.dataset.i;
+      for (const it of V.frs.children) it.classList.toggle('drop', +it.dataset.i === to && to !== i);
+      const r = V.frs.getBoundingClientRect();
+      if (ev.clientX < r.left + 24) V.frs.scrollLeft -= 12; else if (ev.clientX > r.right - 24) V.frs.scrollLeft += 12;
+    };
+    const end = ev => {
+      V.frs.removeEventListener('pointermove', mv); V.frs.removeEventListener('pointerup', end); V.frs.removeEventListener('pointercancel', end);
+      if (drag) { el.classList.remove('drag'); moveFrame(i, to); } else if (ev.type === 'pointerup') goFrame(i);
+    };
+    V.frs.addEventListener('pointermove', mv); V.frs.addEventListener('pointerup', end); V.frs.addEventListener('pointercancel', end);
+  });
+  V.frs.addEventListener('click', e => { const b = e.target.closest('.dw-fm'); if (b) frameMenu(b, D.f); });
+  V.frs.addEventListener('contextmenu', e => { const el = e.target.closest('.dw-fr'); if (!el) return; e.preventDefault(); goFrame(+el.dataset.i); const cur = V.frs.children[D.f]; frameMenu(cur || el, D.f); });
+  V.fps.addEventListener('change', () => { setFps(V.fps.value); V.fps.blur(); });
+  V.loop.addEventListener('change', () => { setLoop(V.loop.value); V.loop.blur(); });
+  for (const [el, k] of [[V.onBf, 'b'], [V.onAf, 'a']]) el.addEventListener('change', () => { onionOpt()[k] = +el.value; savePrefs(); onionNow(); el.blur(); });
+  new MutationObserver(() => framesUI()).observe(V.animP, { attributes: true, attributeFilter: ['hidden'] });
   document.addEventListener('keyup', e => { if (e.code === 'Space' && SPACE) { SPACE = false; cursorUI(); } });
   addEventListener('blur', () => { if (SPACE) { SPACE = false; cursorUI(); } });
   document.addEventListener('paste', onPaste);
@@ -589,12 +761,15 @@ function onWheel(e) {
 /* --- the paper: one canvas for each layer, the lowest first, and what is being moved on the layer it belongs to --- */
 function paintPaper() {
   if (!D || !V.paper) return;
-  const kids = [];
-  for (const L of D.layers) {
+  bindAll();
+  const kids = [], under = D.frames.length > 1 ? D.layers.findIndex(L => !L.fx) : -1;
+  for (const [i, L] of D.layers.entries()) {
+    if (i === under && V.onion) kids.push(V.onion);
     L.cv.style.opacity = String(L.op); L.cv.style.visibility = L.vis ? '' : 'hidden';
     kids.push(L.cv);
     if (FL && FL.L === L) { FL.cv.style.opacity = String(L.op); FL.cv.style.visibility = L.vis ? '' : 'hidden'; kids.push(FL.cv); }
   }
+  if (PLAY && V.play) kids.push(V.play);
   V.paper.replaceChildren(...kids);
   V.paper.style.width = D.w + 'px'; V.paper.style.height = D.h + 'px';
   V.paper.classList.toggle('clear', !D.bg);
@@ -623,11 +798,13 @@ function layersUI() {
   if (!V.list || !D) return;
   if (V.side.hidden) { layerButtons(); return; }
   V.list.textContent = '';
+  const anim = D.frames.length > 1;
   for (const L of D.layers.slice().reverse()) {
     if (!L.th) L.th = newCanvas(1, 1);
     const on = L.id === D.active;
     V.list.append(h('div', { class: 'dw-row' + (on ? ' on' : '') + (L.vis ? '' : ' off'), role: 'option', 'aria-selected': String(on), 'data-id': L.id, title: L.name },
       h('div', { class: 'dw-th' }, L.th), h('div', { class: 'dw-nm', text: L.name }),
+      anim || L.fx ? h('button', { class: 'rb dw-pin' + (L.fx ? ' on' : ''), type: 'button', title: L.fx ? T('נעוצה: מופיעה בכל הפריימים. לחיצה משחררת') : T('נעיצה: השכבה תופיע בכל הפריימים, כמו רקע'), 'aria-label': T('נעיצה בכל הפריימים'), 'aria-pressed': String(L.fx) }, icon('push_pin')) : null,
       h('button', { class: 'rb dw-eye', type: 'button', title: L.vis ? T('הסתרת השכבה') : T('הצגת השכבה'), 'aria-label': L.vis ? T('הסתרת השכבה') : T('הצגת השכבה'), 'aria-pressed': String(!L.vis) }, icon(L.vis ? 'visibility' : 'visibility_off'))));
   }
   thumbsNow(); layerButtons();
@@ -636,8 +813,7 @@ function layerButtons() {
   const L = layerOf(), i = D.layers.indexOf(L), dis = (cmd, off) => { for (const b of document.querySelectorAll(`.dw-lbar [data-cmd="${cmd}"]`)) b.disabled = off; };
   const see = 100 - Math.round(L.op * 100);
   V.lop.value = String(see); V.lopv.textContent = see + '%';
-  const full = D.layers.length >= maxLayers();
-  dis('dwLayerAdd', full); dis('dwLayerDup', full); dis('dwLayerUp', i >= D.layers.length - 1); dis('dwLayerDown', i <= 0); dis('dwLayerMerge', i <= 0); dis('dwLayerDel', D.layers.length <= 1);
+  dis('dwLayerAdd', !room(1)); dis('dwLayerDup', !room(L.cells.size)); dis('dwLayerUp', i >= D.layers.length - 1); dis('dwLayerDown', i <= 0); dis('dwLayerMerge', i <= 0); dis('dwLayerDel', D.layers.length <= 1);
 }
 function setActive(id) {
   if (!D || D.active === id || !D.layers.some(L => L.id === id)) return;
@@ -650,7 +826,8 @@ const LRI = String.fromCharCode(0x2066), PDI = String.fromCharCode(0x2069);
 function stat() {
   if (!D || S.cur !== LOADED) return;
   $('#stPage').textContent = T('קנבס {0}', `${LRI}${D.w} × ${D.h}${PDI}`);
-  $('#stWords').textContent = TN('{n} שכבות', D.layers.length);
+  const n = TN('{n} שכבות', D.layers.length);
+  $('#stWords').textContent = D.frames.length > 1 ? `${n} · ${T('פריים {0} מתוך {1}', D.f + 1, D.frames.length)}` : n;
 }
 const canvasUI = () => stat();
 
@@ -660,6 +837,7 @@ const canvasUI = () => stat();
 const pressureOf = e => e.pointerType === 'pen' ? clamp(e.pressure || 0, 0, 1) : 1;
 function onDown(e) {
   if (!D || !LOADED) return;
+  if (PLAY) { stopPlay(); return; }   // a touch on the drawing stops it playing
   if (TX && (e.target === TX.el || TX.grip.contains(e.target))) return;   // writing in the text box, or moving it
   const p = { ...viewPt(e), t: e.pointerType, id: e.pointerId };
   if (e.pointerType === 'pen') PEN = true;
@@ -1298,7 +1476,7 @@ function cancelFloat() {
   freeCanvas(f.cv);
   paintPaper(); layersUI(); undoUI(); optsUI();
 }
-function commitPending() { if (TX) commitText(); if (FL) drop(); }
+function commitPending() { stopPlay(); if (TX) commitText(); if (FL) drop(); }
 function selectAll() {
   if (!D) return;
   commitPending();
@@ -1360,14 +1538,15 @@ async function placeImage(src, newLayer, at) {
   cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
   // and comes in no bigger than the drawing
   const k = Math.min(1, D.w * 0.92 / iw, D.h * 0.92 / ih), w = Math.max(1, Math.round(iw * k)), hh = Math.max(1, Math.round(ih * k));
-  if (newLayer && D.layers.length >= maxLayers()) { toast(TN('בציור בגודל הזה אפשר עד {n} שכבות. התמונה נכנסת לשכבה שבחרת.', maxLayers()), { ms: 6000 }); newLayer = false; }
+  if (newLayer && !room(1)) { toast(T('אין מקום בזיכרון של המכשיר לעוד שכבה. התמונה נכנסת לשכבה שבחרת.'), { ms: 6000 }); newLayer = false; }
   let L = layerOf(), pre = null;
   if (!newLayer && !canDraw(L)) { freeCanvas(cv); return; }
   if (!MOVE_TOOLS.includes(TOOL)) setTool('move');
   if (newLayer) {
     const a = snapLayers(), name = src && src.name ? String(src.name).replace(/\.[^.]+$/, '').trim().slice(0, 40) : '';
-    L = makeLayer(name && name !== 'image' ? name : T('תמונה'), D.w, D.h);
+    L = makeLayer(name && name !== 'image' ? name : T('תמונה'));
     D.layers.splice(D.layers.indexOf(layerOf()) + 1, 0, L); D.active = L.id;
+    bind(L);
     pre = { a, b: snapLayers() };
   }
   const r = vpRect(), mc = at || (src && src._at ? null : toCanvas({ x: r.width / 2, y: r.height / 2 }));
@@ -1422,6 +1601,7 @@ function drawOverlay() {
    ========================================================= */
 function setTool(t) {
   if (!TOOLS[t] || ACT) return;
+  stopPlay();
   if (TX && t !== 'text') commitText();
   if (FL && !MOVE_TOOLS.includes(t)) drop();
   if (!MOVE_TOOLS.includes(t)) SEL = null;
@@ -1526,14 +1706,16 @@ function bgPop(anchor) {
    layers
    ========================================================= */
 function addLayer() {
-  if (D.layers.length >= maxLayers()) { toast(TN('בציור בגודל הזה אפשר עד {n} שכבות', maxLayers()), { ms: 5000 }); return; }
-  struct(() => { const L = makeLayer(nextLayerName(), D.w, D.h); D.layers.splice(D.layers.indexOf(layerOf()) + 1, 0, L); D.active = L.id; });
+  if (!room(1)) { fullMsg(); return; }
+  struct(() => { const L = makeLayer(nextLayerName()); D.layers.splice(D.layers.indexOf(layerOf()) + 1, 0, L); D.active = L.id; });
 }
+/* a copy of the layer in every frame */
 function dupLayer() {
-  if (D.layers.length >= maxLayers()) { toast(TN('בציור בגודל הזה אפשר עד {n} שכבות', maxLayers()), { ms: 5000 }); return; }
+  const S0 = layerOf(), list = [...S0.cells].filter(([, c]) => c.ver || c === S0.cell);
+  if (!room(list.length)) { fullMsg(); return; }
   struct(() => {
-    const S0 = layerOf(), L = makeLayer(T('{0} (עותק)', S0.name).slice(0, 60), D.w, D.h, { op: S0.op, vis: S0.vis });
-    L.cx.drawImage(S0.cv, 0, 0);
+    const L = makeLayer(T('{0} (עותק)', S0.name).slice(0, 60), { op: S0.op, vis: S0.vis, fx: S0.fx });
+    for (const [k, c] of list) { const n = newCell(); n.cx.drawImage(c.cv, 0, 0); n.ver = c.ver ? 1 : 0; L.cells.set(k, n); }
     D.layers.splice(D.layers.indexOf(S0) + 1, 0, L); D.active = L.id;
   });
 }
@@ -1547,18 +1729,27 @@ function delLayer() {
   const L = layerOf(), i = D.layers.indexOf(L);
   struct(() => { D.layers.splice(i, 1); D.active = D.layers[Math.max(0, i - 1)].id; });
 }
-/* the layer onto the one under it, as it shows (its opacity too), and the two become one */
+/* the layer onto the one under it, as it shows (its opacity too), in every frame, and the two become one.
+   The merged cells are new canvases, so undo only puts the old ones back */
 function mergeDown() {
   const L = layerOf(), i = D.layers.indexOf(L);
   if (i <= 0) return;
-  const B = D.layers[i - 1];
+  const B = D.layers[i - 1], anim = D.frames.length > 1;
   if (!B.vis) { toast(T('השכבה שמתחת מוסתרת. כדי למזג, מציגים אותה קודם.')); return; }
+  if (anim && L.fx !== B.fx) { toast(T('אפשר למזג רק שתי שכבות נעוצות, או שתי שכבות שאינן נעוצות.'), { ms: 6000 }); return; }
+  const pairs = anim ? [...new Set([...B.cells.keys(), ...L.cells.keys()])].map(k => [k, B.cells.get(k), L.cells.get(k)]) : [[keyOf(B), B.cell, L.cell]];
+  if (!room(pairs.length)) { fullMsg(); return; }
   struct(() => {
-    const before = B.cx.getImageData(0, 0, D.w, D.h);
-    if (L.vis) { B.cx.save(); B.cx.globalAlpha = L.op; B.cx.drawImage(L.cv, 0, 0); B.cx.restore(); }
-    B.ver++;
+    const cells = new Map();
+    for (const [k, b, l] of pairs) {
+      const n = newCell();
+      if (b && b.ver) n.cx.drawImage(b.cv, 0, 0);
+      if (l && l.ver && L.vis) { n.cx.globalAlpha = L.op; n.cx.drawImage(l.cv, 0, 0); n.cx.globalAlpha = 1; }
+      n.ver = (b && b.ver) || (l && l.ver) ? 1 : 0;
+      cells.set(k, n);
+    }
+    B.cells = cells;
     D.layers.splice(i, 1); D.active = B.id;
-    return [pxStep(B, { x: 0, y: 0, w: D.w, h: D.h }, before)];
   });
 }
 function clearLayer() {
@@ -1616,6 +1807,8 @@ function onKey(e) {
     FL.x += e.key === 'ArrowLeft' ? -s : e.key === 'ArrowRight' ? s : 0; FL.y += e.key === 'ArrowUp' ? -s : e.key === 'ArrowDown' ? s : 0;
     placeFloat(); return true;
   }
+  // the arrows go from frame to frame: toward the reading direction is forward
+  if ((c === 'ArrowLeft' || c === 'ArrowRight') && D.frames.length > 1 && !e.shiftKey) { e.preventDefault(); goFrame(D.f + ((c === 'ArrowLeft') === (UI_DIR === 'rtl') ? 1 : -1)); return true; }
   if (c === 'BracketLeft' || c === 'BracketRight') { e.preventDefault(); sizeBy(c === 'BracketRight' ? 1 : -1); return true; }
   if (e.shiftKey) return false;
   const t = Object.keys(TOOLS).find(k => TOOLS[k].key === c);
@@ -1625,6 +1818,7 @@ function onKey(e) {
 /* Esc: the text is put down, then what floats, then the selection goes */
 function onEsc() {
   if (!D) return false;
+  if (PLAY) { stopPlay(); return true; }
   if (TX) { commitText(); return true; }
   if (FL) { drop(); return true; }
   if (SEL) { SEL = null; drawOverlay(); optsUI(); return true; }
@@ -1691,17 +1885,24 @@ function sizeDialog() {
 }
 function resizeCanvas(w, hh, stretch) {
   if (!D || (w === D.w && hh === D.h)) return;
-  if (D.layers.length * w * hh > PX_BUDGET) { toast(T('בגודל הזה כל השכבות לא ייכנסו לזיכרון של המכשיר. אפשר למזג או למחוק שכבות, או לבחור גודל קטן יותר.'), { ms: 7000 }); return false; }
+  const cells = D.layers.reduce((n, L) => n + [...L.cells.values()].filter(c => c.ver).length + 1, 0);
+  if (cells * w * hh > PX_BUDGET) { toast(T('בגודל הזה כל השכבות לא ייכנסו לזיכרון של המכשיר. אפשר למזג או למחוק שכבות, או לבחור גודל קטן יותר.'), { ms: 7000 }); return false; }
   struct(() => {
     const ox = Math.round((w - D.w) / 2), oy = Math.round((hh - D.h) / 2);
-    D.layers = D.layers.map(L => {
-      const N = makeLayer(L.name, w, hh, { id: L.id, op: L.op, vis: L.vis });
-      N.cx.imageSmoothingQuality = 'high';
-      if (stretch) N.cx.drawImage(L.cv, 0, 0, w, hh); else N.cx.drawImage(L.cv, ox, oy);
-      return N;
-    });
     D.w = w; D.h = hh;
     for (const k of Object.keys(HX)) { freeCanvas(HX[k]); HX[k] = null; }
+    // every cell of every frame, on a canvas of the new size
+    D.layers = D.layers.map(L => {
+      const N = makeLayer(L.name, { id: L.id, op: L.op, vis: L.vis, fx: L.fx });
+      for (const [k, c] of L.cells) {
+        if (!c.ver) continue;
+        const n = newCell();
+        n.cx.imageSmoothingQuality = 'high';
+        if (stretch) n.cx.drawImage(c.cv, 0, 0, w, hh); else n.cx.drawImage(c.cv, ox, oy);
+        n.ver = 1; N.cells.set(k, n);
+      }
+      return N;
+    });
   });
   fit();
 }
@@ -1709,33 +1910,49 @@ function resizeCanvas(w, hh, stretch) {
 /* =========================================================
    files, printing, and the drawing in a document or a presentation
    ========================================================= */
-const visible = () => D.layers.filter(L => L.vis && L.op > 0).map(L => ({ op: L.op, cv: L.cv }));
 const png = () => flatten(null, { type: 'image/png' });
 const jpg = () => flatten(null, { type: 'image/jpeg', q: 0.92 });
-/* one page the drawing's size (150 pixels to the inch) */
+/* a page for each frame, the drawing's size (150 pixels to the inch): an animation printed is a flip book */
 async function pdf() {
   await loadScript(LIB.jspdf);
   const J = window.jspdf && window.jspdf.jsPDF;
   if (!J || !D) throw new Error('lib');
-  commitPending();
-  const W = D.w * 72 / DPI, H = D.h * 72 / DPI, c = flatTo(newCanvas(D.w, D.h), D.w, D.h, D.bg || '#ffffff', visible()), data = c.toDataURL('image/jpeg', 0.93);
-  freeCanvas(c);
-  const doc = new J({ orientation: W > H ? 'landscape' : 'portrait', unit: 'pt', format: [W, H] });
-  doc.addImage(data, 'JPEG', 0, 0, W, H);
+  const src = await framesOf(null), W = src.w * 72 / DPI, H = src.h * 72 / DPI, o = W > H ? 'landscape' : 'portrait', c = newCanvas(src.w, src.h), x = c.getContext('2d');
+  const doc = new J({ orientation: o, unit: 'pt', format: [W, H] });
+  try {
+    for (let i = 0; i < src.frames.length; i++) {
+      x.fillStyle = src.bg || '#ffffff'; x.fillRect(0, 0, c.width, c.height);
+      await src.draw(x, i, c.width, c.height);
+      if (i) doc.addPage([W, H], o);
+      doc.addImage(c.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, W, H);
+    }
+  } finally { freeCanvas(c); }
   return doc.output('blob');
 }
 async function print() {
   if (!D) return null;
-  const url = await blobToDataURL(await png()), rule = $('#pageRule'), before = rule.textContent, img = h('img', { src: url, alt: '' });
+  const src = await framesOf(null), [w, hh] = fitSize(src.w, src.h, 2000), c = newCanvas(w, hh), x = c.getContext('2d'), rule = $('#pageRule'), before = rule.textContent;
+  V.print.textContent = '';
+  for (let i = 0; i < src.frames.length; i++) {
+    x.clearRect(0, 0, w, hh);
+    if (src.bg) { x.fillStyle = src.bg; x.fillRect(0, 0, w, hh); }
+    await src.draw(x, i, w, hh);
+    V.print.append(h('img', { src: c.toDataURL('image/png'), alt: '' }));
+  }
+  freeCanvas(c);
   rule.textContent = `@page{size:${(D.w / DPI).toFixed(3)}in ${(D.h / DPI).toFixed(3)}in;margin:0}`;
-  V.print.textContent = ''; V.print.append(img);
-  await Promise.race([img.decode().catch(() => {}), sleep(1500)]);   // decode can wait forever in a hidden window
+  await Promise.race([Promise.all([...V.print.querySelectorAll('img')].map(im => im.decode().catch(() => {}))), sleep(2500)]);   // decode can wait forever in a hidden window
   document.documentElement.classList.add('draw-print');
   return () => { document.documentElement.classList.remove('draw-print'); V.print.textContent = ''; rule.textContent = before; };
 }
-/* the picture that goes into a document or a slide: a JPEG when the drawing has a background (smaller), else a PNG that keeps see-through */
-const insertBlob = (body, max) => { const j = body == null ? D : parseBody(body); return flatten(body, { type: j.bg ? 'image/jpeg' : 'image/png', max, q: 0.9 }); };
-const fileOf = (blob, title) => new File([blob], safeName(title) + (blob.type === 'image/png' ? '.png' : '.jpg'), { type: blob.type });
+/* the picture that goes into a document or a slide: an animation as a GIF that moves there too; a drawing as a JPEG when
+   it has a background (smaller), else a PNG that keeps see-through */
+async function insertBlob(body, max) {
+  const j = body == null ? D : parseBody(body);
+  if (j.frames.length > 1) return makeGif(body, { max: Math.min(max, 960) });
+  return flatten(body, { type: j.bg ? 'image/jpeg' : 'image/png', max, q: 0.9 });
+}
+const fileOf = (blob, title) => new File([blob], safeName(title) + ({ 'image/png': '.png', 'image/gif': '.gif' }[blob.type] || '.jpg'), { type: blob.type });
 /* from the drawing: choose a document or a presentation (or a new one); the drawing goes in at the end of the
    document, or on a new slide at the end of the presentation */
 function sendTo() {
@@ -1794,12 +2011,20 @@ function pickInto() {
    opening and closing a drawing
    ========================================================= */
 function reset() {
+  if (PLAY) { cancelAnimationFrame(PLAY.raf); PLAY = null; }
+  if (V.play) { V.play.remove(); V.play.width = V.play.height = 1; }
+  if (V.paper) V.paper.classList.remove('playing');
+  for (const c of FTH.values()) freeCanvas(c);
+  FTH.clear();
+  if (V.frs) V.frs.textContent = '';
+  if (V.time) V.time.hidden = true;
+  if (V.onion) { V.onion.width = V.onion.height = 1; }
   if (ACT && ACT.timer) clearInterval(ACT.timer);
   ACT = null; PTR.clear(); SPACE = false;
   if (TX) { TX.el.remove(); TX.grip.remove(); TX = null; }
   if (FL) { FL.cv.remove(); freeCanvas(FL.cv); FL = null; }
   SEL = null;
-  if (D) for (const L of D.layers) freeCanvas(L.cv);
+  if (D) for (const c of cellsOf(D)) freeCanvas(c.cv);
   HIST.steps = []; HIST.at = 0; HIST.bytes = 0;
   for (const k of Object.keys(HX)) { freeCanvas(HX[k]); HX[k] = null; }
   encodeSoon.cancel();
@@ -1809,14 +2034,20 @@ function reset() {
   if (V.list) V.list.textContent = '';
   if (V.cur) V.cur.style.display = 'none';
 }
+/* a body's layers with a canvas for each picture it has (a frame without one gets an empty canvas when it comes on screen) */
 async function layersFrom(j, gen) {
   const out = [];
   for (const l of j.layers) {
-    const L = makeLayer(l.name, j.w, j.h, l);
+    const L = makeLayer(l.name, l);
     out.push(L);
-    if (l.src) { try { L.cx.drawImage(await loadImg(l.src), 0, 0); } catch (e) { console.warn(e); } }
-    L.enc = { ver: L.ver, src: l.src };
-    if (gen != null && gen !== GEN) break;
+    for (const [k, src] of Object.entries(l.cells)) {
+      if (!src) continue;
+      const c = newCell(j.w, j.h);
+      try { c.cx.drawImage(await loadImg(src), 0, 0); } catch (e) { console.warn(e); }
+      c.ver = 1; c.enc = { ver: 1, src };
+      L.cells.set(k, c);
+      if (gen != null && gen !== GEN) return out;
+    }
   }
   return out;
 }
@@ -1827,13 +2058,13 @@ async function load(html, cur) {
   LOADED = cur;
   V.wait.hidden = false;
   const j = parseBody(html), layers = await layersFrom(j, gen);
-  if (gen !== GEN || S.cur !== cur) { if (gen === GEN) LOADED = null; layers.forEach(L => freeCanvas(L.cv)); return; }
-  D = { w: j.w, h: j.h, bg: j.bg, layers, active: j.active };
+  if (gen !== GEN || S.cur !== cur) { if (gen === GEN) LOADED = null; layers.forEach(L => { for (const c of L.cells.values()) freeCanvas(c.cv); }); return; }
+  D = { w: j.w, h: j.h, bg: j.bg, layers, active: j.active, frames: j.frames, f: j.f, fps: j.fps, loop: j.loop };
   BODY = bodyOf(D);
   V.wait.hidden = true;
   TOOL = TOOLS[prefs().tool] ? prefs().tool : 'pen';
   COLOR = hex6(prefs().color) || '#000000';
-  paintPaper(); fit(); layersUI(); toolUI(); colorUI(); undoUI(); cursorUI(); stat();
+  paintPaper(); fit(); layersUI(); toolUI(); colorUI(); undoUI(); cursorUI(); stat(); framesUI(); onionNow();
   for (const b of document.querySelectorAll('.dw-ltog')) b.classList.toggle('on', !V.side.hidden);
   // a drawing from a backup or a copy has no small picture yet: it gets one now
   if (!cur.isSample && !(typeof cur.meta.thumb === 'string' && cur.meta.thumb.startsWith('data:image/'))) { metaOf(D, cur); markDirty(); }
@@ -1845,14 +2076,366 @@ async function replace(html) {
   const d = D, j = parseBody(html), layers = await layersFrom(j);
   if (D !== d) return;
   struct(() => {
-    D.layers = layers; D.active = j.active; D.bg = j.bg;
+    D.layers = layers; D.active = j.active; D.bg = j.bg; D.frames = j.frames; D.f = j.f; D.fps = j.fps; D.loop = j.loop;
     if (D.w !== j.w || D.h !== j.h) { D.w = j.w; D.h = j.h; for (const k of Object.keys(HX)) { freeCanvas(HX[k]); HX[k] = null; } }
   });
   fit();
 }
 /* what Claude is told about a drawing it opens: its size and layers, the top one first. It can't draw yet */
-const infoOf = d => ({ width: d.w, height: d.h, background: d.bg || 'transparent', layers: d.layers.slice().reverse().map(l => ({ name: l.name, visible: l.vis, opacity: Math.round(l.op * 100) / 100 })) });
+const infoOf = d => ({ width: d.w, height: d.h, background: d.bg || 'transparent', ...(d.frames.length > 1 ? { frames: d.frames.length, frames_per_second: d.fps } : {}), layers: d.layers.slice().reverse().map(l => ({ name: l.name, visible: l.vis, opacity: Math.round(l.op * 100) / 100 })) });
 const info = html => D && LOADED === S.cur ? infoOf(D) : infoOf(parseBody(html));   // the one on screen as it is now, not as it was last saved
+
+/* =========================================================
+   animation: frames shown one after another. Each layer has its own picture in each frame, unless it is pinned to
+   all of them (a background). The strip under the drawing shows the frames, and the frames before and after the one
+   on screen show faintly under it (onion skin), so the next step is easy to draw
+   ========================================================= */
+const GIFENC = 'https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.esm.js';
+const MP4MUX = 'https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.mjs';
+const FPS_LIST = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 24, 30];
+const onionOpt = () => {
+  const p = prefs();
+  if (!p.onion || typeof p.onion !== 'object') p.onion = { on: true, b: 1, a: 1 };
+  return p.onion;
+};
+function goFrame(i, quiet) {
+  if (!D) return;
+  i = clamp(i, 0, D.frames.length - 1);
+  if (quiet) stopPlay(); else commitPending();
+  if (i === D.f) return;
+  freeUnused();
+  D.f = i; SEL = null;
+  bindAll(); paintPaper(); layersUI(); framesUI(); stat(); onionSoon(); optsUI();
+}
+/* a new frame after the one on screen: empty (the one before shows through the onion skin), or a copy of it */
+function addFrame(copy) {
+  if (!D) return;
+  const anim = D.layers.filter(L => !L.fx), need = copy ? anim.filter(L => L.cell && L.cell.ver).length : anim.length;
+  if (!room(need)) { fullMsg(); return; }
+  const first = D.frames.length === 1;
+  struct(() => {
+    const f = { id: fid(), d: copy ? D.frames[D.f].d : 1 };
+    if (copy) for (const L of anim) {
+      const c = L.cell;
+      if (!c || !c.ver) continue;
+      const n = newCell(); n.cx.drawImage(c.cv, 0, 0); n.ver = 1;
+      L.cells.set(f.id, n);
+    }
+    freeUnused();
+    D.frames.splice(D.f + 1, 0, f);
+    D.f++;
+  });
+  stat();
+  if (first && D.layers.length > 1) toast(T('שכבה שצריכה להופיע בכל הפריימים, כמו רקע, נועצים בחלונית השכבות.'), { icon: 'push_pin', ms: 8000 });
+}
+function delFrame(i = D.f) {
+  if (!D) return;
+  if (D.frames.length <= 1) { toast(T('באנימציה צריך להיות לפחות פריים אחד')); return; }
+  struct(() => {
+    const f = D.frames[i];
+    for (const L of D.layers) if (!L.fx) L.cells.delete(f.id);
+    D.frames.splice(i, 1);
+    if (D.f > i || D.f >= D.frames.length) D.f = Math.max(0, D.f - 1);
+  });
+  stat();
+}
+function moveFrame(from, to) {
+  if (!D || from === to || to < 0 || to >= D.frames.length) return;
+  struct(() => { const cur = D.frames[D.f].id, [f] = D.frames.splice(from, 1); D.frames.splice(to, 0, f); D.f = D.frames.findIndex(x => x.id === cur); });
+}
+function setDur(i, d) { if (D && D.frames[i] && D.frames[i].d !== d) struct(() => { D.frames[i].d = d; }); }
+function setFps(v) { v = clamp(Math.round(+v) || 12, 1, 30); if (D && v !== D.fps) struct(() => { D.fps = v; }); }
+function setLoop(m) { if (D && LOOPS.includes(m) && m !== D.loop) struct(() => { D.loop = m; }); }
+/* pinned: one picture for every frame, the one this frame has. Unpinned: that picture goes to this frame only */
+function toggleFix(id) {
+  const L = D.layers.find(x => x.id === id);
+  if (!L) return;
+  struct(() => {
+    if (L.fx) { const c = L.cells.get('*'); L.fx = false; L.cells = new Map(c ? [[D.frames[D.f].id, c]] : []); }
+    else { const c = L.cell; L.fx = true; L.cells = new Map(c ? [['*', c]] : []); }
+  });
+  if (D.frames.length > 1) toast(L.fx ? T('השכבה מופיעה עכשיו בכל הפריימים') : T('השכבה מופיעה עכשיו רק בפריים הזה'), { icon: 'push_pin' });
+}
+
+/* --- the onion skin: the frames before in red, the frames after in green, fainter the further they are.
+   Drawn at a lower resolution, under the first layer that changes from frame to frame --- */
+const onionSoon = debounce(() => onionNow(), 40);
+let ONT = null;
+function onionNow() {
+  const c = V.onion;
+  if (!c || !D) return;
+  const o = onionOpt(), on = o.on && D.frames.length > 1 && !PLAY && D.layers.some(L => !L.fx);
+  c.style.display = on ? '' : 'none';
+  for (const b of document.querySelectorAll('#ribbon [data-cmd="dwOnion"]')) b.classList.toggle('on', !!o.on);
+  if (!on) { if (c.width > 1) { c.width = 1; c.height = 1; } return; }
+  const [w, hh] = fitSize(D.w, D.h, 1200);
+  if (c.width !== w || c.height !== hh) { c.width = w; c.height = hh; }
+  if (!ONT || ONT.width !== w || ONT.height !== hh) { freeCanvas(ONT); ONT = newCanvas(w, hh); }
+  const x = c.getContext('2d'), tx = ONT.getContext('2d');
+  x.clearRect(0, 0, w, hh);
+  const one = (i, tint, a) => {
+    if (i < 0 || i >= D.frames.length) return;
+    tx.globalCompositeOperation = 'source-over'; tx.globalAlpha = 1; tx.clearRect(0, 0, w, hh);
+    let any = false;
+    for (const L of D.layers) {
+      const cl = !L.fx && L.vis && L.op > 0 && L.cells.get(D.frames[i].id);
+      if (!cl || !cl.ver) continue;
+      tx.globalAlpha = L.op; tx.drawImage(cl.cv, 0, 0, w, hh); any = true;
+    }
+    if (!any) return;
+    tx.globalAlpha = 0.75; tx.globalCompositeOperation = 'source-atop'; tx.fillStyle = tint; tx.fillRect(0, 0, w, hh);
+    x.globalAlpha = a; x.drawImage(ONT, 0, 0); x.globalAlpha = 1;
+  };
+  for (let k = o.b; k >= 1; k--) one(D.f - k, '#e5484d', 0.5 * Math.pow(0.55, k - 1));
+  for (let k = o.a; k >= 1; k--) one(D.f + k, '#1f9d73', 0.42 * Math.pow(0.55, k - 1));
+}
+
+/* --- playing: each frame for its ticks at the drawing's speed, on a canvas of its own over the paper --- */
+function playUI() {
+  for (const b of document.querySelectorAll('[data-cmd="dwPlay"]')) {
+    const ic = b.querySelector('.ms'), t = b.querySelector('span:not(.ms)'), label = PLAY ? T('עצירה') : T('ניגון');
+    if (ic) ic.textContent = PLAY ? 'stop' : 'play_arrow';
+    if (t) t.textContent = label;
+    b.title = label; b.setAttribute('aria-label', label); b.classList.toggle('on', !!PLAY);
+  }
+}
+function paintFrame(c, i) {
+  const x = c.getContext('2d');
+  x.clearRect(0, 0, c.width, c.height);
+  for (const L of D.layers) {
+    const cl = L.vis && L.op > 0 && cellAt(L, i);
+    if (!cl || (!cl.ver && cl !== L.cell)) continue;
+    x.globalAlpha = L.op; x.drawImage(cl.cv, 0, 0, c.width, c.height);
+  }
+  x.globalAlpha = 1;
+}
+function markPlay(i) { if (V.frs) for (const el of V.frs.children) el.classList.toggle('pl', +el.dataset.i === i); }
+function play() {
+  if (!D) return;
+  if (PLAY) { stopPlay(); return; }
+  if (D.frames.length < 2) { toast(T('כדי לנגן צריך לפחות שני פריימים. "פריים חדש" מוסיף אחד.')); return; }
+  commitPending();
+  const [w, hh] = fitSize(D.w, D.h, 1600), c = V.play || (V.play = newCanvas(1, 1));
+  c.className = 'dw-pl'; c.width = w; c.height = hh;
+  V.paper.append(c); V.paper.classList.add('playing');
+  PLAY = { seq: seqOf(D.frames.length, D.loop), n: 0, next: performance.now(), raf: 0 };
+  onionNow(); playUI();
+  const step = () => {
+    const p = PLAY;
+    if (!p) return;
+    const t = performance.now();
+    if (t >= p.next) {
+      if (p.n >= p.seq.length) { if (D.loop === 'once') { stopPlay(); return; } p.n = 0; }
+      const i = p.seq[p.n++], dur = D.frames[i].d * 1000 / D.fps;
+      paintFrame(c, i); markPlay(i);
+      p.next += dur;
+      if (p.next < t) p.next = t + dur;   // after the window was hidden: no rushing to catch up
+    }
+    p.raf = requestAnimationFrame(step);
+  };
+  step();
+}
+function stopPlay() {
+  if (!PLAY) return;
+  cancelAnimationFrame(PLAY.raf); PLAY = null;
+  if (V.play) { V.play.remove(); V.play.width = V.play.height = 1; }
+  if (V.paper) V.paper.classList.remove('playing');
+  markPlay(-1); onionNow(); playUI();
+}
+
+/* --- the strip of frames under the drawing: shown in an animation, or while the animation tab is open --- */
+const FTH = new Map();   // the strip's pictures, by frame id
+const framesSoon = debounce(() => frameThumbs(), 300);
+const stripOn = () => !!D && (D.frames.length > 1 || (!!V.animP && !V.animP.hidden));
+function framesUI() {
+  if (!V.time || !D) return;
+  animUI();
+  const on = stripOn();
+  V.time.hidden = !on;
+  if (!on) return;
+  V.frs.textContent = '';
+  for (const k of [...FTH.keys()]) if (!D.frames.some(f => f.id === k)) { freeCanvas(FTH.get(k)); FTH.delete(k); }
+  D.frames.forEach((f, i) => {
+    let th = FTH.get(f.id);
+    if (!th) FTH.set(f.id, th = newCanvas(1, 1));
+    const cur = i === D.f;
+    V.frs.append(h('div', { class: 'dw-fr' + (cur ? ' on' : ''), role: 'option', 'aria-selected': String(cur), 'data-i': i, title: T('פריים {0}', i + 1) },
+      h('div', { class: 'dw-fth' }, th), h('span', { class: 'dw-fn', text: String(i + 1) }), f.d > 1 ? h('span', { class: 'dw-fd', text: '×' + f.d }) : null,
+      cur ? h('button', { class: 'dw-fm', type: 'button', title: T('פעולות על הפריים'), 'aria-label': T('פעולות על הפריים') }, icon('more_horiz')) : null));
+  });
+  frameThumbs(); playUI();
+  const el = V.frs.children[D.f];
+  if (el) { const r = el.getBoundingClientRect(), s = V.frs.getBoundingClientRect(); if (r.left < s.left || r.right > s.right) V.frs.scrollLeft += (r.left + r.right) / 2 - (s.left + s.right) / 2; }
+}
+function frameThumbs() {
+  if (!D || !V.time || V.time.hidden) return;
+  const [tw, th] = fitSize(D.w, D.h, 72);
+  D.frames.forEach((f, i) => {
+    const c = FTH.get(f.id);
+    if (!c) return;
+    if (c.width !== tw || c.height !== th) { c.width = tw; c.height = th; }
+    const x = c.getContext('2d');
+    x.clearRect(0, 0, tw, th);
+    if (D.bg) { x.fillStyle = D.bg; x.fillRect(0, 0, tw, th); }
+    for (const L of D.layers) {
+      const cl = L.vis && L.op > 0 && cellAt(L, i);
+      if (!cl || (!cl.ver && cl !== L.cell)) continue;
+      x.globalAlpha = L.op; x.drawImage(cl.cv, 0, 0, tw, th);
+    }
+    x.globalAlpha = 1;
+  });
+}
+/* the animation tab's controls, as the drawing has them */
+function animUI() {
+  if (!V.fps || !D) return;
+  if (!FPS_LIST.includes(D.fps) && ![...V.fps.options].some(o => +o.value === D.fps)) V.fps.append(h('option', { value: D.fps, text: TN('{n} בשנייה', D.fps) }));
+  V.fps.value = String(D.fps); V.loop.value = D.loop;
+  const o = onionOpt();
+  V.onBf.value = String(o.b); V.onAf.value = String(o.a);
+  for (const b of document.querySelectorAll('#ribbon [data-cmd="dwOnion"]')) b.classList.toggle('on', !!o.on);
+}
+function frameMenu(anchor, i) {
+  const f = D.frames[i], rtl = UI_DIR === 'rtl';
+  const mi = (ic, label, fn, off) => h('button', { class: 'mi', type: 'button', disabled: off ? true : null, onclick: () => { closePopover(); fn(); } }, icon(ic), label);
+  openPop(anchor, h('div', { class: 'menu' },
+    mi('content_copy', T('שכפול הפריים'), () => addFrame(true)),
+    mi('add_box', T('פריים ריק אחריו'), () => addFrame(false)),
+    mi(rtl ? 'arrow_forward' : 'arrow_back', T('הזזה אחורה'), () => moveFrame(i, i - 1), i === 0),
+    mi(rtl ? 'arrow_back' : 'arrow_forward', T('הזזה קדימה'), () => moveFrame(i, i + 1), i >= D.frames.length - 1),
+    mi('delete', T('מחיקת הפריים'), () => delFrame(i), D.frames.length <= 1),
+    h('div', { class: 'pop-t', text: T('כמה זמן הפריים מוצג') }),
+    h('div', { class: 'dw-durs' }, [1, 2, 3, 4, 6, 8].map(d => h('button', { class: 'opt' + (f.d === d ? ' on' : ''), type: 'button', onclick: () => { closePopover(); setDur(i, d); } }, '×' + d)))));
+}
+
+/* --- files: GIF (moves by itself, everywhere), video (MP4, for YouTube and phones), and the frames as PDF pages --- */
+const loadMod = url => import(url).catch(() => { throw new Error('lib'); });
+async function makeGif(body, { k = 1, max = 0, prog } = {}) {
+  const { GIFEncoder, quantize, applyPalette } = await loadMod(GIFENC);
+  const src = await framesOf(body), [w, hh] = fitSize(Math.round(src.w * k), Math.round(src.h * k), max), seq = seqOf(src.frames.length, src.loop);
+  const c = newCanvas(w, hh), x = c.getContext('2d', { willReadFrequently: true }), gif = GIFEncoder(), see = !src.bg, repeat = src.loop === 'once' ? -1 : 0;
+  x.imageSmoothingQuality = 'high';
+  try {
+    for (let n = 0; n < seq.length; n++) {
+      const i = seq[n], delay = src.frames[i].d * 1000 / src.fps;
+      x.clearRect(0, 0, w, hh);
+      if (src.bg) { x.fillStyle = src.bg; x.fillRect(0, 0, w, hh); }
+      await src.draw(x, i, w, hh);
+      const data = x.getImageData(0, 0, w, hh).data;
+      if (see) {   // a see-through background stays see-through: one color of the palette is "nothing"
+        const palette = quantize(data, 256, { format: 'rgba4444', oneBitAlpha: true }), index = applyPalette(data, palette, 'rgba4444'), ti = palette.findIndex(p => p[3] === 0);
+        gif.writeFrame(index, w, hh, { palette, delay, repeat, transparent: ti >= 0, transparentIndex: Math.max(0, ti) });
+      } else {
+        const palette = quantize(data, 256), index = applyPalette(data, palette);
+        gif.writeFrame(index, w, hh, { palette, delay, repeat });
+      }
+      if (prog) prog((n + 1) / seq.length);
+      await sleep(0);   // the window stays responsive meanwhile
+    }
+    gif.finish();
+    return new Blob([gif.bytes()], { type: 'image/gif' });
+  } finally { freeCanvas(c); src.done(); }
+}
+/* MP4 made frame by frame with the browser's own video encoder (no waiting for it to play); where there is none,
+   the frames are played into a recording, in real time */
+async function makeVideo({ k = 1, times = 1, prog } = {}) {
+  const src = await framesOf(null), seq = seqOf(src.frames.length, src.loop), fps = src.fps;
+  let [w, hh] = fitSize(Math.round(src.w * k), Math.round(src.h * k), 1920);
+  w = Math.max(2, w - w % 2); hh = Math.max(2, hh - hh % 2);   // H.264 wants even sizes
+  const c = newCanvas(w, hh), x = c.getContext('2d'), list = [];
+  for (let r = 0; r < times; r++) list.push(...seq);
+  const ticks = list.reduce((s, i) => s + src.frames[i].d, 0), br = clamp(Math.round(w * hh * fps * 0.15), 600e3, 12e6);
+  const paint = async i => { x.fillStyle = src.bg || '#ffffff'; x.fillRect(0, 0, w, hh); await src.draw(x, i, w, hh); };
+  let codec = null;
+  if (window.VideoEncoder && window.VideoFrame) for (const cd of ['avc1.640028', 'avc1.4d0028', 'avc1.42e01f']) {
+    try { if ((await VideoEncoder.isConfigSupported({ codec: cd, width: w, height: hh, bitrate: br, framerate: fps })).supported) { codec = cd; break; } } catch {}
+  }
+  try {
+    if (codec) {
+      const { Muxer, ArrayBufferTarget } = await loadMod(MP4MUX);
+      const muxer = new Muxer({ target: new ArrayBufferTarget(), video: { codec: 'avc', width: w, height: hh, frameRate: fps }, fastStart: 'in-memory' });
+      let fail = null, n = 0;
+      const enc = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: e => { fail = e; } });
+      enc.configure({ codec, width: w, height: hh, bitrate: br, framerate: fps });
+      const us = 1e6 / fps;
+      for (let m = 0; m < list.length; m++) {
+        const i = list[m];
+        await paint(i);
+        for (let r = 0; r < src.frames[i].d; r++, n++) {
+          const vf = new VideoFrame(c, { timestamp: Math.round(n * us), duration: Math.round(us) });
+          enc.encode(vf, { keyFrame: n % (fps * 2) === 0 });
+          vf.close();
+          while (enc.encodeQueueSize > 6 && !fail) await sleep(4);
+          if (fail) throw fail;
+        }
+        if (prog) prog((m + 1) / list.length);
+      }
+      await enc.flush(); enc.close();
+      if (fail) throw fail;
+      muxer.finalize();
+      return new Blob([muxer.target.buffer], { type: 'video/mp4' });
+    }
+    const mime = window.MediaRecorder && ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'].find(m => MediaRecorder.isTypeSupported(m));
+    if (!mime || !c.captureStream) throw new Error('video');
+    const stream = c.captureStream(0), track = stream.getVideoTracks()[0], rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: br }), parts = [];
+    rec.ondataavailable = e => { if (e.data && e.data.size) parts.push(e.data); };
+    const stopped = new Promise(r => { rec.onstop = r; });
+    rec.start();
+    let done = 0;
+    for (const i of list) {
+      await paint(i);
+      if (track.requestFrame) track.requestFrame();
+      await sleep(src.frames[i].d * 1000 / fps);
+      done += src.frames[i].d;
+      if (prog) prog(done / ticks);
+    }
+    rec.stop(); await stopped;
+    stream.getTracks().forEach(t => t.stop());
+    return new Blob(parts, { type: mime.split(';')[0] });
+  } finally { freeCanvas(c); src.done(); }
+}
+/* saving an animation: GIF or video, its size, and for a video how many times it plays */
+function animDialog(kind) {
+  if (!D) return;
+  commitPending();
+  if (D.frames.length < 2) { toast(T('כדי לשמור אנימציה צריך לפחות שני פריימים. "פריים חדש" בלשונית אנימציה מוסיף אחד.'), { ms: 6000 }); return; }
+  let fmt = kind === 'video' ? 'video' : 'gif';
+  const seg = h('div', { class: 'seg', role: 'tablist' }), body = h('div'), size = h('select', { class: 'sel', 'aria-label': T('גודל') });
+  const times = h('select', { class: 'sel', 'aria-label': T('כמה פעמים לנגן') }, [1, 2, 3, 5, 10].map(n => h('option', { value: n, text: TN('{n} פעמים', n) })));
+  const secs = seqOf(D.frames.length, D.loop).reduce((s, i) => s + D.frames[i].d, 0) / D.fps;
+  const draw = () => {
+    seg.textContent = '';
+    for (const [k, ic, label] of [['gif', 'gif', 'GIF'], ['video', 'movie', T('סרטון')]]) seg.append(h('button', { type: 'button', role: 'tab', 'aria-selected': String(fmt === k), onclick: () => { fmt = k; draw(); } }, icon(ic), label));
+    const cap = fmt === 'gif' ? 1600 : 1920, seen = new Set();
+    size.textContent = '';
+    for (const k of [1, 0.5, 0.25]) {
+      const [w, hh] = fitSize(Math.round(D.w * k), Math.round(D.h * k), cap), t = `${w} × ${hh}`;
+      if (!seen.has(t)) { seen.add(t); size.append(h('option', { value: k, text: LRI + t + PDI })); }
+    }
+    // a GIF the size of a phone screen is plenty, and far lighter than a big one
+    if (fmt === 'gif') { const o = [...size.options].find(x => Math.max(...fitSize(Math.round(D.w * +x.value), Math.round(D.h * +x.value), cap)) <= 960); if (o) size.value = o.value; }
+    body.textContent = '';
+    body.append(h('label', { class: 'fld' }, h('span', { text: T('גודל') }), size),
+      fmt === 'video' ? h('label', { class: 'fld' }, h('span', { text: T('כמה פעמים לנגן') }), times) : null,
+      h('p', { class: 'muted small', text: `${TN('{n} פריימים', D.frames.length)} · ${T('{0} שניות', (Math.round(secs * 10) / 10).toLocaleString(LOCALE))}` }),
+      h('p', { class: 'muted small', text: fmt === 'gif' ? T('GIF זז לבד בכל מקום: בהודעות, באתרים ובמצגות. רקע שקוף נשאר שקוף.') : T('סרטון MP4 נפתח בכל טלפון ומחשב, ואפשר להעלות אותו ליוטיוב. רקע שקוף נהיה לבן.') }));
+  };
+  draw();
+  modal({ title: T('שמירת האנימציה'), body: h('div', {}, seg, body), actions: [{ label: T('שמירה'), kind: 'primary', icon: 'download', run: () => { saveAnim(fmt, +size.value, +times.value); } }, { label: T('ביטול'), value: false }] });
+}
+async function saveAnim(fmt, k, times) {
+  if (!D) return;
+  const name = safeName(displayTitle(S.cur.meta)), what = fmt === 'gif' ? T('מכין את ה-GIF…') : T('מכין את הסרטון…');
+  const t = toast(what, { icon: 'hourglass_top', ms: 900000 }), txt = t.querySelector('span:not(.ms)');
+  const prog = p => { if (txt) txt.textContent = `${what} ${Math.round(p * 100)}%`; };
+  try {
+    const blob = fmt === 'gif' ? await makeGif(null, { k, max: 1600, prog }) : await makeVideo({ k, times, prog });
+    t.remove();
+    await offerFile(`${name}.${fmt === 'gif' ? 'gif' : /mp4/.test(blob.type) ? 'mp4' : 'webm'}`, blob);
+  } catch (e) {
+    console.error(e); t.remove();
+    toast(e && e.message === 'lib' ? T('לא הצלחתי לטעון את כלי השמירה. כדאי לבדוק את החיבור לאינטרנט.') : e && e.message === 'video' ? T('הדפדפן הזה לא יודע ליצור סרטונים. אפשר לשמור כ-GIF.') : T('לא הצלחתי להכין את הקובץ. כדאי לנסות שוב.'), { ms: 7000 });
+  }
+}
 
 const COMMANDS = {
   dwUndo: () => undo(), dwRedo: () => redo(),
@@ -1868,6 +2451,9 @@ const COMMANDS = {
   dwZoom: a => { if (a === 'in') zoomBy(1.25); else if (a === 'out') zoomBy(0.8); else if (a === 'fit') fit(); else zoomTo(1); },
   dwSelAll: () => selectAll(), dwSelDel: () => delSel(),
   dwSend: () => sendTo(),
+  dwPlay: () => play(), dwFrameAdd: () => addFrame(false), dwFrameDup: () => addFrame(true), dwFrameDel: () => delFrame(),
+  dwOnion: () => { const o = onionOpt(); o.on = !o.on; savePrefs(); onionNow(); },
+  dwAnimExport: a => animDialog(a),
 };
 
 window.INK_DRAW = {
@@ -1877,6 +2463,7 @@ window.INK_DRAW = {
   image: f => placeImage(f, true),
   ready: cur => !!D && LOADED === cur,
   count: () => D ? D.layers.length : 0,
+  frames: () => D ? D.frames.length : 0,
 };
 
 // ==DRAW-END==
