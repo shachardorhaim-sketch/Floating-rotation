@@ -631,6 +631,7 @@ function ribbonPanels() {
       rbtn('dwScan', 'document_scanner', T('ציור מדף'), { text: T('ציור מדף'), cls: 'txt', title: T('תמונה של ציור שציירת על דף: הדף נעלם, והקווים נכנסים לציור בשכבה משלהם') })));
   V.canvasP = h('div', { class: 'panel draw-only', 'data-panel': 'dwcanvas', hidden: true },
     group(T('קנבס'), '', rbtn('dwSize', 'aspect_ratio', T('גודל הקנבס'), { big: true }), rbtn('dwBg', 'wallpaper', T('רקע'), { big: true, title: T('צבע הרקע, או רקע שקוף') })),
+    group(T('הוספה'), '', rbtn('dwScan', 'document_scanner', T('ציור מדף'), { big: true, title: T('תמונה של ציור שציירת על דף: הדף נעלם, והקווים נכנסים לציור בשכבה משלהם') })),
     group(T('תצוגה@view'), '', rbtn('dwZoom', 'zoom_in', T('הגדלה@zoom'), { big: true, arg: 'in', title: T('הגדלה (Ctrl++)') }), rbtn('dwZoom', 'zoom_out', T('הקטנה'), { big: true, arg: 'out', title: T('הקטנה (Ctrl+-)') }),
       rbtn('dwZoom', 'fit_screen', T('כל הציור'), { big: true, arg: 'fit', title: T('כל הציור בחלון (Ctrl+0)') }), rbtn('dwZoom', 'search', T('גודל אמיתי'), { big: true, arg: '1', title: T('פיקסל של הציור לכל פיקסל במסך (Ctrl+1)') })),
     group(T('שמירה כקובץ'), '', rbtn('exportAs', 'image', T('תמונת PNG'), { big: true, arg: 'png', title: T('שומר את מה שרואים כתמונה. רקע שקוף נשאר שקוף') }),
