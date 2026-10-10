@@ -698,6 +698,12 @@ label.bk-row:hover{background:var(--surface-2)}
 .idea:hover{box-shadow:0 0 0 2px var(--text-3)}
 .idea.on{box-shadow:0 0 0 3px var(--accent)}
 .idea .mini{margin:0;box-shadow:none;border-radius:0}
+.eq-dlg{display:flex;flex-direction:column;gap:12px}
+.eq-tools{display:flex;flex-wrap:wrap;gap:4px}
+.eq-tool{min-width:38px;height:34px;padding:0 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);font:18px "Cambria Math","Times New Roman",serif;cursor:pointer}
+.eq-tool:hover{background:var(--surface-2)}
+.eq-field{display:block;width:100%;min-height:76px;font-size:34px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:#16203a;box-sizing:border-box}
+.eq-ex{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 #stage{flex:1;min-width:0;min-height:0;position:relative;overflow:hidden;display:grid;place-items:center;background:var(--desk);touch-action:none}
 #stageBox{position:relative;box-shadow:var(--shadow);background:#fff}
 #stage>#banner{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:5;margin:0;width:max-content;max-width:calc(100% - 24px)}
@@ -1028,6 +1034,7 @@ body.aud{margin:0;height:100vh;background:#000;display:grid;place-items:center;o
     <button class="tab ctx deck-only" role="tab" data-tab="dpic" id="tabDPic" aria-selected="false" hidden>עיצוב תמונה</button>
     <button class="tab ctx deck-only" role="tab" data-tab="dtable" id="tabDTable" aria-selected="false" hidden>טבלה</button>
     <button class="tab ctx deck-only" role="tab" data-tab="dchart" id="tabDChart" aria-selected="false" hidden>גרף</button>
+    <button class="tab ctx deck-only" role="tab" data-tab="deq" id="tabDEq" aria-selected="false" hidden>נוסחה</button>
     <button class="tab ctx deck-only" role="tab" data-tab="dvideo" id="tabDVideo" aria-selected="false" hidden>וידאו</button>
     <button class="tab pdfa-only" role="tab" data-tab="pwrite" aria-selected="false">כתיבה על הדפים</button>
   </nav>
@@ -1343,6 +1350,9 @@ body.aud{margin:0;height:100vh;background:#000;display:grid;place-items:center;o
         <button class="rb big" data-cmd="dLink" data-need="lnk" title="קישור לאתר או לשקופית אחרת (Ctrl+K)"><span class="ms">link</span>קישור</button>
         <button class="rb big" data-cmd="footer" title="מספרי שקופיות, שורה תחתונה ותאריך בכל השקופיות"><span class="ms">tag</span>מספרי שקופיות</button>
       </div><div class="gn">קישורים ומספור</div></div>
+      <div class="grp"><div class="gb">
+        <button class="rb big" data-cmd="eqNew" title="שברים, חזקות, שורשים וסימנים של מתמטיקה"><span class="ms">function</span>נוסחה</button>
+      </div><div class="gn">מתמטיקה</div></div>
     </div>
 
     <div class="panel deck-only" data-panel="design" hidden>
@@ -1541,6 +1551,19 @@ body.aud{margin:0;height:100vh;background:#000;display:grid;place-items:center;o
         <button class="rb big" data-cmd="dAlignPop" data-need="el" title="יישור לשקופית, או של כמה דברים זה לזה"><span class="ms">align_horizontal_center</span>יישור</button>
         <button class="rb big" data-cmd="dGroupPop" data-need="groupable" title="קיבוץ של כמה דברים לאחד (Ctrl+G)"><span class="ms">ad_group</span>קיבוץ</button>
       </div><div class="gn">סידור</div></div>
+    </div>
+
+    <div class="panel deck-only" data-panel="deq" hidden>
+      <div class="grp"><div class="gb">
+        <button class="rb big" data-cmd="eqEdit" data-need="eq1"><span class="ms">edit</span>עריכת הנוסחה</button>
+      </div><div class="gn">נוסחה</div></div>
+      <div class="grp"><div class="gb">
+        <button class="rb big" data-cmd="eqColor" data-need="eq"><span class="ms">format_color_text</span>צבע</button>
+        <div class="gb col">
+          <button class="rb txt" data-cmd="eqGrow" data-need="eq"><span class="ms">text_increase</span>הגדלה</button>
+          <button class="rb txt" data-cmd="eqShrink" data-need="eq"><span class="ms">text_decrease</span>הקטנה</button>
+        </div>
+      </div><div class="gn">עיצוב</div></div>
     </div>
 
     <div class="panel deck-only" data-panel="dvideo" hidden>
@@ -1872,6 +1895,10 @@ const LIB = {
   pdfjsWorker: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
   pdfjsDir: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/',
   pdflib: 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
+  // equations: MathJax draws them, MathLive is the box they're written in
+  mathjax: 'https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js',
+  mathlive: 'https://cdn.jsdelivr.net/npm/mathlive@0.111.1/mathlive.min.js',
+  mathliveDir: 'https://cdn.jsdelivr.net/npm/mathlive@0.111.1/',
 };
 /* Arabic, Russian and Chinese get two fonts that have their letters first (loaded in <head>) */
 const LANG_FONTS = { ar: ['Cairo', 'Amiri'], ru: ['Noto Sans', 'Noto Serif'], zh: ['Noto Sans SC', 'Noto Serif SC'] }[LANG] || [];
@@ -6385,7 +6412,7 @@ const DK = { deck: null, idx: 0, sel: [], edit: null, typing: false, k: 1, ver: 
 /* undo history: copies of the deck. The copies share their strings, so pictures take no extra memory */
 const DH = { stack: [], idx: -1 };
 let DVER = 0, FID = 0;
-const DECK_TABS = ['dhome', 'dinsert', 'design', 'dtrans', 'danim', 'show', 'dshape', 'dpic', 'dtable', 'dchart', 'dvideo'];
+const DECK_TABS = ['dhome', 'dinsert', 'design', 'dtrans', 'danim', 'show', 'dshape', 'dpic', 'dtable', 'dchart', 'dvideo', 'deq'];
 const DSIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 54, 60, 66, 72, 80, 96];
 /* each theme: background (a color, or G() for a gradient), title and text colors, two accents, fonts (title, body);
    sf: the soft color for cards, where the accent mixed into a dark background would look muddy; tk: how much bigger titles draw,
@@ -6865,6 +6892,13 @@ function normEl(e, dir) {
     lineOf(b, e);
     return b;
   }
+  if (e.t === 'eq') {   // an equation: its TeX, and its drawing checked shape by shape
+    const tex = typeof e.tex === 'string' ? e.tex.trim().slice(0, 4000) : '', vb = String(e.vb || '').trim(), svg = cleanEqSvg(e.svg);
+    if (!tex || !EQ_VB.test(vb) || !svg) return null;
+    Object.assign(b, { tex, vb, svg });
+    const col = colorTok(e.color); if (col) b.color = col;
+    return b;
+  }
   return null;
 }
 function parseDeck(body) { let j = null; try { j = JSON.parse(body); } catch {} return normDeck(j); }
@@ -7046,6 +7080,7 @@ function elNode(el, look, dir, mode, fitted) {
   else if (el.t === 'chart') drawChart(n, el, look, dir);
   else if (el.t === 'icon') drawIcon(n, el, look);
   else if (el.t === 'video') drawVideo(n, el, look, mode);
+  else if (el.t === 'eq') drawEq(n, el, look);
   else return null;
   if (el.rot) { if (mode === 'export') n.style.transform = `rotate(${el.rot}deg)`; else n.style.rotate = el.rot + 'deg'; }
   return n;
@@ -7196,7 +7231,7 @@ function updateDeckUI() {
     lineOnly: kinds.has('line'), texts: kinds.has('text'), img: !!(one && one.t === 'img' && one.src), imgs: els.some(e => e.t === 'img' && e.src),
     groupable: units.length > 1 || els.some(e => e.g), multi: units.length > 1, dist: units.length > 2,
     styl: els.some(e => ['text', 'shape', 'line', 'icon'].includes(e.t)), rad: els.some(e => e.t === 'img' || e.t === 'text' || e.t === 'video'),
-    lnk: !!(one && LINKABLE.has(one.t)), tbl: !!(one && one.t === 'table'), chart: kinds.has('chart'), chart1: !!(one && one.t === 'chart'), vid: kinds.has('video'), vid1: !!(one && one.t === 'video'),
+    lnk: !!(one && LINKABLE.has(one.t)), eq: kinds.has('eq'), eq1: !!(one && one.t === 'eq'), tbl: !!(one && one.t === 'table'), chart: kinds.has('chart'), chart1: !!(one && one.t === 'chart'), vid: kinds.has('video'), vid1: !!(one && one.t === 'video'),
   };
   const tEdit = one && one.t === 'table' && DK.edit === one.id && DK.cell ? cellRange(one, DK.cell) : null, tAnchor = tEdit && one.cells[tEdit.r1][tEdit.c1];
   need.tmerge = !!tEdit && (tEdit.r2 > tEdit.r1 || tEdit.c2 > tEdit.c1);
@@ -7231,8 +7266,8 @@ function updateDeckUI() {
   // the format tabs appear with what they format, the way PowerPoint's do
   const shapeish = els.some(e => ['text', 'shape', 'line', 'icon'].includes(e.t)), pic = els.some(e => e.t === 'img');
   $('#tabDShape').hidden = !shapeish; $('#tabDPic').hidden = !pic;
-  $('#tabDTable').hidden = !need.tbl; $('#tabDChart').hidden = !need.chart; $('#tabDVideo').hidden = !need.vid;
-  if ((S.tab === 'dshape' && !shapeish) || (S.tab === 'dpic' && !pic) || (S.tab === 'dtable' && !need.tbl) || (S.tab === 'dchart' && !need.chart) || (S.tab === 'dvideo' && !need.vid)) selectTab('dhome');
+  $('#tabDTable').hidden = !need.tbl; $('#tabDChart').hidden = !need.chart; $('#tabDVideo').hidden = !need.vid; $('#tabDEq').hidden = !need.eq;
+  if ((S.tab === 'dshape' && !shapeish) || (S.tab === 'dpic' && !pic) || (S.tab === 'dtable' && !need.tbl) || (S.tab === 'dchart' && !need.chart) || (S.tab === 'dvideo' && !need.vid) || (S.tab === 'deq' && !need.eq)) selectTab('dhome');
   if (S.panel === 'ideas') renderIdeasSoon();
 }
 
@@ -7718,7 +7753,7 @@ function startDrag(e, hd, onClick) {
   const xs = [0, SW / 2, SW], ys = [0, SH / 2, SH];
   for (const o of others) { const g = geo(o); xs.push(g.x, g.x + g.w / 2, g.x + g.w); ys.push(g.y, g.y + g.h / 2, g.y + g.h); }
   // pictures keep their shape when pulled by a corner; Shift does the opposite, and makes anything else keep its shape
-  const keepRatio = ev => hd && hd.length === 2 && ((els.length === 1 && ['img', 'icon', 'video'].includes(els[0].t)) !== ev.shiftKey);
+  const keepRatio = ev => hd && hd.length === 2 && ((els.length === 1 && ['img', 'icon', 'video', 'eq'].includes(els[0].t)) !== ev.shiftKey);
   let moved = false;
   const move = ev => {
     if (!moved) { if (Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) < 4) return; moved = true; dSnap(); for (const [id, k] of unglue(els)) delete orig.get(id)[k]; }
@@ -7919,6 +7954,7 @@ function onStageDbl(e) {
   else if (el && el.t === 'table') { const k = cellOf(e.target); if (k) startCellEdit(el.id, k.r, k.c, e.clientX, e.clientY); }
   else if (el && el.t === 'chart') openChartData(el.id);
   else if (el && el.t === 'video') previewVideo();
+  else if (el && el.t === 'eq') openEqEditor(el.id);
   else if (el) selectTab('dshape');
 }
 function popAtPoint(x, y, content) {
@@ -8027,6 +8063,7 @@ function deckKey(e) {
     if (/^Arrow(Left|Right|Up|Down)$/.test(k)) { e.preventDefault(); nudge(k, e.shiftKey ? 10 : 1); return true; }
     if ((k === 'Enter' || k === 'F2') && els.length === 1 && els[0].t === 'text') { e.preventDefault(); startEdit(els[0].id); return true; }
     if ((k === 'Enter' || k === 'F2') && els.length === 1 && els[0].t === 'table') { e.preventDefault(); startCellEdit(els[0].id, 0, 0); return true; }
+    if ((k === 'Enter' || k === 'F2') && els.length === 1 && els[0].t === 'eq') { e.preventDefault(); openEqEditor(els[0].id); return true; }
     return false;
   }
   if (t.closest && t.closest('button,a,[role=tab]') && !inStrip) return false;
@@ -9194,6 +9231,7 @@ async function elPpt(s, el, look, node, patch, rtl) {
   if (el.t === 'chart') { chartPpt(s, el, look, box, name, rtl); return true; }
   if (el.t === 'icon') return iconPpt(s, el, look, box, name);
   if (el.t === 'video') return videoPpt(s, el, box, name);
+  if (el.t === 'eq') return eqPpt(s, el, look, box, name, patch);
   return false;
 }
 /* what PptxGenJS writes that PowerPoint doesn't take well, fixed in the file, and what it can't write, added:
@@ -9248,6 +9286,7 @@ function patchEl(b, e) {
     b = b.replace(/<p:cNvSpPr txBox="1"\s*\/>/, '<p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr>').replace(/<p:nvPr\s*\/>|<p:nvPr>\s*<\/p:nvPr>/, `<p:nvPr><p:ph type="${type}" sz="quarter" idx="${idx}"/></p:nvPr>`);
     if (fld) b = b.replace(/<a:r>(<a:rPr\b[\s\S]*?)<a:t>([^<]*)<\/a:t><\/a:r>/, (m, pr, t) => `<a:fld id="{${fld}}" type="${e.ph === 'num' ? 'slidenum' : 'datetime1'}">${pr}<a:t>${t}</a:t></a:fld>`);
   }
+  if (e.math) b = eqAlt(b, e.math);   // last: it wraps the picture
   return b;
 }
 const PH_FTR = { num: ['sldNum', 12, 'B6F15528-21DE-4FAA-801E-634DDDAF4B2B'], date: ['dt', 10, '9A0DB2DC-4C9A-4742-B13C-FB6460FD3503'], txt: ['ftr', 11, null] };
@@ -9296,6 +9335,7 @@ async function buildPptx() {
   const fonts = themeFonts(deckTheme(deck));
   pres.theme = { headFontFace: fonts[0], bodyFontFace: fonts[1] };
   const host = h('div', { style: { position: 'fixed', left: '-12000px', top: '0', width: SW + 'px', height: SH + 'px' } });
+  if (deck.slides.some(x => x.els.some(e => e.t === 'eq'))) await eqKit().catch(() => {});   // equations go as PowerPoint's own, through MathJax's MathML; without it, as pictures
   document.body.append(host);
   const patches = [];
   try {
@@ -10811,6 +10851,7 @@ async function pptTree(tree, cx, out) {
       const ch = xkid(n, 'Choice'), fb = xkid(n, 'Fallback');
       if (ch && xdesc(ch, 'contentPart').length) { cx.pk.note('ink'); continue; }
       if (ch && [...ch.getElementsByTagName('*')].some(e => /chartex/i.test(e.namespaceURI || ''))) { cx.pk.note('chart'); continue; }
+      if (ch && xdesc(ch, 'oMath').length && await pptMath(ch, cx, out)) continue;   // an equation: an equation here too
       const use = fb && xkids(fb).length ? fb : ch;
       if (use) await pptTree(use, cx, out);
       continue;
@@ -12156,6 +12197,307 @@ function applyIdea(idea, src, c) {
   DK.ideaKey = ideaKeyOf(s); DK.ideaOn = idea.k;
   DK.sel = []; renderStage(); updateThumb(DK.idx); updateDeckUI();
   for (const b of $$('#ideasView .idea')) b.classList.toggle('on', b.dataset.k === idea.k);
+}
+
+/* --- equations (t: 'eq'): written in a math box that works like a calculator (MathLive: / makes a fraction, ^ a power,
+   sqrt a root), kept as TeX (tex) and drawn by MathJax as SVG paths (svg, inside the viewBox vb), so a slide shows them
+   with no library and no internet. In PowerPoint each is its own equation, editable there (OMML, with its picture for
+   versions before 2010); in the PDF, the drawing. An equation in a PowerPoint file opens as one here too --- */
+let eqReady = null, mlReady = null;
+function eqKit() {   // MathJax, which draws them: loaded the first time an equation is written, saved or opened
+  if (window.MathJax && window.MathJax.tex2svg) return Promise.resolve(window.MathJax);
+  if (!eqReady) {
+    window.MathJax = { svg: { fontCache: 'none' }, startup: { typeset: false }, options: { enableMenu: false } };
+    eqReady = loadScript(LIB.mathjax).then(() => window.MathJax.startup.promise).then(() => window.MathJax).catch(e => { eqReady = null; throw e; });
+  }
+  return eqReady;
+}
+function mathLive() {   // the math box, only for writing
+  if (!mlReady) mlReady = loadScript(LIB.mathlive).then(() => {
+    const M = window.MathfieldElement;
+    M.fontsDirectory = LIB.mathliveDir + 'fonts/'; M.soundsDirectory = null;
+    if (M.strings && M.strings[LANG]) M.locale = LANG;
+    return M;
+  }).catch(e => { mlReady = null; throw e; });
+  return mlReady;
+}
+/* MathLive's own words for things, in the TeX that MathJax knows */
+const EQ_MACROS = [[/\\placeholder(?:\[[^\]]*\])?\{[^{}]*\}/g, '{}'], [/\\degree\b/g, '^{\\circ}'], [/\\differentialD\b/g, '\\mathrm{d}'], [/\\exponentialE\b/g, '\\mathrm{e}'],
+  [/\\imaginaryI\b/g, '\\mathrm{i}'], [/\\imaginaryJ\b/g, '\\mathrm{j}'], [/\\operatorname\*/g, '\\operatorname']];
+const eqTex = s => EQ_MACROS.reduce((t, [a, b]) => t.replace(a, b), String(s || '')).trim().slice(0, 4000);
+/* the drawing as it is kept: only shapes, places and colors, checked one by one, since a presentation can come from anywhere */
+const EQ_TAGS = { g: ['transform', 'fill', 'stroke', 'stroke-width'], path: ['d', 'transform', 'fill', 'stroke', 'stroke-width'], rect: ['x', 'y', 'width', 'height', 'transform', 'fill', 'stroke', 'stroke-width'],
+  line: ['x1', 'y1', 'x2', 'y2', 'transform', 'stroke', 'stroke-width'], svg: ['x', 'y', 'width', 'height', 'viewBox'], text: ['x', 'y', 'transform', 'font-size', 'font-family', 'font-style', 'font-weight', 'fill'] };
+const EQ_NUM = /^-?[\d.]+(?:e-?\d+)?(?:px|ex|em|%)?$/, EQ_VB = /^-?[\d.]+(?:e-?\d+)?(?:\s+-?[\d.]+(?:e-?\d+)?){3}$/, EQ_PAINT = /^(?:currentColor|none|#[0-9a-f]{3,6})$/i;
+const EQ_VAL = { transform: /^(?:\s*(?:translate|scale|matrix|rotate|skewX|skewY)\(\s*-?[\d.]+(?:e-?\d+)?(?:[\s,]+-?[\d.]+(?:e-?\d+)?)*\s*\))+\s*$/, d: SVG_D, viewBox: EQ_VB,
+  'font-family': /^[\w\s,"'-]{1,80}$/, 'font-style': /^(?:normal|italic|oblique)$/, 'font-weight': /^(?:normal|bold|\d{3})$/, fill: EQ_PAINT, stroke: EQ_PAINT };
+function cleanEqSvg(src) {
+  if (typeof src !== 'string' || !src || src.length > 400000) return null;
+  const doc = new DOMParser().parseFromString(`<svg xmlns="http://www.w3.org/2000/svg">${src}</svg>`, 'image/svg+xml');
+  if (doc.getElementsByTagName('parsererror').length) return null;
+  const walk = n => [...n.childNodes].map(c => {
+    if (c.nodeType === 3) return n.localName === 'text' ? esc(c.data) : '';
+    if (c.nodeType !== 1 || !EQ_TAGS[c.localName]) return '';
+    const ok = EQ_TAGS[c.localName].filter(a => c.hasAttribute(a) && (EQ_VAL[a] || EQ_NUM).test(c.getAttribute(a).trim()));
+    let at = ok.map(a => ` ${a}="${esc(c.getAttribute(a).trim())}"`).join('');
+    // a stretched part (a long bar or arrow) is a small viewport of its own: its size, kept from the page's "every svg fills its box"
+    if (c.localName === 'svg') { const w = parseFloat(c.getAttribute('width')) || 0, hh = parseFloat(c.getAttribute('height')) || 0; at += ` style="width:${w}px;height:${hh}px;overflow:hidden"`; }
+    return `<${c.localName}${at}>${walk(c)}</${c.localName}>`;
+  }).join('');
+  const out = walk(doc.documentElement);
+  return out && out.length <= 400000 ? out : null;
+}
+/* MathJax sets the letters of a word it has no font for one at a time, left to right: Hebrew and Arabic go to it
+   backwards, so that they read right (only for the drawing; the TeX and PowerPoint keep them as written) */
+const RTL_RUN = /[\u0590-\u05ff\u0600-\u06ff\ufb1d-\ufdff\ufe70-\ufeff]+(?:\s+[\u0590-\u05ff\u0600-\u06ff\ufb1d-\ufdff\ufe70-\ufeff]+)*/g;
+const eqDrawTex = tex => tex.replace(RTL_RUN, w => [...w].reverse().join(''));
+function eqRender(MJ, tex) {
+  try {
+    const svg = MJ.tex2svg(eqDrawTex(tex), { display: true }).querySelector('svg');
+    if (!svg || svg.querySelector('[data-mml-node="merror"]')) return null;
+    const vb = String(svg.getAttribute('viewBox') || '').trim(), body = cleanEqSvg(svg.innerHTML);
+    return EQ_VB.test(vb) && body ? { vb, svg: body } : null;
+  } catch { return null; }
+}
+const eqVb = el => el.vb.split(/\s+/).map(Number);
+/* the box for a drawing at a font size in pixels (1000 viewBox units are one em) */
+function eqSize(vb, fpx) { const [, , w, h] = vb.split(/\s+/).map(Number); return { w: Math.max(8, Math.round(w / 1000 * fpx)), h: Math.max(8, Math.round(h / 1000 * fpx)) }; }
+const eqFontPx = el => { const [, , w, h] = eqVb(el); return Math.min(el.w / (w / 1000), el.h / (h / 1000)); };
+function drawEq(n, el, look) {
+  n.style.opacity = el.op != null ? String(el.op) : '';
+  n.innerHTML = `<svg viewBox="${el.vb}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${esc(el.tex)}" style="color:${paint(el.color, look) || look.text}">${el.svg}</svg>`;
+}
+/* the buttons over the math box: what's hard to type */
+const EQ_TOOLS = [['a/b', '\\frac{#@}{#?}', N_('שבר')], ['x²', '#@^{#?}', N_('חזקה')], ['x₂', '#@_{#?}', N_('אינדקס')], ['√', '\\sqrt{#@}', N_('שורש')], ['∛', '\\sqrt[#?]{#@}', N_('שורש עם מעלה')],
+  ['( )', '\\left(#@\\right)', N_('סוגריים')], ['|x|', '\\left|#@\\right|', N_('ערך מוחלט')], ['×', '\\times', N_('כפל')], ['÷', '\\div', N_('חילוק')], ['±', '\\pm', N_('פלוס מינוס')],
+  ['≠', '\\neq', N_('שונה')], ['≤', '\\le', N_('קטן או שווה')], ['≥', '\\ge', N_('גדול או שווה')], ['≈', '\\approx', N_('בערך')], ['π', '\\pi', 'π'], ['°', '^{\\circ}', N_('מעלות')],
+  ['∞', '\\infty', N_('אינסוף')], ['α', '\\alpha', 'α'], ['β', '\\beta', 'β'], ['θ', '\\theta', 'θ'], ['∑', '\\sum_{#?}^{#?}#@', N_('סכום')], ['∫', '\\int_{#?}^{#?}#@', N_('אינטגרל')],
+  ['→', '\\rightarrow', N_('חץ')], ['∠', '\\angle', N_('זווית')], ['△', '\\triangle', N_('משולש')], ['x\u0304', '\\overline{#@}', N_('קו מעל')], ['v\u20d7', '\\vec{#@}', N_('וקטור')]];
+const EQ_EXAMPLES = [[N_('פיתגורס'), 'a^2+b^2=c^2'], [N_('שטח של עיגול'), 'A=\\pi r^2'], [N_('נוסחת השורשים'), 'x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}'],
+  [N_('נוסחת הכפל המקוצר'), '(a+b)^2=a^2+2ab+b^2'], [N_('מהירות'), 'v=\\frac{d}{t}'], [N_('שברים'), '\\frac{1}{2}+\\frac{1}{3}=\\frac{5}{6}']];
+async function openEqEditor(id) {
+  if (!DK.deck) return;
+  const old = id ? elOf(id) : null;
+  if (old && old.t !== 'eq') return;
+  endCrop(); exitEdit(); disarm();
+  const busy = toast(T('טוען את עורך הנוסחאות…'), { icon: 'function', ms: 60000 });
+  let MJ, MF;
+  try { [MJ, MF] = await Promise.all([eqKit(), mathLive()]); } catch { toast(T('לא הצלחתי לטעון את עורך הנוסחאות. כדאי לבדוק את החיבור לאינטרנט.')); return; } finally { busy.remove(); }
+  const mf = new MF();
+  mf.setAttribute('dir', 'ltr'); mf.className = 'eq-field'; mf.setAttribute('aria-label', T('נוסחה'));
+  mf.smartFence = true; mf.mathVirtualKeyboardPolicy = 'auto';
+  mf.value = old ? old.tex : '';
+  const ins = latex => { mf.focus(); mf.insert(latex, { selectionMode: 'placeholder', focus: true }); };
+  const tools = h('div', { class: 'eq-tools', role: 'toolbar', 'aria-label': T('סימנים') }, EQ_TOOLS.map(([label, latex, tip]) => h('button', { class: 'eq-tool', type: 'button', dir: 'ltr', title: T(tip), 'aria-label': T(tip), onclick: () => ins(latex) }, label)));
+  const examples = h('div', { class: 'eq-ex' }, h('span', { class: 'muted small', text: T('דוגמאות:') }), EQ_EXAMPLES.map(([n, latex]) => h('button', { class: 'chip', type: 'button', onclick: () => { mf.value = latex; mf.focus(); } }, T(n))));
+  const err = h('p', { class: 'lk-err', hidden: true });
+  const done = () => {
+    const tex = eqTex(mf.getValue('latex-expanded'));
+    if (!tex) return true;   // nothing written: nothing added
+    const r = eqRender(MJ, tex);
+    if (!r) { err.textContent = T('המחשב לא מצליח לצייר את הנוסחה הזאת. אפשר לבדוק אותה ולנסות שוב.'); err.hidden = false; return false; }
+    if (old) updateEq(old, tex, r); else insertEq(tex, r);
+    return true;
+  };
+  mf.addEventListener('input', () => { err.hidden = true; });
+  mf.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); if (done()) m.close(true); } }, true);
+  const m = modal({ title: old ? T('עריכת הנוסחה') : T('נוסחה חדשה'), wide: true, onClose: () => { if (window.mathVirtualKeyboard) try { window.mathVirtualKeyboard.hide(); } catch {} },
+    body: h('div', { class: 'eq-dlg' }, tools, mf, err, examples, h('p', { class: 'muted small', text: T('כותבים כמו במחשבון: / עושה שבר, ^ חזקה, sqrt שורש, pi את π. אפשר גם ללחוץ על הכפתורים.') })),
+    actions: [{ label: old ? T('אישור') : T('הוספה'), kind: 'primary', run: done }, { label: T('ביטול'), value: false }] });
+  setTimeout(() => mf.focus(), 60);
+}
+function insertEq(tex, r) {
+  let { w, h: hh } = eqSize(r.vb, 43);   // about 32pt, as a slide's text is
+  if (w > 860) { hh = Math.round(hh * 860 / w); w = 860; }
+  if (hh > 480) { w = Math.round(w * 480 / hh); hh = 480; }
+  addBox({ id: uid(), t: 'eq', tex, svg: r.svg, vb: r.vb, x: Math.round((SW - w) / 2), y: Math.round((SH - hh) / 2), w, h: hh });
+  selectTab('deq');
+}
+/* an equation written again: the same size of letters, around the same middle */
+function updateEq(el, tex, r) {
+  const { w, h: hh } = eqSize(r.vb, eqFontPx(el)), cx = el.x + el.w / 2, cy = el.y + el.h / 2;
+  dEdit(() => Object.assign(el, { tex, svg: r.svg, vb: r.vb, x: Math.round(cx - w / 2), y: Math.round(cy - hh / 2), w, h: hh }));
+  refreshEl(el); drawSel(); updateThumb(DK.idx); updateDeckUI();
+}
+function openEqColor(anchor) {
+  const els = selEls().filter(e => e.t === 'eq'); if (!els.length) return;
+  const look = curLook(), pick = c => editEls(e => e.t === 'eq', e => { if (c) e.color = c; else delete e.color; });
+  openPop(anchor, h('div', {}, h('div', { class: 'pop-t', text: T('צבע הנוסחה') }), deckSwatches(els[0].color || null, [...themeColors(look), ...TEXT_COLORS], pick), customColor(pick)));
+}
+/* bigger or smaller letters: the box grows or shrinks around its middle */
+function eqScale(d) {
+  editEls(e => e.t === 'eq', e => { const k = d > 0 ? 1.15 : 1 / 1.15, w = Math.max(8, Math.round(e.w * k)), hh = Math.max(8, Math.round(e.h * k)); e.x = Math.round(e.x + (e.w - w) / 2); e.y = Math.round(e.y + (e.h - hh) / 2); e.w = w; e.h = hh; });
+}
+/* --- an equation in PowerPoint: MathML from MathJax turned into PowerPoint's own math (OMML) --- */
+const NARY_CH = new Set(['∑', '∏', '∐', '∫', '∬', '∭', '∮', '⋃', '⋂', '⋁', '⋀']);
+const ACC_CH = { '→': '\u20d7', '⟶': '\u20d7', '^': '\u0302', 'ˆ': '\u0302', '˙': '\u0307', '¨': '\u0308', '~': '\u0303', '˜': '\u0303', '´': '\u0301', '`': '\u0300', 'ˇ': '\u030c', '˘': '\u0306' };
+const BAR_CH = new Set(['¯', '―', '‾', '_', '−', '─']);
+/* letters as PowerPoint keeps them in an equation: math italic (x is 𝑥), h is ℎ */
+const mathItalic = s => s.replace(/[A-Za-z]/g, c => c === 'h' ? 'ℎ' : String.fromCodePoint((c <= 'Z' ? 0x1d434 - 65 : 0x1d44e - 97) + c.charCodeAt(0)));
+function mmlToOmml(mml, sz, hex) {
+  const doc = new DOMParser().parseFromString(mml, 'application/xml'), math = doc.documentElement;
+  if (!math || math.localName !== 'math') return null;
+  const kids = n => [...n.children], txt = n => n.textContent.replace(/[\u2061-\u2064]/g, '').trim();
+  const rPr = it => `<a:rPr lang="en-US" sz="${sz}" b="0" i="${it ? 1 : 0}"><a:solidFill><a:srgbClr val="${hex}"/></a:solidFill><a:latin typeface="Cambria Math" panose="02040503050406030204" pitchFamily="18" charset="0"/><a:cs typeface="Arial"/></a:rPr>`;
+  const run = (t, sty) => t ? `<m:r>${sty ? `<m:rPr>${sty === 'nor' ? '<m:nor/>' : `<m:sty m:val="${sty}"/>`}</m:rPr>` : ''}${rPr(!sty)}<m:t xml:space="preserve">${esc(sty ? t : mathItalic(t))}</m:t></m:r>` : '';
+  const naryOf = n => { const b = /^(msub|msup|msubsup|munder|mover|munderover)$/.test(n.localName) ? n.children[0] : n; return b && b.localName === 'mo' && NARY_CH.has(txt(b)) ? txt(b) : null; };
+  const nary = (n, ch, next) => {
+    const [, a, b] = kids(n), tag = n.localName, sub = /^(msub|msubsup|munder|munderover)$/.test(tag) ? a : null, sup = tag === 'msup' || tag === 'mover' ? a : /^(msubsup|munderover)$/.test(tag) ? b : null;
+    return `<m:nary><m:naryPr><m:chr m:val="${ch}"/><m:limLoc m:val="${/^mu/.test(tag) || tag === 'mover' ? 'undOvr' : 'subSup'}"/>${sub ? '' : '<m:subHide m:val="1"/>'}${sup ? '' : '<m:supHide m:val="1"/>'}</m:naryPr><m:sub>${sub ? one(sub) : ''}</m:sub><m:sup>${sup ? one(sup) : ''}</m:sup><m:e>${next ? one(next) : ''}</m:e></m:nary>`;
+  };
+  // a sum or an integral takes what follows it; a function name (sin, log) followed by MathJax's invisible "apply" takes its argument
+  const seq = list => {
+    let s = '';
+    for (let i = 0; i < list.length; i++) {
+      const n = list[i], ch = naryOf(n), ap = list[i + 1] && list[i + 1].localName === 'mo' && list[i + 1].textContent === '\u2061';
+      if (ch) { s += nary(n, ch, list[i + 1]); if (list[i + 1]) i++; }
+      else if (ap && list[i + 2]) { s += `<m:func><m:fName>${one(n)}</m:fName><m:e>${one(list[i + 2])}</m:e></m:func>`; i += 2; }
+      else s += one(n);
+    }
+    return s;
+  };
+  const fence = n => { const k = kids(n), a = k[0], z = k[k.length - 1]; return k.length >= 2 && a.localName === 'mo' && z.localName === 'mo' && a.getAttribute('data-mjx-texclass') === 'OPEN' && z.getAttribute('data-mjx-texclass') === 'CLOSE'; };
+  const one = n => {
+    const k = kids(n), tag = n.localName;
+    switch (tag) {
+      case 'mi': { const t = txt(n), v = n.getAttribute('mathvariant'); return run(t, v === 'normal' || t.length > 1 ? 'p' : v === 'bold' ? 'b' : v === 'bold-italic' ? 'bi' : null); }
+      case 'mn': return run(txt(n), 'p');
+      case 'mo': return run(txt(n), 'p');
+      case 'mtext': return run(n.textContent, 'nor');
+      case 'ms': return run(n.textContent, 'nor');
+      case 'mspace': return parseFloat(n.getAttribute('width') || '0') >= 0.15 ? run(' ', 'p') : '';
+      case 'mfrac': return `<m:f>${n.getAttribute('linethickness') === '0' ? '<m:fPr><m:type m:val="noBar"/></m:fPr>' : ''}<m:num>${one(k[0])}</m:num><m:den>${one(k[1])}</m:den></m:f>`;
+      case 'msqrt': return `<m:rad><m:radPr><m:degHide m:val="1"/></m:radPr><m:deg/><m:e>${seq(k)}</m:e></m:rad>`;
+      case 'mroot': return `<m:rad><m:deg>${one(k[1])}</m:deg><m:e>${one(k[0])}</m:e></m:rad>`;
+      case 'msup': return `<m:sSup><m:e>${one(k[0])}</m:e><m:sup>${one(k[1])}</m:sup></m:sSup>`;
+      case 'msub': return `<m:sSub><m:e>${one(k[0])}</m:e><m:sub>${one(k[1])}</m:sub></m:sSub>`;
+      case 'msubsup': return `<m:sSubSup><m:e>${one(k[0])}</m:e><m:sub>${one(k[1])}</m:sub><m:sup>${one(k[2])}</m:sup></m:sSubSup>`;
+      case 'mover': {
+        const c = k[1] && k[1].localName === 'mo' ? txt(k[1]) : '';
+        if (BAR_CH.has(c)) return `<m:bar><m:barPr><m:pos m:val="top"/></m:barPr><m:e>${one(k[0])}</m:e></m:bar>`;
+        if (ACC_CH[c]) return `<m:acc><m:accPr><m:chr m:val="${ACC_CH[c]}"/></m:accPr><m:e>${one(k[0])}</m:e></m:acc>`;
+        if (c === '⏞') return `<m:groupChr><m:groupChrPr><m:chr m:val="⏞"/><m:pos m:val="top"/><m:vertJc m:val="bot"/></m:groupChrPr><m:e>${one(k[0])}</m:e></m:groupChr>`;
+        return `<m:limUpp><m:e>${one(k[0])}</m:e><m:lim>${one(k[1])}</m:lim></m:limUpp>`;
+      }
+      case 'munder': {
+        const c = k[1] && k[1].localName === 'mo' ? txt(k[1]) : '';
+        if (BAR_CH.has(c)) return `<m:bar><m:barPr><m:pos m:val="bot"/></m:barPr><m:e>${one(k[0])}</m:e></m:bar>`;
+        if (c === '⏟') return `<m:groupChr><m:e>${one(k[0])}</m:e></m:groupChr>`;
+        return `<m:limLow><m:e>${one(k[0])}</m:e><m:lim>${one(k[1])}</m:lim></m:limLow>`;
+      }
+      case 'munderover': return `<m:limUpp><m:e><m:limLow><m:e>${one(k[0])}</m:e><m:lim>${one(k[1])}</m:lim></m:limLow></m:e><m:lim>${one(k[2])}</m:lim></m:limUpp>`;
+      case 'mtable': {
+        const rows = k.filter(r => /^(mtr|mlabeledtr)$/.test(r.localName)), cells = r => kids(r).filter(c => c.localName === 'mtd');
+        if (/right left/.test(n.getAttribute('columnalign') || '') || rows.every(r => cells(r).length === 1)) return `<m:eqArr>${rows.map(r => `<m:e>${cells(r).map(c => seq(kids(c))).join('')}</m:e>`).join('')}</m:eqArr>`;
+        const cols = Math.max(...rows.map(r => cells(r).length));
+        return `<m:m><m:mPr><m:mcs><m:mc><m:mcPr><m:count m:val="${cols}"/><m:mcJc m:val="center"/></m:mcPr></m:mc></m:mcs></m:mPr>${rows.map(r => `<m:mr>${cells(r).map(c => `<m:e>${seq(kids(c))}</m:e>`).join('')}${'<m:e/>'.repeat(cols - cells(r).length)}</m:mr>`).join('')}</m:m>`;
+      }
+      case 'menclose': return /box/.test(n.getAttribute('notation') || '') ? `<m:borderBox><m:e>${seq(k)}</m:e></m:borderBox>` : seq(k);
+      case 'mphantom': case 'merror': case 'annotation': case 'annotation-xml': return '';
+      case 'mrow': if (fence(n)) return `<m:d><m:dPr><m:begChr m:val="${esc(txt(k[0]))}"/><m:endChr m:val="${esc(txt(k[k.length - 1]))}"/></m:dPr><m:e>${seq(k.slice(1, -1))}</m:e></m:d>`;
+      // falls through: a row is what's in it
+      default: return seq(k);
+    }
+  };
+  return `<m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"><m:oMathParaPr><m:jc m:val="centerGroup"/></m:oMathParaPr><m:oMath>${seq(kids(math))}</m:oMath></m:oMathPara>`;
+}
+/* the picture PowerPoint shows where it can't draw equations, and that the PDF tool and older programs get */
+async function eqPng(el, color) {
+  const k = Math.min(4, 2400 / Math.max(el.w, el.h)), W = Math.max(1, Math.round(el.w * k)), H = Math.max(1, Math.round(el.h * k));
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="${el.vb}" preserveAspectRatio="xMidYMid meet" style="color:${color}">${el.svg}</svg>`;
+  const im = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)), c = h('canvas', { width: W, height: H });
+  c.getContext('2d').drawImage(im, 0, 0, W, H);
+  const d = c.toDataURL('image/png'); c.width = c.height = 0;
+  return d;
+}
+async function eqPpt(s, el, look, box, name, patch) {
+  const c = paint(el.color, look) || look.text, o = { data: (await eqPng(el, c)).replace(/^data:/, ''), ...box, objectName: name };
+  if (el.rot) o.rotate = el.rot;
+  if (el.op != null && el.op < 1) o.transparency = Math.round((1 - el.op) * 100);
+  s.addImage(o);
+  const MJ = window.MathJax && window.MathJax.tex2mml;
+  if (MJ) try { const math = mmlToOmml(window.MathJax.tex2mml(el.tex, { display: true }), Math.round(eqFontPx(el) * 75), HX(c)); if (math) patch.els[name] = { ...(patch.els[name] || {}), math }; } catch (e) { console.warn('equation', e); }
+  return true;
+}
+/* the picture inside PowerPoint's own wrapper for an equation: the equation for PowerPoint 2010 and later, the picture before */
+function eqAlt(pic, math) {
+  const nv = (/<p:cNvPr\b[^>]*?\/?>/.exec(pic) || [''])[0].replace(/\s*\/?>$/, '/>'), xf = (/<a:xfrm\b[\s\S]*?<\/a:xfrm>/.exec(pic) || [''])[0];
+  const sp = `<p:sp><p:nvSpPr>${nv}<p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr>${xf}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></p:spPr>`
+    + `<p:txBody><a:bodyPr wrap="none" lIns="0" tIns="0" rIns="0" bIns="0" rtlCol="0" anchor="ctr"><a:noAutofit/></a:bodyPr><a:lstStyle/><a:p><a:pPr algn="ctr"/><a14:m>${math}</a14:m><a:endParaRPr lang="en-US" dirty="0"/></a:p></p:txBody></p:sp>`;
+  return `<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:Choice xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" Requires="a14">${sp}</mc:Choice><mc:Fallback>${pic}</mc:Fallback></mc:AlternateContent>`;
+}
+/* --- an equation in a PowerPoint file: its OMML as TeX, drawn here --- */
+const NARY_TEX = { '∑': '\\sum', '∏': '\\prod', '∐': '\\coprod', '∫': '\\int', '∬': '\\iint', '∭': '\\iiint', '∮': '\\oint', '⋃': '\\bigcup', '⋂': '\\bigcap', '⋁': '\\bigvee', '⋀': '\\bigwedge' };
+const ACC_TEX = { '\u0302': '\\hat', '\u0303': '\\tilde', '\u0304': '\\bar', '\u0305': '\\overline', '\u20d7': '\\vec', '\u20d1': '\\vec', '\u0307': '\\dot', '\u0308': '\\ddot', '\u0301': '\\acute', '\u0300': '\\grave', '\u030c': '\\check', '\u0306': '\\breve' };
+const DELIM_TEX = { '': '.', '{': '\\{', '}': '\\}', '‖': '\\|', '⟨': '\\langle', '⟩': '\\rangle', '〈': '\\langle', '〉': '\\rangle', '⌊': '\\lfloor', '⌋': '\\rfloor', '⌈': '\\lceil', '⌉': '\\rceil' };
+const FUNC_TEX = new Set(['sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'log', 'ln', 'lg', 'exp', 'lim', 'max', 'min', 'sinh', 'cosh', 'tanh', 'arcsin', 'arccos', 'arctan', 'det', 'gcd', 'deg']);
+const TEX_NAME = /^\\[a-z]+ ?$|^\\mathrm\{/;   // a function's name already in TeX: \sin, \mathrm{...}
+const texEsc = t => t.replace(/[\\{}#$%&_^~]/g, c => c === '\\' ? '\\backslash ' : c === '^' ? '\\hat{}' : c === '~' ? '\\sim ' : '\\' + c);
+function ommlTex(n) {
+  const mval = (x, name, d) => { const c = xkid(x, name); if (!c) return d; const v = c.getAttribute('m:val') ?? c.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/math', 'val'); return v == null ? d : v; };
+  const on = v => v === '1' || v === 'on' || v === 'true';
+  const all = x => x ? xkids(x).map(part).join('') : '';
+  const kid = (x, name) => all(xkid(x, name));
+  const delim = c => DELIM_TEX[c] ?? c;
+  const part = x => {
+    switch (x.localName) {
+      case 'r': {
+        // letters PowerPoint keeps as math italic (𝑎𝑐) are variables; upright ones (m:sty p) are a name, like sin
+        const raw = xdesc(x, 't').map(e => e.textContent).join(''), t = raw.normalize('NFKC'), pr = xkid(x, 'rPr');
+        if (!t) return '';
+        if (xkid(pr, 'nor') || HEB_RE.test(t) || ARB_RE.test(t)) return `\\text{${t.replace(/[\\{}]/g, c => '\\' + c)}}`;
+        if (/^[A-Za-z]{2,}$/.test(t) && (mval(pr, 'sty', '') === 'p' || (raw === t && FUNC_TEX.has(t)))) return FUNC_TEX.has(t) ? `\\${t} ` : `\\mathrm{${t}}`;
+        return texEsc(t);
+      }
+      case 'f': { const ty = mval(xkid(x, 'fPr'), 'type', 'bar'), a = kid(x, 'num'), b = kid(x, 'den'); return ty === 'lin' ? `${a}/${b}` : ty === 'noBar' ? `\\genfrac{}{}{0pt}{}{${a}}{${b}}` : `\\frac{${a}}{${b}}`; }
+      case 'sSup': return `{${kid(x, 'e')}}^{${kid(x, 'sup')}}`;
+      case 'sSub': return `{${kid(x, 'e')}}_{${kid(x, 'sub')}}`;
+      case 'sSubSup': return `{${kid(x, 'e')}}_{${kid(x, 'sub')}}^{${kid(x, 'sup')}}`;
+      case 'sPre': return `{}_{${kid(x, 'sub')}}^{${kid(x, 'sup')}}{${kid(x, 'e')}}`;
+      case 'rad': { const deg = kid(x, 'deg'); return on(mval(xkid(x, 'radPr'), 'degHide', '0')) || !deg ? `\\sqrt{${kid(x, 'e')}}` : `\\sqrt[${deg}]{${kid(x, 'e')}}`; }
+      case 'd': {
+        const pr = xkid(x, 'dPr'), es = xkids(x, 'e').map(all), sep = mval(pr, 'sepChr', '|');
+        return `\\left${delim(mval(pr, 'begChr', '('))}${es.join(sep === '|' ? '\\middle|' : sep === '' ? '' : delim(sep))}\\right${delim(mval(pr, 'endChr', ')'))}`;
+      }
+      case 'nary': {
+        const pr = xkid(x, 'naryPr'), ch = mval(pr, 'chr', '∫'), sub = on(mval(pr, 'subHide', '0')) ? '' : kid(x, 'sub'), sup = on(mval(pr, 'supHide', '0')) ? '' : kid(x, 'sup');
+        return `${NARY_TEX[ch] || ch}${sub ? `_{${sub}}` : ''}${sup ? `^{${sup}}` : ''}{${kid(x, 'e')}}`;
+      }
+      case 'func': { const f = kid(x, 'fName').trim(), name = TEX_NAME.test(f) ? f : `\\operatorname{${f}}`; return `${name}{${kid(x, 'e')}}`; }
+      case 'acc': return `${ACC_TEX[mval(xkid(x, 'accPr'), 'chr', '\u0302')] || '\\hat'}{${kid(x, 'e')}}`;
+      case 'bar': return `${mval(xkid(x, 'barPr'), 'pos', 'bot') === 'top' ? '\\overline' : '\\underline'}{${kid(x, 'e')}}`;
+      case 'limLow': { const e = kid(x, 'e').trim(), l = kid(x, 'lim'); return /^\\(lim|max|min) ?$/.test(e) ? `${e.trim()}_{${l}}` : `\\underset{${l}}{${e}}`; }
+      case 'limUpp': return `\\overset{${kid(x, 'lim')}}{${kid(x, 'e')}}`;
+      case 'groupChr': return `${mval(xkid(x, 'groupChrPr'), 'pos', 'bot') === 'top' ? '\\overbrace' : '\\underbrace'}{${kid(x, 'e')}}`;
+      case 'borderBox': return `\\boxed{${kid(x, 'e')}}`;
+      case 'eqArr': return `\\begin{gathered}${xkids(x, 'e').map(all).join('\\\\')}\\end{gathered}`;
+      case 'm': return `\\begin{matrix}${xkids(x, 'mr').map(r => xkids(r, 'e').map(all).join('&')).join('\\\\')}\\end{matrix}`;
+      case 'oMathPara': return xkids(x, 'oMath').map(all).join('\\\\');
+      default: return /Pr$/.test(x.localName) ? '' : all(x);   // properties say how, not what; other wrappers hold what's in them
+    }
+  };
+  return part(n).trim();
+}
+/* a PowerPoint shape that holds only equations: one equation here, at its size and in its color */
+async function pptMath(ch, cx, out) {
+  const sp = xkids(ch).find(c => c.localName === 'sp'), tx = xkid(sp, 'txBody');
+  if (!sp || !tx) return false;
+  // words beside the equations would be lost, so such a shape stays the picture PowerPoint keeps of it
+  if (xkids(tx, 'p').some(p => xkids(p).some(c => (c.localName === 'r' || c.localName === 'fld') && c.textContent.trim()))) return false;
+  const maths = xdesc(sp, 'oMath'), lines = maths.map(ommlTex).filter(Boolean);
+  if (!lines.length) return false;
+  const tex = lines.length > 1 ? `\\begin{gathered}${lines.join('\\\\')}\\end{gathered}` : lines[0];
+  let MJ; try { MJ = await eqKit(); } catch { return false; }
+  const r = eqRender(MJ, tex), xf = xfrmOf(xkid(sp, 'spPr'));
+  if (!r || !xf) return false;
+  const b = boxPx(cx.tf(xf), cx), rp = xdesc(sp, 'rPr').find(e => e.getAttribute('sz')), pt = rp ? +rp.getAttribute('sz') / 100 : 18;
+  const { w, h: hh } = eqSize(r.vb, pt * 4 / 3 * cx.k), el = { id: uid(), t: 'eq', tex, svg: r.svg, vb: r.vb, x: Math.round(b.x + (b.w - w) / 2), y: Math.round(b.y + (b.h - hh) / 2), w, h: hh };
+  const f = rp && pptFill(rp, cx), c = fillColor(f);
+  if (c && c.hex) el.color = c.hex;
+  if (xf.rot) el.rot = Math.round(xf.rot * 10) / 10;
+  if (cx.g) el.g = cx.g;
+  out.push(el); markSpid(sp, cx, el.id);
+  return true;
 }
 
 /* --- ready presentations: each slide is a recipe, drawn for left to right and mirrored for right to left.
@@ -13917,6 +14259,7 @@ const CMD = {
   showStart: () => startShow(0), showHere: () => startShow(DK.idx), presenter: () => startShow(DK.idx, true), toggleNotes: () => toggleNotes(),
   trans: a => setTrans(a), trPreview: () => previewTrans(), trAll: () => transAll(),
   anAdd: (a, b) => openAnimMenu(b), anRemove: () => removeAnim(), anPreview: () => previewAnim(), anPane: () => toggleAnimPane(),
+  eqNew: () => openEqEditor(), eqEdit: () => { const el = curEl(); if (el && el.t === 'eq') openEqEditor(el.id); }, eqColor: (a, b) => openEqColor(b), eqGrow: () => eqScale(1), eqShrink: () => eqScale(-1),
   webPics: () => openWebPics(), dLink: () => openLinkDlg(), footer: () => openFooter(), ideas: () => toggleIdeas(), sorter: () => setSorter(!DK.sorter), sections: (a, b) => openSectionMenu(b),
   // PDF pages
   openPdf: () => $('#filePdf').click(),
