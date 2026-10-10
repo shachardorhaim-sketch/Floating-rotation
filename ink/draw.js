@@ -66,6 +66,24 @@ const PALETTE = ['#000000', '#7f7f7f', '#880015', '#ed1c24', '#ff7f27', '#fff200
 const MORE_COLORS = [...PALETTE, '#3b2314', '#6f4a2f', '#a0694b', '#d39e7a', '#f2c9a8', '#ffe0c7', '#0b3d2e', '#0e7c66', '#4fd1c5', '#c6f6d5',
   '#1a237e', '#5c6bc0', '#e91e63', '#f8bbd0', '#ff5722', '#ffd180', '#263238', '#546e7a', '#b0bec5', '#eceff1'];
 
+/* how a layer mixes with the ones under it, as in drawing programs: the canvas's own blend modes when a picture is made,
+   and the same ones in CSS on screen. "add" is the canvas's "lighter", and CSS's "plus-lighter" where the browser has it */
+const BLENDS = [['normal', N_('רגיל')], ['multiply', N_('הכפלה')], ['screen', N_('מסך')], ['overlay', N_('שכבת-על')], ['darken', N_('הכהה')], ['lighten', N_('הבהר')],
+  ['color-dodge', N_('התחמקות צבע')], ['color-burn', N_('צריבת צבע')], ['hard-light', N_('אור קשה')], ['soft-light', N_('אור רך')], ['difference', N_('הפרש')], ['exclusion', N_('החרגה')],
+  ['hue', N_('גוון')], ['saturation', N_('רוויה')], ['color', N_('צבע')], ['luminosity', N_('בהירות@blend')], ['add', N_('הוספה@blend')]];
+const BLEND_KEYS = new Set(BLENDS.map(b => b[0]));
+const ADD_OK = !!(window.CSS && window.CSS.supports && window.CSS.supports('mix-blend-mode', 'plus-lighter'));   // (CSS here is this file's style sheet)
+const gcoOf = bm => bm === 'add' ? 'lighter' : bm && bm !== 'normal' ? bm : 'source-over';
+const cssBlend = bm => bm === 'add' ? 'plus-lighter' : bm && bm !== 'normal' ? bm : '';
+/* the layers as one picture on cx (cw x ch): the background first (when there is one), so the layers blend with it as on
+   screen, then each layer with its opacity and its blend mode. under: a color put behind it all afterwards, for a picture
+   that can't be see-through, so a layer that blends over nothing doesn't blend with that color */
+function compose(cx, list, w, hh, cw, ch, bg, under) {
+  if (bg) { cx.fillStyle = bg; cx.fillRect(0, 0, cw, ch); }
+  for (const x of list) { cx.globalAlpha = x.op; cx.globalCompositeOperation = gcoOf(x.bm); cx.drawImage(x.im || x.cv, 0, 0, w, hh, 0, 0, cw, ch); }
+  cx.globalAlpha = 1; cx.globalCompositeOperation = 'source-over';
+  if (!bg && under) { cx.globalCompositeOperation = 'destination-over'; cx.fillStyle = under; cx.fillRect(0, 0, cw, ch); cx.globalCompositeOperation = 'source-over'; }
+}
 function prefs() { if (!PREFS.draw || typeof PREFS.draw !== 'object') PREFS.draw = {}; return PREFS.draw; }
 /* a tool's own settings: each brush keeps its size, opacity and smoothing, as in drawing programs */
 function opt(t = TOOL) {
@@ -115,7 +133,7 @@ function newCell(w = D.w, hh = D.h) { const cv = newCanvas(w, hh); cv.className 
 /* a layer: its settings, and its cells by frame id ('*' when it is pinned to every frame). cv and cx are always its cell
    of the frame on screen (bind), so everything that draws works on the frame being drawn */
 function makeLayer(name, o = {}) {
-  return { id: o.id || lid(), name: String(name), op: typeof o.op === 'number' ? clamp(o.op, 0, 1) : 1, vis: o.vis !== false, fx: !!o.fx, cells: new Map(), cell: null, cv: null, cx: null };
+  return { id: o.id || lid(), name: String(name), op: typeof o.op === 'number' ? clamp(o.op, 0, 1) : 1, vis: o.vis !== false, fx: !!o.fx, bm: BLEND_KEYS.has(o.bm) ? o.bm : 'normal', cells: new Map(), cell: null, cv: null, cx: null };
 }
 const fid = () => 'F' + Math.random().toString(36).slice(2, 9);
 const keyOf = (L, i = D.f) => L.fx ? '*' : D.frames[i].id;
@@ -177,7 +195,7 @@ function parseBody(body) {
     if (fx) cells['*'] = okSrc(l.src);
     else if (anim && l.cells && typeof l.cells === 'object') { for (const f of frames) { const s = okSrc(l.cells[f.id]); if (s) cells[f.id] = s; } }
     else cells[frames[0].id] = okSrc(l.src);
-    return { id, name: String(l.name || '').trim().slice(0, 60) || layerName(i + 1), op: typeof l.op === 'number' && isFinite(l.op) ? clamp(l.op, 0, 1) : 1, vis: l.vis !== false, fx, cells };
+    return { id, name: String(l.name || '').trim().slice(0, 60) || layerName(i + 1), op: typeof l.op === 'number' && isFinite(l.op) ? clamp(l.op, 0, 1) : 1, vis: l.vis !== false, fx, bm: BLEND_KEYS.has(l.bm) ? l.bm : 'normal', cells };
   });
   if (!layers.length) layers.push({ id: lid(), name: layerName(1), op: 1, vis: true, fx: false, cells: {} });
   const active = layers.some(l => l.id === j.active) ? j.active : layers[layers.length - 1].id;
@@ -190,6 +208,7 @@ function bodyFrom(d, srcOf) {
   o.layers = d.layers.map(L => {
     const x = { id: L.id, name: L.name, op: L.op, vis: L.vis };
     if (L.fx) x.fx = true;
+    if (L.bm && L.bm !== 'normal') x.bm = L.bm;
     if (L.fx || !anim) x.src = srcOf(L, L.fx ? '*' : d.frames[0].id) || '';
     else { x.cells = {}; for (const f of d.frames) { const s = srcOf(L, f.id); if (s) x.cells[f.id] = s; } }
     return x;
@@ -209,37 +228,35 @@ async function framesOf(body) {
     commitPending();
     const d = D;
     return { w: d.w, h: d.h, bg: d.bg, frames: d.frames.map(f => ({ ...f })), fps: d.fps, loop: d.loop, done() {},
-      async draw(cx, i, cw, ch) {
+      async draw(cx, i, cw, ch, under) {
+        const list = [];
         for (const L of d.layers) {
           const c = L.vis && L.op > 0 && cellAt(L, i);
-          if (!c || (!c.ver && c !== L.cell)) continue;
-          cx.globalAlpha = L.op; cx.drawImage(c.cv, 0, 0, d.w, d.h, 0, 0, cw, ch);
+          if (c && (c.ver || c === L.cell)) list.push({ op: L.op, bm: L.bm, cv: c.cv });
         }
-        cx.globalAlpha = 1;
+        compose(cx, list, d.w, d.h, cw, ch, d.bg, under);
       } };
   }
   const j = parseBody(body), kept = new Map();
   return { w: j.w, h: j.h, bg: j.bg, frames: j.frames, fps: j.fps, loop: j.loop, done() { kept.clear(); },
-    async draw(cx, i, cw, ch) {
+    async draw(cx, i, cw, ch, under) {
+      const list = [];
       for (const l of j.layers) {
         const s = l.vis && l.op > 0 && l.cells[l.fx ? '*' : j.frames[i].id];
         if (!s) continue;
         let im = kept.get(s);
         if (!im) { im = await loadImg(s).catch(() => null); if (im && l.fx) kept.set(s, im); }
-        if (!im) continue;
-        cx.globalAlpha = l.op; cx.drawImage(im, 0, 0, j.w, j.h, 0, 0, cw, ch);
+        if (im) list.push({ op: l.op, bm: l.bm, im });
       }
-      cx.globalAlpha = 1;
+      compose(cx, list, j.w, j.h, cw, ch, j.bg, under);
     } };
 }
-/* everything that shows, on one canvas: the background (white for a JPEG, when there is none), then each layer that isn't hidden */
-function flatTo(c, w, hh, bg, list) {
+/* everything that shows, on one canvas: the background, then each layer that isn't hidden (under: white for a JPEG, when there is no background) */
+function flatTo(c, w, hh, bg, list, under) {
   const cx = c.getContext('2d');
   cx.clearRect(0, 0, c.width, c.height);
-  if (bg) { cx.fillStyle = bg; cx.fillRect(0, 0, c.width, c.height); }
   cx.imageSmoothingQuality = 'high';
-  for (const x of list) { cx.globalAlpha = x.op; cx.drawImage(x.im || x.cv, 0, 0, w, hh, 0, 0, c.width, c.height); }
-  cx.globalAlpha = 1;
+  compose(cx, list, w, hh, c.width, c.height, bg, under);
   return c;
 }
 const fitSize = (w, hh, max) => { const k = max ? Math.min(1, max / Math.max(w, hh)) : 1; return [Math.max(1, Math.round(w * k)), Math.max(1, Math.round(hh * k))]; };
@@ -247,10 +264,9 @@ const fitSize = (w, hh, max) => { const k = max ? Math.min(1, max / Math.max(w, 
    type 'image/png' keeps see-through parts; a JPEG gets white behind them */
 async function flatten(body, { type = 'image/png', max = 0, q = 0.92 } = {}) {
   const src = await framesOf(body), i = body == null ? D.f : parseBody(body).f;
-  const [cw, ch] = fitSize(src.w, src.h, max), c = newCanvas(cw, ch), x = c.getContext('2d'), bg = src.bg || (type === 'image/png' ? '' : '#ffffff');
-  if (bg) { x.fillStyle = bg; x.fillRect(0, 0, cw, ch); }
+  const [cw, ch] = fitSize(src.w, src.h, max), c = newCanvas(cw, ch), x = c.getContext('2d');
   x.imageSmoothingQuality = 'high';
-  await src.draw(x, i, cw, ch);
+  await src.draw(x, i, cw, ch, type === 'image/png' ? '' : '#ffffff');
   src.done();
   const blob = await new Promise(r => c.toBlob(r, type, q));
   freeCanvas(c);
@@ -288,7 +304,7 @@ function metaOf(d, cur) {
   if (!cur) return;
   Object.assign(cur.meta, { layers: d.layers.length, frames: d.frames.length, w: d.w, h: d.h });
   // the small picture shown when choosing a drawing to put in a document or a presentation: the frame on screen
-  const [tw, th] = fitSize(d.w, d.h, 160), c = flatTo(newCanvas(tw, th), d.w, d.h, d.bg || '#ffffff', d.layers.filter(L => L.vis && L.op > 0 && L.cv).map(L => ({ op: L.op, cv: L.cv })));
+  const [tw, th] = fitSize(d.w, d.h, 160), c = flatTo(newCanvas(tw, th), d.w, d.h, d.bg, d.layers.filter(L => L.vis && L.op > 0 && L.cv).map(L => ({ op: L.op, bm: L.bm, cv: L.cv })), '#ffffff');
   cur.meta.thumb = c.toDataURL('image/jpeg', 0.72);
   freeCanvas(c);
 }
@@ -332,9 +348,8 @@ function push(step) {
   while (HIST.steps.length > 1 && (HIST.bytes > UNDO_BYTES || HIST.steps.length > UNDO_STEPS)) { const s = HIST.steps.shift(); HIST.at--; HIST.bytes -= s.bytes || 0; }
   undoUI();
 }
-function pxStep(L, R, before) {
+function pxStep(L, R, before, cell = L.cell, fk = L.fx ? null : D.frames[D.f].id) {
   let after = null;
-  const cell = L.cell, fk = L.fx ? null : D.frames[D.f].id;
   // a change on another frame is undone there: that frame comes on screen first
   const show = () => { if (fk && D.frames[D.f].id !== fk) { const i = D.frames.findIndex(f => f.id === fk); if (i >= 0) goFrame(i, true); } };
   const st = {
@@ -345,12 +360,12 @@ function pxStep(L, R, before) {
   return st;
 }
 /* the layers, their cells and the frames as they are now (the canvases themselves, so nothing is copied) */
-const snapLayers = () => ({ layers: D.layers.slice(), props: D.layers.map(L => [L.name, L.op, L.vis, L.fx, new Map(L.cells)]), active: D.active, bg: D.bg, w: D.w, h: D.h,
+const snapLayers = () => ({ layers: D.layers.slice(), props: D.layers.map(L => [L.name, L.op, L.vis, L.fx, new Map(L.cells), L.bm]), active: D.active, bg: D.bg, w: D.w, h: D.h,
   frames: D.frames.map(f => ({ ...f })), f: D.f, fps: D.fps, loop: D.loop });
 function setLayers(s) {
   stopPlay();
   D.layers = s.layers.slice();
-  s.layers.forEach((L, i) => { const [name, op, vis, fx, cells] = s.props[i]; Object.assign(L, { name, op, vis, fx }); L.cells = new Map(cells); });
+  s.layers.forEach((L, i) => { const [name, op, vis, fx, cells, bm] = s.props[i]; Object.assign(L, { name, op, vis, fx, bm: bm || 'normal' }); L.cells = new Map(cells); });
   D.active = s.active; D.bg = s.bg; D.frames = s.frames.map(f => ({ ...f })); D.f = clamp(s.f, 0, D.frames.length - 1); D.fps = s.fps; D.loop = s.loop;
   if (D.w !== s.w || D.h !== s.h) { D.w = s.w; D.h = s.h; for (const k of Object.keys(HX)) { freeCanvas(HX[k]); HX[k] = null; } fit(); }
   // a cell let go when its frame was left (it had never been drawn on) comes back empty
@@ -376,6 +391,7 @@ function struct(fn) {
 }
 function undo() {
   if (ACT) return;
+  if (FXS) { fxCancel(); return; }   // the filter being tried goes first
   if (TX) { cancelText(); return; }   // the text being written, or the pixels being moved, go back first
   if (FL) { cancelFloat(); return; }
   if (!HIST.at) return;
@@ -413,6 +429,7 @@ const CSS = `
 .dw-vp.c-text{cursor:text}.dw-vp.c-move{cursor:move}.dw-vp.c-pan{cursor:grab}.dw-vp.c-panning{cursor:grabbing}.dw-vp.c-wait{cursor:progress}
 .dw-paper{position:absolute;left:0;top:0;transform-origin:0 0;box-shadow:0 1px 3px rgba(0,0,0,.16),0 8px 28px rgba(0,0,0,.14)}
 .dw-paper.clear{background-color:#fff;background-image:conic-gradient(#d3d7df 25%,#fff 0 50%,#d3d7df 0 75%,#fff 0)}
+.dw-stack{position:absolute;inset:0;isolation:isolate}
 .dw-paper canvas{position:absolute;left:0;top:0;width:100%;height:100%}
 .dw-paper canvas.dw-fl{right:auto;bottom:auto}
 .dw-paper.px canvas{image-rendering:pixelated}
@@ -447,6 +464,9 @@ const CSS = `
 .dw-lop{display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--line);font-size:12.5px;color:var(--text-2)}
 .dw-lop input{flex:1;min-width:0;accent-color:var(--accent)}
 .dw-lop b{min-width:38px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;text-align:end}
+.dw-lop .sel{flex:1;min-width:0;height:28px}
+.dw-lop+.dw-lop{border-top:0;padding-top:0}
+.dw-bmk{flex:none;font-size:10.5px;color:var(--text-3);white-space:nowrap;max-width:64px;overflow:hidden;text-overflow:ellipsis}
 .dw-lbar{display:flex;justify-content:space-between;gap:2px;padding:6px 8px;border-top:1px solid var(--line)}
 .dw-tg,.dw-sg{display:grid;grid-template-columns:repeat(3,auto);gap:2px}
 .dw-opts{gap:5px}
@@ -454,9 +474,10 @@ const CSS = `
 .dw-sl input[type=range]{width:112px;accent-color:var(--accent)}
 .dw-sl .ms{font-size:18px;color:var(--text-3)}
 .dw-sl b{min-width:46px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
-.dw-sl input[type=number]{width:64px;height:28px}
+.dw-sl input[type=number]{width:56px;height:28px}
+.dw-opts .sel{max-width:112px}
 .dw-sl input[type=checkbox]{accent-color:var(--accent)}
-.dw-hint{max-width:230px;white-space:normal;font-size:12px;color:var(--text-2);line-height:1.4}
+.dw-hint{max-width:196px;white-space:normal;font-size:12px;color:var(--text-2);line-height:1.35}
 .dw-cur-sw{width:42px;height:42px;border-radius:10px;border:1px solid rgba(0,0,0,.2);padding:0;box-shadow:inset 0 0 0 3px var(--surface);flex:none}
 .dw-cols{display:flex;flex-direction:column;gap:3px}
 .dw-pal{display:grid;grid-template-columns:repeat(10,18px);gap:3px}
@@ -483,7 +504,23 @@ const CSS = `
 .dw-bgrow .sw{width:30px;height:30px;border-radius:8px}
 .dw-bgrow .sw.none{background:#fff conic-gradient(#d3d7df 25%,#fff 0 50%,#d3d7df 0 75%,#fff 0) 0 0/10px 10px}
 .dw-bgrow input[type=color]{width:38px;height:30px;padding:0;border:1px solid var(--line);border-radius:8px;background:none;cursor:pointer}
-.dw-go{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.dw-go{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-top:18px}
+.dw-go .grow{flex:1}
+.dw-scan{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+.dw-scc{display:flex;flex-direction:column;gap:8px;min-width:0}
+.dw-sch5{font-size:13px;font-weight:700;color:var(--text-2)}
+.dw-scv{display:grid;place-items:center;min-height:180px;padding:10px;border-radius:10px;background:var(--surface-3)}
+.dw-scbox{position:relative;line-height:0;touch-action:none;user-select:none;-webkit-user-select:none;max-width:100%}
+.dw-scv canvas{display:block;max-width:100%;height:auto}
+.dw-scov{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.dw-scq{fill:rgba(37,99,235,.12);stroke:var(--accent);stroke-width:2}
+.dw-sch{fill:#fff;stroke:var(--accent);stroke-width:3;cursor:grab}
+.dw-sch.on{fill:var(--accent)}
+.dw-scr canvas{background:#fff conic-gradient(#e2e5eb 25%,#fff 0 50%,#e2e5eb 0 75%,#fff 0) 0 0/16px 16px;box-shadow:var(--shadow)}
+.dw-scseg{margin:0;align-self:flex-start}
+.dw-scsay{margin:-2px 0 0}
+.dw-scopts{display:flex;flex-direction:column;gap:10px}
+@media (max-width:700px){.dw-scan{grid-template-columns:1fr}}
 .dw-check{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px}
 .dw-verbox{display:grid;place-items:center;background:var(--surface-3);padding:12px;border-radius:8px}
 .dw-ver{max-width:100%;max-height:62vh;box-shadow:var(--shadow);background:#fff conic-gradient(#e2e5eb 25%,#fff 0 50%,#e2e5eb 0 75%,#fff 0) 0 0/16px 16px}
@@ -535,6 +572,39 @@ const CSS = `
   #drawPrint img{display:block;width:100vw;height:100vh;object-fit:contain;break-after:page}
   #drawPrint img:last-child{break-after:auto}
 }
+.dw-fx{position:absolute;top:10px;inset-inline-end:10px;width:304px;max-height:calc(100% - 70px);overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:12px 14px 14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--pop);z-index:5;box-sizing:border-box}
+.dw-fxh{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14.5px}
+.dw-fxh>.ms{color:var(--accent)}
+.dw-fxh .grow{flex:1}
+.dw-fxd{font-size:12.5px;color:var(--text-2);line-height:1.45;margin-top:-4px}
+.dw-fxw{font-size:12px;color:var(--text-3);margin-top:-4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dw-fxp{display:flex;flex-direction:column;gap:10px}
+.dw-fxs{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 8px;font-size:12.5px;color:var(--text-2)}
+.dw-fxs input[type=range]{grid-column:1/-1;width:100%;margin:0;accent-color:var(--accent)}
+.dw-fxs b{font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.dw-fxc{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text)}
+.dw-fxc input{accent-color:var(--accent);margin:0}
+.dw-fxrow{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-2);flex-wrap:wrap}
+.dw-fxrow .grow{flex:1}
+.dw-fxsw{width:30px;height:30px;border-radius:8px;flex:none}
+.dw-fxb{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;position:sticky;bottom:-14px;margin-bottom:-14px;padding:10px 0 14px;border-top:1px solid var(--line);background:var(--surface);z-index:1}
+.dw-fxb2{display:flex;gap:6px}
+.dw-fxb2.end{margin-inline-start:auto}
+.dw-fxb .btn{height:32px;padding:0 9px;gap:4px}
+.dw-fxb .btn.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.dw-fxcw{display:flex;flex-direction:column;gap:8px}
+.dw-fxseg{display:flex;margin:0;flex-wrap:nowrap}
+.dw-fxseg button{flex:1 1 auto;min-width:0;padding-inline:6px;white-space:nowrap}
+.dw-fxcv{width:100%;max-width:236px;align-self:center;aspect-ratio:1;display:block;border:1px solid var(--line);border-radius:6px;touch-action:none;cursor:crosshair}
+.dw-fxgw{display:flex;flex-direction:column;gap:8px;direction:ltr}
+.dw-fxgbar{height:22px;border-radius:6px;border:1px solid var(--line)}
+.dw-fxgr{display:flex;align-items:center;gap:6px}
+.dw-fxgr .grow{flex:1}
+.dw-fxgp{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.dw-fxg{height:20px;border-radius:5px;border:1px solid var(--line);padding:0;cursor:pointer}
+.dw-fxpt{fill:none;stroke:#fff;stroke-width:3}
+.dw-fxpt.b{stroke:#1b1f2a;stroke-width:1.4}
+@media (max-width:700px){.dw-fx{top:auto;bottom:0;inset-inline:0;width:auto;max-height:58%;border-radius:14px 14px 0 0}}
 @media (max-width:700px){.dw-fth{width:56px;height:40px}.dw-fth canvas{max-width:56px;max-height:40px}.dw-tplay{width:40px;height:40px}.dw-tadd{height:52px}.dw-side{position:absolute;inset-block:0;inset-inline-end:0;z-index:6;box-shadow:var(--pop);width:min(84vw,280px)}.dw-zoom{bottom:8px;inset-inline-end:8px}}
 `;
 
@@ -557,7 +627,8 @@ function ribbonPanels() {
     V.opts = group(T('הגדרות'), 'col dw-opts'),
     group(T('צבעים'), '', V.curSw = h('button', { class: 'dw-cur-sw', type: 'button', 'data-cmd': 'dwColor', title: T('הצבע שמציירים בו. לחיצה פותחת עוד צבעים'), 'aria-label': T('צבע') }),
       h('div', { class: 'dw-cols' }, h('div', { class: 'dw-pal' }, PALETTE.map(c => sw(c))), V.recent = h('div', { class: 'dw-pal', title: T('צבעים אחרונים') }))),
-    group(T('הוספה'), '', rbtn('dwImage', 'add_photo_alternate', T('תמונה'), { big: true, title: T('תמונה מהמחשב, בשכבה חדשה. אפשר גם להדביק תמונה או לגרור קובץ לציור') })));
+    group(T('הוספה'), 'col', rbtn('dwImage', 'add_photo_alternate', T('תמונה'), { text: T('תמונה'), cls: 'txt', title: T('תמונה מהמחשב, בשכבה חדשה. אפשר גם להדביק תמונה או לגרור קובץ לציור') }),
+      rbtn('dwScan', 'document_scanner', T('ציור מדף'), { text: T('ציור מדף'), cls: 'txt', title: T('תמונה של ציור שציירת על דף: הדף נעלם, והקווים נכנסים לציור בשכבה משלהם') })));
   V.canvasP = h('div', { class: 'panel draw-only', 'data-panel': 'dwcanvas', hidden: true },
     group(T('קנבס'), '', rbtn('dwSize', 'aspect_ratio', T('גודל הקנבס'), { big: true }), rbtn('dwBg', 'wallpaper', T('רקע'), { big: true, title: T('צבע הרקע, או רקע שקוף') })),
     group(T('תצוגה@view'), '', rbtn('dwZoom', 'zoom_in', T('הגדלה@zoom'), { big: true, arg: 'in', title: T('הגדלה (Ctrl++)') }), rbtn('dwZoom', 'zoom_out', T('הקטנה'), { big: true, arg: 'out', title: T('הקטנה (Ctrl+-)') }),
@@ -577,18 +648,24 @@ function ribbonPanels() {
     group(T('שכבות בצל'), '', rbtn('dwOnion', 'auto_awesome_motion', T('שכבות בצל'), { big: true, title: T('הפריימים שלפני ושאחרי מופיעים חלש מתחת לפריים, כדי שיהיה קל לצייר את הצעד הבא') }),
       h('div', { class: 'dw-col' }, h('label', { class: 'dw-sl' }, h('span', { text: T('לפני') }), V.onBf), h('label', { class: 'dw-sl' }, h('span', { text: T('אחרי') }), V.onAf))),
     group(T('שמירה כקובץ'), '', rbtn('dwAnimExport', 'gif', 'GIF', { big: true, arg: 'gif', title: T('תמונה שזזה לבד, לשליחה ולשיתוף') }), rbtn('dwAnimExport', 'movie', T('סרטון'), { big: true, arg: 'video', title: T('סרטון MP4, למשל ליוטיוב') })));
-  return [V.home, V.canvasP, V.animP];
+  const fxBtn = (k, f) => h('button', { class: 'rb big', type: 'button', 'data-cmd': 'dwFx', 'data-arg': k, 'data-fx': k, title: T(f.d), 'aria-label': T(f.n), 'aria-pressed': 'false' }, icon(f.ic), h('span', { text: T(f.n) }));
+  V.fxP = h('div', { class: 'panel draw-only', 'data-panel': 'dwfx', hidden: true }, FX_GROUPS.map(([g, name]) => {
+    const list = Object.entries(FXL).filter(([, f]) => f.g === g);
+    return group(T(name), '', list.filter(([, f]) => f.big).map(([k, f]) => fxBtn(k, f)),
+      list.some(([, f]) => !f.big) ? rbtn('dwFxMenu', 'expand_more', T('עוד'), { big: true, arg: g, title: T('עוד פילטרים') }) : null);
+  }));
+  return [V.home, V.fxP, V.canvasP, V.animP];
 }
 function mount() {
   if (V.vp) return;
   document.head.append(h('style', { id: 'drawcss' }, CSS));
   const tabs = $('#tabs');
-  for (const [k, label] of [['dwhome', T('ציור')], ['dwcanvas', T('קנבס')], ['dwanim', T('אנימציה')]]) tabs.append(h('button', { class: 'tab draw-only', role: 'tab', 'data-tab': k, 'aria-selected': 'false' }, label));
+  for (const [k, label] of [['dwhome', T('ציור')], ['dwfx', T('פילטרים')], ['dwcanvas', T('קנבס')], ['dwanim', T('אנימציה')]]) tabs.append(h('button', { class: 'tab draw-only', role: 'tab', 'data-tab': k, 'aria-selected': 'false' }, label));
   const ribbon = $('#ribbon');
   for (const p of ribbonPanels()) ribbon.append(p);
   const view = $('#drawView');
   view.querySelectorAll('.dw-wait').forEach(n => n.remove());
-  V.paper = h('div', { class: 'dw-paper' });
+  V.paper = h('div', { class: 'dw-paper' }, V.stack = h('div', { class: 'dw-stack' }));
   V.ov = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   V.ov.setAttribute('class', 'dw-ov');
   V.cur = h('div', { class: 'dw-cur' });
@@ -613,6 +690,8 @@ function mount() {
   V.side = h('aside', { class: 'dw-side', 'aria-label': T('שכבות') },
     h('div', { class: 'dw-sh' }, icon('layers'), h('span', { class: 'grow', text: T('שכבות') }), lb('dwLayers', 'close', T('סגירה'))),
     V.list,
+    h('label', { class: 'dw-lop' }, h('span', { text: T('מיזוג@blend') }), V.lbm = h('select', { class: 'sel', 'aria-label': T('מיזוג@blend'), title: T('איך השכבה מתערבבת עם השכבות שמתחתיה') },
+      BLENDS.filter(([k]) => k !== 'add' || ADD_OK).map(([k, n]) => h('option', { value: k, text: T(n) })))),
     h('label', { class: 'dw-lop' }, h('span', { text: T('שקיפות') }), V.lop, V.lopv),
     h('div', { class: 'dw-lbar' }, lb('dwLayerAdd', 'add', T('שכבה חדשה')), lb('dwLayerDup', 'content_copy', T('שכפול השכבה')), lb('dwLayerUp', 'move_up', T('העברה למעלה')),
       lb('dwLayerDown', 'move_down', T('העברה למטה')), lb('dwLayerMerge', 'vertical_align_bottom', T('מיזוג עם השכבה שמתחת')), lb('dwLayerDel', 'delete', T('מחיקת השכבה')), lb('dwLayerMenu', 'more_horiz', T('עוד'))));
@@ -654,6 +733,11 @@ function mount() {
     if (opBefore == null) { commitPending(); opBefore = snapLayers(); }
     L.op = (100 - +V.lop.value) / 100; L.cv.style.opacity = String(L.op); V.lopv.textContent = V.lop.value + '%';
     if (FL && FL.L === L) FL.cv.style.opacity = String(L.op);
+  });
+  V.lbm.addEventListener('change', () => {
+    const L = layerOf();
+    if (L && BLEND_KEYS.has(V.lbm.value) && V.lbm.value !== L.bm) struct(() => { L.bm = V.lbm.value; });
+    V.lbm.blur();
   });
   V.lop.addEventListener('change', () => {
     if (opBefore == null) return;
@@ -763,17 +847,18 @@ function paintPaper() {
   if (!D || !V.paper) return;
   bindAll();
   const kids = [], under = D.frames.length > 1 ? D.layers.findIndex(L => !L.fx) : -1;
+  const look = (c, L) => { c.style.opacity = String(L.op); c.style.visibility = L.vis ? '' : 'hidden'; c.style.mixBlendMode = cssBlend(L.bm); };
   for (const [i, L] of D.layers.entries()) {
     if (i === under && V.onion) kids.push(V.onion);
-    L.cv.style.opacity = String(L.op); L.cv.style.visibility = L.vis ? '' : 'hidden';
-    kids.push(L.cv);
-    if (FL && FL.L === L) { FL.cv.style.opacity = String(L.op); FL.cv.style.visibility = L.vis ? '' : 'hidden'; kids.push(FL.cv); }
+    look(L.cv, L); kids.push(L.cv);
+    if (FXS && FXS.L === L && GLX.cv) { look(GLX.cv, L); kids.push(GLX.cv); }
+    if (FL && FL.L === L) { look(FL.cv, L); kids.push(FL.cv); }
   }
   if (PLAY && V.play) kids.push(V.play);
-  V.paper.replaceChildren(...kids);
+  V.stack.replaceChildren(...kids);
   V.paper.style.width = D.w + 'px'; V.paper.style.height = D.h + 'px';
   V.paper.classList.toggle('clear', !D.bg);
-  V.paper.style.backgroundColor = D.bg || '';
+  V.stack.style.backgroundColor = D.bg || '';
   applyView();
 }
 function placeFloat() {
@@ -804,6 +889,7 @@ function layersUI() {
     const on = L.id === D.active;
     V.list.append(h('div', { class: 'dw-row' + (on ? ' on' : '') + (L.vis ? '' : ' off'), role: 'option', 'aria-selected': String(on), 'data-id': L.id, title: L.name },
       h('div', { class: 'dw-th' }, L.th), h('div', { class: 'dw-nm', text: L.name }),
+      L.bm && L.bm !== 'normal' ? h('span', { class: 'dw-bmk', text: T(BLENDS.find(b => b[0] === L.bm)[1]), title: T('מיזוג@blend') }) : null,
       anim || L.fx ? h('button', { class: 'rb dw-pin' + (L.fx ? ' on' : ''), type: 'button', title: L.fx ? T('נעוצה: מופיעה בכל הפריימים. לחיצה משחררת') : T('נעיצה: השכבה תופיע בכל הפריימים, כמו רקע'), 'aria-label': T('נעיצה בכל הפריימים'), 'aria-pressed': String(L.fx) }, icon('push_pin')) : null,
       h('button', { class: 'rb dw-eye', type: 'button', title: L.vis ? T('הסתרת השכבה') : T('הצגת השכבה'), 'aria-label': L.vis ? T('הסתרת השכבה') : T('הצגת השכבה'), 'aria-pressed': String(!L.vis) }, icon(L.vis ? 'visibility' : 'visibility_off'))));
   }
@@ -813,6 +899,7 @@ function layerButtons() {
   const L = layerOf(), i = D.layers.indexOf(L), dis = (cmd, off) => { for (const b of document.querySelectorAll(`.dw-lbar [data-cmd="${cmd}"]`)) b.disabled = off; };
   const see = 100 - Math.round(L.op * 100);
   V.lop.value = String(see); V.lopv.textContent = see + '%';
+  V.lbm.value = L.bm || 'normal';
   dis('dwLayerAdd', !room(1)); dis('dwLayerDup', !room(L.cells.size)); dis('dwLayerUp', i >= D.layers.length - 1); dis('dwLayerDown', i <= 0); dis('dwLayerMerge', i <= 0); dis('dwLayerDel', D.layers.length <= 1);
 }
 function setActive(id) {
@@ -837,6 +924,7 @@ const canvasUI = () => stat();
 const pressureOf = e => e.pointerType === 'pen' ? clamp(e.pressure || 0, 0, 1) : 1;
 function onDown(e) {
   if (!D || !LOADED) return;
+  if (ACT && ACT.kind === 'busy') return;   // Claude, or the bucket, is drawing
   if (PLAY) { stopPlay(); return; }   // a touch on the drawing stops it playing
   if (TX && (e.target === TX.el || TX.grip.contains(e.target))) return;   // writing in the text box, or moving it
   const p = { ...viewPt(e), t: e.pointerType, id: e.pointerId };
@@ -858,6 +946,7 @@ function onDown(e) {
   if (e.button === 1 || (e.button === 0 && SPACE)) { e.preventDefault(); startPan(p); return; }
   if (e.button !== 0) return;
   e.preventDefault();
+  if (FXS) { if (fxHasPoint()) { ACT = { kind: 'fxpt', id: p.id }; fxPoint(toCanvas(p)); } return; }
   if (document.activeElement !== V.vp && !(TX && document.activeElement === TX.el)) V.vp.focus({ preventScroll: true });
   const c = toCanvas(p);
   if (TX) { commitText(); if (TOOL === 'text') return; }   // a click outside the text box finishes it
@@ -884,6 +973,7 @@ function onMove(e) {
   else if (a.kind === 'pick') pickMove(a, toCanvas(p));
   else if (a.kind === 'selnew') selMove(a, toCanvas(p), e.shiftKey);
   else if (a.kind === 'drag') dragMove(a, toCanvas(p), e.shiftKey);
+  else if (a.kind === 'fxpt') fxPoint(toCanvas(p));
 }
 function onUp(e) {
   PTR.delete(e.pointerId);
@@ -941,7 +1031,7 @@ function cursorUI() {
 }
 /* the brush's size around the mouse or the pen */
 function cursorAt(p) {
-  if (!TOOLS[TOOL].brush || SPACE || (ACT && ACT.kind === 'pan')) { V.cur.style.display = 'none'; return; }
+  if (!TOOLS[TOOL].brush || SPACE || FXS || (ACT && ACT.kind === 'pan')) { V.cur.style.display = 'none'; return; }
   const d = opt().s * VIEW.z;
   if (d < 5) { V.cur.style.display = 'none'; return; }
   Object.assign(V.cur.style, { display: 'block', width: d + 'px', height: d + 'px', transform: `translate(${p.x - d / 2}px,${p.y - d / 2}px)` });
@@ -1173,18 +1263,17 @@ function shapeEnd(a) {
    the eyedropper and the bucket
    ========================================================= */
 /* the color as it shows at a point: each visible layer over the background */
+let PIXC = null;
 function colorAt(c) {
   const x = Math.floor(c.x), y = Math.floor(c.y);
   if (!D || x < 0 || y < 0 || x >= D.w || y >= D.h) return null;
-  let col = D.bg ? [...rgbOf(D.bg), 1] : [0, 0, 0, 0];
-  for (const L of D.layers) {
-    if (!L.vis || L.op <= 0) continue;
-    const d = L.cx.getImageData(x, y, 1, 1).data, a = d[3] / 255 * L.op;
-    if (!a) continue;
-    const oa = a + col[3] * (1 - a);
-    col = [0, 1, 2].map(i => (d[i] * a + col[i] * col[3] * (1 - a)) / oa).concat(oa);
-  }
-  return col[3] > 0.02 ? hexOfRgb(col[0], col[1], col[2]) : null;
+  const k = PIXC || (PIXC = newCanvas(1, 1).getContext('2d', { willReadFrequently: true }));
+  k.clearRect(0, 0, 1, 1);
+  if (D.bg) { k.fillStyle = D.bg; k.fillRect(0, 0, 1, 1); }
+  for (const L of D.layers) { if (L.vis && L.op > 0) { k.globalAlpha = L.op; k.globalCompositeOperation = gcoOf(L.bm); k.drawImage(L.cv, x, y, 1, 1, 0, 0, 1, 1); } }
+  k.globalAlpha = 1; k.globalCompositeOperation = 'source-over';
+  const d = k.getImageData(0, 0, 1, 1).data;
+  return d[3] > 5 ? hexOfRgb(d[0], d[1], d[2]) : null;
 }
 function startPick(p, c, temp) { ACT = { kind: 'pick', id: p.id, c0: COLOR, temp }; pickMove(ACT, c); }
 function pickMove(a, c) { const col = colorAt(c); if (col && col !== COLOR) setColor(col); }
@@ -1221,6 +1310,35 @@ function flood(img, sx, sy, tol) {
   return x1 < 0 ? null : { m, box: { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 } };
 }
 const nextFrame = () => Promise.race([new Promise(r => requestAnimationFrame(() => setTimeout(r, 0))), sleep(60)]);
+/* the bucket's paint: the area of alike colors around x, y in color, on L. Returns the rectangle it changed and the
+   pixels that were there, or null when there was nothing to fill */
+function fillCore(L, x, y, color, tol, op, all) {
+  const t = helper('tmp'), tx = t.getContext('2d');
+  // what the bucket sees: every visible layer together (lines on one layer, color on another), or this layer alone
+  let img;
+  if (all) {
+    tx.clearRect(0, 0, D.w, D.h);
+    for (const M of D.layers) if (M.vis && M.op > 0) { tx.globalAlpha = M.op; tx.globalCompositeOperation = gcoOf(M.bm); tx.drawImage(M.cv, 0, 0); }
+    tx.globalAlpha = 1; tx.globalCompositeOperation = 'source-over';
+    img = tx.getImageData(0, 0, D.w, D.h);
+  } else img = L.cx.getImageData(0, 0, D.w, D.h);
+  const f = flood(img, x, y, tol);
+  if (!f) return null;
+  const B = f.box, out = new ImageData(B.w, B.h), px = new Uint32Array(out.data.buffer), [r, g, b] = rgbOf(color), m = f.m;
+  const v = ((255 << 24) | (b << 16) | (g << 8) | r) | 0;   // the bytes of one pixel, read as one number (little-endian: A B G R)
+  for (let yy = 0, j = 0; yy < B.h; yy++) for (let i = (B.y + yy) * D.w + B.x, e = i + B.w; i < e; i++, j++) px[j] = v & -(m[i] >> 1);
+  // one pixel more all round, so the paint goes under the soft edge of the line around it and leaves no pale rim:
+  // the area drawn again a pixel to each side, by the graphics card
+  const R = clipR(B.x - 1, B.y - 1, B.w + 2, B.h + 2);
+  tx.clearRect(R.x, R.y, R.w, R.h); tx.putImageData(out, B.x, B.y);
+  tx.save(); tx.beginPath(); tx.rect(R.x, R.y, R.w, R.h); tx.clip();
+  const src = newCanvas(B.w, B.h); src.getContext('2d').putImageData(out, 0, 0);
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) tx.drawImage(src, B.x + dx, B.y + dy);
+  tx.restore(); freeCanvas(src);
+  const before = !all && R.w === D.w && R.h === D.h ? img : L.cx.getImageData(R.x, R.y, R.w, R.h);
+  L.cx.save(); L.cx.globalAlpha = op; L.cx.drawImage(t, R.x, R.y, R.w, R.h, R.x, R.y, R.w, R.h); L.cx.restore();
+  return { R, before };
+}
 async function fillAt(c) {
   if (FL) drop();
   const L = layerOf();
@@ -1233,31 +1351,9 @@ async function fillAt(c) {
   try {
     await nextFrame();
     if (D !== d0 || !D.layers.includes(L)) return;
-    const o = opt('fill'), all = prefs().all !== false, t = helper('tmp'), tx = t.getContext('2d');
-    // what the bucket sees: every visible layer together (lines on one layer, color on another), or this layer alone
-    let img;
-    if (all) {
-      tx.clearRect(0, 0, D.w, D.h);
-      for (const M of D.layers) if (M.vis && M.op > 0) { tx.globalAlpha = M.op; tx.drawImage(M.cv, 0, 0); }
-      tx.globalAlpha = 1;
-      img = tx.getImageData(0, 0, D.w, D.h);
-    } else img = L.cx.getImageData(0, 0, D.w, D.h);
-    const f = flood(img, x, y, o.tol);
-    if (!f) return;
-    const B = f.box, out = new ImageData(B.w, B.h), px = new Uint32Array(out.data.buffer), [r, g, b] = rgbOf(COLOR), m = f.m;
-    const v = ((255 << 24) | (b << 16) | (g << 8) | r) | 0;   // the bytes of one pixel, read as one number (little-endian: A B G R)
-    for (let yy = 0, j = 0; yy < B.h; yy++) for (let i = (B.y + yy) * D.w + B.x, e = i + B.w; i < e; i++, j++) px[j] = v & -(m[i] >> 1);
-    // one pixel more all round, so the paint goes under the soft edge of the line around it and leaves no pale rim:
-    // the area drawn again a pixel to each side, by the graphics card
-    const R = clipR(B.x - 1, B.y - 1, B.w + 2, B.h + 2);
-    tx.clearRect(R.x, R.y, R.w, R.h); tx.putImageData(out, B.x, B.y);
-    tx.save(); tx.beginPath(); tx.rect(R.x, R.y, R.w, R.h); tx.clip();
-    const src = newCanvas(B.w, B.h); src.getContext('2d').putImageData(out, 0, 0);
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) tx.drawImage(src, B.x + dx, B.y + dy);
-    tx.restore(); freeCanvas(src);
-    const before = !all && R.w === D.w && R.h === D.h ? img : L.cx.getImageData(R.x, R.y, R.w, R.h);
-    L.cx.save(); L.cx.globalAlpha = o.o / 100; L.cx.drawImage(t, R.x, R.y, R.w, R.h, R.x, R.y, R.w, R.h); L.cx.restore();
-    push(pxStep(L, R, before));
+    const o = opt('fill'), r = fillCore(L, x, y, COLOR, o.tol, o.o / 100, prefs().all !== false);
+    if (!r) return;
+    push(pxStep(L, r.R, r.before));
     changed(L); addRecent(COLOR);
   } finally {
     if (ACT === busy) ACT = null;
@@ -1476,7 +1572,7 @@ function cancelFloat() {
   freeCanvas(f.cv);
   paintPaper(); layersUI(); undoUI(); optsUI();
 }
-function commitPending() { stopPlay(); if (TX) commitText(); if (FL) drop(); }
+function commitPending() { stopPlay(); if (FXS) fxApply(); if (TX) commitText(); if (FL) drop(); }
 function selectAll() {
   if (!D) return;
   commitPending();
@@ -1594,6 +1690,10 @@ function drawOverlay() {
   else if (SEL) d = pathD(SEL.path);
   if (d) V.ov.append(sv('path', { d, class: 'dw-ants' }), sv('path', { d, class: 'dw-ants b' }));
   if ((FL || SEL) && !making && MOVE_TOOLS.includes(TOOL)) for (const [x, y] of handlesOf()) V.ov.append(sv('rect', { x: x - 5, y: y - 5, width: 10, height: 10, rx: 2, class: 'dw-hd' }));
+  if (fxHasPoint()) {
+    const [x, y] = toView(FXS.p.c[0], FXS.p.c[1]);
+    for (const cls of ['dw-fxpt', 'dw-fxpt b']) V.ov.append(sv('circle', { cx: x, cy: y, r: 10, class: cls }), sv('path', { d: `M${x - 18} ${y}H${x - 6}M${x + 6} ${y}H${x + 18}M${x} ${y - 18}V${y - 6}M${x} ${y + 6}V${y + 18}`, class: cls }));
+  }
 }
 
 /* =========================================================
@@ -1602,6 +1702,7 @@ function drawOverlay() {
 function setTool(t) {
   if (!TOOLS[t] || ACT) return;
   stopPlay();
+  if (FXS) fxApply();
   if (TX && t !== 'text') commitText();
   if (FL && !MOVE_TOOLS.includes(t)) drop();
   if (!MOVE_TOOLS.includes(t)) SEL = null;
@@ -1714,7 +1815,7 @@ function dupLayer() {
   const S0 = layerOf(), list = [...S0.cells].filter(([, c]) => c.ver || c === S0.cell);
   if (!room(list.length)) { fullMsg(); return; }
   struct(() => {
-    const L = makeLayer(T('{0} (עותק)', S0.name).slice(0, 60), { op: S0.op, vis: S0.vis, fx: S0.fx });
+    const L = makeLayer(T('{0} (עותק)', S0.name).slice(0, 60), { op: S0.op, vis: S0.vis, fx: S0.fx, bm: S0.bm });
     for (const [k, c] of list) { const n = newCell(); n.cx.drawImage(c.cv, 0, 0); n.ver = c.ver ? 1 : 0; L.cells.set(k, n); }
     D.layers.splice(D.layers.indexOf(S0) + 1, 0, L); D.active = L.id;
   });
@@ -1744,7 +1845,7 @@ function mergeDown() {
     for (const [k, b, l] of pairs) {
       const n = newCell();
       if (b && b.ver) n.cx.drawImage(b.cv, 0, 0);
-      if (l && l.ver && L.vis) { n.cx.globalAlpha = L.op; n.cx.drawImage(l.cv, 0, 0); n.cx.globalAlpha = 1; }
+      if (l && l.ver && L.vis) { n.cx.globalAlpha = L.op; n.cx.globalCompositeOperation = gcoOf(L.bm); n.cx.drawImage(l.cv, 0, 0); n.cx.globalAlpha = 1; n.cx.globalCompositeOperation = 'source-over'; }
       n.ver = (b && b.ver) || (l && l.ver) ? 1 : 0;
       cells.set(k, n);
     }
@@ -1783,6 +1884,10 @@ function layerMenu(anchor) {
 function onKey(e) {
   if (!D || !LOADED || MODALS.length) return false;
   const tg = e.target;
+  if (FXS && !e.altKey) {   // the filter's window, even from its sliders: Enter keeps the filter, Ctrl+Z puts the layer back
+    if (e.code === 'Enter' && !(tg && tg.closest && tg.closest('button,select'))) { e.preventDefault(); fxApply(); return true; }
+    if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyZ' || e.code === 'KeyY')) { e.preventDefault(); fxCancel(); return true; }
+  }
   if (tg && tg.closest && tg.closest('input,textarea,select,[contenteditable="true"]')) return false;   // typing in a box, the text tool's too
   const mod = e.ctrlKey || e.metaKey, c = e.code;
   if (mod && !e.altKey) {
@@ -1819,6 +1924,7 @@ function onKey(e) {
 function onEsc() {
   if (!D) return false;
   if (PLAY) { stopPlay(); return true; }
+  if (FXS) { fxCancel(); return true; }
   if (TX) { commitText(); return true; }
   if (FL) { drop(); return true; }
   if (SEL) { SEL = null; drawOverlay(); optsUI(); return true; }
@@ -1871,7 +1977,9 @@ function chooser(box, close) {
     savePrefs(); close();
     await createDoc({ html: blankBody(s.w, s.h, bg), kind: 'draw' });
   });
-  box.append(h('div', { class: 'dw-h4', text: T('גודל הקנבס') }), sz.el, h('div', { class: 'dw-h4', text: T('רקע') }), row, h('div', { class: 'dw-go' }, go));
+  const scan = h('button', { class: 'btn', type: 'button', title: T('צילום של ציור שציירת על דף נהיה ציור חדש: הדף נעלם, והקווים נשארים') }, icon('document_scanner'), T('מתמונה של ציור על דף'));
+  scan.addEventListener('click', () => { close(); scanStart('new'); });
+  box.append(h('div', { class: 'dw-h4', text: T('גודל הקנבס') }), sz.el, h('div', { class: 'dw-h4', text: T('רקע') }), row, h('div', { class: 'dw-go' }, scan, h('span', { class: 'grow' }), go));
 }
 function sizeDialog() {
   if (!D) return;
@@ -1921,8 +2029,8 @@ async function pdf() {
   const doc = new J({ orientation: o, unit: 'pt', format: [W, H] });
   try {
     for (let i = 0; i < src.frames.length; i++) {
-      x.fillStyle = src.bg || '#ffffff'; x.fillRect(0, 0, c.width, c.height);
-      await src.draw(x, i, c.width, c.height);
+      x.clearRect(0, 0, c.width, c.height);
+      await src.draw(x, i, c.width, c.height, '#ffffff');
       if (i) doc.addPage([W, H], o);
       doc.addImage(c.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, W, H);
     }
@@ -1935,7 +2043,6 @@ async function print() {
   V.print.textContent = '';
   for (let i = 0; i < src.frames.length; i++) {
     x.clearRect(0, 0, w, hh);
-    if (src.bg) { x.fillStyle = src.bg; x.fillRect(0, 0, w, hh); }
     await src.draw(x, i, w, hh);
     V.print.append(h('img', { src: c.toDataURL('image/png'), alt: '' }));
   }
@@ -2011,6 +2118,7 @@ function pickInto() {
    opening and closing a drawing
    ========================================================= */
 function reset() {
+  fxClose();
   if (PLAY) { cancelAnimationFrame(PLAY.raf); PLAY = null; }
   if (V.play) { V.play.remove(); V.play.width = V.play.height = 1; }
   if (V.paper) V.paper.classList.remove('playing');
@@ -2029,7 +2137,7 @@ function reset() {
   for (const k of Object.keys(HX)) { freeCanvas(HX[k]); HX[k] = null; }
   encodeSoon.cancel();
   D = null; LOADED = null; BODY = null; REV = DONE_REV = 0;
-  if (V.paper) V.paper.replaceChildren();
+  if (V.stack) V.stack.replaceChildren();
   if (V.ov) V.ov.textContent = '';
   if (V.list) V.list.textContent = '';
   if (V.cur) V.cur.style.display = 'none';
@@ -2081,9 +2189,10 @@ async function replace(html) {
   });
   fit();
 }
-/* what Claude is told about a drawing it opens: its size and layers, the top one first. It can't draw yet */
-const infoOf = d => ({ width: d.w, height: d.h, background: d.bg || 'transparent', ...(d.frames.length > 1 ? { frames: d.frames.length, frames_per_second: d.fps } : {}), layers: d.layers.slice().reverse().map(l => ({ name: l.name, visible: l.vis, opacity: Math.round(l.op * 100) / 100 })) });
-const info = html => D && LOADED === S.cur ? infoOf(D) : infoOf(parseBody(html));   // the one on screen as it is now, not as it was last saved
+/* what Claude is told about a drawing: its size, its frames, and its layers, the top one first */
+const infoOf = d => ({ width: d.w, height: d.h, background: d.bg || 'transparent',
+  ...(d.frames.length > 1 ? { frames: d.frames.length, frame_on_screen: d.f + 1, frames_per_second: d.fps, loop: d.loop } : {}),
+  layers: d.layers.slice().reverse().map(l => ({ name: l.name, visible: l.vis, opacity: Math.round(l.op * 100) / 100, ...(l.bm && l.bm !== 'normal' ? { blend: l.bm } : {}), ...(l.fx ? { pinned: true } : {}), ...(l.id === d.active ? { selected: true } : {}) })) });
 
 /* =========================================================
    animation: frames shown one after another. Each layer has its own picture in each frame, unless it is pinned to
@@ -2199,15 +2308,11 @@ function playUI() {
     b.title = label; b.setAttribute('aria-label', label); b.classList.toggle('on', !!PLAY);
   }
 }
+const frameList = i => D.layers.map(L => [L, L.vis && L.op > 0 && cellAt(L, i)]).filter(([L, cl]) => cl && (cl.ver || cl === L.cell)).map(([L, cl]) => ({ op: L.op, bm: L.bm, cv: cl.cv }));
 function paintFrame(c, i) {
   const x = c.getContext('2d');
   x.clearRect(0, 0, c.width, c.height);
-  for (const L of D.layers) {
-    const cl = L.vis && L.op > 0 && cellAt(L, i);
-    if (!cl || (!cl.ver && cl !== L.cell)) continue;
-    x.globalAlpha = L.op; x.drawImage(cl.cv, 0, 0, c.width, c.height);
-  }
-  x.globalAlpha = 1;
+  compose(x, frameList(i), D.w, D.h, c.width, c.height, D.bg);
 }
 function markPlay(i) { if (V.frs) for (const el of V.frs.children) el.classList.toggle('pl', +el.dataset.i === i); }
 function play() {
@@ -2217,7 +2322,7 @@ function play() {
   commitPending();
   const [w, hh] = fitSize(D.w, D.h, 1600), c = V.play || (V.play = newCanvas(1, 1));
   c.className = 'dw-pl'; c.width = w; c.height = hh;
-  V.paper.append(c); V.paper.classList.add('playing');
+  V.stack.append(c); V.paper.classList.add('playing');
   PLAY = { seq: seqOf(D.frames.length, D.loop), n: 0, next: performance.now(), raf: 0 };
   onionNow(); playUI();
   const step = () => {
@@ -2276,13 +2381,7 @@ function frameThumbs() {
     if (c.width !== tw || c.height !== th) { c.width = tw; c.height = th; }
     const x = c.getContext('2d');
     x.clearRect(0, 0, tw, th);
-    if (D.bg) { x.fillStyle = D.bg; x.fillRect(0, 0, tw, th); }
-    for (const L of D.layers) {
-      const cl = L.vis && L.op > 0 && cellAt(L, i);
-      if (!cl || (!cl.ver && cl !== L.cell)) continue;
-      x.globalAlpha = L.op; x.drawImage(cl.cv, 0, 0, tw, th);
-    }
-    x.globalAlpha = 1;
+    compose(x, frameList(i), D.w, D.h, tw, th, D.bg);
   });
 }
 /* the animation tab's controls, as the drawing has them */
@@ -2318,7 +2417,6 @@ async function makeGif(body, { k = 1, max = 0, prog } = {}) {
     for (let n = 0; n < seq.length; n++) {
       const i = seq[n], delay = src.frames[i].d * 1000 / src.fps;
       x.clearRect(0, 0, w, hh);
-      if (src.bg) { x.fillStyle = src.bg; x.fillRect(0, 0, w, hh); }
       await src.draw(x, i, w, hh);
       const data = x.getImageData(0, 0, w, hh).data;
       if (see) {   // a see-through background stays see-through: one color of the palette is "nothing"
@@ -2344,7 +2442,7 @@ async function makeVideo({ k = 1, times = 1, prog } = {}) {
   const c = newCanvas(w, hh), x = c.getContext('2d'), list = [];
   for (let r = 0; r < times; r++) list.push(...seq);
   const ticks = list.reduce((s, i) => s + src.frames[i].d, 0), br = clamp(Math.round(w * hh * fps * 0.15), 600e3, 12e6);
-  const paint = async i => { x.fillStyle = src.bg || '#ffffff'; x.fillRect(0, 0, w, hh); await src.draw(x, i, w, hh); };
+  const paint = async i => { x.clearRect(0, 0, w, hh); await src.draw(x, i, w, hh, '#ffffff'); };
   let codec = null;
   if (window.VideoEncoder && window.VideoFrame) for (const cd of ['avc1.640028', 'avc1.4d0028', 'avc1.42e01f']) {
     try { if ((await VideoEncoder.isConfigSupported({ codec: cd, width: w, height: hh, bitrate: br, framerate: fps })).supported) { codec = cd; break; } } catch {}
@@ -2437,6 +2535,1779 @@ async function saveAnim(fmt, k, times) {
   }
 }
 
+/* =========================================================
+   filters. Each is a few small programs for the graphics card (WebGL 2), so even a big layer changes the moment a
+   slider moves. While a filter's window is open, the card's own canvas shows the result over the layer, in the place
+   it changes (the layer has a hole there meanwhile), so trying costs no copying; "ביטול" (or Esc, or Ctrl+Z) fills the
+   hole as it was, and "החלה" (or going on to anything else) copies the result in, as one step to undo. With part of
+   the layer chosen, only that part changes. The pictures on the card are premultiplied (each color already times its alpha), as the
+   canvas keeps them: a blur mixes them as they are, and the color filters take the alpha out and put it back
+   ========================================================= */
+const FX_GROUPS = [['color', N_('צבע')], ['blur', N_('טשטוש וחדות')], ['fx', N_('אפקטים')], ['style', N_('סגנון')]];
+/* a slider: its setting, label, range, starting value and unit */
+const rng = (k, n, min, max, def, u = '') => ({ k, n, t: 'range', min, max, def, u });
+const chk = (k, n, def = false) => ({ k, n, t: 'check', def });
+const clr = (k, def) => ({ k, n: N_('צבע'), t: 'color', def });
+const PT = { k: 'c', t: 'point' };   // a place on the drawing, the middle until a click on the drawing moves it
+const angOf = d => [Math.cos(d * Math.PI / 180), Math.sin(d * Math.PI / 180)];
+const GRADS = [['#2b0f54', '#e2445c', '#ffd27a'], ['#0b1026', '#2f6fb5', '#bfe9ff'], ['#2a1a0f', '#a0703c', '#f6e7c8'], ['#13002b', '#ff2fa0', '#3cfffa'],
+  ['#0b2414', '#3e8c4a', '#e8f5c8'], ['#1a1206', '#b8860b', '#fff4c2'], ['#000000', '#7f7f7f', '#ffffff'], ['#3d0000', '#ff4500', '#ffff66']];
+/* g: its group in the ribbon; big: a button of its own there (the rest are in the group's menu); ps: its settings;
+   pad: how far from a pixel it reads, so a chosen part takes in what is around it; run: the passes, the last into the canvas */
+const FXL = {
+  hsl: { g: 'color', big: 1, ic: 'palette', n: N_('גוון ורוויה'), d: N_('מסובב את הצבעים בגלגל הצבעים, ומחזק או מחליש אותם'),
+    ps: [rng('hue', N_('גוון'), -180, 180, 0, '°'), rng('sat', N_('רוויה'), -100, 100, 0, '%'), rng('light', N_('בהירות'), -100, 100, 0, '%'), chk('col', N_('הכול בצבע אחד'))],
+    run: (p, X) => X.fin('hsl', { hue: p.hue / 360, sat: p.sat / 100, light: p.light / 100, col: +p.col }) },
+  bc: { g: 'color', big: 1, ic: 'contrast', n: N_('בהירות וניגודיות'), d: N_('מבהיר או מכהה, ומרחיק או מקרב את הבהיר והכהה'),
+    ps: [rng('br', N_('בהירות'), -100, 100, 0, '%'), rng('ct', N_('ניגודיות'), -100, 100, 0, '%')],
+    run: (p, X) => X.fin('bc', { br: p.br / 100, ct: p.ct / 100 }) },
+  curves: { g: 'color', big: 1, ic: 'show_chart', n: N_('עקומות'), d: N_('גוררים את הקו: למעלה מבהיר, למטה מכהה. שמאל הוא הכהה בציור וימין הבהיר'),
+    ps: [{ k: 'cv', t: 'curves', def: { a: [[0, 0], [255, 255]], r: [[0, 0], [255, 255]], g: [[0, 0], [255, 255]], b: [[0, 0], [255, 255]] } }],
+    run: (p, X) => X.fin('curves', {}, { src: X.src, lut: X.lut(curvesLut(p.cv)) }) },
+  temp: { g: 'color', ic: 'thermostat', n: N_('חמימות'), d: N_('צבעים חמים יותר, כמו בשקיעה, או קרים יותר, כמו בחורף'),
+    ps: [rng('wa', N_('חמימות'), -100, 100, 0, '%')],
+    run: (p, X) => X.fin('temp', { wa: p.wa / 100 }) },
+  gmap: { g: 'color', ic: 'gradient', n: N_('מפת צבעים'), d: N_('צובע כל מקום לפי כמה הוא כהה או בהיר: הכהה בצבע הראשון, והבהיר באחרון'),
+    ps: [{ k: 'gr', t: 'grad', def: GRADS[0] }, rng('amt', N_('חוזק'), 0, 100, 100, '%')],
+    run: (p, X) => X.fin('gmap', { amt: p.amt / 100 }, { src: X.src, lut: X.lut(gradLut(p.gr)) }) },
+  gray: { g: 'color', ic: 'filter_b_and_w', n: N_('גווני אפור'), d: N_('בלי צבעים, כמו תמונה ישנה בשחור-לבן'),
+    ps: [rng('amt', N_('חוזק'), 0, 100, 100, '%')], run: (p, X) => X.fin('mono', { mode: 0, amt: p.amt / 100 }) },
+  sepia: { g: 'color', ic: 'filter_vintage', n: N_('ספיה'), d: N_('חום-צהבהב, כמו תמונה מלפני מאה שנה'),
+    ps: [rng('amt', N_('חוזק'), 0, 100, 100, '%')], run: (p, X) => X.fin('mono', { mode: 1, amt: p.amt / 100 }) },
+  invert: { g: 'color', ic: 'invert_colors', n: N_('היפוך צבעים'), d: N_('כל צבע נהיה ההפך שלו: שחור לבן, וכחול כתום'),
+    ps: [rng('amt', N_('חוזק'), 0, 100, 100, '%')], run: (p, X) => X.fin('mono', { mode: 2, amt: p.amt / 100 }) },
+  post: { g: 'color', ic: 'tonality', n: N_('פוסטר'), d: N_('רק כמה גוונים לכל צבע, כמו בכרזה מודפסת'),
+    ps: [rng('lv', N_('גוונים'), 2, 16, 4)], run: (p, X) => X.fin('mono', { mode: 3, amt: 1, lv: p.lv }) },
+  thr: { g: 'color', ic: 'exposure', n: N_('שחור-לבן'), d: N_('כל מקום נהיה שחור או לבן. טוב לציור על דף שצילמו או סרקו'),
+    ps: [rng('t', N_('סף'), 1, 99, 50, '%'), chk('clr', N_('הלבן נהיה שקוף'))], run: (p, X) => X.fin('thr', { t: p.t / 100, clr: +p.clr }) },
+  blur: { g: 'blur', big: 1, ic: 'lens_blur', n: N_('טשטוש'), d: N_('מרכך הכול, כמו מבעד לזכוכית מטושטשת'),
+    ps: [rng('r', N_('עוצמה'), 0, 200, 10, ' px')], pad: p => p.r * 1.6 + 2,
+    run: (p, X) => X.fin('copy', {}, { src: X.blur(X.src, p.r / 2) }) },
+  motion: { g: 'blur', big: 1, ic: 'motion_blur', n: N_('טשטוש תנועה'), d: N_('כאילו הכול זז מהר בכיוון אחד'),
+    ps: [rng('len', N_('מרחק'), 0, 400, 40, ' px'), rng('ang', N_('כיוון'), -180, 180, 0, '°')], pad: p => p.len / 2 + 2,
+    run: (p, X) => {
+      const [c, s] = angOf(p.ang), dx = c * p.len / X.W, dy = s * p.len / X.H, n = 24, a = X.tmp();
+      X.pass('line', { dir: [dx, dy], n }, { src: X.src }, a);
+      X.fin('line', { dir: [dx / (n - 1), dy / (n - 1)], n }, { src: a });   // and the gaps between the samples
+    } },
+  zoom: { g: 'blur', big: 1, ic: 'blur_circular', n: N_('טשטוש זום'), d: N_('כאילו טסים לתוך הציור. לחיצה על הציור קובעת את המרכז'),
+    ps: [rng('s', N_('עוצמה'), 0, 100, 30, '%'), PT],
+    run: (p, X) => {
+      const s = p.s / 100 * 0.6, n = 24, a = X.tmp(), c = X.at(p.c);
+      X.pass('zoom', { c, s, n }, { src: X.src }, a);
+      X.fin('zoom', { c, s: s / (n - 1), n }, { src: a });
+    } },
+  sharp: { g: 'blur', big: 1, ic: 'deblur', n: N_('חידוד'), d: N_('קצוות ופרטים חדים יותר'),
+    ps: [rng('amt', N_('עוצמה'), 0, 300, 100, '%'), rng('r', N_('רוחב'), 1, 20, 2, ' px')], pad: p => p.r * 1.6 + 2,
+    run: (p, X) => X.fin('usm', { amt: p.amt / 100 }, { src: X.src, b: X.blur(X.src, p.r / 2) }) },
+  glow: { g: 'fx', big: 1, ic: 'flare', n: N_('זוהר'), d: N_('המקומות הבהירים זורחים החוצה'),
+    ps: [rng('t', N_('מאיזו בהירות'), 0, 100, 60, '%'), rng('r', N_('גודל'), 1, 150, 30, ' px'), rng('amt', N_('עוצמה'), 0, 300, 100, '%')], pad: p => p.r * 1.6 + 2,
+    run: (p, X) => { const a = X.tmp(); X.pass('bright', { t: p.t / 100 }, { src: X.src }, a); X.fin('screen', { amt: p.amt / 100 }, { src: X.src, b: X.blur(a, p.r / 2) }); } },
+  noise: { g: 'fx', big: 1, ic: 'grain', n: N_('רעש'), d: N_('גרגרים קטנים, כמו בצילום ישן'),
+    ps: [rng('amt', N_('כמות'), 0, 100, 20, '%'), rng('gs', N_('גודל הגרגר'), 1, 20, 1, ' px'), chk('col', N_('גרגרים צבעוניים'))],
+    run: (p, X) => X.fin('noise', { amt: p.amt / 100, gs: p.gs, col: +p.col }) },
+  pix: { g: 'fx', big: 1, ic: 'grid_on', n: N_('פיקסלים'), d: N_('ריבועים גדולים, כמו במשחק מחשב ישן'),
+    ps: [rng('cell', N_('גודל'), 2, 120, 16, ' px')],
+    run: (p, X) => {
+      // the color of each square first, a pixel for each, then the squares the size they are
+      const cell = p.cell, b0 = [Math.floor(X.org[0] / cell) * cell, Math.floor(X.org[1] / cell) * cell];
+      const a = X.tmp(Math.ceil((X.org[0] + X.W - b0[0]) / cell), Math.ceil((X.org[1] + X.H - b0[1]) / cell), true);
+      X.pass('pxavg', { cell, base: b0 }, { src: X.src }, a);
+      X.fin('pxput', { cell, base: b0 }, { b: a });
+    } },
+  half: { g: 'fx', ic: 'blur_on', n: N_('נקודות דפוס'), d: N_('נקודות קטנות וגדולות, כמו בקומיקס מודפס'),
+    ps: [rng('cell', N_('גודל'), 3, 60, 10, ' px'), chk('mono', N_('בשחור בלבד'))], pad: p => p.cell * 2,
+    run: (p, X) => X.fin('half', { cell: p.cell, mono: +p.mono }, { src: X.src, b: X.blur(X.src, p.cell * 0.35) }) },
+  glitch: { g: 'fx', ic: 'broken_image', n: N_('גליץ\''), d: N_('קלקול של מסך: פסים שקופצים הצידה, והצבעים נפרדים'),
+    ps: [rng('amt', N_('עוצמה'), 0, 100, 40, '%'), { k: 'seed', t: 'seed', def: 1 }], pad: p => p.amt * 0.0021 * Math.max(D.w, D.h) + 4,
+    run: (p, X) => X.fin('glitch', { amt: p.amt / 100, seed: p.seed }) },
+  chroma: { g: 'fx', ic: 'filter_tilt_shift', n: N_('הפרדת צבעים'), d: N_('האדום והכחול זזים הצידה, כמו בעדשה זולה. לחיצה על הציור קובעת את המרכז'),
+    ps: [rng('amt', N_('עוצמה'), 0, 100, 30, '%'), PT], pad: p => p.amt * 0.0003 * Math.hypot(D.w, D.h) + 2,
+    run: (p, X) => X.fin('chroma', { c: p.c, k: p.amt / 100 * 0.03 }) },
+  vig: { g: 'fx', ic: 'vignette', n: N_('וינייטה'), d: N_('הקצוות כהים יותר, והעין נמשכת למרכז. לחיצה על הציור קובעת את המרכז'),
+    ps: [rng('amt', N_('עוצמה'), 0, 100, 60, '%'), rng('size', N_('גודל המרכז'), 0, 100, 40, '%'), clr('col', '#000000'), PT],
+    run: (p, X) => X.fin('vig', { c: p.c, amt: p.amt / 100, s0: p.size / 100 * 0.8, col: rgbOf(p.col).map(v => v / 255) }) },
+  edges: { g: 'fx', ic: 'draw', n: N_('קווי מתאר'), d: N_('נשארים רק הקווים, כמו בדף צביעה'),
+    ps: [rng('amt', N_('עוצמה'), 0, 100, 50, '%'), rng('soft', N_('החלקה'), 0, 10, 1, ' px'), chk('white', N_('רקע לבן'))], pad: p => p.soft * 1.6 + 3,
+    run: (p, X) => X.fin('edges', { amt: p.amt / 100, white: +p.white }, { src: X.blur(X.src, p.soft / 2) }) },
+  emboss: { g: 'fx', ic: 'landscape', n: N_('הבלטה'), d: N_('כאילו הציור חרוט באבן או בלוח מתכת'),
+    ps: [rng('amt', N_('עוצמה'), 0, 300, 100, '%'), rng('ht', N_('גובה'), 1, 10, 2, ' px'), rng('ang', N_('כיוון האור'), -180, 180, -135, '°'), chk('col', N_('בצבע'))], pad: p => p.ht + 2,
+    run: (p, X) => { const [c, s] = angOf(p.ang); X.fin('emboss', { d: [c * p.ht / X.W, s * p.ht / X.H], amt: p.amt / 100 * 3, col: +p.col }); } },
+  outline: { g: 'style', big: 1, ic: 'border_outer', n: N_('קו מסביב'), d: N_('קו מסביב לכל מה שמצויר בשכבה, כמו מדבקה'),
+    ps: [rng('w', N_('עובי'), 1, 64, 6, ' px'), clr('col', '#000000')], pad: p => p.w + 2,
+    run: (p, X) => {
+      // the distance to the nearest drawn pixel, by jumping: each pass looks around at half the distance of the one before
+      let a = X.tmp(X.W, X.H, true), b = X.tmp(X.W, X.H, true);
+      X.pass('jfa0', {}, { src: X.src }, a);
+      for (let st = 2 ** Math.ceil(Math.log2(p.w + 1)); st >= 1; st = st / 2) { X.pass('jfa', { st }, { b: a }, b); [a, b] = [b, a]; }
+      X.pass('jfa', { st: 1 }, { b: a }, b); [a, b] = [b, a];
+      X.fin('outl', { w: p.w, col: rgbOf(p.col).map(v => v / 255) }, { src: X.src, b: a });
+    } },
+  shadow: { g: 'style', big: 1, ic: 'shadow', n: N_('צל'), d: N_('צל מתחת לכל מה שמצויר בשכבה'),
+    ps: [rng('dist', N_('מרחק'), 0, 200, 14, ' px'), rng('ang', N_('כיוון'), -180, 180, 45, '°'), rng('soft', N_('רכות'), 0, 100, 12, ' px'), rng('see', N_('שקיפות'), 0, 100, 40, '%'), clr('col', '#000000')],
+    pad: p => p.dist + p.soft * 1.6 + 2,
+    run: (p, X) => { const [c, s] = angOf(p.ang); X.fin('shad', { off: [c * p.dist / X.W, s * p.dist / X.H], op: 1 - p.see / 100, col: rgbOf(p.col).map(v => v / 255) }, { src: X.src, b: X.blur(X.src, p.soft / 2) }); } },
+};
+
+/* --- the programs --- */
+const VS = `#version 300 es
+uniform float flip;
+out vec2 uv;
+void main() {
+  vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+  uv = p;
+  gl_Position = vec4(p.x * 2.0 - 1.0, (p.y * 2.0 - 1.0) * flip, 0.0, 1.0);
+}`;
+/* uv runs down the picture as it does on the canvas: (0, 0) is its top left. tx is one pixel of src; us the size of the
+   part being changed, org where it is in the drawing, cs the drawing's size */
+const FS_HEAD = `#version 300 es
+precision highp float;
+in vec2 uv;
+out vec4 o;
+uniform sampler2D src, b, lut;
+uniform vec2 tx, us, org, cs;
+vec3 un(vec4 c) { return c.a > 0.0 ? c.rgb / c.a : vec3(0.0); }
+vec4 pm(vec3 c, float a) { return vec4(clamp(c, 0.0, 1.0) * a, a); }
+float lum(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+vec2 dpx() { return org + uv * us; }
+vec2 duv(vec2 p) { return (p - org) / us; }
+float hash(vec2 p) { vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); }
+`;
+const FS = {
+  copy: `void main() { o = texture(src, uv); }`,
+  warp: `uniform vec3 ma, mb, mc;
+void main() {
+  vec3 q = vec3(uv, 1.0);
+  vec2 s = vec2(dot(ma, q), dot(mb, q)) / dot(mc, q);
+  o = s.x < 0.0 || s.y < 0.0 || s.x > 1.0 || s.y > 1.0 ? vec4(1.0) : vec4(texture(src, s).rgb, 1.0);
+}`,
+  norm: `void main() { o = vec4(clamp(texture(src, uv).rgb / max(texture(b, uv).rgb, vec3(0.04)), 0.0, 1.0), 1.0); }`,
+  scan: `uniform float mode, lo, hi, useInk; uniform vec3 ink;
+void main() {
+  vec3 n = texture(src, uv).rgb;
+  if (mode > 1.5) { float k = lo * 0.5; o = vec4(clamp((n - k) / (1.0 - k), 0.0, 1.0), 1.0); return; }
+  float d = 1.0 - lum(n), s = max(n.r, max(n.g, n.b)) - min(n.r, min(n.g, n.b)), a = smoothstep(lo, hi, d);
+  if (mode > 0.5) a = max(a, smoothstep(0.1 + lo * 0.4, 0.22 + lo * 0.5, s) * smoothstep(0.02, 0.1, d));
+  if (a < 0.01) { o = vec4(0.0); return; }
+  vec3 p = clamp((n - (1.0 - a)) / a, 0.0, 1.0);
+  if (mode < 0.5) p = useInk > 0.5 ? ink : pow(p, vec3(1.6));
+  o = vec4(p * a, a);
+}`,
+  grow: `uniform float r, thick;
+void main() {
+  vec4 best = texture(src, uv);
+  int k = int(r);
+  for (int j = -k; j <= k; j++) for (int i = -k; i <= k; i++) {
+    if (i * i + j * j > k * k) continue;
+    vec4 c = texture(src, uv + vec2(float(i), float(j)) * tx);
+    if (thick > 0.5 ? c.a > best.a : c.a < best.a) best = c;
+  }
+  o = best;
+}`,
+  present: `uniform float cut, lasso; uniform vec4 box;
+void main() {
+  vec4 c = texture(src, uv);
+  if (cut > 0.5) {
+    c *= step(box.x, uv.x) * step(box.y, uv.y) * step(uv.x, box.z) * step(uv.y, box.w);
+    if (lasso > 0.5) c *= texture(b, uv).a;
+  }
+  o = c;
+}`,
+  gauss: `uniform vec2 dir; uniform float sig;
+void main() {
+  int r = int(ceil(sig * 3.0));
+  float k = -0.5 / (sig * sig), ws = 0.0;
+  vec4 acc = vec4(0.0);
+  for (int i = -r; i <= r; i++) { float w = exp(float(i * i) * k); acc += texture(src, uv + dir * float(i)) * w; ws += w; }
+  o = acc / ws;
+}`,
+  line: `uniform vec2 dir; uniform float n;
+void main() {
+  int k = int(n); vec4 acc = vec4(0.0);
+  for (int i = 0; i < k; i++) acc += texture(src, uv + dir * (float(i) / float(k - 1) - 0.5));
+  o = acc / float(k);
+}`,
+  zoom: `uniform vec2 c; uniform float s, n;
+void main() {
+  int k = int(n); vec4 acc = vec4(0.0);
+  for (int i = 0; i < k; i++) acc += texture(src, c + (uv - c) * (1.0 - s * float(i) / float(k - 1)));
+  o = acc / float(k);
+}`,
+  hsl: `uniform float hue, sat, light, col;
+vec3 toHsl(vec3 c) {
+  float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b)), l = (mx + mn) * 0.5, d = mx - mn, h = 0.0, s = 0.0;
+  if (d > 1e-5) {
+    s = l > 0.5 ? d / (2.0 - mx - mn) : d / (mx + mn);
+    if (mx == c.r) h = (c.g - c.b) / d + (c.g < c.b ? 6.0 : 0.0);
+    else if (mx == c.g) h = (c.b - c.r) / d + 2.0;
+    else h = (c.r - c.g) / d + 4.0;
+    h /= 6.0;
+  }
+  return vec3(h, s, l);
+}
+vec3 toRgb(vec3 c) {
+  vec3 k = clamp(abs(mod(c.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+  return c.z + c.y * (k - 0.5) * (1.0 - abs(2.0 * c.z - 1.0));
+}
+void main() {
+  vec4 c = texture(src, uv);
+  if (c.a <= 0.0) { o = c; return; }
+  vec3 h = toHsl(un(c));
+  if (col > 0.5) { h.x = fract(hue + 1.0); h.y = clamp(0.5 + sat * 0.5, 0.0, 1.0); }
+  else { h.x = fract(h.x + hue + 1.0); h.y = clamp(h.y * (1.0 + sat), 0.0, 1.0); }
+  h.z = light >= 0.0 ? h.z + (1.0 - h.z) * light : h.z * (1.0 + light);
+  o = pm(toRgb(h), c.a);
+}`,
+  bc: `uniform float br, ct;
+void main() {
+  vec4 c = texture(src, uv);
+  if (c.a <= 0.0) { o = c; return; }
+  vec3 v = un(c);
+  v = br >= 0.0 ? v + (1.0 - v) * br : v * (1.0 + br);
+  v = (v - 0.5) * tan((min(ct, 0.97) + 1.0) * 0.785398) + 0.5;
+  o = pm(v, c.a);
+}`,
+  curves: `void main() {
+  vec4 c = texture(src, uv);
+  if (c.a <= 0.0) { o = c; return; }
+  vec3 m = (un(c) * 255.0 + 0.5) / 256.0;
+  o = pm(vec3(texture(lut, vec2(m.r, 0.5)).r, texture(lut, vec2(m.g, 0.5)).g, texture(lut, vec2(m.b, 0.5)).b), c.a);
+}`,
+  temp: `uniform float wa;
+void main() {
+  vec4 c = texture(src, uv);
+  if (c.a <= 0.0) { o = c; return; }
+  o = pm(un(c) * vec3(1.0 + wa * 0.25, 1.0 + wa * 0.03, 1.0 - wa * 0.25), c.a);
+}`,
+  gmap: `uniform float amt;
+void main() {
+  vec4 c = texture(src, uv);
+  if (c.a <= 0.0) { o = c; return; }
+  vec3 v = un(c);
+  o = pm(mix(v, texture(lut, vec2((lum(v) * 255.0 + 0.5) / 256.0, 0.5)).rgb, amt), c.a);
+}`,
+  mono: `uniform float mode, amt, lv;
+void main() {
+  vec4 c = texture(src, uv);
+  if (c.a <= 0.0) { o = c; return; }
+  vec3 v = un(c), r;
+  int m = int(mode + 0.5);
+  if (m == 0) r = vec3(lum(v));
+  else if (m == 1) r = vec3(dot(v, vec3(0.393, 0.769, 0.189)), dot(v, vec3(0.349, 0.686, 0.168)), dot(v, vec3(0.272, 0.534, 0.131)));
+  else if (m == 2) r = 1.0 - v;
+  else r = min(floor(v * lv), lv - 1.0) / (lv - 1.0);
+  o = pm(mix(v, r, amt), c.a);
+}`,
+  thr: `uniform float t, clr;
+void main() {
+  vec4 c = texture(src, uv);
+  if (c.a <= 0.0) { o = c; return; }
+  float k = smoothstep(t - 0.006, t + 0.006, lum(un(c)));
+  o = clr > 0.5 ? vec4(0.0, 0.0, 0.0, (1.0 - k) * c.a) : pm(vec3(k), c.a);
+}`,
+  usm: `uniform float amt;
+void main() {
+  vec4 c = texture(src, uv);
+  if (c.a <= 0.0) { o = c; return; }
+  vec3 v = un(c);
+  o = pm(v + (v - un(texture(b, uv))) * amt, c.a);
+}`,
+  bright: `uniform float t;
+void main() { vec4 c = texture(src, uv); o = c * smoothstep(t, t + 0.15, lum(un(c))); }`,
+  screen: `uniform float amt;
+void main() { vec4 c = texture(src, uv), g = clamp(texture(b, uv) * amt, 0.0, 1.0); o = c + g - c * g; }`,
+  noise: `uniform float amt, gs, col;
+void main() {
+  vec4 c = texture(src, uv);
+  if (c.a <= 0.0) { o = c; return; }
+  vec2 q = floor(dpx() / gs);
+  vec3 n = col > 0.5 ? vec3(hash(q), hash(q + 17.13), hash(q + 41.71)) - 0.5 : vec3(hash(q) - 0.5);
+  o = pm(un(c) + n * amt, c.a);
+}`,
+  pxavg: `uniform float cell; uniform vec2 base;
+void main() {
+  vec2 c0 = base + floor(gl_FragCoord.xy) * cell;
+  vec4 acc = vec4(0.0);
+  for (int j = 0; j < 8; j++) for (int i = 0; i < 8; i++) acc += texture(src, duv(c0 + (vec2(float(i), float(j)) + 0.5) * cell / 8.0));
+  o = acc / 64.0;
+}`,
+  pxput: `uniform float cell; uniform vec2 base;
+void main() { o = texelFetch(b, ivec2(floor((dpx() - base) / cell)), 0); }`,
+  half: `uniform float cell, mono;
+vec2 rot(vec2 p, float a) { float s = sin(a), c = cos(a); return vec2(c * p.x - s * p.y, s * p.x + c * p.y); }
+float ink(vec2 p, float a, int ch) {
+  vec2 q = rot(p, -a), qc = (floor(q / cell) + 0.5) * cell;
+  vec4 s = texture(b, duv(rot(qc, a)));
+  vec3 v = s.rgb + (1.0 - s.a);   // over white paper
+  float k = 1.0 - max(v.r, max(v.g, v.b)), amt;
+  if (ch == 3) amt = mono > 0.5 ? 1.0 - lum(v) : k;
+  else { vec3 cmy = (1.0 - v - k) / max(1.0 - k, 0.001); amt = ch == 0 ? cmy.x : ch == 1 ? cmy.y : cmy.z; }
+  float r = sqrt(clamp(amt, 0.0, 1.0)) * cell * 0.71;
+  return 1.0 - smoothstep(r - 0.7, r + 0.7, length(q - qc));
+}
+void main() {
+  vec4 c = texture(src, uv);
+  if (c.a <= 0.0) { o = c; return; }
+  vec2 p = dpx();
+  vec3 col = vec3(1.0 - ink(p, 0.7854, 3));
+  if (mono < 0.5) col *= vec3(1.0 - ink(p, 0.2618, 0), 1.0 - ink(p, 1.309, 1), 1.0 - ink(p, 0.0, 2));
+  o = pm(col, c.a);
+}`,
+  glitch: `uniform float amt, seed;
+float h1(float x) { return hash(vec2(x, seed * 7.31)); }
+void main() {
+  vec2 p = dpx();
+  float big = floor(p.y / 64.0), ht = 6.0 + floor(h1(big) * 5.0) * 12.0, row = floor(p.y / ht) + big * 97.0;
+  float sl = h1(row + 3.1) > 1.0 - amt * 0.6 ? (h1(row + 11.7) - 0.5) * amt * 0.12 * max(cs.x, cs.y) * (1.0 + 2.0 * step(0.8, h1(row + 5.3))) : 0.0;
+  float sp = amt * 0.012 * max(cs.x, cs.y) * (0.5 + h1(row + 23.9));
+  vec2 q = p + vec2(sl, 0.0);
+  vec4 r = texture(src, duv(q + vec2(sp, 0.0))), g = texture(src, duv(q)), bl = texture(src, duv(q - vec2(sp, 0.0)));
+  o = vec4(r.r, g.g, bl.b, max(r.a, max(g.a, bl.a)));
+}`,
+  chroma: `uniform vec2 c; uniform float k;
+void main() {
+  vec2 p = dpx(), d = (p - c) * k;
+  vec4 r = texture(src, duv(p + d)), g = texture(src, uv), bl = texture(src, duv(p - d));
+  o = vec4(r.r, g.g, bl.b, max(r.a, max(g.a, bl.a)));
+}`,
+  vig: `uniform vec2 c; uniform float amt, s0; uniform vec3 col;
+void main() {
+  vec4 v = texture(src, uv);
+  if (v.a <= 0.0) { o = v; return; }
+  float f = smoothstep(s0, s0 + 0.75, length((dpx() - c) / (cs * 0.5)) / 1.2);
+  o = pm(mix(un(v), col, f * amt), v.a);
+}`,
+  edges: `uniform float amt, white;
+float L(vec2 q) { vec4 c = texture(src, q); return lum(c.rgb + (1.0 - c.a)); }
+void main() {
+  vec2 e = tx;
+  float tl = L(uv - e), t = L(uv + vec2(0.0, -e.y)), tr = L(uv + vec2(e.x, -e.y)), l = L(uv + vec2(-e.x, 0.0)), r = L(uv + vec2(e.x, 0.0)),
+    bl = L(uv + vec2(-e.x, e.y)), bt = L(uv + vec2(0.0, e.y)), br = L(uv + e);
+  float gx = (tr + 2.0 * r + br) - (tl + 2.0 * l + bl), gy = (bl + 2.0 * bt + br) - (tl + 2.0 * t + tr);
+  float m = clamp(length(vec2(gx, gy)) * mix(0.6, 6.0, amt), 0.0, 1.0);
+  o = white > 0.5 ? vec4(vec3(1.0 - m), 1.0) : vec4(0.0, 0.0, 0.0, m);
+}`,
+  emboss: `uniform vec2 d; uniform float amt, col;
+float L(vec2 q) { vec4 c = texture(src, q); return lum(c.rgb + (1.0 - c.a)); }
+void main() {
+  vec4 c = texture(src, uv);
+  if (c.a <= 0.0) { o = c; return; }
+  float r = (L(uv - d) - L(uv + d)) * amt;
+  o = col > 0.5 ? pm(un(c) + r, c.a) : pm(vec3(0.5 + r), c.a);
+}`,
+  jfa0: `vec4 enc(vec2 p) { return vec4(mod(p.x, 256.0), floor(p.x / 256.0), mod(p.y, 256.0), floor(p.y / 256.0)) / 255.0; }
+void main() { o = texture(src, uv).a >= 0.5 ? enc(floor(gl_FragCoord.xy)) : vec4(1.0); }`,
+  jfa: `uniform float st;
+vec4 enc(vec2 p) { return vec4(mod(p.x, 256.0), floor(p.x / 256.0), mod(p.y, 256.0), floor(p.y / 256.0)) / 255.0; }
+vec2 dec(vec4 v) { v = floor(v * 255.0 + 0.5); return vec2(v.x + v.y * 256.0, v.z + v.w * 256.0); }
+void main() {
+  ivec2 me = ivec2(gl_FragCoord.xy), n = textureSize(b, 0);
+  vec2 best = vec2(0.0); float bd = 1e20; bool got = false;
+  for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+    ivec2 q = me + ivec2(i, j) * int(st);
+    if (q.x < 0 || q.y < 0 || q.x >= n.x || q.y >= n.y) continue;
+    vec4 v = texelFetch(b, q, 0);
+    if (v == vec4(1.0)) continue;
+    vec2 s = dec(v); float d = dot(s - vec2(me), s - vec2(me));
+    if (d < bd) { bd = d; best = s; got = true; }
+  }
+  o = got ? enc(best) : vec4(1.0);
+}`,
+  outl: `uniform float w; uniform vec3 col;
+vec2 dec(vec4 v) { v = floor(v * 255.0 + 0.5); return vec2(v.x + v.y * 256.0, v.z + v.w * 256.0); }
+void main() {
+  vec4 c = texture(src, uv), v = texelFetch(b, ivec2(uv * vec2(textureSize(b, 0))), 0);
+  float cov = v == vec4(1.0) ? 0.0 : clamp(w + 0.5 - length(dec(v) - floor(uv * vec2(textureSize(b, 0)))), 0.0, 1.0);
+  o = c + vec4(col * cov, cov) * (1.0 - c.a);
+}`,
+  shad: `uniform vec2 off; uniform float op; uniform vec3 col;
+void main() {
+  vec4 c = texture(src, uv);
+  float a = texture(b, uv - off).a * op;
+  o = c + vec4(col * a, a) * (1.0 - c.a);
+}`,
+};
+/* the curves of the "עקומות" window, through their points (smooth, and never past a point's height between two points) */
+function curveFn(pts) {
+  const n = pts.length, xs = pts.map(q => q[0]), ys = pts.map(q => q[1]);
+  if (n < 2) return x => x;
+  const d = [], m = [];
+  for (let i = 0; i < n - 1; i++) d.push((ys[i + 1] - ys[i]) / ((xs[i + 1] - xs[i]) || 1));
+  m[0] = d[0]; m[n - 1] = d[n - 2];
+  for (let i = 1; i < n - 1; i++) m[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2;
+  for (let i = 0; i < n - 1; i++) {
+    if (!d[i]) { m[i] = m[i + 1] = 0; continue; }
+    const a = m[i] / d[i], b = m[i + 1] / d[i], s = a * a + b * b;
+    if (s > 9) { const t = 3 / Math.sqrt(s); m[i] = t * a * d[i]; m[i + 1] = t * b * d[i]; }
+  }
+  return x => {
+    if (x <= xs[0]) return ys[0];
+    if (x >= xs[n - 1]) return ys[n - 1];
+    let i = 0;
+    while (x > xs[i + 1]) i++;
+    const hh = xs[i + 1] - xs[i], t = (x - xs[i]) / hh, t2 = t * t, t3 = t2 * t;
+    return (2 * t3 - 3 * t2 + 1) * ys[i] + (t3 - 2 * t2 + t) * hh * m[i] + (-2 * t3 + 3 * t2) * ys[i + 1] + (t3 - t2) * hh * m[i + 1];
+  };
+}
+/* each color's own curve first, then the one for all of them */
+function curvesLut(cv) {
+  const a = curveFn(cv.a), out = new Uint8Array(1024);
+  ['r', 'g', 'b'].forEach((k, j) => { const f = curveFn(cv[k]); for (let i = 0; i < 256; i++) out[i * 4 + j] = clamp(Math.round(a(clamp(f(i), 0, 255))), 0, 255); });
+  for (let i = 0; i < 256; i++) out[i * 4 + 3] = 255;
+  return out;
+}
+function gradLut(cols) {
+  const c = cols.map(rgbOf), out = new Uint8Array(1024);
+  for (let i = 0; i < 256; i++) {
+    const t = i / 255 * (c.length - 1), j = Math.min(Math.floor(t), c.length - 2), f = t - j;
+    for (let k = 0; k < 3; k++) out[i * 4 + k] = Math.round(c[j][k] + (c[j + 1][k] - c[j][k]) * f);
+    out[i * 4 + 3] = 255;
+  }
+  return out;
+}
+
+/* --- the graphics card: one hidden canvas, its programs, and the pictures in between, kept for the next time --- */
+const GLX = { cv: null, gl: null, P: {}, pool: [], once: [] };
+function glx() {
+  if (GLX.gl && !GLX.gl.isContextLost()) return GLX.gl;
+  GLX.cv = newCanvas(1, 1);
+  const gl = GLX.cv.getContext('webgl2', { alpha: true, premultipliedAlpha: true, preserveDrawingBuffer: true, antialias: false, depth: false, stencil: false });
+  GLX.gl = gl || null; GLX.P = {}; GLX.pool = []; GLX.once = [];
+  // the card can be taken back (a phone short of memory, a driver restarting): the layer goes back as it was
+  if (gl) GLX.cv.addEventListener('webglcontextlost', e => { e.preventDefault(); if (FXS) fxFail(new Error('gl lost')); });
+  return GLX.gl;
+}
+function prog(name) {
+  const gl = GLX.gl;
+  if (GLX.P[name]) return GLX.P[name];
+  const sh = (type, txt) => {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, txt); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS) && !gl.isContextLost()) throw new Error(name + ': ' + gl.getShaderInfoLog(s));
+    return s;
+  };
+  const pr = gl.createProgram();
+  gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS_HEAD + FS[name]));
+  gl.linkProgram(pr);
+  if (!gl.getProgramParameter(pr, gl.LINK_STATUS) && !gl.isContextLost()) throw new Error(name + ': ' + gl.getProgramInfoLog(pr));
+  const loc = new Map();
+  return (GLX.P[name] = { pr, u: k => { if (!loc.has(k)) loc.set(k, gl.getUniformLocation(pr, k)); return loc.get(k); } });
+}
+function texParams(gl, near) {
+  const f = near ? gl.NEAREST : gl.LINEAR;
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, f); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, f);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+}
+/* a picture to draw into, from the ones kept (each is used once in a run) */
+function tmpTex(w, hh, near) {
+  const gl = GLX.gl;
+  let t = GLX.pool.find(x => !x.used && x.w === w && x.h === hh && x.near === !!near);
+  if (!t) {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, w, hh);
+    texParams(gl, near);
+    const fb = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    t = { t: tex, fb, w, h: hh, near: !!near };
+    GLX.pool.push(t);
+  }
+  t.used = true;
+  return t;
+}
+/* a canvas onto the card, premultiplied as the canvas keeps it */
+function upTex(c) {
+  const gl = GLX.gl, t = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+  texParams(gl, false);
+  return { t, w: c.width, h: c.height };
+}
+function lutTex(bytes) {
+  const gl = GLX.gl, t = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, bytes);
+  texParams(gl, false);
+  GLX.once.push(t);
+  return { t, w: 256, h: 1 };
+}
+function glPass(name, uni, ins, out, U) {
+  const gl = GLX.gl, p = prog(name), w = out ? out.w : GLX.cv.width, hh = out ? out.h : GLX.cv.height;
+  gl.useProgram(p.pr);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, out ? out.fb : null);
+  gl.viewport(0, 0, w, hh);
+  let unit = 0;
+  for (const [k, t] of Object.entries(ins)) { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t.t); gl.uniform1i(p.u(k), unit); unit++; }
+  const s = ins.src || ins.b;
+  for (const [k, v] of Object.entries({ flip: out ? 1 : -1, tx: [1 / s.w, 1 / s.h], us: [U.w, U.h], org: [U.x, U.y], cs: D ? [D.w, D.h] : [U.w, U.h], ...uni })) {
+    const l = p.u(k);
+    if (l == null) continue;
+    if (typeof v === 'number') gl.uniform1f(l, v);
+    else if (v.length === 2) gl.uniform2f(l, v[0], v[1]);
+    else if (v.length === 3) gl.uniform3f(l, v[0], v[1], v[2]);
+    else gl.uniform4f(l, v[0], v[1], v[2], v[3]);
+  }
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+/* a filter over a picture of the part U of a layer: the result is in GLX.cv, the size of U. For the window, only where
+   the layer changes (and the picture as it was, while "לפני" is held); to keep, all of it */
+function fxRender(s, src, final) {
+  const gl = GLX.gl, U = s.U, R = s.R;
+  for (const t of GLX.pool) t.used = false;
+  if (GLX.cv.width !== U.w || GLX.cv.height !== U.h) { GLX.cv.width = U.w; GLX.cv.height = U.h; }
+  const pass = (name, uni, ins, out) => glPass(name, uni, ins, out, U);
+  let res = src;
+  if (final || !s.before) {
+    res = tmpTex(U.w, U.h);
+    const X = {
+      src, W: U.w, H: U.h, org: [U.x, U.y],
+      tmp: (w = U.w, hh = U.h, near) => tmpTex(Math.max(1, w), Math.max(1, hh), near),
+      pass, fin: (name, uni, ins = { src }) => pass(name, uni, ins, res),
+      lut: lutTex,
+      at: c => [(c[0] - U.x) / U.w, (c[1] - U.y) / U.h],
+      // a gaussian blur: smaller copies first for a wide one, so it costs the same whatever its size
+      blur(t, sig) {
+        if (sig < 0.3) return t;
+        let cur = t, k = 0;
+        while (sig / 2 ** k > 6 && cur.w > 16 && cur.h > 16) { const n = X.tmp(Math.ceil(cur.w / 2), Math.ceil(cur.h / 2)); pass('copy', {}, { src: cur }, n); cur = n; k++; }
+        const sg = sig / 2 ** k, a = X.tmp(cur.w, cur.h), b = X.tmp(cur.w, cur.h);
+        pass('gauss', { dir: [1 / cur.w, 0], sig: sg }, { src: cur }, a);
+        pass('gauss', { dir: [0, 1 / cur.h], sig: sg }, { src: a }, b);
+        if (!k) return b;
+        const up = X.tmp(t.w, t.h);
+        pass('copy', {}, { src: b }, up);
+        return up;
+      },
+    };
+    s.f.run(s.p, X);
+  }
+  pass('present', { cut: final ? 0 : 1, lasso: s.mk ? 1 : 0, box: [(R.x - U.x) / U.w, (R.y - U.y) / U.h, (R.x + R.w - U.x) / U.w, (R.y + R.h - U.y) / U.h] }, s.mk ? { src: res, b: s.mk } : { src: res }, null);
+  for (const t of GLX.once) gl.deleteTexture(t);
+  GLX.once = [];
+  if (gl.isContextLost()) throw new Error('gl');
+  return GLX.cv;
+}
+/* the pictures kept on the card go when the window closes: a big drawing's are big */
+function glFree() {
+  const gl = GLX.gl;
+  if (!gl) return;
+  for (const t of GLX.pool) { gl.deleteTexture(t.t); gl.deleteFramebuffer(t.fb); }
+  GLX.pool = [];
+  if (GLX.cv) { GLX.cv.remove(); GLX.cv.width = 1; GLX.cv.height = 1; }
+}
+
+/* --- the filter being tried, and its window over the drawing --- */
+let FXS = null;   // { id, f, p (its settings), L, cell, R (what changes), U (what it reads: R and around it), sel (a free outline), tex, el, raf, before, all }
+const curvesOk = v => !!v && typeof v === 'object' && ['a', 'r', 'g', 'b'].every(k => Array.isArray(v[k]) && v[k].length >= 2 && v[k].length <= 16
+  && v[k].every((q, i) => Array.isArray(q) && q.length === 2 && q.every(n => typeof n === 'number' && n >= 0 && n <= 255) && (!i || q[0] > v[k][i - 1][0])));
+/* the settings a filter starts with: as they were the last time it was used, or its own */
+function fxSettings(id, fresh) {
+  const fx = prefs().fx && typeof prefs().fx === 'object' ? prefs().fx : {}, saved = !fresh && fx[id] && typeof fx[id] === 'object' ? fx[id] : {}, p = {};
+  for (const q of FXL[id].ps) {
+    const v = saved[q.k];
+    if (q.t === 'range') p[q.k] = typeof v === 'number' && isFinite(v) ? clamp(Math.round(v), q.min, q.max) : q.def;
+    else if (q.t === 'check') p[q.k] = typeof v === 'boolean' ? v : q.def;
+    else if (q.t === 'color') p[q.k] = hex6(v) || q.def;
+    else if (q.t === 'grad') p[q.k] = Array.isArray(v) && v.length === 3 && v.every(hex6) ? v.map(hex6) : q.def.slice();
+    else if (q.t === 'curves') p[q.k] = JSON.parse(JSON.stringify(curvesOk(v) ? v : q.def));
+    else if (q.t === 'seed') p[q.k] = typeof v === 'number' && isFinite(v) ? v : q.def;
+    else if (q.t === 'point') p[q.k] = [D.w / 2, D.h / 2];   // the middle of the drawing, each time
+  }
+  return p;
+}
+function fxKeep(s) {
+  const p = prefs();
+  if (!p.fx || typeof p.fx !== 'object') p.fx = {};
+  const o = {};
+  for (const q of s.f.ps) if (q.t !== 'point') o[q.k] = s.p[q.k];
+  p.fx[s.id] = o; savePrefs();
+}
+/* a part of a canvas as a canvas of its own (the canvas itself when the part is all of it) */
+function partOf(c, U) {
+  if (!U.x && !U.y && U.w === c.width && U.h === c.height) return c;
+  const n = newCanvas(U.w, U.h);
+  n.getContext('2d').drawImage(c, U.x, U.y, U.w, U.h, 0, 0, U.w, U.h);
+  return n;
+}
+function fxOpen(id) {
+  const f = FXL[id];
+  if (!D || !LOADED || !f || ACT) return;
+  if (FXS) { if (FXS.id === id) return; fxApply(); }
+  // what floats is put down first, and stays chosen
+  const fl = FL ? clipR(FL.x, FL.y, FL.w, FL.h) : null;
+  commitPending();
+  if (fl) SEL = rectSel(fl);
+  const L = layerOf();
+  if (!canDraw(L)) return;
+  if (!glx()) { toast(T('הדפדפן הזה לא יכול להפעיל פילטרים.'), { ms: 6000 }); return; }
+  const R = SEL ? clipR(SEL.box.x, SEL.box.y, SEL.box.w, SEL.box.h) : { x: 0, y: 0, w: D.w, h: D.h };
+  if (!R) return;
+  const p = fxSettings(id), far = {};
+  for (const q of f.ps) far[q.k] = q.t === 'range' ? q.max : p[q.k];
+  const pad = f.pad ? Math.ceil(f.pad(far)) : 0, U = clipR(R.x - pad, R.y - pad, R.w + 2 * pad, R.h + 2 * pad);
+  keepLayer(L);
+  const s = { id, f, p, L, cell: L.cell, R, U, sel: SEL && !SEL.rect ? selPath() : null, tex: null, mk: null, el: null, raf: 0, before: false, all: false };
+  try {
+    const c = partOf(HX.bk, U);
+    s.tex = upTex(c);
+    if (c !== HX.bk) freeCanvas(c);
+    if (s.sel) {   // a free outline, as a picture: where it is, the result shows
+      const m = newCanvas(U.w, U.h), mx = m.getContext('2d');
+      mx.translate(-U.x, -U.y); mx.fillStyle = '#fff'; mx.fill(s.sel);
+      s.mk = upTex(m); freeCanvas(m);
+    }
+  } catch (e) { console.error(e); if (s.tex && GLX.gl) GLX.gl.deleteTexture(s.tex.t); toast(T('לא הצלחתי להפעיל את הפילטר.')); return; }
+  FXS = s;
+  const cx = s.cell.cx;
+  cx.save(); cx.beginPath(); cx.rect(R.x, R.y, R.w, R.h); cx.clip(); if (s.sel) cx.clip(s.sel); cx.clearRect(R.x, R.y, R.w, R.h); cx.restore();
+  GLX.cv.className = 'dw-fl';
+  Object.assign(GLX.cv.style, { left: U.x + 'px', top: U.y + 'px', width: U.w + 'px', height: U.h + 'px' });
+  paintPaper();
+  fxPanel(s);
+  V.cur.style.display = 'none';
+  drawOverlay(); fxUI();
+  try { fxShow(s); } catch (e) { fxFail(e); }   // now, so the hole is never seen
+}
+/* into a layer's canvas, only where the filter changes it */
+function fxPut(cx, s, from, sx, sy) {
+  const R = s.R;
+  cx.save();
+  cx.beginPath(); cx.rect(R.x, R.y, R.w, R.h); cx.clip();
+  if (s.sel) cx.clip(s.sel);
+  cx.clearRect(R.x, R.y, R.w, R.h);
+  cx.drawImage(from, sx, sy, R.w, R.h, R.x, R.y, R.w, R.h);
+  cx.restore();
+}
+const fxShow = s => fxRender(s, s.tex, false);
+const fxBack = s => fxPut(s.cell.cx, s, HX.bk, s.R.x, s.R.y);
+function fxSoon() {
+  const s = FXS;
+  if (!s || s.raf) return;
+  s.raf = requestAnimationFrame(() => {
+    s.raf = 0;
+    if (FXS !== s) return;
+    try { fxShow(s); } catch (e) { fxFail(e); }
+  });
+}
+function fxFail(e) {
+  console.error(e);
+  const s = FXS;
+  if (!s) return;
+  try { fxBack(s); } catch {}
+  fxClose();
+  toast(T('הפילטר לא הצליח. אולי הציור גדול מדי בשביל המכשיר הזה.'), { ms: 7000 });
+}
+/* kept: one step to undo, for the frame on screen and, when asked, for the layer's other frames too */
+function fxApply() {
+  const s = FXS;
+  if (!s) return;
+  if (s.raf) { cancelAnimationFrame(s.raf); s.raf = 0; }
+  const L = s.L;
+  if (!D || !D.layers.includes(L) || L.cell !== s.cell) { fxCancel(); return; }
+  try { fxPut(s.cell.cx, s, fxRender(s, s.tex, true), s.R.x - s.U.x, s.R.y - s.U.y); } catch (e) { fxFail(e); return; }
+  const steps = [pxStep(L, s.R, keptRect(s.R))], more = [];
+  if (s.all && !L.fx) {
+    try {
+      D.frames.forEach((fr, i) => {
+        const cell = cellAt(L, i);
+        if (i === D.f || !cell || !cell.ver || !cell.cv.width) return;   // a frame where nothing was drawn stays empty
+        const before = cell.cx.getImageData(s.R.x, s.R.y, s.R.w, s.R.h), c = partOf(cell.cv, s.U), tex = upTex(c);
+        if (c !== cell.cv) freeCanvas(c);
+        try { fxPut(cell.cx, s, fxRender(s, tex, true), s.R.x - s.U.x, s.R.y - s.U.y); } finally { GLX.gl.deleteTexture(tex.t); }
+        steps.push(pxStep(L, s.R, before, cell, null)); more.push(cell);
+      });
+    } catch (e) { console.error(e); toast(T('הפילטר לא הצליח בחלק מהפריימים.'), { ms: 6000 }); }
+  }
+  fxClose();
+  push(steps.length === 1 ? steps[0] : { bytes: steps.reduce((n, st) => n + st.bytes, 0), undo() { for (const st of steps.slice().reverse()) st.undo(); }, redo() { for (const st of steps) st.redo(); } });
+  for (const c of more) changed(L, c);
+  changed(L);
+}
+function fxCancel() {
+  const s = FXS;
+  if (!s) return;
+  if (s.raf) { cancelAnimationFrame(s.raf); s.raf = 0; }
+  if (D) { try { fxBack(s); } catch (e) { console.error(e); } }   // the hole filled, even in a cell no longer on screen
+  fxClose();
+}
+function fxClose() {
+  const s = FXS;
+  if (!s) return;
+  FXS = null;
+  if (s.raf) cancelAnimationFrame(s.raf);
+  if (s.el) s.el.remove();
+  if (GLX.gl) for (const t of [s.tex, s.mk]) if (t) GLX.gl.deleteTexture(t.t);
+  glFree();
+  paintPaper(); drawOverlay(); cursorUI(); fxUI();
+}
+const fxUI = () => { for (const b of document.querySelectorAll('#ribbon [data-fx]')) { const on = !!FXS && FXS.id === b.dataset.fx; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); } };
+/* a click on the drawing moves the middle of the filters that have one */
+const fxHasPoint = () => !!FXS && FXS.f.ps.some(q => q.t === 'point');
+function fxPoint(c) {
+  if (!FXS) return;
+  FXS.p.c = [clamp(Math.round(c.x), 0, D.w), clamp(Math.round(c.y), 0, D.h)];
+  drawOverlay(); fxSoon();
+}
+function fxMenu(g, anchor) {
+  const list = Object.entries(FXL).filter(([, f]) => f.g === g && !f.big);
+  openPop(anchor, h('div', { class: 'menu' }, list.map(([k, f]) => h('button', { class: 'mi', type: 'button', title: T(f.d), onclick: () => { closePopover(); fxOpen(k); } }, icon(f.ic), T(f.n)))));
+}
+
+/* the window: the filter's name and what it does, its settings, and the buttons */
+const fmtFx = (q, v) => (q.min < 0 && v > 0 ? '+' : '') + v + q.u;
+function fxPanel(s) {
+  const f = s.f, L = s.L, body = h('div', { class: 'dw-fxp' });
+  const fill = () => { body.textContent = ''; for (const q of f.ps) { const el = fxCtl(s, q); if (el) body.append(el); } };
+  fill();
+  let all = null;
+  if (D.frames.length > 1 && !L.fx) {
+    all = h('input', { type: 'checkbox' });
+    all.addEventListener('change', () => { s.all = all.checked; });
+  }
+  // pressed and held: the layer as it was
+  const cmp = h('button', { class: 'btn', type: 'button', title: T('לוחצים ומחזיקים כדי לראות איך היה לפני') }, icon('compare'), T('לפני'));
+  const hold = on => { if (FXS === s && s.before !== on) { s.before = on; cmp.classList.toggle('on', on); fxSoon(); } };
+  cmp.addEventListener('pointerdown', e => { if (e.button > 0) return; try { cmp.setPointerCapture(e.pointerId); } catch {} hold(true); });
+  for (const k of ['pointerup', 'pointercancel', 'lostpointercapture']) cmp.addEventListener(k, () => hold(false));
+  cmp.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); hold(true); } });
+  cmp.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') hold(false); });
+  cmp.addEventListener('contextmenu', e => e.preventDefault());
+  const reset = h('button', { class: 'btn', type: 'button', title: T('ההגדרות שהפילטר מתחיל בהן'), onclick: () => { const c = s.p.c; s.p = fxSettings(s.id, true); if (c) s.p.c = c; fill(); fxSoon(); fxKeep(s); } }, icon('restart_alt'), T('איפוס'));
+  s.el = h('div', { class: 'dw-fx', role: 'dialog', 'aria-label': T(f.n) },
+    h('div', { class: 'dw-fxh' }, icon(f.ic), h('span', { class: 'grow', text: T(f.n) }), h('button', { class: 'rb', type: 'button', title: T('ביטול (Esc)'), 'aria-label': T('ביטול'), onclick: fxCancel }, icon('close'))),
+    h('div', { class: 'dw-fxd', text: T(f.d) }),
+    h('div', { class: 'dw-fxw', text: SEL ? T('רק בחלק שבחרת, בשכבה: {0}', L.name) : T('בשכבה: {0}', L.name) }),
+    body,
+    all ? h('label', { class: 'dw-fxc' }, all, T('בכל הפריימים של השכבה')) : null,
+    h('div', { class: 'dw-fxb' }, h('div', { class: 'dw-fxb2' }, cmp, reset),
+      h('div', { class: 'dw-fxb2 end' }, h('button', { class: 'btn', type: 'button', onclick: fxCancel }, T('ביטול')), h('button', { class: 'btn primary', type: 'button', title: T('החלה (Enter)'), onclick: fxApply }, T('החלה')))));
+  V.stage.append(s.el);
+}
+function fxCtl(s, q) {
+  const set = v => { s.p[q.k] = v; fxSoon(); };
+  if (q.t === 'range') {
+    const r = h('input', { type: 'range', min: String(q.min), max: String(q.max), step: '1', value: String(s.p[q.k]), 'aria-label': T(q.n) }), b = h('b', { text: fmtFx(q, s.p[q.k]) });
+    r.addEventListener('input', () => { set(+r.value); b.textContent = fmtFx(q, +r.value); });
+    r.addEventListener('change', () => fxKeep(s));
+    // a double click puts it back where it starts
+    r.addEventListener('dblclick', () => { r.value = String(q.def); set(q.def); b.textContent = fmtFx(q, q.def); fxKeep(s); });
+    return h('label', { class: 'dw-fxs' }, h('span', { text: T(q.n) }), b, r);
+  }
+  if (q.t === 'check') {
+    const c = h('input', { type: 'checkbox' });
+    c.checked = !!s.p[q.k];
+    c.addEventListener('change', () => { set(c.checked); fxKeep(s); });
+    return h('label', { class: 'dw-fxc' }, c, T(q.n));
+  }
+  if (q.t === 'color') {
+    const b = h('button', { class: 'sw dw-fxsw', type: 'button', style: { background: s.p[q.k] }, title: s.p[q.k], 'aria-label': T(q.n) });
+    b.addEventListener('click', () => colorPop(b, s.p[q.k], c => { b.style.background = c; b.title = c; set(c); fxKeep(s); }));
+    return h('div', { class: 'dw-fxrow' }, h('span', { text: T(q.n) }), b);
+  }
+  if (q.t === 'point') {
+    return h('div', { class: 'dw-fxrow' }, h('span', { class: 'grow', text: T('לחיצה על הציור קובעת את המרכז') }),
+      h('button', { class: 'btn small', type: 'button', onclick: () => fxPoint({ x: D.w / 2, y: D.h / 2 }) }, T('באמצע')));
+  }
+  if (q.t === 'seed') {
+    return h('div', { class: 'dw-fxrow' }, h('button', { class: 'btn small', type: 'button', onclick: () => { set(1 + Math.floor(Math.random() * 9999)); fxKeep(s); } }, icon('refresh'), T('סידור אחר')));
+  }
+  if (q.t === 'grad') return fxGrad(s, q);
+  if (q.t === 'curves') return fxCurves(s, q);
+  return null;
+}
+/* the three colors of the color map, from the dark to the light, and ready ones to start from */
+function fxGrad(s, q) {
+  const cols = s.p[q.k], bar = h('div', { class: 'dw-fxgbar' });
+  const done = () => { paint(); fxSoon(); fxKeep(s); };
+  const sws = [T('הצבע של הכהה'), T('הצבע של האמצע'), T('הצבע של הבהיר')].map((label, i) => {
+    const b = h('button', { class: 'sw dw-fxsw', type: 'button', 'aria-label': label });
+    b.addEventListener('click', () => colorPop(b, cols[i], c => { cols[i] = c; done(); }));
+    return b;
+  });
+  function paint() {
+    bar.style.background = `linear-gradient(to right,${cols.join(',')})`;
+    sws.forEach((b, i) => { b.style.background = cols[i]; b.title = `${b.getAttribute('aria-label')} ${cols[i]}`; });
+  }
+  paint();
+  return h('div', { class: 'dw-fxgw' }, bar,
+    h('div', { class: 'dw-fxgr' }, sws, h('span', { class: 'grow' }), h('button', { class: 'rb', type: 'button', title: T('הפוך את הסדר'), 'aria-label': T('הפוך את הסדר'), onclick: () => { cols.reverse(); done(); } }, icon('swap_horiz'))),
+    h('div', { class: 'dw-fxgp' }, GRADS.map((g, i) => h('button', { class: 'dw-fxg', type: 'button', style: { background: `linear-gradient(to right,${g.join(',')})` }, title: T('מעבר צבעים {0}', i + 1), 'aria-label': T('מעבר צבעים {0}', i + 1),
+      onclick: () => { g.forEach((c, j) => { cols[j] = c; }); done(); } }))));
+}
+/* how much of each brightness the part has, for behind the curve */
+function histOf(s) {
+  const k = Math.min(1, 400 / Math.max(s.R.w, s.R.h)), w = Math.max(1, Math.round(s.R.w * k)), hh = Math.max(1, Math.round(s.R.h * k));
+  const c = newCanvas(w, hh), x = c.getContext('2d', { willReadFrequently: true });
+  x.drawImage(HX.bk, s.R.x, s.R.y, s.R.w, s.R.h, 0, 0, w, hh);
+  const d = x.getImageData(0, 0, w, hh).data, H = { a: new Float32Array(256), r: new Float32Array(256), g: new Float32Array(256), b: new Float32Array(256) };
+  for (let i = 0; i < d.length; i += 4) {
+    const a = d[i + 3] / 255;
+    if (!a) continue;
+    H.r[d[i]] += a; H.g[d[i + 1]] += a; H.b[d[i + 2]] += a; H.a[Math.round(d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114)] += a;
+  }
+  freeCanvas(c);
+  return H;
+}
+/* the curves: dragging a point moves it, a click elsewhere adds one, and one dragged off the square (or clicked twice) goes.
+   Left is the dark in the drawing and right the light, whatever the language, as in every drawing program */
+const CURVE_COLS = { r: '#e5484d', g: '#1f9d73', b: '#3e63dd' };
+function fxCurves(s, q) {
+  const cv = s.p[q.k], N = 512, hist = histOf(s);
+  let ch = 'a', drag = -1, ghost = null;
+  const can = h('canvas', { class: 'dw-fxcv', width: N, height: N, role: 'img', 'aria-label': T('עקומות') }), seg = h('div', { class: 'seg dw-fxseg', role: 'tablist' });
+  const tabs = () => {
+    seg.textContent = '';
+    for (const [k, label] of [['a', T('כל הצבעים')], ['r', T('אדום')], ['g', T('ירוק')], ['b', T('כחול')]]) seg.append(h('button', { type: 'button', role: 'tab', 'aria-selected': String(ch === k), onclick: () => { ch = k; tabs(); paint(); } }, label));
+  };
+  const css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim() || '#888';
+  function paint() {
+    const x = can.getContext('2d');
+    x.clearRect(0, 0, N, N);
+    x.fillStyle = css('--surface-2'); x.fillRect(0, 0, N, N);
+    // the brightnesses there are, faintly
+    const hs = hist[ch];
+    let mx = 0;
+    for (const v of hs) mx = Math.max(mx, Math.sqrt(v));
+    if (mx) {
+      x.fillStyle = ch === 'a' ? 'rgba(128,128,128,.28)' : CURVE_COLS[ch] + '40';
+      x.beginPath(); x.moveTo(0, N);
+      for (let i = 0; i < 256; i++) x.lineTo(i / 255 * N, N - Math.sqrt(hs[i]) / mx * N * 0.92);
+      x.lineTo(N, N); x.closePath(); x.fill();
+    }
+    x.strokeStyle = css('--line'); x.lineWidth = 1.5;
+    for (let i = 1; i < 4; i++) { x.beginPath(); x.moveTo(i * N / 4, 0); x.lineTo(i * N / 4, N); x.moveTo(0, i * N / 4); x.lineTo(N, i * N / 4); x.stroke(); }
+    x.setLineDash([6, 6]); x.beginPath(); x.moveTo(0, N); x.lineTo(N, 0); x.stroke(); x.setLineDash([]);
+    const line = (pts, col, wd) => {
+      const fn = curveFn(pts);
+      x.strokeStyle = col; x.lineWidth = wd; x.beginPath();
+      for (let i = 0; i <= 255; i++) { const y = N - clamp(fn(i), 0, 255) / 255 * N; if (i) x.lineTo(i / 255 * N, y); else x.moveTo(0, y); }
+      x.stroke();
+    };
+    for (const k of ['r', 'g', 'b']) if (k !== ch && JSON.stringify(cv[k]) !== '[[0,0],[255,255]]') line(cv[k], CURVE_COLS[k] + '80', 2);
+    line(cv[ch], ch === 'a' ? css('--text') : CURVE_COLS[ch], 4);
+    for (const [i, [px, py]] of cv[ch].entries()) {
+      x.beginPath(); x.arc(px / 255 * N, N - py / 255 * N, i === drag ? 13 : 10, 0, Math.PI * 2);
+      x.fillStyle = i === drag ? (ch === 'a' ? css('--accent') : CURVE_COLS[ch]) : '#fff'; x.fill();
+      x.strokeStyle = ch === 'a' ? css('--text') : CURVE_COLS[ch]; x.lineWidth = 3; x.stroke();
+    }
+  }
+  const at = e => { const r = can.getBoundingClientRect(); return { fx: (e.clientX - r.left) / r.width, fy: (e.clientY - r.top) / r.height, tol: 14 / r.width * 255 }; };
+  can.addEventListener('pointerdown', e => {
+    if (e.button > 0) return;
+    const pts = cv[ch], { fx, fy, tol } = at(e), x = clamp(fx * 255, 0, 255), y = clamp((1 - fy) * 255, 0, 255);
+    let i = pts.findIndex(p => Math.abs(p[0] - x) <= tol && Math.abs(p[1] - y) <= tol);
+    if (i < 0) {
+      if (pts.length >= 16 || pts.some(p => Math.abs(p[0] - x) < 2)) return;
+      i = pts.findIndex(p => p[0] > x);
+      if (i < 0) i = pts.length;
+      pts.splice(i, 0, [Math.round(x), Math.round(y)]);
+    }
+    drag = i; ghost = null;
+    try { can.setPointerCapture(e.pointerId); } catch {}
+    paint(); fxSoon();
+  });
+  can.addEventListener('pointermove', e => {
+    if (drag < 0 && !ghost) return;
+    const pts = cv[ch], { fx, fy } = at(e), inside = fx > -0.12 && fx < 1.12 && fy > -0.12 && fy < 1.12;
+    if (ghost) {
+      if (!inside) return;
+      // back in the square: the point comes back
+      const x = Math.round(clamp(fx * 255, 0, 255));
+      if (pts.some(p => p[0] === x)) return;
+      drag = pts.findIndex(p => p[0] > x); if (drag < 0) drag = pts.length;
+      pts.splice(drag, 0, [x, 0]); ghost = null;
+    } else if (!inside && drag > 0 && drag < pts.length - 1) { ghost = pts.splice(drag, 1)[0]; drag = -1; paint(); fxSoon(); return; }
+    const lo = drag > 0 ? pts[drag - 1][0] + 1 : 0, hi = drag < pts.length - 1 ? pts[drag + 1][0] - 1 : 255;
+    pts[drag] = [Math.round(clamp(fx * 255, lo, hi)), Math.round(clamp((1 - fy) * 255, 0, 255))];
+    paint(); fxSoon();
+  });
+  const end = () => { if (drag < 0 && !ghost) return; drag = -1; ghost = null; paint(); fxKeep(s); };
+  can.addEventListener('pointerup', end); can.addEventListener('pointercancel', end);
+  can.addEventListener('dblclick', e => {
+    const pts = cv[ch], { fx, fy, tol } = at(e), x = fx * 255, y = (1 - fy) * 255;
+    const i = pts.findIndex(p => Math.abs(p[0] - x) <= tol && Math.abs(p[1] - y) <= tol);
+    if (i > 0 && i < pts.length - 1) { pts.splice(i, 1); paint(); fxSoon(); fxKeep(s); }
+  });
+  tabs(); paint();
+  return h('div', { class: 'dw-fxcw' }, seg, can);
+}
+
+/* =========================================================
+   Claude draws: the connector's create_drawing, draw and edit_drawing (index.html passes them here), and the
+   picture read_document gives it. What one call draws is drawn bit by bit, so the user watches it appear, and the
+   whole call is one step to undo. Claude draws with what a person has: SVG for exact shapes, the brushes for lines
+   drawn by hand, the bucket and text. Everything is checked before anything is drawn, so a mistake draws nothing
+   ========================================================= */
+const AI_ITEMS = 400, AI_POINTS = 5000, AI_SVG = 800000, AI_TIME = 7000;
+const AI_SIZES = { a4_portrait: [1240, 1754], a4_landscape: [1754, 1240], wide: [1920, 1080], square: [1500, 1500], animation: [1280, 720] };
+const aiErr = (k, msg) => new Error(`items[${k}]: ${msg}`);
+const num = (v, what) => { const n = +v; if (typeof v === 'boolean' || v === '' || v == null || !isFinite(n)) throw new Error(`${what} must be a number.`); return n; };
+const findLayer = name => { const n = String(name == null ? '' : name).trim().toLowerCase(); return D.layers.find(L => L.name.trim().toLowerCase() === n) || null; };
+function layerNamed(name) {
+  const L = findLayer(name);
+  if (!L) throw new Error(`There is no layer named "${name}". The layers are: ${D.layers.slice().reverse().map(l => `"${l.name}"`).join(', ')}.`);
+  return L;
+}
+function frameAt(n) {
+  const i = Math.round(num(n, 'frame')) - 1;
+  if (!(i >= 0 && i < D.frames.length)) throw new Error(`There is no frame ${n}: the drawing has ${D.frames.length === 1 ? 'one frame' : D.frames.length + ' frames'}.`);
+  return i;
+}
+/* a new drawing's body: a picture, or an animation of empty frames */
+function aiBlank(o = {}) {
+  const n = o.frames == null ? 1 : Math.round(num(o.frames, 'frames'));
+  if (!(n >= 1 && n <= 300)) throw new Error('frames goes from 1 to 300.');
+  let w, hh;
+  if (o.width != null || o.height != null) {
+    w = Math.round(num(o.width, 'width')); hh = Math.round(num(o.height, 'height'));
+    if (!(w >= MIN_SIDE && w <= MAX_SIDE && hh >= MIN_SIDE && hh <= MAX_SIDE)) throw new Error(`width and height go from ${MIN_SIDE} to ${MAX_SIDE} pixels.`);
+  } else {
+    const s = AI_SIZES[o.size == null ? (n > 1 ? 'animation' : 'wide') : o.size];
+    if (!s) throw new Error(`Unknown size "${o.size}". Use one of: ${Object.keys(AI_SIZES).join(', ')}; or give width and height.`);
+    [w, hh] = s;
+  }
+  const bg = o.background == null ? '#ffffff' : o.background === 'transparent' ? '' : hex6(o.background);
+  if (bg == null) throw new Error('background is a color #rrggbb, or "transparent".');
+  const fps = o.fps == null ? 12 : clamp(Math.round(num(o.fps, 'fps')), 1, 30);
+  const one = { id: 'L1', name: layerName(1), op: 1, vis: true };
+  if (n === 1) return JSON.stringify({ v: 1, w, h: hh, bg, active: 'L1', fps, loop: 'loop', layers: [{ ...one, src: '' }] });
+  return JSON.stringify({ v: 2, w, h: hh, bg, active: 'L1', fps, loop: 'loop', f: 0, frames: Array.from({ length: n }, (_, i) => ({ id: 'F' + (i + 1), d: 1 })), layers: [{ ...one, cells: {} }] });
+}
+/* what Claude sees: a frame as one picture (a JPEG; see-through parts on white), or a single layer of it */
+async function aiLook({ frame, layer, max = 1024 } = {}) {
+  if (!D) throw new Error('No drawing is open.');
+  const i = frame == null ? D.f : frameAt(frame), L = layer == null || layer === '' ? null : layerNamed(layer);
+  const [cw, ch] = fitSize(D.w, D.h, clamp(Math.round(+max) || 1024, 64, 2048)), c = newCanvas(cw, ch), x = c.getContext('2d');
+  x.imageSmoothingQuality = 'high';
+  if (L) { x.fillStyle = '#ffffff'; x.fillRect(0, 0, cw, ch); const cell = cellAt(L, i); if (cell && cell.cv.width) x.drawImage(cell.cv, 0, 0, D.w, D.h, 0, 0, cw, ch); }
+  else await (await framesOf(null)).draw(x, i, cw, ch, '#ffffff');
+  const url = c.toDataURL('image/jpeg', 0.86);
+  freeCanvas(c);
+  return { data: url.slice(url.indexOf(',') + 1), mimeType: 'image/jpeg' };
+}
+
+/* --- the items, checked and made ready --- */
+const AI_TYPES = ['svg', 'stroke', 'fill', 'text'];
+const colorOf = (v, def, k) => { if (v == null || v === '') return def; const c = hex6(v); if (!c) throw aiErr(k, `color must be #rrggbb, not "${v}".`); return c; };
+const opOf = (v, def, k) => { if (v == null) return def; const n = +v; if (!isFinite(n)) throw aiErr(k, 'opacity is a number from 0 to 1.'); return clamp(n > 1 ? n / 100 : n, 0, 1); };
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const SVG_KEEP = new Set(['defs', 'style', 'title', 'desc', 'metadata', 'lineargradient', 'radialgradient', 'pattern', 'clippath', 'mask', 'filter', 'symbol', 'marker']);
+function aiCheck(it, k) {
+  if (!it || typeof it !== 'object') throw aiErr(k, 'each item is an object with a "type".');
+  const t = it.type;
+  if (!AI_TYPES.includes(t)) throw aiErr(k, `"type" must be ${AI_TYPES.join(', ')}; not "${t}".`);
+  if (t === 'stroke') {
+    const brush = it.brush == null ? 'pen' : String(it.brush);
+    if (!BRUSHES.includes(brush)) throw aiErr(k, `brush must be one of ${BRUSHES.join(', ')}.`);
+    if (!Array.isArray(it.points) || !it.points.length) throw aiErr(k, 'a stroke needs points: [[x, y], [x, y], ...].');
+    if (it.points.length > AI_POINTS) throw aiErr(k, `up to ${AI_POINTS} points in one stroke.`);
+    let pressure = false;
+    const pts = it.points.map((q, j) => {
+      if (!Array.isArray(q) || q.length < 2 || !q.slice(0, 3).every(v => typeof v === 'number' && isFinite(v))) throw aiErr(k, `points[${j}] must be [x, y], or [x, y, pressure].`);
+      if (q.length > 2) pressure = true;
+      return [q[0], q[1], q.length > 2 ? clamp(q[2], 0, 1) : 1];
+    });
+    const d = DEF[brush];
+    return { t, brush, pts, pressure, color: colorOf(it.color, '#000000', k), size: it.size == null ? d.s : clamp(num(it.size, `items[${k}].size`), 0.5, SIZE_MAX), op: opOf(it.opacity, d.o / 100, k) };
+  }
+  if (t === 'fill') {
+    const x = num(it.x, `items[${k}].x`), y = num(it.y, `items[${k}].y`);
+    if (x < 0 || y < 0 || x >= D.w || y >= D.h) throw aiErr(k, `x, y (${x}, ${y}) is outside the drawing (${D.w} x ${D.h}).`);
+    return { t, x: Math.floor(x), y: Math.floor(y), color: colorOf(it.color, '#000000', k), tol: it.tolerance == null ? 30 : clamp(num(it.tolerance, `items[${k}].tolerance`), 0, 100), all: it.all_layers !== false, op: opOf(it.opacity, 1, k) };
+  }
+  if (t === 'text') {
+    const text = String(it.text == null ? '' : it.text).slice(0, 2000);
+    if (!text.trim()) throw aiErr(k, 'the text is empty.');
+    const font = it.font == null ? defFont() : String(it.font);
+    if (!FONT_NAMES.has(font)) throw aiErr(k, `unknown font "${font}". The fonts are: ${FONTS.join(', ')}.`);
+    const align = it.align == null ? 'center' : String(it.align);
+    if (!['left', 'center', 'right'].includes(align)) throw aiErr(k, 'align is left, center or right.');
+    return { t, text, x: num(it.x, `items[${k}].x`), y: num(it.y, `items[${k}].y`), size: it.size == null ? 48 : clamp(num(it.size, `items[${k}].size`), 4, 800), color: colorOf(it.color, '#000000', k), font, bold: it.bold !== false, align, op: opOf(it.opacity, 1, k) };
+  }
+  // svg: read as XML, made safe (nothing that runs, no pictures from elsewhere), and sized to where it goes
+  let src = String(it.svg == null ? '' : it.svg).trim();
+  if (!src) throw aiErr(k, 'an svg item needs "svg": a whole <svg> element.');
+  if (src.length > AI_SVG) throw aiErr(k, `the svg is too long (up to ${AI_SVG} characters).`);
+  src = src.replace(/^<\?xml[^>]*\?>\s*/, '');
+  const open = /^<svg\b[^>]*>/i.exec(src);
+  if (!open) throw aiErr(k, 'the svg must start with <svg ...>.');
+  let tag = open[0];
+  if (!/\sxmlns\s*=/.test(tag)) tag = tag.replace(/^<svg\b/i, `<svg xmlns="${SVG_NS}"`);
+  if (/xlink:/.test(src) && !/\sxmlns:xlink\s*=/.test(tag)) tag = tag.replace(/^<svg\b/i, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+  src = tag + src.slice(open[0].length);
+  const doc = new DOMParser().parseFromString(src, 'image/svg+xml'), root = doc.documentElement, bad = doc.getElementsByTagName('parsererror')[0];
+  if (bad || !root || root.localName !== 'svg') {
+    const why = bad ? bad.textContent.replace(/\s+/g, ' ') : 'it is not an <svg> element';
+    throw aiErr(k, `the svg could not be read: ${((/error on line[^]*?(?=Below is|$)/.exec(why) || [why])[0]).trim().slice(0, 200)}`);
+  }
+  for (const el of [...root.querySelectorAll('script, foreignObject, iframe, object, embed, audio, video, image[href^="http"]')]) el.remove();
+  for (const el of [root, ...root.querySelectorAll('*')]) for (const at of [...el.attributes]) {
+    const n = at.name.toLowerCase();
+    if (n.startsWith('on') || ((n === 'href' || n === 'xlink:href') && !/^(#|data:image\/(png|jpeg|gif|webp);)/i.test(at.value.trim()))) el.removeAttribute(at.name);
+  }
+  const W0 = parseFloat(root.getAttribute('width')), H0 = parseFloat(root.getAttribute('height')), own = W0 > 0 && H0 > 0 && !/%/.test(root.getAttribute('width') + root.getAttribute('height'));
+  if (!root.getAttribute('viewBox')) root.setAttribute('viewBox', own ? `0 0 ${W0} ${H0}` : `0 0 ${D.w} ${D.h}`);
+  const box = { x: it.x == null ? 0 : num(it.x, `items[${k}].x`), y: it.y == null ? 0 : num(it.y, `items[${k}].y`),
+    w: it.width != null ? num(it.width, `items[${k}].width`) : own ? W0 : D.w, h: it.height != null ? num(it.height, `items[${k}].height`) : own ? H0 : D.h };
+  if (!(box.w >= 1 && box.h >= 1 && box.w <= 4 * MAX_SIDE && box.h <= 4 * MAX_SIDE)) throw aiErr(k, 'width and height must be positive, and not huge.');
+  root.setAttribute('width', String(box.w)); root.setAttribute('height', String(box.h));
+  const kids = [...root.children], parts = kids.map((el, j) => SVG_KEEP.has(el.localName.toLowerCase()) ? -1 : j).filter(j => j >= 0);
+  return { t, root, parts, box, op: opOf(it.opacity, 1, k) };
+}
+const svgUrl = root => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(root));
+/* the svg with only its first m drawn elements (the definitions always stay) */
+function svgUpTo(p, m) {
+  if (m >= p.parts.length) return svgUrl(p.root);
+  const c = p.root.cloneNode(true), kids = [...c.children];
+  for (let j = m; j < p.parts.length; j++) kids[p.parts[j]].remove();
+  return svgUrl(c);
+}
+/* every svg is turned into a picture once before anything is drawn: one the browser can't read, or that would stop the
+   drawing from being saved (a "tainted" canvas), is refused here */
+async function aiPrepare(plan) {
+  for (const [k, p] of plan.entries()) {
+    if (p.t !== 'svg') continue;
+    let im;
+    try { im = await loadImg(svgUrl(p.root)); } catch { throw aiErr(k, 'the browser could not draw this svg. Check that it is valid SVG.'); }
+    const c = newCanvas(2, 2), x = c.getContext('2d');
+    try { x.drawImage(im, 0, 0, 2, 2); x.getImageData(0, 0, 1, 1); } catch { throw aiErr(k, 'this svg cannot be drawn here (it reaches outside the drawing, for example with foreignObject).'); }
+    finally { freeCanvas(c); }
+  }
+}
+/* how long each item takes to appear: a line at the speed of a quick hand, the whole call within AI_TIME */
+function aiTimes(plan) {
+  if (document.hidden) return plan.map(() => 0);   // nobody is watching, and a hidden page barely runs its timers
+  const diag = Math.hypot(D.w, D.h);
+  const t = plan.map(p => {
+    if (p.t === 'stroke') { let len = 0; for (let j = 1; j < p.pts.length; j++) len += Math.hypot(p.pts[j][0] - p.pts[j - 1][0], p.pts[j][1] - p.pts[j - 1][1]); return clamp(len / diag * 1100, 70, 1400); }
+    if (p.t === 'svg') return clamp(p.parts.length * 45, 120, 1800);
+    return 160;
+  });
+  const sum = t.reduce((a, b) => a + b, 0), k = sum > AI_TIME ? AI_TIME / sum : 1;
+  return t.map(v => v * k);
+}
+const waitUntil = async at => { const w = at - now(); if (w > 4) await sleep(w); await nextFrame(); };
+/* the part of the layer a stroke can reach, kept as it is in the helper canvas (the whole layer would be slow to copy for each line) */
+function keepPart(L, R) {
+  const bk = helper('bk'), bx = bk.getContext('2d');
+  bx.clearRect(R.x, R.y, R.w, R.h); bx.drawImage(L.cv, R.x, R.y, R.w, R.h, R.x, R.y, R.w, R.h);
+  return bk;
+}
+/* a point of a stroke drawn by Claude: the line runs through the points as curves, as with a hand; the same point
+   twice in a row ends the curve there, for a sharp corner */
+function aiFeed(a, x, y, p) {
+  if (!a.s) { a.s = { x, y, p }; a.pts.push({ x, y, p }); dot(a, a.pts[0]); return; }
+  const P = a.pts, last = P[P.length - 1];
+  if (Math.hypot(x - last.x, y - last.y) < 0.35) {
+    if (P.length > 1) { const n = P.length - 1; seg(a, n === 1 ? mid(P[0], P[1]) : mid(P[n - 1], P[n]), P[n]); a.pts = [P[n]]; }
+    return;
+  }
+  P.push({ x, y, p });
+  curve(a);
+}
+async function aiStroke(L, p, dur, alive) {
+  const br = BR[p.brush];
+  let pts = p.pts;
+  if (br.kind === 'spray') {   // the spray paints as it moves: its points close together, as a hand's would be
+    const step = Math.max(2, p.size * 0.25), out = [pts[0]];
+    for (let j = 1; j < pts.length; j++) {
+      const [x0, y0, p0] = pts[j - 1], [x1, y1, p1] = pts[j], n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / step);
+      for (let i = 1; i <= n; i++) out.push([x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n, p0 + (p1 - p0) * i / n]);
+    }
+    pts = out;
+  }
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  const pad = p.size / 2 + Math.max(4, p.size / 45 + 2), R = clipR(x0 - pad, y0 - pad, x1 - x0 + 2 * pad, y1 - y0 + 2 * pad);
+  if (!R) return null;
+  keepPart(L, R);
+  const sx = helper('st').getContext('2d');
+  sx.clearRect(R.x, R.y, R.w, R.h); sx.fillStyle = p.color; sx.globalAlpha = 1;
+  const a = { kind: 'stroke', L, t: p.brush, br, size: p.size, op: p.op, sm: 0, color: p.color, erase: !!br.erase, pen: p.pressure, pts: [], s: null, raw: null, box: null, pend: null, carry: 0, sx };
+  if (br.kind === 'stamp') a.tip = tipOf(p.color, br.hard);
+  const t0 = now(), steps = dur > 0 ? Math.max(1, Math.min(pts.length, Math.round(dur / 16))) : 1, per = Math.ceil(pts.length / steps);
+  for (let j = 0; j < pts.length; j++) {
+    aiFeed(a, pts[j][0], pts[j][1], pts[j][2]);
+    if (dur > 0 && j % per === per - 1 && j < pts.length - 1) {
+      if (a.pend) { comp(a, a.pend); a.pend = null; }
+      await waitUntil(t0 + dur * (j + 1) / pts.length);
+      if (!alive()) return R;
+    }
+  }
+  if (br.kind !== 'spray' && a.pts.length > 1) { const P = a.pts, n = P.length - 1; seg(a, n === 1 ? mid(P[0], P[1]) : mid(P[n - 1], P[n]), P[n]); }
+  if (a.pend) { comp(a, a.pend); a.pend = null; }
+  return R;
+}
+async function aiSvg(L, p, dur, alive) {
+  const b = p.box, R = clipR(b.x, b.y, b.w, b.h);
+  if (!R) return null;
+  keepPart(L, R);
+  const n = p.parts.length, steps = dur > 0 && n > 1 ? Math.min(n, 30) : 1, t0 = now(), x = L.cx;
+  for (let s = 1; s <= steps; s++) {
+    const im = await loadImg(svgUpTo(p, Math.round(n * s / steps)));
+    if (!alive()) return R;
+    x.save(); x.beginPath(); x.rect(R.x, R.y, R.w, R.h); x.clip();
+    x.clearRect(R.x, R.y, R.w, R.h); x.drawImage(HX.bk, R.x, R.y, R.w, R.h, R.x, R.y, R.w, R.h);
+    x.globalAlpha = p.op; x.drawImage(im, b.x, b.y, b.w, b.h);
+    x.restore();
+    if (s < steps) { await waitUntil(t0 + dur * s / steps); if (!alive()) return R; }
+  }
+  return R;
+}
+async function aiText(L, p) {
+  const weight = p.bold ? 700 : 400, font = `${weight} ${p.size}px "${p.font}"`;
+  if (document.fonts && document.fonts.load) await Promise.race([document.fonts.load(font, p.text).catch(() => {}), sleep(1500)]);
+  const x = L.cx, lines = p.text.split('\n'), lh = p.size * 1.25, hh = lines.length * lh;
+  x.save(); x.font = font;
+  const wmax = Math.max(1, ...lines.map(l => x.measureText(l).width)), left = p.align === 'left' ? p.x : p.align === 'right' ? p.x - wmax : p.x - wmax / 2, top = p.y - hh / 2;
+  x.globalAlpha = p.op; x.fillStyle = p.color; x.textBaseline = 'middle'; x.textAlign = p.align;
+  lines.forEach((ln, i) => { x.direction = dirOf(ln); x.fillText(ln, p.x, top + i * lh + lh / 2); });
+  x.restore();
+  return clipR(left - p.size, top - p.size * 0.5, wmax + p.size * 2, hh + p.size);
+}
+/* a call's changes as one step: the layers and frames as they were (when it added any), and the pixels */
+function aiStep(pre, pxs) {
+  if (!pre && !pxs.length) return;
+  const post = pre && snapLayers(), bytes = pxs.reduce((n, p) => n + p.bytes, 0);
+  if (!pre) { push(pxs.length === 1 ? pxs[0] : { bytes, undo() { for (const p of pxs.slice().reverse()) p.undo(); }, redo() { for (const p of pxs) p.redo(); } }); return; }
+  push({ bytes: bytes + D.w * D.h * 4, undo() { for (const p of pxs.slice().reverse()) p.undo(); setLayers(pre); changed(); }, redo() { setLayers(post); for (const p of pxs) p.redo(); changed(); } });
+}
+async function aiDraw(args = {}) {
+  if (!D || !LOADED) throw new Error('No drawing is open.');
+  if (ACT) throw new Error('The user is drawing at this moment. Try again in a few seconds.');
+  commitPending();
+  const list = Array.isArray(args.items) ? args.items : [];
+  if (list.length > AI_ITEMS) throw new Error(`Up to ${AI_ITEMS} items in one call; draw the rest in another call.`);
+  if (!list.length && !args.clear) throw new Error('Nothing to draw: items is empty.');
+  const plan = list.map((it, k) => aiCheck(it, k));
+  await aiPrepare(plan);
+  if (!D || !LOADED) throw new Error('The drawing was closed.');
+  // where: a layer by its name (a new one on top when none has it, or the one chosen on screen), and a frame
+  const named = args.layer != null && String(args.layer).trim() !== '';
+  let L = named ? findLayer(args.layer) : layerOf(), fi = D.f, addF = false;
+  if (args.frame != null) {
+    const n = Math.round(num(args.frame, 'frame'));
+    if (n === D.frames.length + 1) addF = true; else fi = frameAt(n);
+  }
+  if (L && !L.vis) throw new Error(`The layer "${L.name}" is hidden. Show it first: edit_drawing with {"action": "layer", "layer": "${L.name}", "visible": true}.`);
+  const need = (addF ? D.layers.filter(l => !l.fx).length : 0) + (L ? 0 : 1);
+  if (need && !room(need)) throw new Error('The drawing is full: its layers and frames take all the memory this device allows. Delete a layer or some frames first.');
+  let pre = null;
+  if (addF || !L) {
+    pre = snapLayers();
+    if (addF) { freeUnused(); D.frames.push({ id: fid(), d: 1 }); fi = D.frames.length - 1; D.f = fi; }
+    if (!L) { L = makeLayer(String(args.layer).trim().slice(0, 60)); D.layers.push(L); }
+  }
+  if (fi !== D.f) { freeUnused(); D.f = fi; }
+  D.active = L.id; SEL = null;
+  bindAll(); paintPaper(); layersUI(); framesUI(); stat(); onionSoon(); drawOverlay();
+  const d0 = D, busy = ACT = { kind: 'busy', id: null }, alive = () => D === d0 && D.layers.includes(L);
+  const cell = L.cell, orig = newCanvas(D.w, D.h);
+  orig.getContext('2d').drawImage(cell.cv, 0, 0);
+  try {
+    let R = null;
+    if (args.clear) { cell.cx.clearRect(0, 0, D.w, D.h); R = { x: 0, y: 0, w: D.w, h: D.h }; }
+    const times = aiTimes(plan);
+    for (const [k, p] of plan.entries()) {
+      if (!alive()) break;
+      const r = p.t === 'stroke' ? await aiStroke(L, p, times[k], alive) : p.t === 'svg' ? await aiSvg(L, p, times[k], alive) : p.t === 'text' ? await aiText(L, p)
+        : (fillCore(L, p.x, p.y, p.color, p.tol, p.op, p.all) || {}).R;
+      R = unionR(R, r);
+      if ((p.t === 'fill' || p.t === 'text') && times[k]) await sleep(times[k]);
+    }
+    if (!alive()) throw new Error('The drawing was closed while it was being drawn.');
+    R = R && clipR(R.x, R.y, R.w, R.h);
+    aiStep(pre, R ? [pxStep(L, R, orig.getContext('2d').getImageData(R.x, R.y, R.w, R.h))] : []);
+    changed(L);
+    paintPaper(); layersUI(); framesUI();
+    return { drawn: plan.length, layer: L.name, ...(D.frames.length > 1 ? { frame: D.f + 1, frames: D.frames.length } : {}), ...(L.fx && D.frames.length > 1 ? { note: 'This layer is pinned: what is on it shows in every frame.' } : {}) };
+  } finally {
+    freeCanvas(orig);
+    if (ACT === busy) ACT = null;
+  }
+}
+
+/* --- edit_drawing: the layers, the frames, the background and the filters, in order, as one step. A mistake in any
+   of them puts everything back as it was --- */
+function aiSettings(id, given) {
+  const f = FXL[id], p = fxSettings(id, true);
+  if (given == null) return p;
+  if (typeof given !== 'object' || Array.isArray(given)) throw new Error('settings is an object, like {"r": 12}.');
+  for (const [k, v] of Object.entries(given)) {
+    const q = f.ps.find(x => x.k === k);
+    if (!q) throw new Error(`"${id}" has no setting "${k}". Its settings are: ${f.ps.map(x => x.k).join(', ')}.`);
+    if (q.t === 'range') p[k] = clamp(Math.round(num(v, k)), q.min, q.max);
+    else if (q.t === 'check') p[k] = !!v;
+    else if (q.t === 'seed') p[k] = Math.round(num(v, k));
+    else if (q.t === 'color') { const c = hex6(v); if (!c) throw new Error(`${k} is a color #rrggbb.`); p[k] = c; }
+    else if (q.t === 'grad') { if (!Array.isArray(v) || v.length !== 3 || !v.every(hex6)) throw new Error(`${k} is three colors, from the dark to the light: ["#rrggbb", "#rrggbb", "#rrggbb"].`); p[k] = v.map(hex6); }
+    else if (q.t === 'point') { if (!Array.isArray(v) || v.length !== 2) throw new Error(`${k} is a point [x, y] on the drawing.`); p[k] = [clamp(num(v[0], k), 0, D.w), clamp(num(v[1], k), 0, D.h)]; }
+    else if (q.t === 'curves') {
+      const cv = JSON.parse(JSON.stringify(p[k]));
+      if (!v || typeof v !== 'object') throw new Error(`${k} is {"a": [[0, 0], ..., [255, 255]], "r": ..., "g": ..., "b": ...}: points [in, out] from 0 to 255, for all colors (a) or one.`);
+      for (const ch of ['a', 'r', 'g', 'b']) if (v[ch] != null) cv[ch] = Array.isArray(v[ch]) ? v[ch].map(q2 => Array.isArray(q2) ? q2.map(n => clamp(Math.round(+n) || 0, 0, 255)) : q2).sort((u, w) => u[0] - w[0]) : v[ch];
+      if (!curvesOk(cv)) throw new Error(`${k}: each curve has 2 to 16 points [in, out] from 0 to 255, each further right than the one before.`);
+      p[k] = cv;
+    }
+  }
+  return p;
+}
+function aiAction(a, px) {
+  const act = a.action;
+  bindAll();
+  const lay = () => a.layer == null || a.layer === '' ? layerOf() : layerNamed(a.layer);
+  const full = { x: 0, y: 0, w: D.w, h: D.h };
+  switch (act) {
+    case 'add_layer': {
+      if (!room(1)) throw new Error('The drawing is full: no memory for another layer.');
+      const name = a.name == null || !String(a.name).trim() ? nextLayerName() : String(a.name).trim().slice(0, 60);
+      if (findLayer(name)) throw new Error(`There is already a layer named "${name}".`);
+      const L = makeLayer(name);
+      D.layers.splice(a.above == null ? D.layers.length : D.layers.indexOf(layerNamed(a.above)) + 1, 0, L);
+      D.active = L.id;
+      return;
+    }
+    case 'delete_layer': {
+      const L = lay(), i = D.layers.indexOf(L);
+      if (D.layers.length <= 1) throw new Error('A drawing needs at least one layer.');
+      D.layers.splice(i, 1);
+      if (D.active === L.id) D.active = D.layers[Math.max(0, i - 1)].id;
+      return;
+    }
+    case 'rename_layer': {
+      const L = lay(), name = String(a.name == null ? '' : a.name).trim().slice(0, 60);
+      if (!name) throw new Error('name is empty.');
+      if (findLayer(name) && findLayer(name) !== L) throw new Error(`There is already a layer named "${name}".`);
+      L.name = name;
+      return;
+    }
+    case 'duplicate_layer': {
+      const S0 = lay(), list = [...S0.cells].filter(([, c]) => c.ver || c === S0.cell);
+      if (!room(list.length)) throw new Error('The drawing is full: no memory for another layer.');
+      const name = a.name == null || !String(a.name).trim() ? T('{0} (עותק)', S0.name).slice(0, 60) : String(a.name).trim().slice(0, 60);
+      const L = makeLayer(name, { op: S0.op, vis: S0.vis, fx: S0.fx, bm: S0.bm });
+      for (const [k, c] of list) { const n = newCell(); n.cx.drawImage(c.cv, 0, 0); n.ver = c.ver ? 1 : 0; L.cells.set(k, n); }
+      D.layers.splice(D.layers.indexOf(S0) + 1, 0, L); D.active = L.id;
+      return;
+    }
+    case 'layer': {
+      const L = lay();
+      if (a.visible != null) L.vis = !!a.visible;
+      if (a.opacity != null) { const o = num(a.opacity, 'opacity'); L.op = clamp(o > 1 ? o / 100 : o, 0, 1); }
+      if (a.blend != null) { if (!BLEND_KEYS.has(a.blend)) throw new Error(`blend is one of: ${[...BLEND_KEYS].join(', ')}.`); L.bm = a.blend; }
+      if (a.pinned != null && !!a.pinned !== L.fx) {
+        if (L.fx) { const c = L.cells.get('*'); L.fx = false; L.cells = new Map(c ? [[D.frames[D.f].id, c]] : []); }
+        else { const c = L.cell; L.fx = true; L.cells = new Map(c ? [['*', c]] : []); }
+      }
+      return;
+    }
+    case 'move_layer': {
+      const L = lay(), i = D.layers.indexOf(L), to = { top: D.layers.length - 1, bottom: 0, up: i + 1, down: i - 1 }[a.to];
+      if (to == null) throw new Error('to is top, bottom, up or down.');
+      D.layers.splice(i, 1); D.layers.splice(clamp(to, 0, D.layers.length), 0, L);
+      return;
+    }
+    case 'select_layer': D.active = lay().id; return;
+    case 'clear_layer': {
+      const L = lay(), i = a.frame == null ? D.f : frameAt(a.frame), cell = cellAt(L, i);
+      if (!cell || !cell.ver || !cell.cv.width) return;
+      px.push({ L, cell, R: full, before: cell.cx.getImageData(0, 0, D.w, D.h), fk: L.fx ? null : D.frames[i].id });
+      cell.cx.clearRect(0, 0, D.w, D.h);
+      return;
+    }
+    case 'add_frame': {
+      const count = a.count == null ? 1 : Math.round(num(a.count, 'count')), after = a.after == null ? D.frames.length - 1 : frameAt(a.after);
+      if (!(count >= 1 && count <= 300) || D.frames.length + count > 3000) throw new Error('count goes from 1 to 300.');
+      const anim = D.layers.filter(L => !L.fx), src = a.copy ? anim.map(L => [L, cellAt(L, after)]).filter(([, c]) => c && c.ver && c.cv.width) : [];
+      if (!room(a.copy ? src.length * count : anim.length)) throw new Error('The drawing is full: no memory for more frames.');
+      for (let j = 0; j < count; j++) {
+        const f = { id: fid(), d: a.copy ? D.frames[after].d : 1 };
+        for (const [L, c] of src) { const n = newCell(); n.cx.drawImage(c.cv, 0, 0); n.ver = 1; L.cells.set(f.id, n); }
+        D.frames.splice(after + 1 + j, 0, f);
+      }
+      if (D.f > after) D.f += count;
+      return;
+    }
+    case 'delete_frame': {
+      const i = frameAt(a.frame);
+      if (D.frames.length <= 1) throw new Error('A drawing needs at least one frame.');
+      const f = D.frames[i];
+      for (const L of D.layers) if (!L.fx) L.cells.delete(f.id);
+      D.frames.splice(i, 1);
+      if (D.f > i || D.f >= D.frames.length) D.f = Math.max(0, D.f - 1);
+      return;
+    }
+    case 'move_frame': {
+      const i = frameAt(a.frame), to = frameAt(a.to), cur = D.frames[D.f].id, [f] = D.frames.splice(i, 1);
+      D.frames.splice(to, 0, f); D.f = D.frames.findIndex(x => x.id === cur);
+      return;
+    }
+    case 'frame_duration': D.frames[frameAt(a.frame)].d = clamp(Math.round(num(a.beats, 'beats')), 1, 60); return;
+    case 'go_to_frame': { const i = frameAt(a.frame); if (i !== D.f) { freeUnused(); D.f = i; } return; }
+    case 'animation': {
+      if (a.fps != null) D.fps = clamp(Math.round(num(a.fps, 'fps')), 1, 30);
+      if (a.loop != null) { if (!LOOPS.includes(a.loop)) throw new Error(`loop is ${LOOPS.join(', ')}.`); D.loop = a.loop; }
+      return;
+    }
+    case 'background': {
+      const c = a.color === 'transparent' ? '' : hex6(a.color);
+      if (c == null) throw new Error('color is #rrggbb, or "transparent".');
+      D.bg = c;
+      return;
+    }
+    case 'filter': {
+      const id = a.filter, f = FXL[id];
+      if (!f) throw new Error(`Unknown filter "${id}". The filters are: ${Object.keys(FXL).join(', ')}.`);
+      const L = lay();
+      if (!L.vis) throw new Error(`The layer "${L.name}" is hidden.`);
+      const p = aiSettings(id, a.settings);
+      if (!glx()) throw new Error('This browser cannot run filters.');
+      const cells = a.all_frames && !L.fx ? D.frames.map((fr, i) => [i, cellAt(L, i)]).filter(([i, c]) => c && c.cv.width && (c.ver || i === D.f)) : [[D.f, L.cell]];
+      const s = { f, p, R: full, U: full, sel: null, mk: null, before: false };
+      try {
+        for (const [i, cell] of cells) {
+          const before = cell.cx.getImageData(0, 0, D.w, D.h), tex = upTex(cell.cv);
+          try { fxPut(cell.cx, s, fxRender(s, tex, true), 0, 0); } finally { GLX.gl.deleteTexture(tex.t); }
+          px.push({ L, cell, R: full, before, fk: L.fx ? null : D.frames[i].id });
+        }
+      } finally { glFree(); }
+      return;
+    }
+    default: throw new Error('action must be add_layer, delete_layer, rename_layer, duplicate_layer, layer, move_layer, select_layer, clear_layer, add_frame, delete_frame, move_frame, frame_duration, go_to_frame, animation, background or filter.');
+  }
+}
+async function aiEdit(args = {}) {
+  if (!D || !LOADED) throw new Error('No drawing is open.');
+  if (ACT) throw new Error('The user is drawing at this moment. Try again in a few seconds.');
+  commitPending();
+  const acts = Array.isArray(args.actions) ? args.actions : [];
+  if (!acts.length) throw new Error('actions is empty.');
+  if (acts.length > 300) throw new Error('Up to 300 actions in one call.');
+  const pre = snapLayers(), px = [];
+  try {
+    acts.forEach((a, i) => {
+      a = a && typeof a === 'object' ? a : {};
+      try { aiAction(a, px); } catch (e) { throw new Error(`actions[${i}] (${a.action}): ${e.message}`); }
+    });
+  } catch (e) {
+    for (const c of px.slice().reverse()) c.cell.cx.putImageData(c.before, 0, 0);
+    setLayers(pre);
+    throw e;
+  }
+  bindAll();
+  aiStep(pre, px.map(c => pxStep(c.L, c.R, c.before, c.cell, c.fk)));
+  for (const c of px) changed(c.L, c.cell);
+  paintPaper(); layersUI(); framesUI(); stat(); onionSoon(); changed();
+  return infoOf(D);
+}
+
+/* =========================================================
+   a drawing from paper: a photo of something drawn on a page becomes a layer. The page is found in the photo (the
+   biggest bright patch) and its corners can be dragged; it is straightened (a perspective warp), its light made even
+   (the paper's own color, worked out from a small copy without the lines, is divided out, so a shadow from the phone goes),
+   and the paper made see-through. The drawing then appears on the canvas bit by bit, each line where it was drawn.
+   All of it runs on the graphics card, like the filters
+   ========================================================= */
+const SCAN_MAX = 2400;   // the longest side a page is made at: a phone's photo is bigger, and more would only take memory
+/* the projective map from the unit square to the page's four corners (top left, top right, bottom right, bottom left), Heckbert's */
+function sq2quad([x0, y0], [x1, y1], [x2, y2], [x3, y3]) {
+  const dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3, dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3;
+  if (Math.abs(dx3) < 1e-9 && Math.abs(dy3) < 1e-9) return { a: x1 - x0, b: x2 - x1, c: x0, d: y1 - y0, e: y2 - y1, f: y0, g: 0, h: 0 };
+  const den = dx1 * dy2 - dx2 * dy1, g = (dx3 * dy2 - dx2 * dy3) / den, hh = (dx1 * dy3 - dx3 * dy1) / den;
+  return { a: x1 - x0 + g * x1, b: x3 - x0 + hh * x3, c: x0, d: y1 - y0 + g * y1, e: y3 - y0 + hh * y3, f: y0, g, h: hh };
+}
+const dist = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+/* the page's size, from its sides: as long as they are, the longest side no more than max. A photo taken at a slant makes a
+   page look shorter than it is, so one close to the shape of A4 (most pages are) gets that shape exactly */
+function pageSize(q, max) {
+  let w = (dist(q[0], q[1]) + dist(q[3], q[2])) / 2, hh = (dist(q[0], q[3]) + dist(q[1], q[2])) / 2;
+  const r = w / Math.max(hh, 1);
+  if (r > 0.64 && r < 0.79) w = hh / Math.SQRT2; else if (r > 1.27 && r < 1.56) hh = w / Math.SQRT2;
+  const k = Math.min(1, max / Math.max(w, hh, 1));
+  return [Math.max(16, Math.round(w * k)), Math.max(16, Math.round(hh * k))];
+}
+const quadArea = q => Math.abs(q.reduce((s, p, i) => { const n = q[(i + 1) % 4]; return s + p[0] * n[1] - n[0] * p[1]; }, 0)) / 2;
+const convex = q => { let sg = 0; for (let i = 0; i < 4; i++) { const a = q[i], b = q[(i + 1) % 4], c = q[(i + 2) % 4], z = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]); if (!z) continue; if (sg && Math.sign(z) !== sg) return false; sg = Math.sign(z); } return true; };
+/* the page in the photo: the biggest patch more like paper than Otsu's threshold (with thin dark lines closed over), and its
+   corners as the points furthest along the diagonals. null when nothing page-like stands out (the photo is the page) */
+function detectPage(src) {
+  const k = Math.min(1, 480 / Math.max(src.width, src.height)), w = Math.max(8, Math.round(src.width * k)), hh = Math.max(8, Math.round(src.height * k));
+  const c = newCanvas(w, hh), x = c.getContext('2d', { willReadFrequently: true });
+  x.drawImage(src, 0, 0, w, hh);
+  const d = x.getImageData(0, 0, w, hh).data, n = w * hh, g = new Uint8Array(n);
+  freeCanvas(c);
+  // how much like paper each pixel is: bright, and with hardly any color (a shadow over the page darkens it but leaves it
+  // gray, while a wooden table is darker and browner)
+  for (let i = 0, j = 0; i < n; i++, j += 4) {
+    const r = d[j], gg = d[j + 1], b = d[j + 2], mx = Math.max(r, gg, b), sat = mx ? (mx - Math.min(r, gg, b)) / mx : 0;
+    g[i] = clamp(Math.round(((r * 77 + gg * 150 + b * 29) >> 8) * (1 - 1.6 * sat)), 0, 255);
+  }
+  const hist = new Float64Array(256);
+  for (let i = 0; i < n; i++) hist[g[i]]++;
+  let sum = 0, sB = 0, wB = 0, best = -1, th = 127;
+  for (let t = 0; t < 256; t++) sum += t * hist[t];
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (!wB) continue;
+    const wF = n - wB;
+    if (!wF) break;
+    sB += t * hist[t];
+    const v = wB * wF * (sB / wB - (sum - sB) / wF) ** 2;
+    if (v > best) { best = v; th = t; }
+  }
+  let m = new Uint8Array(n);
+  for (let i = 0; i < n; i++) m[i] = g[i] > th ? 1 : 0;
+  // closing: wider, then narrower again, so a line drawn across the page doesn't cut it in two
+  const pass = (a, wide, dx, dy) => { const o = new Uint8Array(n); for (let y = 0; y < hh; y++) for (let xx = 0; xx < w; xx++) { let v = a[y * w + xx]; for (let s = -2; s <= 2; s++) { const X = xx + s * dx, Y = y + s * dy; if (X < 0 || Y < 0 || X >= w || Y >= hh) continue; const u = a[Y * w + X]; v = wide ? v | u : v & u; } o[y * w + xx] = v; } return o; };
+  m = pass(pass(pass(pass(m, true, 1, 0), true, 0, 1), false, 1, 0), false, 0, 1);
+  const seen = new Uint8Array(n), stack = new Int32Array(n);
+  let most = 0, ends = null;
+  for (let s0 = 0; s0 < n; s0++) {
+    if (!m[s0] || seen[s0]) continue;
+    let top = 0, cnt = 0, a1 = Infinity, a2 = -Infinity, a3 = -Infinity, a4 = Infinity, p1 = s0, p2 = s0, p3 = s0, p4 = s0;
+    stack[top++] = s0; seen[s0] = 1;
+    while (top) {
+      const p = stack[--top], px = p % w, py = (p - px) / w, sp = px + py, df = px - py;
+      cnt++;
+      if (sp < a1) { a1 = sp; p1 = p; } if (df > a2) { a2 = df; p2 = p; } if (sp > a3) { a3 = sp; p3 = p; } if (df < a4) { a4 = df; p4 = p; }
+      if (px > 0 && m[p - 1] && !seen[p - 1]) { seen[p - 1] = 1; stack[top++] = p - 1; }
+      if (px < w - 1 && m[p + 1] && !seen[p + 1]) { seen[p + 1] = 1; stack[top++] = p + 1; }
+      if (py > 0 && m[p - w] && !seen[p - w]) { seen[p - w] = 1; stack[top++] = p - w; }
+      if (py < hh - 1 && m[p + w] && !seen[p + w]) { seen[p + w] = 1; stack[top++] = p + w; }
+    }
+    if (cnt > most) { most = cnt; ends = [p1, p2, p3, p4]; }
+  }
+  if (!ends || most < n * 0.12) return null;
+  const q = ends.map(p => [clamp((p % w + 0.5) / k, 0, src.width), clamp((Math.floor(p / w) + 0.5) / k, 0, src.height)]);
+  return quadArea(q) >= src.width * src.height * 0.12 && convex(q) ? q : null;
+}
+/* a separable gaussian blur of one channel (w x hh floats), and the brightest within r */
+function blurF(a, w, hh, sg) {
+  const r = Math.ceil(sg * 2.5), k = [];
+  let ks = 0;
+  for (let i = -r; i <= r; i++) { const v = Math.exp(-i * i / (2 * sg * sg)); k.push(v); ks += v; }
+  const t = new Float32Array(a.length), o = new Float32Array(a.length);
+  for (let y = 0; y < hh; y++) for (let x = 0; x < w; x++) { let v = 0; for (let i = -r; i <= r; i++) v += a[y * w + clamp(x + i, 0, w - 1)] * k[i + r]; t[y * w + x] = v / ks; }
+  for (let y = 0; y < hh; y++) for (let x = 0; x < w; x++) { let v = 0; for (let i = -r; i <= r; i++) v += t[clamp(y + i, 0, hh - 1) * w + x] * k[i + r]; o[y * w + x] = v / ks; }
+  return o;
+}
+function maxF(a, w, hh, r) {
+  const t = new Float32Array(a.length), o = new Float32Array(a.length);
+  for (let y = 0; y < hh; y++) for (let x = 0; x < w; x++) { let v = 0; for (let i = -r; i <= r; i++) v = Math.max(v, a[y * w + clamp(x + i, 0, w - 1)]); t[y * w + x] = v; }
+  for (let y = 0; y < hh; y++) for (let x = 0; x < w; x++) { let v = 0; for (let i = -r; i <= r; i++) v = Math.max(v, t[clamp(y + i, 0, hh - 1) * w + x]); o[y * w + x] = v; }
+  return o;
+}
+/* the paper's own color all over a small copy of the page (s: its RGBA bytes). Paper is where the page is bright for its
+   surroundings, has hardly any color, and isn't much darker than the page's paper in general; that is smoothed over, and
+   everything else (lines, colored and dark areas, however big) is filled in from the paper around it: from near paper
+   where there is some, and from further away where there isn't (a normalized convolution at two widths). A shadow, being
+   paper, is kept in it, and so goes when the page is divided by it */
+function paperOf(s, w, hh) {
+  const n = w * hh, L = new Float32Array(n), wt = new Float32Array(n);
+  for (let i = 0, j = 0; i < n; i++, j += 4) L[i] = (s[j] * 0.299 + s[j + 1] * 0.587 + s[j + 2] * 0.114) / 255;
+  const P = Float32Array.from(L).sort()[Math.floor(n * 0.85)] || 1, mx = maxF(L, w, hh, 2);
+  for (let i = 0, j = 0; i < n; i++, j += 4) {
+    const hi = Math.max(s[j], s[j + 1], s[j + 2]), sat = hi ? (hi - Math.min(s[j], s[j + 1], s[j + 2])) / hi : 0;
+    wt[i] = L[i] >= 0.86 * mx[i] && sat < 0.2 && L[i] > 0.5 * P ? 1 : 0;
+  }
+  const near = blurF(wt, w, hh, 4), far = blurF(wt, w, hh, 18), out = new Uint8Array(n * 4);
+  let cnt = 0;
+  const avg = [0, 0, 0];
+  for (let i = 0; i < n; i++) if (wt[i]) { cnt++; for (let c = 0; c < 3; c++) avg[c] += s[i * 4 + c]; }
+  for (let c = 0; c < 3; c++) avg[c] = cnt ? avg[c] / cnt : P * 255;
+  for (let c = 0; c < 3; c++) {
+    const a = new Float32Array(n);
+    for (let i = 0; i < n; i++) a[i] = s[i * 4 + c] * wt[i];
+    const an = blurF(a, w, hh, 4), af = blurF(a, w, hh, 18);
+    for (let i = 0; i < n; i++) {
+      const f = clamp(near[i] / 0.25, 0, 1), vn = near[i] > 1e-4 ? an[i] / near[i] : avg[c], vf = far[i] > 1e-4 ? af[i] / far[i] : avg[c];
+      out[i * 4 + c] = clamp(Math.round(vn * f + vf * (1 - f)), 1, 255);
+    }
+  }
+  for (let i = 0; i < n; i++) out[i * 4 + 3] = 255;
+  return out;
+}
+/* bytes onto the card, as a picture (gone after the run) */
+function dataTex(w, hh, bytes) {
+  const gl = GLX.gl, t = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, hh, 0, gl.RGBA, gl.UNSIGNED_BYTE, bytes);
+  texParams(gl, false);
+  GLX.once.push(t);
+  return { t, w, h: hh };
+}
+/* the photo (on the card as tex, sw x sh) made into the page: straight, the light even, and the paper see-through
+   (or kept, for "as in the photo"). The result is in GLX.cv, w x hh */
+function scanRender(tex, sw, sh, quad, w, hh, o) {
+  const gl = GLX.gl, U = { x: 0, y: 0, w, h: hh }, pass = (name, uni, ins, out) => glPass(name, uni, ins, out, U);
+  for (const t of GLX.pool) t.used = false;
+  if (GLX.cv.width !== w || GLX.cv.height !== hh) { GLX.cv.width = w; GLX.cv.height = hh; }
+  const M = sq2quad(...quad.map(([x, y]) => [x / sw, y / sh])), page = tmpTex(w, hh);
+  pass('warp', { ma: [M.a, M.b, M.c], mb: [M.d, M.e, M.f], mc: [M.g, M.h, 1] }, { src: tex }, page);
+  // the paper's light, worked out on a copy about 150 pixels long (paperOf), and back on the card to divide by
+  let cur = page;
+  while (Math.max(cur.w, cur.h) > 200) { const nx = tmpTex(Math.ceil(cur.w / 2), Math.ceil(cur.h / 2)); pass('copy', {}, { src: cur }, nx); cur = nx; }
+  const small = new Uint8Array(cur.w * cur.h * 4);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, cur.fb); gl.readPixels(0, 0, cur.w, cur.h, gl.RGBA, gl.UNSIGNED_BYTE, small);
+  const even = tmpTex(w, hh);
+  pass('norm', {}, { src: page, b: dataTex(cur.w, cur.h, paperOf(small, cur.w, cur.h)) }, even);
+  const t = clamp(o.clean, 0, 100) / 100, lo = 0.04 + 0.36 * t, wgt = o.mode === 'photo' ? 0 : clamp(Math.round(o.weight || 0), -2, 3);
+  const uni = { mode: o.mode === 'photo' ? 2 : o.mode === 'colors' ? 1 : 0, lo, hi: lo + 0.16, useInk: o.ink ? 1 : 0, ink: o.ink ? rgbOf(o.ink).map(v => v / 255) : [0, 0, 0] };
+  if (!wgt) pass('scan', uni, { src: even }, null);
+  else { const m = tmpTex(w, hh); pass('scan', uni, { src: even }, m); pass('grow', { r: Math.abs(wgt), thick: wgt > 0 ? 1 : 0 }, { src: m }, null); }
+  for (const x of GLX.once) gl.deleteTexture(x);
+  GLX.once = [];
+  if (gl.isContextLost()) throw new Error('gl');
+  return GLX.cv;
+}
+/* the drawn parts of the page, each a group of touching pixels (8 neighbours, union-find): the specks among them go, and the
+   pixels of the rest are listed for drawing them: group after group from the top down, and in each, outward from its first
+   pixel (so a line grows along itself, as from a pen). Returns that list, px */
+function inkParts(img, specks) {
+  const w = img.width, hh = img.height, n = w * hh, d = img.data, lab = new Int32Array(n), parent = [0];
+  const find = x => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+  for (let y = 0, i = 0; y < hh; y++) for (let x = 0; x < w; x++, i++) {
+    if (d[i * 4 + 3] < 8) continue;
+    let l = 0;
+    const join = j => { const nl = lab[j]; if (!nl) return; if (!l) { l = nl; return; } const a = find(l), b = find(nl); if (a !== b) { if (a < b) parent[b] = a; else parent[a] = b; } };
+    if (x > 0) join(i - 1);
+    if (y > 0) { join(i - w); if (x > 0) join(i - w - 1); if (x < w - 1) join(i - w + 1); }
+    if (!l) { l = parent.length; parent.push(l); }
+    lab[i] = l;
+  }
+  const id = new Int32Array(parent.length), area = [], first = [];
+  let count = 0;
+  for (let i = 0; i < n; i++) {
+    if (!lab[i]) continue;
+    const r = find(lab[i]);
+    if (!id[r]) { id[r] = ++count; area[count] = 0; first[count] = i; }
+    const c = lab[i] = id[r];
+    area[c]++;
+  }
+  // specks: a group smaller than a few millionths of the page (a crumb of eraser, the grain of the paper)
+  const tiny = specks ? Math.max(4, Math.round(n * 0.000006)) : 0, keep = new Uint8Array(count + 1);
+  for (let c = 1; c <= count; c++) keep[c] = area[c] >= tiny ? 1 : 0;
+  let total = 0;
+  for (let i = 0; i < n; i++) { const c = lab[i]; if (!c) continue; if (keep[c]) total++; else { lab[i] = 0; d[i * 4 + 3] = d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = 0; } }
+  const order = [];
+  for (let c = 1; c <= count; c++) if (keep[c]) order.push(c);
+  order.sort((p, q) => first[p] - first[q]);   // each group's first pixel in reading order: from the top down
+  const px = new Int32Array(total);
+  let k = 0;
+  for (const c of order) {   // breadth first from the group's first pixel
+    let head = k;
+    px[k++] = first[c]; lab[first[c]] = -1;
+    while (head < k) {
+      const p = px[head++], x = p % w, y = (p - x) / w;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const X = x + dx, Y = y + dy, q = Y * w + X;
+        if ((dx || dy) && X >= 0 && Y >= 0 && X < w && Y < hh && lab[q] === c) { lab[q] = -1; px[k++] = q; }
+      }
+    }
+  }
+  return px;
+}
+/* the page onto layer L, into the rectangle R of the drawing: the parts one after another over dur ms (a photo's page
+   comes down from the top), and at the end exactly the whole of it */
+async function scanReveal(L, res, img, px, R, dur, alive) {
+  const w = res.width, hh = res.height, x = L.cx;
+  const put = c => { x.save(); x.beginPath(); x.rect(R.x, R.y, R.w, R.h); x.clip(); x.clearRect(R.x, R.y, R.w, R.h); x.imageSmoothingQuality = 'high'; x.drawImage(c, R.x, R.y, R.w, R.h); x.restore(); };
+  const t0 = now(), frames = dur > 0 ? clamp(Math.round(dur / 45), 8, 50) : 0;
+  if (frames && px && px.length) {
+    const acc = new ImageData(w, hh), dst = acc.data, src = img.data, sc = newCanvas(w, hh), sx = sc.getContext('2d'), per = Math.ceil(px.length / frames);
+    for (let f = 1, k = 0; f <= frames && k < px.length; f++) {
+      let x0 = w, y0 = hh, x1 = -1, y1 = -1;
+      for (const end = Math.min(px.length, k + per); k < end; k++) {
+        const p = px[k], q = p * 4, X = p % w, Y = (p - X) / w;
+        dst[q] = src[q]; dst[q + 1] = src[q + 1]; dst[q + 2] = src[q + 2]; dst[q + 3] = src[q + 3];
+        if (X < x0) x0 = X; if (X > x1) x1 = X; if (Y < y0) y0 = Y; if (Y > y1) y1 = Y;
+      }
+      if (x1 >= 0) sx.putImageData(acc, 0, 0, x0, y0, x1 - x0 + 1, y1 - y0 + 1);
+      put(sc);
+      await waitUntil(t0 + dur * f / frames);
+      if (!alive()) { freeCanvas(sc); return; }
+    }
+    freeCanvas(sc);
+  } else if (frames) {
+    for (let f = 1; f <= frames; f++) {
+      const k = f / frames;
+      x.save(); x.beginPath(); x.rect(R.x, R.y, R.w, R.h * k); x.clip(); x.imageSmoothingQuality = 'high'; x.drawImage(res, R.x, R.y, R.w, R.h); x.restore();
+      await waitUntil(t0 + dur * k);
+      if (!alive()) return;
+    }
+  }
+  put(res);
+}
+/* the finished page into the drawing: on a new layer above the one chosen, fitted inside the drawing, as one step to undo.
+   Or, for "new", a new drawing the shape of the page (A4 when it is close to it), with a layer to color in: under the
+   lines, or over a photo's page in "multiply", so the lines stay seen */
+async function scanPlace(res, o, target) {
+  const w = res.width, hh = res.height, img = res.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, hh);
+  const parts = o.mode === 'photo' ? null : inkParts(img, o.specks), photo = o.mode === 'photo', name = T('ציור מהדף');
+  if (parts) res.getContext('2d').putImageData(img, 0, 0);   // without the specks
+  let L, R, pre = null;
+  if (target === 'new') {
+    const r = w / hh, [dw, dh] = Math.abs(r - 1240 / 1754) < 0.06 ? [1240, 1754] : Math.abs(r - 1754 / 1240) < 0.08 ? [1754, 1240] : r >= 1 ? [1600, Math.round(1600 / r)] : [Math.round(1600 * r), 1600];
+    const page = { id: 'L1', name, op: 1, vis: true, src: '' }, paint = { id: 'L2', name: T('צבע'), op: 1, vis: true, src: '' };
+    const body = { v: 1, w: dw, h: dh, bg: '#ffffff', active: 'L2', layers: photo ? [page, { ...paint, bm: 'multiply' }] : [{ ...paint, id: 'L2' }, { ...page, id: 'L1' }] };
+    const id = await createDoc({ html: JSON.stringify(body), kind: 'draw' });
+    if (!id) return;
+    for (let i = 0; i < 160 && !(D && LOADED === S.cur && S.cur.id === id); i++) await sleep(50);
+    if (!D || LOADED !== S.cur) return;
+    L = D.layers.find(l => l.id === 'L1');
+  } else {
+    if (!D || !LOADED) return;
+    if (!room(1)) { fullMsg(); return; }
+    commitPending();
+    pre = snapLayers();
+    L = makeLayer(name);
+    D.layers.splice(D.layers.indexOf(layerOf()) + 1, 0, L);
+    D.active = L.id;
+  }
+  bindAll(); paintPaper(); layersUI(); framesUI();
+  const k = Math.min(D.w / w, D.h / hh), pw = w * k, ph = hh * k;
+  R = { x: (D.w - pw) / 2, y: (D.h - ph) / 2, w: pw, h: ph };
+  const d0 = D, busy = ACT = { kind: 'busy', id: null };
+  try { await scanReveal(L, res, img, parts, R, document.hidden ? 0 : photo ? 1100 : 2200, () => D === d0 && D.layers.includes(L)); }
+  finally { if (ACT === busy) ACT = null; }
+  if (D !== d0 || !D.layers.includes(L)) return;
+  const C = clipR(R.x, R.y, R.w, R.h);
+  if (pre && C) aiStep(pre, [pxStep(L, C, new ImageData(C.w, C.h))]);
+  changed(L); paintPaper(); layersUI();
+  toast(photo ? T('הדף בציור. בשכבה "צבע" שמעליו אפשר לצבוע, והקווים יישארו.') : T('הציור מהדף בשכבה משלו. אפשר לצבוע בשכבה שמתחתיו.'), { icon: 'document_scanner', ms: 6000 });
+}
+function pickFile(accept) {
+  return new Promise(res => {
+    const inp = h('input', { type: 'file', accept, style: { display: 'none' } });
+    inp.addEventListener('change', () => { const f = inp.files && inp.files[0]; inp.remove(); res(f || null); });
+    inp.addEventListener('cancel', () => { inp.remove(); res(null); });
+    document.body.append(inp); inp.click();
+  });
+}
+/* the photo first (on a phone the browser offers the camera too), then the window */
+async function scanStart(target) {
+  if (target !== 'new' && (!D || !LOADED || ACT)) return;
+  if (D && LOADED) commitPending();
+  if (!glx()) { toast(T('הדפדפן הזה לא יכול להעביר ציורים מדף.'), { ms: 6000 }); return; }
+  const f = await pickFile('image/*');
+  if (!f) return;
+  let im;
+  try { im = await createImageBitmap(f); } catch { try { im = await loadImg(await blobToDataURL(f)); } catch { toast(T('לא הצלחתי לפתוח את התמונה')); return; } }
+  scanDialog(im, target);
+}
+const SCAN_MODES = [['lines', N_('קווים'), N_('רק מה שצויר. הדף נעלם')], ['colors', N_('קווים וצבעים'), N_('גם מה שצבעת. הדף נעלם')], ['photo', N_('כמו בתמונה'), N_('הדף כמו שהוא, ישר ובלי צללים')]];
+function scanDialog(im, target) {
+  const p = prefs(), sp = p.scan && typeof p.scan === 'object' ? p.scan : (p.scan = {});
+  const o = { mode: SCAN_MODES.some(m => m[0] === sp.mode) ? sp.mode : 'lines', clean: typeof sp.clean === 'number' ? clamp(sp.clean, 0, 100) : 45,
+    weight: typeof sp.weight === 'number' ? clamp(Math.round(sp.weight), -2, 3) : 0, ink: hex6(sp.ink) || '', specks: sp.specks !== false };
+  const keep = () => { p.scan = { ...o }; savePrefs(); };
+  let rot = 0, src = null, tex = null, quad = null, raf = 0, drag = -1;
+  const PV = 420, pcv = newCanvas(1, 1), rcv = newCanvas(1, 1), ov = sv('svg', { class: 'dw-scov' });
+  const free = () => { cancelAnimationFrame(raf); if (tex && GLX.gl) GLX.gl.deleteTexture(tex.t); tex = null; freeCanvas(src); glFree(); };
+  const full = () => [[0, 0], [src.width, 0], [src.width, src.height], [0, src.height]];
+  // the photo turned and at its working size, on the card once
+  function prep() {
+    const iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height, k = Math.min(1, SCAN_MAX / Math.max(iw, ih)), w = Math.round(iw * k), hh = Math.round(ih * k), turned = rot % 180 !== 0;
+    freeCanvas(src); src = newCanvas(turned ? hh : w, turned ? w : hh);
+    const x = src.getContext('2d');
+    x.translate(src.width / 2, src.height / 2); x.rotate(rot * Math.PI / 180); x.drawImage(im, -w / 2, -hh / 2, w, hh);
+    if (tex) GLX.gl.deleteTexture(tex.t);
+    tex = upTex(src);
+    quad = detectPage(src) || full();
+    const kv = Math.min(PV / src.width, PV / src.height, 1);
+    pcv.width = Math.max(1, Math.round(src.width * kv)); pcv.height = Math.max(1, Math.round(src.height * kv));
+    pcv.getContext('2d').drawImage(src, 0, 0, pcv.width, pcv.height);
+    ov.setAttribute('viewBox', `0 0 ${pcv.width} ${pcv.height}`);
+    marks(); soon();
+  }
+  // the corners: a shape over the photo, and a handle on each, dragged with a finger or the mouse
+  function marks() {
+    const kv = pcv.width / src.width, pts = quad.map(([x, y]) => [x * kv, y * kv]);
+    ov.textContent = '';
+    ov.append(sv('path', { d: 'M' + pts.map(q => q.join(' ')).join('L') + 'Z', class: 'dw-scq' }));
+    pts.forEach(([x, y], i) => ov.append(sv('circle', { cx: x, cy: y, r: 11, class: 'dw-sch' + (i === drag ? ' on' : ''), 'data-i': i })));
+  }
+  const at = e => { const r = ov.getBoundingClientRect(); return [clamp((e.clientX - r.left) / r.width, 0, 1) * src.width, clamp((e.clientY - r.top) / r.height, 0, 1) * src.height]; };
+  ov.addEventListener('pointerdown', e => {
+    const [x, y] = at(e), kv = ov.getBoundingClientRect().width / src.width;
+    let best = -1, bd = 34 / kv;
+    quad.forEach((q, i) => { const dd = Math.hypot(q[0] - x, q[1] - y); if (dd < bd) { bd = dd; best = i; } });
+    if (best < 0) return;
+    e.preventDefault(); drag = best;
+    try { ov.setPointerCapture(e.pointerId); } catch {}
+    marks();
+  });
+  ov.addEventListener('pointermove', e => { if (drag < 0) return; quad[drag] = at(e); marks(); soon(); });
+  for (const k of ['pointerup', 'pointercancel']) ov.addEventListener(k, () => { if (drag < 0) return; drag = -1; marks(); });
+  // what it will look like in the drawing
+  function soon() { if (!raf) raf = requestAnimationFrame(() => { raf = 0; preview(); }); }
+  function preview() {
+    if (!tex) return;
+    const [w, hh] = pageSize(quad, 760);
+    try {
+      const cv = scanRender(tex, src.width, src.height, quad, w, hh, o), kv = Math.min(PV / w, PV / hh, 1);
+      rcv.width = Math.max(1, Math.round(w * kv)); rcv.height = Math.max(1, Math.round(hh * kv));
+      const x = rcv.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(cv, 0, 0, rcv.width, rcv.height);
+    } catch (e) { console.error(e); }
+  }
+  // the settings
+  const seg = h('div', { class: 'seg dw-scseg', role: 'tablist' }), say = h('p', { class: 'muted small dw-scsay' }), more = h('div', { class: 'dw-scopts' });
+  const slide = (label, min, max, k, show) => {
+    const r = h('input', { type: 'range', min: String(min), max: String(max), step: '1', value: String(o[k]), 'aria-label': label }), b = h('b', { text: show(o[k]) });
+    r.addEventListener('input', () => { o[k] = +r.value; b.textContent = show(o[k]); soon(); });
+    r.addEventListener('change', keep);
+    return h('label', { class: 'dw-fxs' }, h('span', { text: label }), b, r);
+  };
+  const inks = () => {
+    const row = h('div', { class: 'dw-fxrow' }, h('span', { text: T('צבע הקווים') }));
+    const opt = (label, v, sw) => row.append(h('button', { class: 'btn small' + (o.ink === v ? ' primary' : ''), type: 'button', onclick: () => { o.ink = v; keep(); fill(); soon(); } }, sw ? h('span', { class: 'sw', style: { background: v, width: '14px', height: '14px' } }) : null, label));
+    opt(T('כמו בדף'), ''); opt(T('שחור'), '#000000');
+    const c = o.ink && o.ink !== '#000000' ? o.ink : COLOR;
+    opt(T('הצבע שבחרת'), c, true);
+    return row;
+  };
+  function fill() {
+    seg.textContent = '';
+    for (const [k, label] of SCAN_MODES) seg.append(h('button', { type: 'button', role: 'tab', 'aria-selected': String(o.mode === k), onclick: () => { o.mode = k; keep(); fill(); soon(); } }, T(label)));
+    say.textContent = T(SCAN_MODES.find(m => m[0] === o.mode)[2]);
+    more.textContent = '';
+    more.append(slide(T('ניקוי@scan'), 0, 100, 'clean', v => v + '%'));
+    if (o.mode !== 'photo') {
+      more.append(slide(T('עובי הקווים'), -2, 3, 'weight', v => (v > 0 ? '+' : '') + v));
+      if (o.mode === 'lines') more.append(inks());
+      const c = h('input', { type: 'checkbox' }); c.checked = o.specks;
+      c.addEventListener('change', () => { o.specks = c.checked; keep(); });
+      more.append(h('label', { class: 'dw-fxc' }, c, T('בלי נקודות קטנות')));
+    }
+  }
+  fill();
+  const tools = h('div', { class: 'dw-fxrow' },
+    h('button', { class: 'btn small', type: 'button', onclick: () => { rot = (rot + 90) % 360; prep(); } }, icon('rotate_right'), T('סיבוב@scan')),
+    h('button', { class: 'btn small', type: 'button', onclick: () => { quad = full(); marks(); soon(); } }, icon('crop_free'), T('כל התמונה')),
+    h('button', { class: 'btn small', type: 'button', onclick: () => { quad = detectPage(src) || full(); marks(); soon(); } }, icon('document_scanner'), T('מציאת הדף')));
+  const body = h('div', { class: 'dw-scan' },
+    h('div', { class: 'dw-scc' }, h('div', { class: 'dw-sch5', text: T('התמונה') }), h('div', { class: 'dw-scv' }, h('div', { class: 'dw-scbox' }, pcv, ov)),
+      h('p', { class: 'muted small', text: T('גוררים את העיגולים לפינות של הדף.') }), tools),
+    h('div', { class: 'dw-scc' }, h('div', { class: 'dw-sch5', text: T('בציור') }), h('div', { class: 'dw-scv dw-scr' }, rcv), seg, say, more));
+  prep();
+  modal({ title: T('ציור מדף'), body, wide: true, onClose: free, actions: [
+    { label: T('הכנסה לציור'), kind: 'primary', icon: 'document_scanner', run: () => {
+      // the page at its full size now, while the photo is still on the card; it is put in after the window closes
+      let res = null;
+      try {
+        const [w, hh] = pageSize(quad, SCAN_MAX), cv = scanRender(tex, src.width, src.height, quad, w, hh, o);
+        res = newCanvas(w, hh); res.getContext('2d').drawImage(cv, 0, 0);
+      } catch (e) { console.error(e); toast(T('לא הצלחתי להעביר את הציור.')); return; }
+      keep();
+      setTimeout(() => scanPlace(res, { ...o }, target).catch(e => { console.error(e); toast(T('לא הצלחתי להעביר את הציור.')); }).finally(() => freeCanvas(res)), 0);
+    } },
+    { label: T('ביטול'), value: false }] });
+}
+
 const COMMANDS = {
   dwUndo: () => undo(), dwRedo: () => redo(),
   dwTool: a => setTool(a),
@@ -2454,16 +4325,19 @@ const COMMANDS = {
   dwPlay: () => play(), dwFrameAdd: () => addFrame(false), dwFrameDup: () => addFrame(true), dwFrameDel: () => delFrame(),
   dwOnion: () => { const o = onionOpt(); o.on = !o.on; savePrefs(); onionNow(); },
   dwAnimExport: a => animDialog(a),
+  dwFx: a => fxOpen(a), dwFxMenu: (a, b) => fxMenu(a, b),
+  dwScan: () => scanStart('layer'),
 };
 
 window.INK_DRAW = {
-  load, unload: reset, replace, preview, chooser, flush, body, norm, info, pickInto,
+  load, unload: reset, replace, preview, chooser, flush, body, norm, pickInto,
   png, jpg, pdf, print,
   key: onKey, esc: onEsc, stat,
   image: f => placeImage(f, true),
   ready: cur => !!D && LOADED === cur,
   count: () => D ? D.layers.length : 0,
   frames: () => D ? D.frames.length : 0,
+  ai: { blank: aiBlank, info: () => infoOf(D), look: aiLook, draw: aiDraw, edit: aiEdit },
 };
 
 // ==DRAW-END==
