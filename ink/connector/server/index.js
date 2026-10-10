@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.14.0';
+const VERSION = '1.15.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -212,13 +212,15 @@ const TOOLS = [
       'The actions run in order, as one step the user can undo with Ctrl+Z; if one of them fails, nothing changes. Layers are called by their names (read_document lists them), and frames are numbered from 1. Returns the layers and frames, and a picture of the drawing.',
     inputSchema: { type: 'object', properties: { id: DOC_ID, look: LOOK, actions: { type: 'array', items: { type: 'object', properties: {
       action: { type: 'string', enum: ['add_layer', 'delete_layer', 'rename_layer', 'duplicate_layer', 'layer', 'move_layer', 'select_layer', 'clear_layer', 'add_frame', 'delete_frame', 'move_frame', 'frame_duration', 'go_to_frame', 'animation', 'background', 'filter'],
-        description: 'add_layer (name, above: on top by default), delete_layer, rename_layer (name), duplicate_layer (name), layer (visible, opacity 0 to 1, pinned: shown on every frame of an animation, like a background), ' +
+        description: 'add_layer (name, above: on top by default), delete_layer, rename_layer (name), duplicate_layer (name), layer (visible, opacity 0 to 1, pinned: shown on every frame of an animation, like a background, blend: how it mixes with the layers under it), ' +
           'move_layer (to: top, bottom, up or down), select_layer, clear_layer (frame), add_frame (after: the last by default; count; copy: copies of that frame instead of empty ones), delete_frame (frame), move_frame (frame, to), ' +
           'frame_duration (frame, beats: how many beats it stays, 1 by default), go_to_frame (frame: shows it on screen), animation (fps 1 to 30, loop: loop, ping (back and forth) or once), background (color #rrggbb or "transparent"), ' +
           'filter (filter, settings, all_frames: on every frame of the layer).' },
       layer: { type: 'string', description: 'The layer\'s name; leave out for the layer selected on screen.' },
       name: { type: 'string' }, above: { type: 'string', description: 'add_layer: the layer to put it above.' },
       visible: { type: 'boolean' }, opacity: { type: 'number' }, pinned: { type: 'boolean' },
+      blend: { type: 'string', enum: ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'hard-light', 'soft-light', 'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity', 'add'],
+        description: 'layer: the blend mode, as in drawing programs. multiply darkens only (colors under black lines, a shadow), screen lightens only (light, glow), overlay adds contrast.' },
       to: { description: 'move_layer: top, bottom, up or down. move_frame: the frame\'s new number.' },
       frame: { type: 'number' }, after: { type: 'number' }, count: { type: 'number' }, copy: { type: 'boolean' }, beats: { type: 'number' },
       fps: { type: 'number' }, loop: { type: 'string', enum: ['loop', 'ping', 'once'] }, color: { type: 'string' },
