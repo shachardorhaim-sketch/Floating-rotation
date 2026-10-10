@@ -4966,7 +4966,16 @@ const linkTitle = () => displayTitle(S.cur.meta);
 const userSel = () => { const r = lastRange; return r && !r.collapsed && inEditor(r.startContainer) ? r.cloneRange() : null; };
 const notDoc = () => new Error(`"${linkTitle()}" is a presentation, not a document. Read it with read_document and change it with edit_presentation.`);
 const notPdfa = () => new Error(`"${linkTitle()}" is a PDF opened to write on its pages. It can be read with read_document, but only changed in the app itself.`);
-const notDraw = () => new Error(`"${linkTitle()}" is a drawing. It can be read with read_document, but only changed in the app itself.`);
+const notDraw = () => new Error(`"${linkTitle()}" is a drawing. Draw in it with draw, and change its layers, frames and filters with edit_drawing.`);
+const notDrawing = () => new Error(`"${linkTitle()}" is not a drawing. Call list_documents to find one, or create_drawing to make one.`);
+/* the drawing open on screen, once draw.js has it */
+async function linkDraw() {
+  for (let i = 0; i < 100 && drawOpen() && !(DRAWK && DRAWK.ready(S.cur)); i++) { await Promise.resolve(S.drawReady).catch(() => {}); await sleep(30); }
+  if (!drawOpen() || !DRAWK || !DRAWK.ready(S.cur)) throw new Error('The drawing could not be opened.');
+  return DRAWK;
+}
+/* the picture that comes back with a drawing tool's answer, so Claude sees what it did (only connectors from 1.14 pass pictures on) */
+async function withLook(out, a, K, o) { if (a.__img && a.look !== false) out.__images = [await K.ai.look(o)]; return out; }
 const notSheet = () => sheetOpen() ? new Error(`"${linkTitle()}" is a spreadsheet. Read it with read_spreadsheet and change it with write_cells.`) : new Error(`"${linkTitle()}" is not a spreadsheet. Call list_documents to find one, or create_spreadsheet to make one.`);
 /* the spreadsheet open on screen, once sheet.js has it */
 async function linkSheet() { await S.sheetReady; if (!SK || !sheetOpen() || !SK.count()) throw new Error('The spreadsheet could not be opened.'); return SK; }
@@ -4976,15 +4985,45 @@ const LINK_TOOLS = {
     linkAct(who, N_('{0} ראה את רשימת המסמכים'));
     return aliveDocs().map(d => ({ id: d.id, title: displayTitle(d), kind: isDeck(d) ? 'presentation' : isPdfa(d) ? 'pdf_pages' : isSheet(d) ? 'spreadsheet' : isDraw(d) ? 'drawing' : 'document', ...(isDeck(d) ? { slides: d.slides || 1 } : isPdfa(d) ? { pages: d.pages || 1 } : isSheet(d) ? { sheets: d.sheets || 1 } : isDraw(d) ? { layers: d.layers || 1, ...(d.frames > 1 ? { frames: d.frames } : {}), width: d.w || 0, height: d.h || 0 } : {}), words: d.words || 0, updated: new Date(d.updatedAt || 0).toISOString(), open: !!(S.cur && !S.cur.isSample && S.cur.id === d.id) }));
   },
-  async read_document({ id }, who) {
+  async read_document({ id, frame, __img }, who) {
     const sel = !id || (S.cur && S.cur.id === id) ? userSel() : null;
     await linkDoc(id);
     linkAct(who, N_('{0} קרא את "{1}"'), linkTitle());
     if (deckOpen()) return { id: S.cur.id, title: linkTitle(), kind: 'presentation', theme: DK.deck.theme, slides: deckForAI() };
     if (pdfaOpen()) return { id: S.cur.id, title: linkTitle(), kind: 'pdf_pages', note: 'A PDF opened to write on its pages. The pages themselves are pictures; typed_text is what the user typed on each page.', pages: PA.doc.pages.map((p, i) => ({ page: i + 1, typed_text: p.els.filter(e => e.t === 'text').map(e => e.txt) })) };
     if (sheetOpen()) return { id: S.cur.id, title: linkTitle(), kind: 'spreadsheet', ...(await linkSheet()).forAI({}) };
-    if (drawOpen()) return { id: S.cur.id, title: linkTitle(), kind: 'drawing', ...(await loadDrawKit().then(K => K.info(curBody())).catch(() => ({}))), note: 'A drawing made of picture layers. It can be seen and changed only in the app itself; Claude cannot draw in it yet.' };
+    if (drawOpen()) {
+      const K = await linkDraw(), out = { id: S.cur.id, title: linkTitle(), kind: 'drawing', ...K.ai.info() };
+      if (!__img) out.note = 'Seeing the drawing itself needs a newer Floating Ink connector: restart the Claude app to get it.';
+      return withLook(out, { __img }, K, { frame, max: 1024 });
+    }
     return { id: S.cur.id, title: linkTitle(), markdown: htmlToMd(ed), ...(sel ? { selected_text: sel.toString() } : {}) };
+  },
+  async create_drawing(a, who) {
+    const html = (await loadDrawKit()).ai.blank(a);
+    const id = await createDoc({ title: String(a.title || '').trim().slice(0, 200), html, kind: 'draw' });
+    if (!id) throw new Error('Could not create the drawing.');
+    const K = await linkDraw(), out = { id, title: linkTitle() };
+    linkAct(who, N_('{0} יצר את הציור "{1}"'), linkTitle());
+    if (Array.isArray(a.items) && a.items.length) {
+      try { Object.assign(out, await K.ai.draw({ items: a.items })); }
+      catch (e) { throw new Error(`The drawing was made (id ${id}), but nothing was drawn on it: ${e.message}`); }
+    }
+    return withLook(Object.assign(out, K.ai.info()), a, K, { max: 768 });
+  },
+  async draw(a, who) {
+    await linkDoc(a.id);
+    if (!drawOpen()) throw notDrawing();
+    const K = await linkDraw(), out = await K.ai.draw(a);
+    linkAct(who, N_('{0} צייר ב-"{1}"'), linkTitle());
+    return withLook(out, a, K, { max: 768 });
+  },
+  async edit_drawing(a, who) {
+    await linkDoc(a.id);
+    if (!drawOpen()) throw notDrawing();
+    const K = await linkDraw(), out = await K.ai.edit(a);
+    linkAct(who, N_('{0} ערך את הציור "{1}"'), linkTitle());
+    return withLook(out, a, K, { max: 768 });
   },
   async create_spreadsheet({ title, sheets, direction, names }, who) {
     const K = await loadSheetKit(), rep = {};

@@ -877,6 +877,7 @@ const canvasUI = () => stat();
 const pressureOf = e => e.pointerType === 'pen' ? clamp(e.pressure || 0, 0, 1) : 1;
 function onDown(e) {
   if (!D || !LOADED) return;
+  if (ACT && ACT.kind === 'busy') return;   // Claude, or the bucket, is drawing
   if (PLAY) { stopPlay(); return; }   // a touch on the drawing stops it playing
   if (TX && (e.target === TX.el || TX.grip.contains(e.target))) return;   // writing in the text box, or moving it
   const p = { ...viewPt(e), t: e.pointerType, id: e.pointerId };
@@ -1263,6 +1264,35 @@ function flood(img, sx, sy, tol) {
   return x1 < 0 ? null : { m, box: { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 } };
 }
 const nextFrame = () => Promise.race([new Promise(r => requestAnimationFrame(() => setTimeout(r, 0))), sleep(60)]);
+/* the bucket's paint: the area of alike colors around x, y in color, on L. Returns the rectangle it changed and the
+   pixels that were there, or null when there was nothing to fill */
+function fillCore(L, x, y, color, tol, op, all) {
+  const t = helper('tmp'), tx = t.getContext('2d');
+  // what the bucket sees: every visible layer together (lines on one layer, color on another), or this layer alone
+  let img;
+  if (all) {
+    tx.clearRect(0, 0, D.w, D.h);
+    for (const M of D.layers) if (M.vis && M.op > 0) { tx.globalAlpha = M.op; tx.drawImage(M.cv, 0, 0); }
+    tx.globalAlpha = 1;
+    img = tx.getImageData(0, 0, D.w, D.h);
+  } else img = L.cx.getImageData(0, 0, D.w, D.h);
+  const f = flood(img, x, y, tol);
+  if (!f) return null;
+  const B = f.box, out = new ImageData(B.w, B.h), px = new Uint32Array(out.data.buffer), [r, g, b] = rgbOf(color), m = f.m;
+  const v = ((255 << 24) | (b << 16) | (g << 8) | r) | 0;   // the bytes of one pixel, read as one number (little-endian: A B G R)
+  for (let yy = 0, j = 0; yy < B.h; yy++) for (let i = (B.y + yy) * D.w + B.x, e = i + B.w; i < e; i++, j++) px[j] = v & -(m[i] >> 1);
+  // one pixel more all round, so the paint goes under the soft edge of the line around it and leaves no pale rim:
+  // the area drawn again a pixel to each side, by the graphics card
+  const R = clipR(B.x - 1, B.y - 1, B.w + 2, B.h + 2);
+  tx.clearRect(R.x, R.y, R.w, R.h); tx.putImageData(out, B.x, B.y);
+  tx.save(); tx.beginPath(); tx.rect(R.x, R.y, R.w, R.h); tx.clip();
+  const src = newCanvas(B.w, B.h); src.getContext('2d').putImageData(out, 0, 0);
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) tx.drawImage(src, B.x + dx, B.y + dy);
+  tx.restore(); freeCanvas(src);
+  const before = !all && R.w === D.w && R.h === D.h ? img : L.cx.getImageData(R.x, R.y, R.w, R.h);
+  L.cx.save(); L.cx.globalAlpha = op; L.cx.drawImage(t, R.x, R.y, R.w, R.h, R.x, R.y, R.w, R.h); L.cx.restore();
+  return { R, before };
+}
 async function fillAt(c) {
   if (FL) drop();
   const L = layerOf();
@@ -1275,31 +1305,9 @@ async function fillAt(c) {
   try {
     await nextFrame();
     if (D !== d0 || !D.layers.includes(L)) return;
-    const o = opt('fill'), all = prefs().all !== false, t = helper('tmp'), tx = t.getContext('2d');
-    // what the bucket sees: every visible layer together (lines on one layer, color on another), or this layer alone
-    let img;
-    if (all) {
-      tx.clearRect(0, 0, D.w, D.h);
-      for (const M of D.layers) if (M.vis && M.op > 0) { tx.globalAlpha = M.op; tx.drawImage(M.cv, 0, 0); }
-      tx.globalAlpha = 1;
-      img = tx.getImageData(0, 0, D.w, D.h);
-    } else img = L.cx.getImageData(0, 0, D.w, D.h);
-    const f = flood(img, x, y, o.tol);
-    if (!f) return;
-    const B = f.box, out = new ImageData(B.w, B.h), px = new Uint32Array(out.data.buffer), [r, g, b] = rgbOf(COLOR), m = f.m;
-    const v = ((255 << 24) | (b << 16) | (g << 8) | r) | 0;   // the bytes of one pixel, read as one number (little-endian: A B G R)
-    for (let yy = 0, j = 0; yy < B.h; yy++) for (let i = (B.y + yy) * D.w + B.x, e = i + B.w; i < e; i++, j++) px[j] = v & -(m[i] >> 1);
-    // one pixel more all round, so the paint goes under the soft edge of the line around it and leaves no pale rim:
-    // the area drawn again a pixel to each side, by the graphics card
-    const R = clipR(B.x - 1, B.y - 1, B.w + 2, B.h + 2);
-    tx.clearRect(R.x, R.y, R.w, R.h); tx.putImageData(out, B.x, B.y);
-    tx.save(); tx.beginPath(); tx.rect(R.x, R.y, R.w, R.h); tx.clip();
-    const src = newCanvas(B.w, B.h); src.getContext('2d').putImageData(out, 0, 0);
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) tx.drawImage(src, B.x + dx, B.y + dy);
-    tx.restore(); freeCanvas(src);
-    const before = !all && R.w === D.w && R.h === D.h ? img : L.cx.getImageData(R.x, R.y, R.w, R.h);
-    L.cx.save(); L.cx.globalAlpha = o.o / 100; L.cx.drawImage(t, R.x, R.y, R.w, R.h, R.x, R.y, R.w, R.h); L.cx.restore();
-    push(pxStep(L, R, before));
+    const o = opt('fill'), r = fillCore(L, x, y, COLOR, o.tol, o.o / 100, prefs().all !== false);
+    if (!r) return;
+    push(pxStep(L, r.R, r.before));
     changed(L); addRecent(COLOR);
   } finally {
     if (ACT === busy) ACT = null;
@@ -2134,9 +2142,10 @@ async function replace(html) {
   });
   fit();
 }
-/* what Claude is told about a drawing it opens: its size and layers, the top one first. It can't draw yet */
-const infoOf = d => ({ width: d.w, height: d.h, background: d.bg || 'transparent', ...(d.frames.length > 1 ? { frames: d.frames.length, frames_per_second: d.fps } : {}), layers: d.layers.slice().reverse().map(l => ({ name: l.name, visible: l.vis, opacity: Math.round(l.op * 100) / 100 })) });
-const info = html => D && LOADED === S.cur ? infoOf(D) : infoOf(parseBody(html));   // the one on screen as it is now, not as it was last saved
+/* what Claude is told about a drawing: its size, its frames, and its layers, the top one first */
+const infoOf = d => ({ width: d.w, height: d.h, background: d.bg || 'transparent',
+  ...(d.frames.length > 1 ? { frames: d.frames.length, frame_on_screen: d.f + 1, frames_per_second: d.fps, loop: d.loop } : {}),
+  layers: d.layers.slice().reverse().map(l => ({ name: l.name, visible: l.vis, opacity: Math.round(l.op * 100) / 100, ...(l.fx ? { pinned: true } : {}), ...(l.id === d.active ? { selected: true } : {}) })) });
 
 /* =========================================================
    animation: frames shown one after another. Each layer has its own picture in each frame, unless it is pinned to
@@ -3060,7 +3069,7 @@ function partOf(c, U) {
 }
 function fxOpen(id) {
   const f = FXL[id];
-  if (!D || !LOADED || !f) return;
+  if (!D || !LOADED || !f || ACT) return;
   if (FXS) { if (FXS.id === id) return; fxApply(); }
   // what floats is put down first, and stays chosen
   const fl = FL ? clipR(FL.x, FL.y, FL.w, FL.h) : null;
@@ -3361,6 +3370,475 @@ function fxCurves(s, q) {
   return h('div', { class: 'dw-fxcw' }, seg, can);
 }
 
+/* =========================================================
+   Claude draws: the connector's create_drawing, draw and edit_drawing (index.html passes them here), and the
+   picture read_document gives it. What one call draws is drawn bit by bit, so the user watches it appear, and the
+   whole call is one step to undo. Claude draws with what a person has: SVG for exact shapes, the brushes for lines
+   drawn by hand, the bucket and text. Everything is checked before anything is drawn, so a mistake draws nothing
+   ========================================================= */
+const AI_ITEMS = 400, AI_POINTS = 5000, AI_SVG = 800000, AI_TIME = 7000;
+const AI_SIZES = { a4_portrait: [1240, 1754], a4_landscape: [1754, 1240], wide: [1920, 1080], square: [1500, 1500], animation: [1280, 720] };
+const aiErr = (k, msg) => new Error(`items[${k}]: ${msg}`);
+const num = (v, what) => { const n = +v; if (typeof v === 'boolean' || v === '' || v == null || !isFinite(n)) throw new Error(`${what} must be a number.`); return n; };
+const findLayer = name => { const n = String(name == null ? '' : name).trim().toLowerCase(); return D.layers.find(L => L.name.trim().toLowerCase() === n) || null; };
+function layerNamed(name) {
+  const L = findLayer(name);
+  if (!L) throw new Error(`There is no layer named "${name}". The layers are: ${D.layers.slice().reverse().map(l => `"${l.name}"`).join(', ')}.`);
+  return L;
+}
+function frameAt(n) {
+  const i = Math.round(num(n, 'frame')) - 1;
+  if (!(i >= 0 && i < D.frames.length)) throw new Error(`There is no frame ${n}: the drawing has ${D.frames.length === 1 ? 'one frame' : D.frames.length + ' frames'}.`);
+  return i;
+}
+/* a new drawing's body: a picture, or an animation of empty frames */
+function aiBlank(o = {}) {
+  const n = o.frames == null ? 1 : Math.round(num(o.frames, 'frames'));
+  if (!(n >= 1 && n <= 300)) throw new Error('frames goes from 1 to 300.');
+  let w, hh;
+  if (o.width != null || o.height != null) {
+    w = Math.round(num(o.width, 'width')); hh = Math.round(num(o.height, 'height'));
+    if (!(w >= MIN_SIDE && w <= MAX_SIDE && hh >= MIN_SIDE && hh <= MAX_SIDE)) throw new Error(`width and height go from ${MIN_SIDE} to ${MAX_SIDE} pixels.`);
+  } else {
+    const s = AI_SIZES[o.size == null ? (n > 1 ? 'animation' : 'wide') : o.size];
+    if (!s) throw new Error(`Unknown size "${o.size}". Use one of: ${Object.keys(AI_SIZES).join(', ')}; or give width and height.`);
+    [w, hh] = s;
+  }
+  const bg = o.background == null ? '#ffffff' : o.background === 'transparent' ? '' : hex6(o.background);
+  if (bg == null) throw new Error('background is a color #rrggbb, or "transparent".');
+  const fps = o.fps == null ? 12 : clamp(Math.round(num(o.fps, 'fps')), 1, 30);
+  const one = { id: 'L1', name: layerName(1), op: 1, vis: true };
+  if (n === 1) return JSON.stringify({ v: 1, w, h: hh, bg, active: 'L1', fps, loop: 'loop', layers: [{ ...one, src: '' }] });
+  return JSON.stringify({ v: 2, w, h: hh, bg, active: 'L1', fps, loop: 'loop', f: 0, frames: Array.from({ length: n }, (_, i) => ({ id: 'F' + (i + 1), d: 1 })), layers: [{ ...one, cells: {} }] });
+}
+/* what Claude sees: a frame as one picture (a JPEG; see-through parts on white), or a single layer of it */
+async function aiLook({ frame, layer, max = 1024 } = {}) {
+  if (!D) throw new Error('No drawing is open.');
+  const i = frame == null ? D.f : frameAt(frame), L = layer == null || layer === '' ? null : layerNamed(layer);
+  const [cw, ch] = fitSize(D.w, D.h, clamp(Math.round(+max) || 1024, 64, 2048)), c = newCanvas(cw, ch), x = c.getContext('2d');
+  x.fillStyle = (!L && D.bg) || '#ffffff'; x.fillRect(0, 0, cw, ch);
+  x.imageSmoothingQuality = 'high';
+  if (L) { const cell = cellAt(L, i); if (cell && cell.cv.width) x.drawImage(cell.cv, 0, 0, D.w, D.h, 0, 0, cw, ch); }
+  else await (await framesOf(null)).draw(x, i, cw, ch);
+  const url = c.toDataURL('image/jpeg', 0.86);
+  freeCanvas(c);
+  return { data: url.slice(url.indexOf(',') + 1), mimeType: 'image/jpeg' };
+}
+
+/* --- the items, checked and made ready --- */
+const AI_TYPES = ['svg', 'stroke', 'fill', 'text'];
+const colorOf = (v, def, k) => { if (v == null || v === '') return def; const c = hex6(v); if (!c) throw aiErr(k, `color must be #rrggbb, not "${v}".`); return c; };
+const opOf = (v, def, k) => { if (v == null) return def; const n = +v; if (!isFinite(n)) throw aiErr(k, 'opacity is a number from 0 to 1.'); return clamp(n > 1 ? n / 100 : n, 0, 1); };
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const SVG_KEEP = new Set(['defs', 'style', 'title', 'desc', 'metadata', 'lineargradient', 'radialgradient', 'pattern', 'clippath', 'mask', 'filter', 'symbol', 'marker']);
+function aiCheck(it, k) {
+  if (!it || typeof it !== 'object') throw aiErr(k, 'each item is an object with a "type".');
+  const t = it.type;
+  if (!AI_TYPES.includes(t)) throw aiErr(k, `"type" must be ${AI_TYPES.join(', ')}; not "${t}".`);
+  if (t === 'stroke') {
+    const brush = it.brush == null ? 'pen' : String(it.brush);
+    if (!BRUSHES.includes(brush)) throw aiErr(k, `brush must be one of ${BRUSHES.join(', ')}.`);
+    if (!Array.isArray(it.points) || !it.points.length) throw aiErr(k, 'a stroke needs points: [[x, y], [x, y], ...].');
+    if (it.points.length > AI_POINTS) throw aiErr(k, `up to ${AI_POINTS} points in one stroke.`);
+    let pressure = false;
+    const pts = it.points.map((q, j) => {
+      if (!Array.isArray(q) || q.length < 2 || !q.slice(0, 3).every(v => typeof v === 'number' && isFinite(v))) throw aiErr(k, `points[${j}] must be [x, y], or [x, y, pressure].`);
+      if (q.length > 2) pressure = true;
+      return [q[0], q[1], q.length > 2 ? clamp(q[2], 0, 1) : 1];
+    });
+    const d = DEF[brush];
+    return { t, brush, pts, pressure, color: colorOf(it.color, '#000000', k), size: it.size == null ? d.s : clamp(num(it.size, `items[${k}].size`), 0.5, SIZE_MAX), op: opOf(it.opacity, d.o / 100, k) };
+  }
+  if (t === 'fill') {
+    const x = num(it.x, `items[${k}].x`), y = num(it.y, `items[${k}].y`);
+    if (x < 0 || y < 0 || x >= D.w || y >= D.h) throw aiErr(k, `x, y (${x}, ${y}) is outside the drawing (${D.w} x ${D.h}).`);
+    return { t, x: Math.floor(x), y: Math.floor(y), color: colorOf(it.color, '#000000', k), tol: it.tolerance == null ? 30 : clamp(num(it.tolerance, `items[${k}].tolerance`), 0, 100), all: it.all_layers !== false, op: opOf(it.opacity, 1, k) };
+  }
+  if (t === 'text') {
+    const text = String(it.text == null ? '' : it.text).slice(0, 2000);
+    if (!text.trim()) throw aiErr(k, 'the text is empty.');
+    const font = it.font == null ? defFont() : String(it.font);
+    if (!FONT_NAMES.has(font)) throw aiErr(k, `unknown font "${font}". The fonts are: ${FONTS.join(', ')}.`);
+    const align = it.align == null ? 'center' : String(it.align);
+    if (!['left', 'center', 'right'].includes(align)) throw aiErr(k, 'align is left, center or right.');
+    return { t, text, x: num(it.x, `items[${k}].x`), y: num(it.y, `items[${k}].y`), size: it.size == null ? 48 : clamp(num(it.size, `items[${k}].size`), 4, 800), color: colorOf(it.color, '#000000', k), font, bold: it.bold !== false, align, op: opOf(it.opacity, 1, k) };
+  }
+  // svg: read as XML, made safe (nothing that runs, no pictures from elsewhere), and sized to where it goes
+  let src = String(it.svg == null ? '' : it.svg).trim();
+  if (!src) throw aiErr(k, 'an svg item needs "svg": a whole <svg> element.');
+  if (src.length > AI_SVG) throw aiErr(k, `the svg is too long (up to ${AI_SVG} characters).`);
+  src = src.replace(/^<\?xml[^>]*\?>\s*/, '');
+  const open = /^<svg\b[^>]*>/i.exec(src);
+  if (!open) throw aiErr(k, 'the svg must start with <svg ...>.');
+  let tag = open[0];
+  if (!/\sxmlns\s*=/.test(tag)) tag = tag.replace(/^<svg\b/i, `<svg xmlns="${SVG_NS}"`);
+  if (/xlink:/.test(src) && !/\sxmlns:xlink\s*=/.test(tag)) tag = tag.replace(/^<svg\b/i, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+  src = tag + src.slice(open[0].length);
+  const doc = new DOMParser().parseFromString(src, 'image/svg+xml'), root = doc.documentElement, bad = doc.getElementsByTagName('parsererror')[0];
+  if (bad || !root || root.localName !== 'svg') {
+    const why = bad ? bad.textContent.replace(/\s+/g, ' ') : 'it is not an <svg> element';
+    throw aiErr(k, `the svg could not be read: ${((/error on line[^]*?(?=Below is|$)/.exec(why) || [why])[0]).trim().slice(0, 200)}`);
+  }
+  for (const el of [...root.querySelectorAll('script, foreignObject, iframe, object, embed, audio, video, image[href^="http"]')]) el.remove();
+  for (const el of [root, ...root.querySelectorAll('*')]) for (const at of [...el.attributes]) {
+    const n = at.name.toLowerCase();
+    if (n.startsWith('on') || ((n === 'href' || n === 'xlink:href') && !/^(#|data:image\/(png|jpeg|gif|webp);)/i.test(at.value.trim()))) el.removeAttribute(at.name);
+  }
+  const W0 = parseFloat(root.getAttribute('width')), H0 = parseFloat(root.getAttribute('height')), own = W0 > 0 && H0 > 0 && !/%/.test(root.getAttribute('width') + root.getAttribute('height'));
+  if (!root.getAttribute('viewBox')) root.setAttribute('viewBox', own ? `0 0 ${W0} ${H0}` : `0 0 ${D.w} ${D.h}`);
+  const box = { x: it.x == null ? 0 : num(it.x, `items[${k}].x`), y: it.y == null ? 0 : num(it.y, `items[${k}].y`),
+    w: it.width != null ? num(it.width, `items[${k}].width`) : own ? W0 : D.w, h: it.height != null ? num(it.height, `items[${k}].height`) : own ? H0 : D.h };
+  if (!(box.w >= 1 && box.h >= 1 && box.w <= 4 * MAX_SIDE && box.h <= 4 * MAX_SIDE)) throw aiErr(k, 'width and height must be positive, and not huge.');
+  root.setAttribute('width', String(box.w)); root.setAttribute('height', String(box.h));
+  const kids = [...root.children], parts = kids.map((el, j) => SVG_KEEP.has(el.localName.toLowerCase()) ? -1 : j).filter(j => j >= 0);
+  return { t, root, parts, box, op: opOf(it.opacity, 1, k) };
+}
+const svgUrl = root => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(root));
+/* the svg with only its first m drawn elements (the definitions always stay) */
+function svgUpTo(p, m) {
+  if (m >= p.parts.length) return svgUrl(p.root);
+  const c = p.root.cloneNode(true), kids = [...c.children];
+  for (let j = m; j < p.parts.length; j++) kids[p.parts[j]].remove();
+  return svgUrl(c);
+}
+/* every svg is turned into a picture once before anything is drawn: one the browser can't read, or that would stop the
+   drawing from being saved (a "tainted" canvas), is refused here */
+async function aiPrepare(plan) {
+  for (const [k, p] of plan.entries()) {
+    if (p.t !== 'svg') continue;
+    let im;
+    try { im = await loadImg(svgUrl(p.root)); } catch { throw aiErr(k, 'the browser could not draw this svg. Check that it is valid SVG.'); }
+    const c = newCanvas(2, 2), x = c.getContext('2d');
+    try { x.drawImage(im, 0, 0, 2, 2); x.getImageData(0, 0, 1, 1); } catch { throw aiErr(k, 'this svg cannot be drawn here (it reaches outside the drawing, for example with foreignObject).'); }
+    finally { freeCanvas(c); }
+  }
+}
+/* how long each item takes to appear: a line at the speed of a quick hand, the whole call within AI_TIME */
+function aiTimes(plan) {
+  if (document.hidden) return plan.map(() => 0);   // nobody is watching, and a hidden page barely runs its timers
+  const diag = Math.hypot(D.w, D.h);
+  const t = plan.map(p => {
+    if (p.t === 'stroke') { let len = 0; for (let j = 1; j < p.pts.length; j++) len += Math.hypot(p.pts[j][0] - p.pts[j - 1][0], p.pts[j][1] - p.pts[j - 1][1]); return clamp(len / diag * 1100, 70, 1400); }
+    if (p.t === 'svg') return clamp(p.parts.length * 45, 120, 1800);
+    return 160;
+  });
+  const sum = t.reduce((a, b) => a + b, 0), k = sum > AI_TIME ? AI_TIME / sum : 1;
+  return t.map(v => v * k);
+}
+const waitUntil = async at => { const w = at - now(); if (w > 4) await sleep(w); await nextFrame(); };
+/* the part of the layer a stroke can reach, kept as it is in the helper canvas (the whole layer would be slow to copy for each line) */
+function keepPart(L, R) {
+  const bk = helper('bk'), bx = bk.getContext('2d');
+  bx.clearRect(R.x, R.y, R.w, R.h); bx.drawImage(L.cv, R.x, R.y, R.w, R.h, R.x, R.y, R.w, R.h);
+  return bk;
+}
+/* a point of a stroke drawn by Claude: the line runs through the points as curves, as with a hand; the same point
+   twice in a row ends the curve there, for a sharp corner */
+function aiFeed(a, x, y, p) {
+  if (!a.s) { a.s = { x, y, p }; a.pts.push({ x, y, p }); dot(a, a.pts[0]); return; }
+  const P = a.pts, last = P[P.length - 1];
+  if (Math.hypot(x - last.x, y - last.y) < 0.35) {
+    if (P.length > 1) { const n = P.length - 1; seg(a, n === 1 ? mid(P[0], P[1]) : mid(P[n - 1], P[n]), P[n]); a.pts = [P[n]]; }
+    return;
+  }
+  P.push({ x, y, p });
+  curve(a);
+}
+async function aiStroke(L, p, dur, alive) {
+  const br = BR[p.brush];
+  let pts = p.pts;
+  if (br.kind === 'spray') {   // the spray paints as it moves: its points close together, as a hand's would be
+    const step = Math.max(2, p.size * 0.25), out = [pts[0]];
+    for (let j = 1; j < pts.length; j++) {
+      const [x0, y0, p0] = pts[j - 1], [x1, y1, p1] = pts[j], n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / step);
+      for (let i = 1; i <= n; i++) out.push([x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n, p0 + (p1 - p0) * i / n]);
+    }
+    pts = out;
+  }
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  const pad = p.size / 2 + Math.max(4, p.size / 45 + 2), R = clipR(x0 - pad, y0 - pad, x1 - x0 + 2 * pad, y1 - y0 + 2 * pad);
+  if (!R) return null;
+  keepPart(L, R);
+  const sx = helper('st').getContext('2d');
+  sx.clearRect(R.x, R.y, R.w, R.h); sx.fillStyle = p.color; sx.globalAlpha = 1;
+  const a = { kind: 'stroke', L, t: p.brush, br, size: p.size, op: p.op, sm: 0, color: p.color, erase: !!br.erase, pen: p.pressure, pts: [], s: null, raw: null, box: null, pend: null, carry: 0, sx };
+  if (br.kind === 'stamp') a.tip = tipOf(p.color, br.hard);
+  const t0 = now(), steps = dur > 0 ? Math.max(1, Math.min(pts.length, Math.round(dur / 16))) : 1, per = Math.ceil(pts.length / steps);
+  for (let j = 0; j < pts.length; j++) {
+    aiFeed(a, pts[j][0], pts[j][1], pts[j][2]);
+    if (dur > 0 && j % per === per - 1 && j < pts.length - 1) {
+      if (a.pend) { comp(a, a.pend); a.pend = null; }
+      await waitUntil(t0 + dur * (j + 1) / pts.length);
+      if (!alive()) return R;
+    }
+  }
+  if (br.kind !== 'spray' && a.pts.length > 1) { const P = a.pts, n = P.length - 1; seg(a, n === 1 ? mid(P[0], P[1]) : mid(P[n - 1], P[n]), P[n]); }
+  if (a.pend) { comp(a, a.pend); a.pend = null; }
+  return R;
+}
+async function aiSvg(L, p, dur, alive) {
+  const b = p.box, R = clipR(b.x, b.y, b.w, b.h);
+  if (!R) return null;
+  keepPart(L, R);
+  const n = p.parts.length, steps = dur > 0 && n > 1 ? Math.min(n, 30) : 1, t0 = now(), x = L.cx;
+  for (let s = 1; s <= steps; s++) {
+    const im = await loadImg(svgUpTo(p, Math.round(n * s / steps)));
+    if (!alive()) return R;
+    x.save(); x.beginPath(); x.rect(R.x, R.y, R.w, R.h); x.clip();
+    x.clearRect(R.x, R.y, R.w, R.h); x.drawImage(HX.bk, R.x, R.y, R.w, R.h, R.x, R.y, R.w, R.h);
+    x.globalAlpha = p.op; x.drawImage(im, b.x, b.y, b.w, b.h);
+    x.restore();
+    if (s < steps) { await waitUntil(t0 + dur * s / steps); if (!alive()) return R; }
+  }
+  return R;
+}
+async function aiText(L, p) {
+  const weight = p.bold ? 700 : 400, font = `${weight} ${p.size}px "${p.font}"`;
+  if (document.fonts && document.fonts.load) await Promise.race([document.fonts.load(font, p.text).catch(() => {}), sleep(1500)]);
+  const x = L.cx, lines = p.text.split('\n'), lh = p.size * 1.25, hh = lines.length * lh;
+  x.save(); x.font = font;
+  const wmax = Math.max(1, ...lines.map(l => x.measureText(l).width)), left = p.align === 'left' ? p.x : p.align === 'right' ? p.x - wmax : p.x - wmax / 2, top = p.y - hh / 2;
+  x.globalAlpha = p.op; x.fillStyle = p.color; x.textBaseline = 'middle'; x.textAlign = p.align;
+  lines.forEach((ln, i) => { x.direction = dirOf(ln); x.fillText(ln, p.x, top + i * lh + lh / 2); });
+  x.restore();
+  return clipR(left - p.size, top - p.size * 0.5, wmax + p.size * 2, hh + p.size);
+}
+/* a call's changes as one step: the layers and frames as they were (when it added any), and the pixels */
+function aiStep(pre, pxs) {
+  if (!pre && !pxs.length) return;
+  const post = pre && snapLayers(), bytes = pxs.reduce((n, p) => n + p.bytes, 0);
+  if (!pre) { push(pxs.length === 1 ? pxs[0] : { bytes, undo() { for (const p of pxs.slice().reverse()) p.undo(); }, redo() { for (const p of pxs) p.redo(); } }); return; }
+  push({ bytes: bytes + D.w * D.h * 4, undo() { for (const p of pxs.slice().reverse()) p.undo(); setLayers(pre); changed(); }, redo() { setLayers(post); for (const p of pxs) p.redo(); changed(); } });
+}
+async function aiDraw(args = {}) {
+  if (!D || !LOADED) throw new Error('No drawing is open.');
+  if (ACT) throw new Error('The user is drawing at this moment. Try again in a few seconds.');
+  commitPending();
+  const list = Array.isArray(args.items) ? args.items : [];
+  if (list.length > AI_ITEMS) throw new Error(`Up to ${AI_ITEMS} items in one call; draw the rest in another call.`);
+  if (!list.length && !args.clear) throw new Error('Nothing to draw: items is empty.');
+  const plan = list.map((it, k) => aiCheck(it, k));
+  await aiPrepare(plan);
+  if (!D || !LOADED) throw new Error('The drawing was closed.');
+  // where: a layer by its name (a new one on top when none has it, or the one chosen on screen), and a frame
+  const named = args.layer != null && String(args.layer).trim() !== '';
+  let L = named ? findLayer(args.layer) : layerOf(), fi = D.f, addF = false;
+  if (args.frame != null) {
+    const n = Math.round(num(args.frame, 'frame'));
+    if (n === D.frames.length + 1) addF = true; else fi = frameAt(n);
+  }
+  if (L && !L.vis) throw new Error(`The layer "${L.name}" is hidden. Show it first: edit_drawing with {"action": "layer", "layer": "${L.name}", "visible": true}.`);
+  const need = (addF ? D.layers.filter(l => !l.fx).length : 0) + (L ? 0 : 1);
+  if (need && !room(need)) throw new Error('The drawing is full: its layers and frames take all the memory this device allows. Delete a layer or some frames first.');
+  let pre = null;
+  if (addF || !L) {
+    pre = snapLayers();
+    if (addF) { freeUnused(); D.frames.push({ id: fid(), d: 1 }); fi = D.frames.length - 1; D.f = fi; }
+    if (!L) { L = makeLayer(String(args.layer).trim().slice(0, 60)); D.layers.push(L); }
+  }
+  if (fi !== D.f) { freeUnused(); D.f = fi; }
+  D.active = L.id; SEL = null;
+  bindAll(); paintPaper(); layersUI(); framesUI(); stat(); onionSoon(); drawOverlay();
+  const d0 = D, busy = ACT = { kind: 'busy', id: null }, alive = () => D === d0 && D.layers.includes(L);
+  const cell = L.cell, orig = newCanvas(D.w, D.h);
+  orig.getContext('2d').drawImage(cell.cv, 0, 0);
+  try {
+    let R = null;
+    if (args.clear) { cell.cx.clearRect(0, 0, D.w, D.h); R = { x: 0, y: 0, w: D.w, h: D.h }; }
+    const times = aiTimes(plan);
+    for (const [k, p] of plan.entries()) {
+      if (!alive()) break;
+      const r = p.t === 'stroke' ? await aiStroke(L, p, times[k], alive) : p.t === 'svg' ? await aiSvg(L, p, times[k], alive) : p.t === 'text' ? await aiText(L, p)
+        : (fillCore(L, p.x, p.y, p.color, p.tol, p.op, p.all) || {}).R;
+      R = unionR(R, r);
+      if ((p.t === 'fill' || p.t === 'text') && times[k]) await sleep(times[k]);
+    }
+    if (!alive()) throw new Error('The drawing was closed while it was being drawn.');
+    R = R && clipR(R.x, R.y, R.w, R.h);
+    aiStep(pre, R ? [pxStep(L, R, orig.getContext('2d').getImageData(R.x, R.y, R.w, R.h))] : []);
+    changed(L);
+    paintPaper(); layersUI(); framesUI();
+    return { drawn: plan.length, layer: L.name, ...(D.frames.length > 1 ? { frame: D.f + 1, frames: D.frames.length } : {}), ...(L.fx && D.frames.length > 1 ? { note: 'This layer is pinned: what is on it shows in every frame.' } : {}) };
+  } finally {
+    freeCanvas(orig);
+    if (ACT === busy) ACT = null;
+  }
+}
+
+/* --- edit_drawing: the layers, the frames, the background and the filters, in order, as one step. A mistake in any
+   of them puts everything back as it was --- */
+function aiSettings(id, given) {
+  const f = FXL[id], p = fxSettings(id, true);
+  if (given == null) return p;
+  if (typeof given !== 'object' || Array.isArray(given)) throw new Error('settings is an object, like {"r": 12}.');
+  for (const [k, v] of Object.entries(given)) {
+    const q = f.ps.find(x => x.k === k);
+    if (!q) throw new Error(`"${id}" has no setting "${k}". Its settings are: ${f.ps.map(x => x.k).join(', ')}.`);
+    if (q.t === 'range') p[k] = clamp(Math.round(num(v, k)), q.min, q.max);
+    else if (q.t === 'check') p[k] = !!v;
+    else if (q.t === 'seed') p[k] = Math.round(num(v, k));
+    else if (q.t === 'color') { const c = hex6(v); if (!c) throw new Error(`${k} is a color #rrggbb.`); p[k] = c; }
+    else if (q.t === 'grad') { if (!Array.isArray(v) || v.length !== 3 || !v.every(hex6)) throw new Error(`${k} is three colors, from the dark to the light: ["#rrggbb", "#rrggbb", "#rrggbb"].`); p[k] = v.map(hex6); }
+    else if (q.t === 'point') { if (!Array.isArray(v) || v.length !== 2) throw new Error(`${k} is a point [x, y] on the drawing.`); p[k] = [clamp(num(v[0], k), 0, D.w), clamp(num(v[1], k), 0, D.h)]; }
+    else if (q.t === 'curves') {
+      const cv = JSON.parse(JSON.stringify(p[k]));
+      if (!v || typeof v !== 'object') throw new Error(`${k} is {"a": [[0, 0], ..., [255, 255]], "r": ..., "g": ..., "b": ...}: points [in, out] from 0 to 255, for all colors (a) or one.`);
+      for (const ch of ['a', 'r', 'g', 'b']) if (v[ch] != null) cv[ch] = Array.isArray(v[ch]) ? v[ch].map(q2 => Array.isArray(q2) ? q2.map(n => clamp(Math.round(+n) || 0, 0, 255)) : q2).sort((u, w) => u[0] - w[0]) : v[ch];
+      if (!curvesOk(cv)) throw new Error(`${k}: each curve has 2 to 16 points [in, out] from 0 to 255, each further right than the one before.`);
+      p[k] = cv;
+    }
+  }
+  return p;
+}
+function aiAction(a, px) {
+  const act = a.action;
+  bindAll();
+  const lay = () => a.layer == null || a.layer === '' ? layerOf() : layerNamed(a.layer);
+  const full = { x: 0, y: 0, w: D.w, h: D.h };
+  switch (act) {
+    case 'add_layer': {
+      if (!room(1)) throw new Error('The drawing is full: no memory for another layer.');
+      const name = a.name == null || !String(a.name).trim() ? nextLayerName() : String(a.name).trim().slice(0, 60);
+      if (findLayer(name)) throw new Error(`There is already a layer named "${name}".`);
+      const L = makeLayer(name);
+      D.layers.splice(a.above == null ? D.layers.length : D.layers.indexOf(layerNamed(a.above)) + 1, 0, L);
+      D.active = L.id;
+      return;
+    }
+    case 'delete_layer': {
+      const L = lay(), i = D.layers.indexOf(L);
+      if (D.layers.length <= 1) throw new Error('A drawing needs at least one layer.');
+      D.layers.splice(i, 1);
+      if (D.active === L.id) D.active = D.layers[Math.max(0, i - 1)].id;
+      return;
+    }
+    case 'rename_layer': {
+      const L = lay(), name = String(a.name == null ? '' : a.name).trim().slice(0, 60);
+      if (!name) throw new Error('name is empty.');
+      if (findLayer(name) && findLayer(name) !== L) throw new Error(`There is already a layer named "${name}".`);
+      L.name = name;
+      return;
+    }
+    case 'duplicate_layer': {
+      const S0 = lay(), list = [...S0.cells].filter(([, c]) => c.ver || c === S0.cell);
+      if (!room(list.length)) throw new Error('The drawing is full: no memory for another layer.');
+      const name = a.name == null || !String(a.name).trim() ? T('{0} (עותק)', S0.name).slice(0, 60) : String(a.name).trim().slice(0, 60);
+      const L = makeLayer(name, { op: S0.op, vis: S0.vis, fx: S0.fx });
+      for (const [k, c] of list) { const n = newCell(); n.cx.drawImage(c.cv, 0, 0); n.ver = c.ver ? 1 : 0; L.cells.set(k, n); }
+      D.layers.splice(D.layers.indexOf(S0) + 1, 0, L); D.active = L.id;
+      return;
+    }
+    case 'layer': {
+      const L = lay();
+      if (a.visible != null) L.vis = !!a.visible;
+      if (a.opacity != null) { const o = num(a.opacity, 'opacity'); L.op = clamp(o > 1 ? o / 100 : o, 0, 1); }
+      if (a.pinned != null && !!a.pinned !== L.fx) {
+        if (L.fx) { const c = L.cells.get('*'); L.fx = false; L.cells = new Map(c ? [[D.frames[D.f].id, c]] : []); }
+        else { const c = L.cell; L.fx = true; L.cells = new Map(c ? [['*', c]] : []); }
+      }
+      return;
+    }
+    case 'move_layer': {
+      const L = lay(), i = D.layers.indexOf(L), to = { top: D.layers.length - 1, bottom: 0, up: i + 1, down: i - 1 }[a.to];
+      if (to == null) throw new Error('to is top, bottom, up or down.');
+      D.layers.splice(i, 1); D.layers.splice(clamp(to, 0, D.layers.length), 0, L);
+      return;
+    }
+    case 'select_layer': D.active = lay().id; return;
+    case 'clear_layer': {
+      const L = lay(), i = a.frame == null ? D.f : frameAt(a.frame), cell = cellAt(L, i);
+      if (!cell || !cell.ver || !cell.cv.width) return;
+      px.push({ L, cell, R: full, before: cell.cx.getImageData(0, 0, D.w, D.h), fk: L.fx ? null : D.frames[i].id });
+      cell.cx.clearRect(0, 0, D.w, D.h);
+      return;
+    }
+    case 'add_frame': {
+      const count = a.count == null ? 1 : Math.round(num(a.count, 'count')), after = a.after == null ? D.frames.length - 1 : frameAt(a.after);
+      if (!(count >= 1 && count <= 300) || D.frames.length + count > 3000) throw new Error('count goes from 1 to 300.');
+      const anim = D.layers.filter(L => !L.fx), src = a.copy ? anim.map(L => [L, cellAt(L, after)]).filter(([, c]) => c && c.ver && c.cv.width) : [];
+      if (!room(a.copy ? src.length * count : anim.length)) throw new Error('The drawing is full: no memory for more frames.');
+      for (let j = 0; j < count; j++) {
+        const f = { id: fid(), d: a.copy ? D.frames[after].d : 1 };
+        for (const [L, c] of src) { const n = newCell(); n.cx.drawImage(c.cv, 0, 0); n.ver = 1; L.cells.set(f.id, n); }
+        D.frames.splice(after + 1 + j, 0, f);
+      }
+      if (D.f > after) D.f += count;
+      return;
+    }
+    case 'delete_frame': {
+      const i = frameAt(a.frame);
+      if (D.frames.length <= 1) throw new Error('A drawing needs at least one frame.');
+      const f = D.frames[i];
+      for (const L of D.layers) if (!L.fx) L.cells.delete(f.id);
+      D.frames.splice(i, 1);
+      if (D.f > i || D.f >= D.frames.length) D.f = Math.max(0, D.f - 1);
+      return;
+    }
+    case 'move_frame': {
+      const i = frameAt(a.frame), to = frameAt(a.to), cur = D.frames[D.f].id, [f] = D.frames.splice(i, 1);
+      D.frames.splice(to, 0, f); D.f = D.frames.findIndex(x => x.id === cur);
+      return;
+    }
+    case 'frame_duration': D.frames[frameAt(a.frame)].d = clamp(Math.round(num(a.beats, 'beats')), 1, 60); return;
+    case 'go_to_frame': { const i = frameAt(a.frame); if (i !== D.f) { freeUnused(); D.f = i; } return; }
+    case 'animation': {
+      if (a.fps != null) D.fps = clamp(Math.round(num(a.fps, 'fps')), 1, 30);
+      if (a.loop != null) { if (!LOOPS.includes(a.loop)) throw new Error(`loop is ${LOOPS.join(', ')}.`); D.loop = a.loop; }
+      return;
+    }
+    case 'background': {
+      const c = a.color === 'transparent' ? '' : hex6(a.color);
+      if (c == null) throw new Error('color is #rrggbb, or "transparent".');
+      D.bg = c;
+      return;
+    }
+    case 'filter': {
+      const id = a.filter, f = FXL[id];
+      if (!f) throw new Error(`Unknown filter "${id}". The filters are: ${Object.keys(FXL).join(', ')}.`);
+      const L = lay();
+      if (!L.vis) throw new Error(`The layer "${L.name}" is hidden.`);
+      const p = aiSettings(id, a.settings);
+      if (!glx()) throw new Error('This browser cannot run filters.');
+      const cells = a.all_frames && !L.fx ? D.frames.map((fr, i) => [i, cellAt(L, i)]).filter(([i, c]) => c && c.cv.width && (c.ver || i === D.f)) : [[D.f, L.cell]];
+      const s = { f, p, R: full, U: full, sel: null, mk: null, before: false };
+      try {
+        for (const [i, cell] of cells) {
+          const before = cell.cx.getImageData(0, 0, D.w, D.h), tex = upTex(cell.cv);
+          try { fxPut(cell.cx, s, fxRender(s, tex, true), 0, 0); } finally { GLX.gl.deleteTexture(tex.t); }
+          px.push({ L, cell, R: full, before, fk: L.fx ? null : D.frames[i].id });
+        }
+      } finally { glFree(); }
+      return;
+    }
+    default: throw new Error('action must be add_layer, delete_layer, rename_layer, duplicate_layer, layer, move_layer, select_layer, clear_layer, add_frame, delete_frame, move_frame, frame_duration, go_to_frame, animation, background or filter.');
+  }
+}
+async function aiEdit(args = {}) {
+  if (!D || !LOADED) throw new Error('No drawing is open.');
+  if (ACT) throw new Error('The user is drawing at this moment. Try again in a few seconds.');
+  commitPending();
+  const acts = Array.isArray(args.actions) ? args.actions : [];
+  if (!acts.length) throw new Error('actions is empty.');
+  if (acts.length > 300) throw new Error('Up to 300 actions in one call.');
+  const pre = snapLayers(), px = [];
+  try {
+    acts.forEach((a, i) => {
+      a = a && typeof a === 'object' ? a : {};
+      try { aiAction(a, px); } catch (e) { throw new Error(`actions[${i}] (${a.action}): ${e.message}`); }
+    });
+  } catch (e) {
+    for (const c of px.slice().reverse()) c.cell.cx.putImageData(c.before, 0, 0);
+    setLayers(pre);
+    throw e;
+  }
+  bindAll();
+  aiStep(pre, px.map(c => pxStep(c.L, c.R, c.before, c.cell, c.fk)));
+  for (const c of px) changed(c.L, c.cell);
+  paintPaper(); layersUI(); framesUI(); stat(); onionSoon(); changed();
+  return infoOf(D);
+}
+
 const COMMANDS = {
   dwUndo: () => undo(), dwRedo: () => redo(),
   dwTool: a => setTool(a),
@@ -3382,13 +3860,14 @@ const COMMANDS = {
 };
 
 window.INK_DRAW = {
-  load, unload: reset, replace, preview, chooser, flush, body, norm, info, pickInto,
+  load, unload: reset, replace, preview, chooser, flush, body, norm, pickInto,
   png, jpg, pdf, print,
   key: onKey, esc: onEsc, stat,
   image: f => placeImage(f, true),
   ready: cur => !!D && LOADED === cur,
   count: () => D ? D.layers.length : 0,
   frames: () => D ? D.frames.length : 0,
+  ai: { blank: aiBlank, info: () => infoOf(D), look: aiLook, draw: aiDraw, edit: aiEdit },
 };
 
 // ==DRAW-END==

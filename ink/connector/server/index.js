@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.13.0';
+const VERSION = '1.14.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -30,6 +30,9 @@ const INSTRUCTIONS = 'Floating Ink is a word processor open in the user\'s brows
   'a title and three to six brief points; what the presenter should say goes in the slide\'s notes. read_document reads a presentation slide by slide. ' +
   'It also makes spreadsheets, like Excel: create_spreadsheet builds one with values, formulas, formatting, conditional formatting, drop-down lists (data validation), defined names and charts (a budget, a table of grades, a list with totals, a chart of them), ' +
   'read_spreadsheet reads one, and write_cells changes cells in one. Formulas are written the way Excel writes them in English, with commas: =SUM(B2:B9). ' +
+  'It also makes drawings, like a paint program: create_drawing starts one (or an animation, with several frames), draw paints on it while the user watches ' +
+  '(exact shapes in SVG, hand-drawn lines with its brushes, the paint bucket, text), edit_drawing changes its layers, frames and background and applies filters, ' +
+  'and read_document shows a drawing as a picture. Look at a drawing before adding to it, and at the picture each drawing call returns, to fix what looks wrong. ' +
   'The chat panel inside Floating Ink is shared: send_message leaves a note there, and read_messages shows ' +
   'what the user or another connected assistant wrote. The user often keeps writing to you from that panel instead of ' +
   'switching back to this window, so when they may still be talking to you there, call wait_for_message: it comes back ' +
@@ -156,11 +159,73 @@ const NAMES = { type: 'array', description: 'Defined names, as in Excel: a name 
     sheet: { type: 'string', description: 'Leave out for a name of the whole workbook (the usual). A sheet\'s name makes it that sheet\'s own name, known only there.' },
     comment: { type: 'string' },
     delete: { type: 'boolean', description: 'write_cells only: true takes the name away.' } }, required: ['name'] } };
+const LOOK = { type: 'boolean', description: 'false: no picture of the drawing comes back (one does by default).' };
+const DRAW_ITEMS = { type: 'array', description: 'What to draw, in order (up to 400 items); the user watches it appear. Coordinates are the drawing\'s pixels, (0, 0) at the top left. ' +
+    'svg: shapes, paths, gradients and text as one <svg> element (scripts and pictures from elsewhere are taken out). Its coordinates are the drawing\'s pixels unless it has a viewBox; x, y, width and height place it (by default it covers the whole drawing). Its top-level elements appear one after another. Best for anything exact: backgrounds, outlines, filled shapes, scenery. ' +
+    'stroke: a line drawn by hand with one of the app\'s brushes, curving smoothly through the points as a real stroke does. The same point twice in a row makes a sharp corner; a third number in a point (0 to 1) is pen pressure, thinner where it is low. ' +
+    'fill: the paint bucket at x, y: fills the area of alike color around that point, up to the lines of every visible layer (all_layers false: of this layer only). ' +
+    'text: text in one of the app\'s fonts (Hebrew too), centered on x, y (with align left or right, x is that edge); several lines with \\n.',
+  items: { type: 'object', properties: {
+    type: { type: 'string', enum: ['svg', 'stroke', 'fill', 'text'] },
+    svg: { type: 'string', description: 'svg: the whole <svg ...>...</svg>.' },
+    x: { type: 'number' }, y: { type: 'number' },
+    width: { type: 'number', description: 'svg: where it goes.' }, height: { type: 'number' },
+    points: { type: 'array', items: { type: 'array', items: { type: 'number' } }, description: 'stroke: [[x, y], [x, y], ...], or [x, y, pressure].' },
+    brush: { type: 'string', enum: ['pen', 'pencil', 'marker', 'brush', 'spray', 'eraser'], description: 'stroke: pen (the default: even and clean), pencil (thin, with the grain of paper), marker (wide and see-through), brush (soft paint), spray (a cloud of dots), eraser (rubs out what is on the layer).' },
+    color: { type: 'string', description: '#rrggbb (black by default).' },
+    size: { type: 'number', description: 'stroke: its width in pixels (each brush has its own default); text: the height of the letters in pixels (48 by default).' },
+    opacity: { type: 'number', description: '0 (nothing) to 1 (solid).' },
+    tolerance: { type: 'number', description: 'fill: how alike a color must be to be filled, 0 to 100 (30 by default).' },
+    all_layers: { type: 'boolean', description: 'fill: false goes by the colors of this layer alone.' },
+    text: { type: 'string' },
+    font: { type: 'string', description: 'text: Rubik (the default in Hebrew and English), Assistant, Heebo, Noto Sans Hebrew, IBM Plex Sans Hebrew, Varela Round, Alef, Fredoka, Frank Ruhl Libre, David Libre, Noto Serif Hebrew, Miriam Libre, Bellefair, Suez One, Secular One, Karantina, Amatic SC, Solitreo, Arial, Times New Roman or Courier New.' },
+    bold: { type: 'boolean', description: 'text: true by default.' },
+    align: { type: 'string', enum: ['left', 'center', 'right'] } }, required: ['type'] } };
+const FILTERS = 'hsl (hue -180..180, sat -100..100, light -100..100, col: true colors everything in one hue), bc (br brightness -100..100, ct contrast -100..100), ' +
+  'curves (cv: {"a": [[in, out], ...], "r": ..., "g": ..., "b": ...}, points 0..255, for all colors or one), temp (wa warmth -100..100), gmap (gr: three colors from the dark to the light, amt 0..100), ' +
+  'gray, sepia and invert (amt 0..100), post (lv shades of each color 2..16), thr (t 1..99, clr: white becomes see-through), blur (r 0..200 px), motion (len 0..400 px, ang -180..180), ' +
+  'zoom (s 0..100, c: its center [x, y]), sharp (amt 0..300, r 1..20), glow (t from what brightness 0..100, r 1..150, amt 0..300), noise (amt 0..100, gs grain 1..20, col), pix (cell 2..120 px), ' +
+  'half (halftone dots: cell 3..60, mono), glitch (amt 0..100, seed), chroma (amt 0..100, c [x, y]), vig (vignette: amt 0..100, size 0..100, col color, c [x, y]), edges (line art: amt 0..100, soft 0..10, white), ' +
+  'emboss (amt 0..300, ht 1..10, ang -180..180, col), outline (w 1..64 px, col color), shadow (dist 0..200, ang -180..180, soft 0..100, see transparency 0..100, col color)';
 const TOOLS = [
-  { name: 'list_documents', description: 'List the documents, presentations and spreadsheets in Floating Ink: id, title, kind, word count, last change, and which one is open on screen.',
+  { name: 'list_documents', description: 'List the documents, presentations, spreadsheets and drawings in Floating Ink: id, title, kind, word count, last change, and which one is open on screen.',
     inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true } },
-  { name: 'read_document', description: 'Read a document as Markdown, a presentation slide by slide, or a spreadsheet\'s cells. Without an id, reads the one open on screen; for a document, also returns the text the user has selected in it.',
-    inputSchema: { type: 'object', properties: { id: DOC_ID } }, annotations: { readOnlyHint: true } },
+  { name: 'read_document', description: 'Read a document as Markdown, a presentation slide by slide, a spreadsheet\'s cells, or a drawing (its layers and frames, and a picture of it). Without an id, reads the one open on screen; for a document, also returns the text the user has selected in it.',
+    inputSchema: { type: 'object', properties: { id: DOC_ID, frame: { type: 'number', description: 'For a drawing that is an animation: the frame to see, 1 for the first (the one on screen by default).' } } }, annotations: { readOnlyHint: true } },
+  { name: 'create_drawing', description: 'Create a new drawing, like a paint program, and open it on the user\'s screen. For an animation give it frames, then draw on each one (draw with frame). ' +
+      'items draws on it straight away (the same items as draw). Returns its id, its layers, and a picture of it.',
+    inputSchema: { type: 'object', properties: { title: { type: 'string' },
+      size: { type: 'string', enum: ['wide', 'a4_portrait', 'a4_landscape', 'square', 'animation'], description: 'wide 1920 x 1080 (the default), a4_portrait 1240 x 1754, a4_landscape 1754 x 1240, square 1500 x 1500, animation 1280 x 720 (the default for an animation).' },
+      width: { type: 'number', description: 'Instead of size: 16 to 4096 pixels.' }, height: { type: 'number' },
+      background: { type: 'string', description: '#rrggbb (white by default), or "transparent".' },
+      frames: { type: 'number', description: 'For an animation: how many empty frames, 1 to 300.' },
+      fps: { type: 'number', description: 'For an animation: frames per second, 1 to 30 (12 by default).' },
+      items: DRAW_ITEMS, look: LOOK }, required: ['title'] } },
+  { name: 'draw', description: 'Draw on a drawing while the user watches: exact shapes in SVG, lines with the app\'s brushes, the paint bucket, and text. What one call draws is one step the user can undo with Ctrl+Z. ' +
+      'Read a drawing first (read_document) to see what is there; draw on a layer of your own (layer) unless asked to change the user\'s own lines; and look at the picture that comes back to check the result.',
+    inputSchema: { type: 'object', properties: { id: DOC_ID,
+      layer: { type: 'string', description: 'The layer to draw on, by its name; a new layer with this name is added on top when there is none. Leave out for the layer selected on screen.' },
+      frame: { type: 'number', description: 'For an animation: the frame to draw on, 1 for the first (the one on screen by default). One more than the number of frames adds a new frame at the end.' },
+      clear: { type: 'boolean', description: 'true empties the layer (in this frame) before drawing.' },
+      items: DRAW_ITEMS, look: LOOK }, required: ['items'] } },
+  { name: 'edit_drawing', description: 'Change a drawing: its layers, its frames (an animation is a drawing with several frames, shown one after another), its background, and filters, as in the app\'s Filters tab. ' +
+      'The actions run in order, as one step the user can undo with Ctrl+Z; if one of them fails, nothing changes. Layers are called by their names (read_document lists them), and frames are numbered from 1. Returns the layers and frames, and a picture of the drawing.',
+    inputSchema: { type: 'object', properties: { id: DOC_ID, look: LOOK, actions: { type: 'array', items: { type: 'object', properties: {
+      action: { type: 'string', enum: ['add_layer', 'delete_layer', 'rename_layer', 'duplicate_layer', 'layer', 'move_layer', 'select_layer', 'clear_layer', 'add_frame', 'delete_frame', 'move_frame', 'frame_duration', 'go_to_frame', 'animation', 'background', 'filter'],
+        description: 'add_layer (name, above: on top by default), delete_layer, rename_layer (name), duplicate_layer (name), layer (visible, opacity 0 to 1, pinned: shown on every frame of an animation, like a background), ' +
+          'move_layer (to: top, bottom, up or down), select_layer, clear_layer (frame), add_frame (after: the last by default; count; copy: copies of that frame instead of empty ones), delete_frame (frame), move_frame (frame, to), ' +
+          'frame_duration (frame, beats: how many beats it stays, 1 by default), go_to_frame (frame: shows it on screen), animation (fps 1 to 30, loop: loop, ping (back and forth) or once), background (color #rrggbb or "transparent"), ' +
+          'filter (filter, settings, all_frames: on every frame of the layer).' },
+      layer: { type: 'string', description: 'The layer\'s name; leave out for the layer selected on screen.' },
+      name: { type: 'string' }, above: { type: 'string', description: 'add_layer: the layer to put it above.' },
+      visible: { type: 'boolean' }, opacity: { type: 'number' }, pinned: { type: 'boolean' },
+      to: { description: 'move_layer: top, bottom, up or down. move_frame: the frame\'s new number.' },
+      frame: { type: 'number' }, after: { type: 'number' }, count: { type: 'number' }, copy: { type: 'boolean' }, beats: { type: 'number' },
+      fps: { type: 'number' }, loop: { type: 'string', enum: ['loop', 'ping', 'once'] }, color: { type: 'string' },
+      filter: { type: 'string', enum: ['hsl', 'bc', 'curves', 'temp', 'gmap', 'gray', 'sepia', 'invert', 'post', 'thr', 'blur', 'motion', 'zoom', 'sharp', 'glow', 'noise', 'pix', 'half', 'glitch', 'chroma', 'vig', 'edges', 'emboss', 'outline', 'shadow'],
+        description: 'The filters and their settings: ' + FILTERS + '.' },
+      settings: { type: 'object', description: 'Only the settings that change, like {"r": 12}; the rest start where the filter starts.' },
+      all_frames: { type: 'boolean' } }, required: ['action'] } } }, required: ['actions'] } },
   { name: 'create_presentation', description: 'Create a new presentation and open it on the user\'s screen, where they watch the slides come in one by one. ' +
       'Start with a "title" slide; keep each slide to a title and a few short points. The user adds the pictures themselves. Returns its id.',
     inputSchema: { type: 'object', properties: { title: { type: 'string' }, theme: THEME, transition: TRANSITION, slides: { type: 'array', items: { type: 'object', properties: SLIDE } } }, required: ['title', 'slides'] } },
@@ -434,13 +499,18 @@ async function handle(msg) {
     inflight.set(id, hooks);
     const tick = keepAlive(name, params);
     try {
-      const out = await callApp(name, (params && params.arguments) || {}, clientName, hooks);
+      const out = await callApp(name, { ...((params && params.arguments) || {}), __img: 1 }, clientName, hooks);
       if (hooks.cancelled || out === CANCELLED) return;
-      const { result, pending } = out;
+      const { pending } = out;
+      let { result } = out, images = [];
+      if (result && typeof result === 'object' && Array.isArray(result.__images)) {
+        images = result.__images.filter(i => i && typeof i.data === 'string' && /^image\/(png|jpeg|webp)$/.test(i.mimeType)).map(i => ({ type: 'image', data: i.data, mimeType: i.mimeType }));
+        result = { ...result }; delete result.__images;
+      }
       const nothing = name === 'wait_for_message' && Array.isArray(result) && !result.length;
       let text = nothing ? NO_MSG : typeof result === 'string' ? result : JSON.stringify(result, null, 2);
       if (pending && pending.length) text += '\n\n' + NEW_MSG + pending.map(m => '\n- "' + m.text + '"').join('');
-      return reply(id, { content: [{ type: 'text', text }] });
+      return reply(id, { content: [{ type: 'text', text }, ...images] });
     } catch (e) {
       if (hooks.cancelled) return;
       return reply(id, { content: [{ type: 'text', text: e.message }], isError: true });

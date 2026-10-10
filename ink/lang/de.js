@@ -2971,7 +2971,10 @@ window.INK_I18N = {
 "רק בחלק שבחרת, בשכבה: {0}": "Nur im ausgewählten Teil, auf der Ebene: {0}",
 "רק כמה גוונים לכל צבע, כמו בכרזה מודפסת": "Nur wenige Abstufungen pro Farbe wie auf einem gedruckten Plakat",
 "רקע לבן": "Weißer Hintergrund",
-"שחור-לבן": "Schwarzweiß"
+"שחור-לבן": "Schwarzweiß",
+"{0} יצר את הציור \"{1}\"": "{0} hat die Zeichnung „{1}“ erstellt",
+"{0} צייר ב-\"{1}\"": "{0} hat in „{1}“ gezeichnet",
+"{0} ערך את הציור \"{1}\"": "{0} hat die Zeichnung „{1}“ bearbeitet"
 },
 "plurals": {
 "{n} מילים": {

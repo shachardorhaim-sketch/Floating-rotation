@@ -2971,7 +2971,10 @@ window.INK_I18N = {
 "רק בחלק שבחרת, בשכבה: {0}": "Only in the part you chose, on the layer: {0}",
 "רק כמה גוונים לכל צבע, כמו בכרזה מודפסת": "Only a few shades of each color, like a printed poster",
 "רקע לבן": "White background",
-"שחור-לבן": "Black and white"
+"שחור-לבן": "Black and white",
+"{0} יצר את הציור \"{1}\"": "{0} created the drawing \"{1}\"",
+"{0} צייר ב-\"{1}\"": "{0} drew in \"{1}\"",
+"{0} ערך את הציור \"{1}\"": "{0} edited the drawing \"{1}\""
 },
 "plurals": {
 "{n} מילים": {
