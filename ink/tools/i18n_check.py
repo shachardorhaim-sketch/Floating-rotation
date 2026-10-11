@@ -1,6 +1,6 @@
 """Which interface texts are missing from (or no longer used in) the translations in ink/lang/*.js.
 
-The app's text is Hebrew, written in ink/index.html as T('...'), TN('... {n} ...', n) or N_('...'),
+The app's text is Hebrew, written in ink/index.html, ink/sheet.js and ink/draw.js as T('...'), TN('... {n} ...', n) or N_('...'),
 plus the fixed text in the page's HTML. Every lang/<code>.js maps that Hebrew text to its translation,
 so a new text needs its Hebrew -> translation pair added to each of them.
 Run from anywhere:  python ink/tools/i18n_check.py
@@ -13,6 +13,7 @@ HEB = re.compile('[' + chr(0x590) + '-' + chr(0x5FF) + ']')
 BS = chr(92)
 REGEX_PREV = set('(,=:[!&|?{};+-*%<>~^')
 KEYWORDS = {'return', 'typeof', 'case', 'do', 'else', 'in', 'of', 'new', 'delete', 'void', 'throw'}
+WORD = re.compile(r'[\w$]+')
 
 
 def skip_str(js, i, q):
@@ -75,7 +76,7 @@ def literals(js):
                     j += 1
                 i = j + 1; prev = 'x'; continue
             if c.isalpha() or c in '_$':
-                w = re.match(r'[\w$]+', js[i:]).group(0)
+                w = WORD.match(js, i).group(0)   # from position i, without copying the rest of the file each time
                 prev = ';' if w in KEYWORDS else 'x'; i += len(w); continue
             if not c.isspace(): prev = 'x' if (c.isdigit() or c in ')]') else c
             i += 1
@@ -104,6 +105,7 @@ class StaticText(HTMLParser):
         self.skip += tag in ('script', 'style')
         for k, v in attrs:
             if k in ('title', 'aria-label', 'placeholder', 'alt') and v and HEB.search(v): self.found.add(v.strip())
+            if k == 'data-t' and v: self.found.add(v.strip())   # a key with its context, e.g. ביטול@undo
     def handle_endtag(self, tag):
         self.skip -= tag in ('script', 'style')
     def handle_data(self, d):
@@ -112,6 +114,9 @@ class StaticText(HTMLParser):
 
 html = io.open(os.path.join(INK, 'index.html'), encoding='utf-8').read()
 js = html[html.rindex('<script>') + 8:html.rindex('</script>')]
+# the spreadsheets and the drawings live in their own files, loaded when one is opened
+for f in ('sheet.js', 'draw.js'):
+    js += chr(10) + ';' + chr(10) + io.open(os.path.join(INK, f), encoding='utf-8').read()
 strings, plurals = set(), set()
 call = re.compile(r'(?<![\w$.])(T|TN|N_)\(\s*$')
 for a, b in literals(js):
@@ -129,8 +134,9 @@ for name in sorted(os.listdir(lang_dir)):
     src = io.open(os.path.join(lang_dir, name), encoding='utf-8').read()
     data = json.loads(src[src.index('=') + 1:src.rindex(';')])
     have, have_p = set(data['strings']), set(data['plurals'])
-    missing, missing_p, unused = sorted(strings - have), sorted(plurals - have_p), sorted(have - strings)
-    print(f"{name}: {len(have)} strings, {len(missing)} missing, {len(missing_p)} plurals missing, {len(unused)} unused")
+    missing, missing_p, unused, unused_p = sorted(strings - have), sorted(plurals - have_p), sorted(have - strings), sorted(have_p - plurals)
+    print(f"{name}: {len(have)} strings, {len(missing)} missing, {len(missing_p)} plurals missing, {len(unused) + len(unused_p)} unused")
     for k in missing: print('   missing:', k[:100])
     for k in missing_p: print('   missing plural:', k[:100])
     for k in unused: print('   unused:', k[:100])
+    for k in unused_p: print('   unused plural:', k[:100])

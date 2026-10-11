@@ -1,10 +1,11 @@
 // Floating Ink — service worker: lets the installed app open without internet.
 // The app's own files are fetched fresh when online (so updates arrive) and fall back
-// to the saved copy offline. Fonts and the Word/PDF libraries are kept after first use.
-const SHELL = 'ink-shell-v3';
+// to the saved copy offline. Fonts and the Word/PDF/Excel libraries are kept after first use. sheet.js (the
+// spreadsheets) and draw.js (the drawings) are saved at install, so they open offline even if none was opened before.
+const SHELL = 'ink-shell-v6';
 const LIBS = 'ink-libs-v1';
 const LANGS = ['en', 'ar', 'zh', 'es', 'fr', 'pt', 'ru', 'de'];
-const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './floating-ink.webp', './icons/icon-192.png', './icons/icon-512.png', './icons/favicon-32.png', './icons/mark-64.png', ...LANGS.map(l => `./lang/${l}.js`)];
+const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './floating-ink.webp', './icons/icon-192.png', './icons/icon-512.png', './icons/favicon-32.png', './icons/mark-64.png', './pptx-shapes.json', './sheet.js', './draw.js', ...LANGS.map(l => `./lang/${l}.js`)];
 const LIB_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net', 'cdnjs.cloudflare.com'];
 
 self.addEventListener('install', e => {
@@ -31,7 +32,8 @@ self.addEventListener('fetch', e => {
           if (res.ok) { const copy = res.clone(); caches.open(SHELL).then(c => c.put(req, copy)); }
           return res;
         })
-        .catch(() => caches.match(req, { ignoreSearch: true }).then(hit => hit || (req.mode === 'navigate' ? caches.match('./index.html') : undefined)))
+        // the exact address first: with ignoreSearch alone, an older copy saved under another query string could answer
+        .catch(() => caches.match(req).then(hit => hit || caches.match(req, { ignoreSearch: true })).then(hit => hit || (req.mode === 'navigate' ? caches.match('./index.html') : undefined)))
         .then(res => res || Response.error())
     );
     return;

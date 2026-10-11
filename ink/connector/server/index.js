@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.3.1';
+const VERSION = '1.15.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -25,6 +25,14 @@ const INSTRUCTIONS = 'Floating Ink is a word processor open in the user\'s brows
   'the user sees every change as it happens, and can undo it with Ctrl+Z. Write document content in Markdown ' +
   '(# headings, **bold**, *italic*, lists, "- [ ]" checklists, | tables |, > quotes, [links](https://...)). ' +
   'Keep the language of the document unless the user asks otherwise; many documents are in Hebrew. ' +
+  'It also makes presentations (slides, like PowerPoint): create_presentation builds one while the user watches, for example ' +
+  'from a script or a document they wrote (read_document it first), and edit_presentation changes one. Keep slides short: ' +
+  'a title and three to six brief points; what the presenter should say goes in the slide\'s notes. read_document reads a presentation slide by slide. ' +
+  'It also makes spreadsheets, like Excel: create_spreadsheet builds one with values, formulas, formatting, conditional formatting, drop-down lists (data validation), defined names and charts (a budget, a table of grades, a list with totals, a chart of them), ' +
+  'read_spreadsheet reads one, and write_cells changes cells in one. Formulas are written the way Excel writes them in English, with commas: =SUM(B2:B9). ' +
+  'It also makes drawings, like a paint program: create_drawing starts one (or an animation, with several frames), draw paints on it while the user watches ' +
+  '(exact shapes in SVG, hand-drawn lines with its brushes, the paint bucket, text), edit_drawing changes its layers, frames and background and applies filters, ' +
+  'and read_document shows a drawing as a picture. Look at a drawing before adding to it, and at the picture each drawing call returns, to fix what looks wrong. ' +
   'The chat panel inside Floating Ink is shared: send_message leaves a note there, and read_messages shows ' +
   'what the user or another connected assistant wrote. The user often keeps writing to you from that panel instead of ' +
   'switching back to this window, so when they may still be talking to you there, call wait_for_message: it comes back ' +
@@ -34,11 +42,211 @@ const INSTRUCTIONS = 'Floating Ink is a word processor open in the user\'s brows
   'in the wait instead of ending your turn.';
 
 const DOC_ID = { type: 'string', description: 'Document id from list_documents. Leave out to use the document open on screen.' };
+const THEME = { type: 'string', enum: ['ink', 'night', 'sand', 'forest', 'sunset', 'chalk', 'plain', 'notebook', 'science', 'business', 'gaming', 'history',
+  'space', 'nature', 'books', 'party', 'sports', 'music', 'minimal', 'travel', 'food', 'math', 'tech', 'creator', 'art'],
+  description: 'Design theme; pick one that fits the topic. ink (blue on white, the default), night (dark blue), sand (warm orange), forest (green), ' +
+    'sunset (pink and purple), chalk (a green chalkboard), plain (black on white), notebook (a lined school notebook), science (a dark lab, hexagons), ' +
+    'business (navy and gold), gaming (neon on dark purple), history (old parchment), space (stars and planets), nature (green leaves), ' +
+    'books (a library in burgundy), party (pink confetti), sports (black and orange), music (purple, sound waves), minimal (quiet, black on light gray), ' +
+    'travel (sky and sea), food (a warm kitchen), math (graph paper), tech (dark blue circuits), creator (red on black, like a video channel), art (bright paint blobs).' };
+const SLIDE = {
+  layout: { type: 'string', enum: ['title', 'content', 'two_columns', 'big_image', 'image_and_text', 'title_only', 'section', 'blank'],
+    description: 'title: the opening slide (title and subtitle). content: a title and text. two_columns: a title and two columns. big_image: a title, a big picture the user adds, and a caption. ' +
+      'image_and_text: a title and text on one side, and a picture the user adds filling the other half. title_only: just a title. section: a chapter title. blank: nothing.' },
+  title: { type: 'string' },
+  subtitle: { type: 'string', description: 'Under the title, on "title" and "section" slides.' },
+  text: { type: 'string', description: 'Markdown for a "content" or "image_and_text" slide: a few short bullet points ("- ..."), a numbered list or short paragraphs; **bold** works.' },
+  column1: { type: 'string', description: 'Markdown for the first column of a "two_columns" slide (the right one in Hebrew).' },
+  column2: { type: 'string', description: 'Markdown for the second column.' },
+  caption: { type: 'string', description: 'The line under the picture of a "big_image" slide.' },
+  notes: { type: 'string', description: 'Speaker notes: what to say while this slide is shown. The presenter sees them in presenter view; the audience does not. An empty string removes them.' },
+};
+const TRANSITION = { type: 'string', enum: ['none', 'fade', 'push', 'wipe', 'cover', 'split', 'flip', 'cube', 'gallery', 'curtains'],
+  description: 'One transition for every slide, as in PowerPoint; it also plays in the saved PowerPoint file. none removes them. Leave out to keep what is there.' };
+const NUMBER_FORMATS = 'general, number (1,234.50), integer (1,235), currency (in the user\'s currency, ₪ in Hebrew), currency_ils, currency_usd, currency_eur, percent (12%), percent2 (12.34%), date, long_date, time, text, or an Excel format code such as #,##0.00 "₪"';
+const SHEET = {
+  name: { type: 'string', description: 'The sheet\'s name on its tab (up to 31 characters).' },
+  start: { type: 'string', description: 'The cell where rows begins, like A1 (the default).' },
+  rows: { type: 'array', items: { type: 'array', items: {} }, description: 'Rows of cells from start, the first row first, the first column first. Each value is a number, text, true/false, or null for an empty cell. ' +
+    'Text that starts with = is a formula, in English with commas as in Excel: =SUM(B2:B9), =AVERAGE(B2:D2), =IF(E2>=55,"pass","fail"), =B2*C2, =\'Sheet 2\'!B7. ' +
+    'About 150 Excel functions work: SUM, SUMIF(S), SUMPRODUCT, ROUND, AVERAGE, COUNTIF(S), MAXIFS, MEDIAN, RANK, IF, IFS, AND, OR, IFERROR, SWITCH, TEXT, LEFT, MID, TEXTJOIN, SUBSTITUTE, TODAY, DATE, EDATE, DATEDIF, NETWORKDAYS, XLOOKUP, VLOOKUP, INDEX, MATCH and more, with + - * / ^ %, & (joining text), comparisons, cells and ranges. ' +
+    'As in Excel 365, a formula whose answer is several values spills them into the cells below and beside it: =SORT(A2:B20,2,-1), =FILTER(A2:C20,C2:C20>50), =UNIQUE(A2:A20), =SEQUENCE(10); leave those cells empty, and refer to the whole spill as A2#. INDIRECT and OFFSET work, and so do defined names (see names): =SUM(Prices). So do LET and LAMBDA (with MAP, REDUCE, SCAN, BYROW, BYCOL and MAKEARRAY), Excel\'s financial functions (PMT, FV, NPV, IRR, XIRR, RATE and the rest), HYPERLINK, and a table\'s columns by name (see tables): =SUM(Sales[Price]). Write plain numbers (1200), and set their look with formats. ' +
+    'One call takes up to 5,000 rows of up to 500 cells; for more, call write_cells again with a later start.' },
+  cells: { type: 'object', additionalProperties: {}, description: 'Single cells by address, like {"B2": 1200, "C2": "=B2*2"}; the same values as rows.' },
+  formats: { type: 'array', description: 'Formatting for ranges, applied in order (up to 500, each range up to 100,000 cells).', items: { type: 'object', properties: {
+    range: { type: 'string', description: 'Like A1:D1 or B2.' }, bold: { type: 'boolean' }, italic: { type: 'boolean' }, underline: { type: 'boolean' }, wrap: { type: 'boolean', description: 'Several lines in the cell.' },
+    color: { type: 'string', description: 'Text color, #rrggbb.' }, fill: { type: 'string', description: 'Background color, #rrggbb.' }, font_size: { type: 'number' },
+    align: { type: 'string', enum: ['left', 'center', 'right'] }, valign: { type: 'string', enum: ['top', 'middle', 'bottom'] },
+    number_format: { type: 'string', description: 'How numbers show: ' + NUMBER_FORMATS + '.' },
+    border: { type: 'string', enum: ['all', 'outside', 'thick_outside', 'bottom', 'top', 'none'] },
+    merge: { type: 'boolean', description: 'One cell over the whole range, as for a title.' } }, required: ['range'] } },
+  column_widths: { type: 'object', additionalProperties: { type: 'number' }, description: 'Widths in pixels by column letter, like {"A": 160, "B": 90}. The default is 100.' },
+  freeze_rows: { type: 'number', description: 'How many rows at the top stay in view when scrolling (1 for a header row).' },
+  freeze_columns: { type: 'number' },
+  direction: { type: 'string', enum: ['rtl', 'ltr'], description: 'rtl puts column A on the right, as Hebrew Excel does. Leave out to follow the language of the text.' },
+  charts: { type: 'array', description: 'Charts drawn from cells of this sheet, like Excel charts; they redraw by themselves when the cells change. Write the cells first (rows), then chart them.', items: { type: 'object', properties: {
+    type: { type: 'string', enum: ['column', 'bar', 'line', 'pie', 'donut'], description: 'column: upright bars; bar: bars across; line; pie; donut (a pie with a hole). pie and donut show the first series only.' },
+    range: { type: 'string', description: 'The cells to chart with their headers, like A1:C7. Words in the first row name the series and words in the first column are the categories, as in Excel.' },
+    title: { type: 'string' },
+    at: { type: 'string', description: 'The cell at the top corner of the chart, like F2. The default is beside the range.' },
+    width: { type: 'number', description: 'In pixels; 480 by default.' },
+    height: { type: 'number', description: 'In pixels; 288 by default.' },
+    series_in: { type: 'string', enum: ['columns', 'rows'], description: 'Leave out to let the sheet decide, as Excel does.' },
+    legend: { type: 'boolean', description: 'true by default.' },
+    labels: { type: 'boolean', description: 'The numbers on the bars or slices.' } }, required: ['type', 'range'] } },
+  conditional_formats: { type: 'array', description: 'Conditional formatting, as in Excel: cells colored by their values, data bars, color scales and icons. They follow the cells when they change. The first rule is the strongest.', items: { type: 'object', properties: {
+    range: { type: 'string', description: 'The cells, like B2:B20 (several ranges with spaces between them).' },
+    type: { type: 'string', enum: ['greater_than', 'greater_or_equal', 'less_than', 'less_or_equal', 'equal', 'not_equal', 'between', 'not_between', 'text_contains', 'text_not_contains', 'text_begins', 'text_ends', 'date', 'blanks', 'no_blanks', 'errors', 'no_errors', 'top', 'bottom', 'above_average', 'below_average', 'duplicates', 'unique', 'formula', 'data_bar', 'color_scale', 'icon_set'] },
+    value: { description: 'For the comparisons: a number, text, or a formula like "=$E$1".' }, value2: { description: 'The other end, for between.' },
+    text: { type: 'string', description: 'For the text types.' },
+    period: { type: 'string', enum: ['yesterday', 'today', 'tomorrow', 'last_7_days', 'last_week', 'this_week', 'next_week', 'last_month', 'this_month', 'next_month'], description: 'For date.' },
+    count: { type: 'number', description: 'For top and bottom: how many (10 by default).' }, percent: { type: 'boolean', description: 'For top and bottom: count is a percent.' },
+    formula: { type: 'string', description: 'For formula: true colors the cell. Written for the first cell of the range, and moved for each cell like a copied formula: "=$C2>100" colors each row whose C is over 100.' },
+    style: { type: 'string', enum: ['red', 'yellow', 'green', 'fill', 'text'], description: 'The look for the highlighting types: red is a light red fill with dark red text (the default), yellow and green the same in their colors, fill a light red fill only, text red text only.' },
+    fill: { type: 'string', description: 'Instead of style: a fill #rrggbb.' }, text_color: { type: 'string', description: 'Instead of style: a text color #rrggbb.' }, bold: { type: 'boolean' }, italic: { type: 'boolean' },
+    color: { type: 'string', description: 'For data_bar: #rrggbb (blue by default).' }, solid: { type: 'boolean', description: 'For data_bar: a solid bar instead of a gradient.' },
+    colors: { type: 'array', items: { type: 'string' }, description: 'For color_scale: 2 or 3 colors #rrggbb, from the lowest values to the highest (red, yellow, green by default).' },
+    icons: { type: 'string', enum: ['arrows', 'triangles', 'traffic_lights', 'signs', 'symbols', 'flags', 'stars', 'ratings', 'quarters'], description: 'For icon_set.' },
+    reverse: { type: 'boolean', description: 'For icon_set: the icons the other way around.' }, hide_values: { type: 'boolean', description: 'For data_bar and icon_set: show only the bar or the icon.' },
+    border: { type: 'string', enum: ['all', 'top', 'bottom'], description: 'A thin line around each cell the rule changes (all), or above or below it, as Excel\'s rules allow.' },
+    border_style: { type: 'string', enum: ['solid', 'dashed', 'dotted'] }, border_color: { type: 'string', description: '#rrggbb (black by default).' },
+    stop_if_true: { type: 'boolean' } }, required: ['range', 'type'] } },
+  validations: { type: 'array', description: 'Data validation, as in Excel: a drop-down list in cells, or a limit on what a person may type into them (it follows the cells when they move, and is saved in Excel files). ' +
+      'A rule takes the place of any rule its cells had. It checks only what a person types: values you write are not stopped, and write_cells tells you which of them a rule does not allow. A rule over a table\'s column reaches the rows a person adds to the table.', items: { type: 'object', properties: {
+    range: { type: 'string', description: 'The cells, like B2:B50 (several ranges with spaces between them; B:B is a whole column).' },
+    type: { type: 'string', enum: ['list', 'whole_number', 'decimal', 'date', 'time', 'text_length', 'custom', 'any', 'none'], description: 'list: a drop-down list. whole_number, decimal, date, time and text_length compare with operator and value. custom: a formula that must be true. any: no limit, only the input message. none: takes the rules of these cells away.' },
+    values: { type: 'array', items: {}, description: 'For list: the items written out, like ["Yes", "No", "Maybe"] (no commas inside an item, up to 255 characters in all; for a longer list write the items in cells and give source).' },
+    source: { type: 'string', description: 'For list, instead of values: the cells that hold the items, one row or one column, like "H2:H20" or "Lists!A1:A30", or a defined name for them ("Fruits"). The list follows those cells as they change. ' +
+      'For a list that depends on another cell, "=INDIRECT(A2)": A2 holds the name of a defined name (or an address as text), and each cell of the rule looks at the cell beside it, like a copied formula.' },
+    dropdown: { type: 'boolean', description: 'For list: false hides the arrow in the cell (true by default).' },
+    operator: { type: 'string', enum: ['between', 'not_between', 'equal', 'not_equal', 'greater_than', 'less_than', 'greater_or_equal', 'less_or_equal'] },
+    value: { description: 'A number, a date as "2026-01-31", a time as "8:30", or a formula like "=$E$1". With between and not_between it is the smaller end.' }, value2: { description: 'The larger end, for between and not_between.' },
+    formula: { type: 'string', description: 'For custom: what is typed is accepted when this is true. Written for the first cell of the range and moved for each cell like a copied formula: "=ISNUMBER(B2)", "=COUNTIF($B$2:$B$50,B2)=1" (no duplicates).' },
+    allow_blank: { type: 'boolean', description: 'false makes an empty cell not valid (true by default).' },
+    input_title: { type: 'string', description: 'Up to 32 characters.' }, input_message: { type: 'string', description: 'A note shown beside the cell while it is selected, saying what to type (up to 255 characters).' },
+    error_style: { type: 'string', enum: ['stop', 'warning', 'information'], description: 'What happens when a person types a value that is not valid. stop (the default): the value is refused. warning: they are asked whether to keep it. information: they are told, and the value goes in.' },
+    error_title: { type: 'string', description: 'Up to 32 characters.' }, error_message: { type: 'string', description: 'The alert\'s text (up to 225 characters); a short default is used without it.' },
+    show_error: { type: 'boolean', description: 'false: no alert at all, anything can be typed (true by default).' } }, required: ['range', 'type'] } },
+  notes: { type: 'object', additionalProperties: { type: 'string' }, description: 'Notes on cells, as Excel\'s notes (a red corner, shown when the pointer is over the cell): {"B2": "Checked with the bank"}. An empty text takes a note away.' },
+  links: { type: 'object', additionalProperties: { type: 'string' }, description: 'Links on cells: {"A2": "https://example.com"}, an email as "mailto:name@example.com", or a place in this workbook as "#Sheet2!A1". The cell keeps its value (write the text to show in it); an empty text takes the link away. A formula can also make one: =HYPERLINK("https://example.com","Site").' },
+  tables: { type: 'array', description: 'Formatted tables, as Excel\'s Format as Table: bands of color, a filter button on each heading, and a name. Write the cells first (rows), with the headings in the range\'s first row. ' +
+      'Formulas may use the table\'s columns by name: =SUM(Sales[Price]), =Sales[@Price]*Sales[@Qty] (the same row), or [@Price] inside the table; a formula written into an empty column fills the whole column. A row typed right below a table joins it.', items: { type: 'object', properties: {
+    range: { type: 'string', description: 'The table with its heading row, like A1:D20.' },
+    name: { type: 'string', description: 'Letters, digits and _, starting with a letter (Hebrew too), and not like a cell address; like Sales. Leave out for Table1, Table2...' },
+    style: { type: 'string', description: 'One of Excel\'s 60 table styles: Light1 to Light21, Medium1 to Medium28, Dark1 to Dark11 (Medium2, blue, by default).' },
+    total_row: { type: 'boolean', description: 'A total row under the table (true adds it; the last column is summed).' },
+    banded_rows: { type: 'boolean', description: 'true by default.' }, banded_columns: { type: 'boolean' }, first_column: { type: 'boolean', description: 'The first column in bold.' }, last_column: { type: 'boolean' },
+    filter_button: { type: 'boolean', description: 'true by default.' } }, required: ['range'] } },
+  pivots: { type: 'array', description: 'Pivot tables, as Excel\'s PivotTable: a summary of a table or a range by its fields (the headings of its first row), in Excel\'s compact layout with subtotals and grand totals. As in Excel it keeps a copy of the data as it was when it was made, and shows that until it is refreshed: after changing its data, refresh it (write_cells with refresh_pivots). ' +
+      'Write the data first (on this sheet or another), then the pivot table where there is room for it. Formulas can read its cells, and GETPIVOTDATA reads one value by its items: =GETPIVOTDATA("Sales",$H$3,"Region","North").', items: { type: 'object', properties: {
+    source: { type: 'string', description: 'The data with its heading row: a range like A1:E200 (on this sheet) or Data!A1:E200, or a table\'s name like Sales.' },
+    at: { type: 'string', description: 'The cell where the pivot table starts, like H3 (the default is beside the used part of the sheet). Leave room below it and beside it.' },
+    name: { type: 'string', description: 'Leave out for PivotTable1, PivotTable2...' },
+    rows: { type: 'array', items: { type: 'string' }, description: 'Fields whose items become rows, the outer one first, like ["Region", "Product"].' },
+    columns: { type: 'array', items: { type: 'string' }, description: 'Fields whose items become columns.' },
+    values: { type: 'array', description: 'The fields to summarize, each a field\'s name or {field, summarize, name}.', items: { anyOf: [{ type: 'string' }, { type: 'object', properties: {
+      field: { type: 'string' }, summarize: { type: 'string', enum: ['sum', 'count', 'average', 'max', 'min', 'product', 'count_numbers', 'stddev', 'stddevp', 'var', 'varp'], description: 'sum by default; count counts every value, count_numbers only numbers.' },
+      name: { type: 'string', description: 'The caption over its column (the default is like Excel\'s: Sum of Sales, in the user\'s language).' } }, required: ['field'] }] } },
+    filters: { type: 'array', description: 'Fields that filter the whole pivot table, shown above it: a field\'s name, or {field, values} with the items it lets through.', items: { anyOf: [{ type: 'string' }, { type: 'object', properties: {
+      field: { type: 'string' }, values: { type: 'array', items: {} } }, required: ['field'] }] } } }, required: ['source'] } },
+};
+const NAMES = { type: 'array', description: 'Defined names, as in Excel: a name for a range of cells, a number or a formula, to write in formulas (=SUM(Prices)), as a list\'s source and in conditional formatting. ' +
+    'They follow their cells when rows, columns or sheets change, and are saved in Excel files. A name that is already there takes the new meaning. ' +
+    'For a drop-down list that depends on another one: name each list\'s cells after an item of the first list, and give the second list the source =INDIRECT(A2).',
+  items: { type: 'object', properties: {
+    name: { type: 'string', description: 'Letters, digits, _ and . after a first letter or _ (Hebrew letters too). No spaces, and nothing that reads as a cell address (B2, R1C1) or as TRUE or FALSE.' },
+    refers_to: { type: 'string', description: 'A range with its sheet, like "=Lists!$A$2:$A$9" (one range written without $ is taken as fixed), a number like "=0.17", or a formula like "=OFFSET(Lists!$A$2,0,0,COUNTA(Lists!$A:$A)-1,1)".' },
+    sheet: { type: 'string', description: 'Leave out for a name of the whole workbook (the usual). A sheet\'s name makes it that sheet\'s own name, known only there.' },
+    comment: { type: 'string' },
+    delete: { type: 'boolean', description: 'write_cells only: true takes the name away.' } }, required: ['name'] } };
+const LOOK = { type: 'boolean', description: 'false: no picture of the drawing comes back (one does by default).' };
+const DRAW_ITEMS = { type: 'array', description: 'What to draw, in order (up to 400 items); the user watches it appear. Coordinates are the drawing\'s pixels, (0, 0) at the top left. ' +
+    'svg: shapes, paths, gradients and text as one <svg> element (scripts and pictures from elsewhere are taken out). Its coordinates are the drawing\'s pixels unless it has a viewBox; x, y, width and height place it (by default it covers the whole drawing). Its top-level elements appear one after another. Best for anything exact: backgrounds, outlines, filled shapes, scenery. ' +
+    'stroke: a line drawn by hand with one of the app\'s brushes, curving smoothly through the points as a real stroke does. The same point twice in a row makes a sharp corner; a third number in a point (0 to 1) is pen pressure, thinner where it is low. ' +
+    'fill: the paint bucket at x, y: fills the area of alike color around that point, up to the lines of every visible layer (all_layers false: of this layer only). ' +
+    'text: text in one of the app\'s fonts (Hebrew too), centered on x, y (with align left or right, x is that edge); several lines with \\n.',
+  items: { type: 'object', properties: {
+    type: { type: 'string', enum: ['svg', 'stroke', 'fill', 'text'] },
+    svg: { type: 'string', description: 'svg: the whole <svg ...>...</svg>.' },
+    x: { type: 'number' }, y: { type: 'number' },
+    width: { type: 'number', description: 'svg: where it goes.' }, height: { type: 'number' },
+    points: { type: 'array', items: { type: 'array', items: { type: 'number' } }, description: 'stroke: [[x, y], [x, y], ...], or [x, y, pressure].' },
+    brush: { type: 'string', enum: ['pen', 'pencil', 'marker', 'brush', 'spray', 'eraser'], description: 'stroke: pen (the default: even and clean), pencil (thin, with the grain of paper), marker (wide and see-through), brush (soft paint), spray (a cloud of dots), eraser (rubs out what is on the layer).' },
+    color: { type: 'string', description: '#rrggbb (black by default).' },
+    size: { type: 'number', description: 'stroke: its width in pixels (each brush has its own default); text: the height of the letters in pixels (48 by default).' },
+    opacity: { type: 'number', description: '0 (nothing) to 1 (solid).' },
+    tolerance: { type: 'number', description: 'fill: how alike a color must be to be filled, 0 to 100 (30 by default).' },
+    all_layers: { type: 'boolean', description: 'fill: false goes by the colors of this layer alone.' },
+    text: { type: 'string' },
+    font: { type: 'string', description: 'text: Rubik (the default in Hebrew and English), Assistant, Heebo, Noto Sans Hebrew, IBM Plex Sans Hebrew, Varela Round, Alef, Fredoka, Frank Ruhl Libre, David Libre, Noto Serif Hebrew, Miriam Libre, Bellefair, Suez One, Secular One, Karantina, Amatic SC, Solitreo, Arial, Times New Roman or Courier New.' },
+    bold: { type: 'boolean', description: 'text: true by default.' },
+    align: { type: 'string', enum: ['left', 'center', 'right'] } }, required: ['type'] } };
+const FILTERS = 'hsl (hue -180..180, sat -100..100, light -100..100, col: true colors everything in one hue), bc (br brightness -100..100, ct contrast -100..100), ' +
+  'curves (cv: {"a": [[in, out], ...], "r": ..., "g": ..., "b": ...}, points 0..255, for all colors or one), temp (wa warmth -100..100), gmap (gr: three colors from the dark to the light, amt 0..100), ' +
+  'gray, sepia and invert (amt 0..100), post (lv shades of each color 2..16), thr (t 1..99, clr: white becomes see-through), blur (r 0..200 px), motion (len 0..400 px, ang -180..180), ' +
+  'zoom (s 0..100, c: its center [x, y]), sharp (amt 0..300, r 1..20), glow (t from what brightness 0..100, r 1..150, amt 0..300), noise (amt 0..100, gs grain 1..20, col), pix (cell 2..120 px), ' +
+  'half (halftone dots: cell 3..60, mono), glitch (amt 0..100, seed), chroma (amt 0..100, c [x, y]), vig (vignette: amt 0..100, size 0..100, col color, c [x, y]), edges (line art: amt 0..100, soft 0..10, white), ' +
+  'emboss (amt 0..300, ht 1..10, ang -180..180, col), outline (w 1..64 px, col color), shadow (dist 0..200, ang -180..180, soft 0..100, see transparency 0..100, col color)';
 const TOOLS = [
-  { name: 'list_documents', description: 'List the documents in Floating Ink: id, title, word count, last change, and which one is open on screen.',
+  { name: 'list_documents', description: 'List the documents, presentations, spreadsheets and drawings in Floating Ink: id, title, kind, word count, last change, and which one is open on screen.',
     inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true } },
-  { name: 'read_document', description: 'Read a document as Markdown. Without an id, reads the document open on screen, and also returns the text the user has selected in it.',
-    inputSchema: { type: 'object', properties: { id: DOC_ID } }, annotations: { readOnlyHint: true } },
+  { name: 'read_document', description: 'Read a document as Markdown, a presentation slide by slide, a spreadsheet\'s cells, or a drawing (its layers and frames, and a picture of it). Without an id, reads the one open on screen; for a document, also returns the text the user has selected in it.',
+    inputSchema: { type: 'object', properties: { id: DOC_ID, frame: { type: 'number', description: 'For a drawing that is an animation: the frame to see, 1 for the first (the one on screen by default).' } } }, annotations: { readOnlyHint: true } },
+  { name: 'create_drawing', description: 'Create a new drawing, like a paint program, and open it on the user\'s screen. For an animation give it frames, then draw on each one (draw with frame). ' +
+      'items draws on it straight away (the same items as draw). Returns its id, its layers, and a picture of it.',
+    inputSchema: { type: 'object', properties: { title: { type: 'string' },
+      size: { type: 'string', enum: ['wide', 'a4_portrait', 'a4_landscape', 'square', 'animation'], description: 'wide 1920 x 1080 (the default), a4_portrait 1240 x 1754, a4_landscape 1754 x 1240, square 1500 x 1500, animation 1280 x 720 (the default for an animation).' },
+      width: { type: 'number', description: 'Instead of size: 16 to 4096 pixels.' }, height: { type: 'number' },
+      background: { type: 'string', description: '#rrggbb (white by default), or "transparent".' },
+      frames: { type: 'number', description: 'For an animation: how many empty frames, 1 to 300.' },
+      fps: { type: 'number', description: 'For an animation: frames per second, 1 to 30 (12 by default).' },
+      items: DRAW_ITEMS, look: LOOK }, required: ['title'] } },
+  { name: 'draw', description: 'Draw on a drawing while the user watches: exact shapes in SVG, lines with the app\'s brushes, the paint bucket, and text. What one call draws is one step the user can undo with Ctrl+Z. ' +
+      'Read a drawing first (read_document) to see what is there; draw on a layer of your own (layer) unless asked to change the user\'s own lines; and look at the picture that comes back to check the result.',
+    inputSchema: { type: 'object', properties: { id: DOC_ID,
+      layer: { type: 'string', description: 'The layer to draw on, by its name; a new layer with this name is added on top when there is none. Leave out for the layer selected on screen.' },
+      frame: { type: 'number', description: 'For an animation: the frame to draw on, 1 for the first (the one on screen by default). One more than the number of frames adds a new frame at the end.' },
+      clear: { type: 'boolean', description: 'true empties the layer (in this frame) before drawing.' },
+      items: DRAW_ITEMS, look: LOOK }, required: ['items'] } },
+  { name: 'edit_drawing', description: 'Change a drawing: its layers, its frames (an animation is a drawing with several frames, shown one after another), its background, and filters, as in the app\'s Filters tab. ' +
+      'The actions run in order, as one step the user can undo with Ctrl+Z; if one of them fails, nothing changes. Layers are called by their names (read_document lists them), and frames are numbered from 1. Returns the layers and frames, and a picture of the drawing.',
+    inputSchema: { type: 'object', properties: { id: DOC_ID, look: LOOK, actions: { type: 'array', items: { type: 'object', properties: {
+      action: { type: 'string', enum: ['add_layer', 'delete_layer', 'rename_layer', 'duplicate_layer', 'layer', 'move_layer', 'select_layer', 'clear_layer', 'add_frame', 'delete_frame', 'move_frame', 'frame_duration', 'go_to_frame', 'animation', 'background', 'filter'],
+        description: 'add_layer (name, above: on top by default), delete_layer, rename_layer (name), duplicate_layer (name), layer (visible, opacity 0 to 1, pinned: shown on every frame of an animation, like a background, blend: how it mixes with the layers under it), ' +
+          'move_layer (to: top, bottom, up or down), select_layer, clear_layer (frame), add_frame (after: the last by default; count; copy: copies of that frame instead of empty ones), delete_frame (frame), move_frame (frame, to), ' +
+          'frame_duration (frame, beats: how many beats it stays, 1 by default), go_to_frame (frame: shows it on screen), animation (fps 1 to 30, loop: loop, ping (back and forth) or once), background (color #rrggbb or "transparent"), ' +
+          'filter (filter, settings, all_frames: on every frame of the layer).' },
+      layer: { type: 'string', description: 'The layer\'s name; leave out for the layer selected on screen.' },
+      name: { type: 'string' }, above: { type: 'string', description: 'add_layer: the layer to put it above.' },
+      visible: { type: 'boolean' }, opacity: { type: 'number' }, pinned: { type: 'boolean' },
+      blend: { type: 'string', enum: ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'hard-light', 'soft-light', 'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity', 'add'],
+        description: 'layer: the blend mode, as in drawing programs. multiply darkens only (colors under black lines, a shadow), screen lightens only (light, glow), overlay adds contrast.' },
+      to: { description: 'move_layer: top, bottom, up or down. move_frame: the frame\'s new number.' },
+      frame: { type: 'number' }, after: { type: 'number' }, count: { type: 'number' }, copy: { type: 'boolean' }, beats: { type: 'number' },
+      fps: { type: 'number' }, loop: { type: 'string', enum: ['loop', 'ping', 'once'] }, color: { type: 'string' },
+      filter: { type: 'string', enum: ['hsl', 'bc', 'curves', 'temp', 'gmap', 'gray', 'sepia', 'invert', 'post', 'thr', 'blur', 'motion', 'zoom', 'sharp', 'glow', 'noise', 'pix', 'half', 'glitch', 'chroma', 'vig', 'edges', 'emboss', 'outline', 'shadow'],
+        description: 'The filters and their settings: ' + FILTERS + '.' },
+      settings: { type: 'object', description: 'Only the settings that change, like {"r": 12}; the rest start where the filter starts.' },
+      all_frames: { type: 'boolean' } }, required: ['action'] } } }, required: ['actions'] } },
+  { name: 'create_presentation', description: 'Create a new presentation and open it on the user\'s screen, where they watch the slides come in one by one. ' +
+      'Start with a "title" slide; keep each slide to a title and a few short points. The user adds the pictures themselves. Returns its id.',
+    inputSchema: { type: 'object', properties: { title: { type: 'string' }, theme: THEME, transition: TRANSITION, slides: { type: 'array', items: { type: 'object', properties: SLIDE } } }, required: ['title', 'slides'] } },
+  { name: 'edit_presentation', description: 'Change a presentation: add, update, delete or move slides, or change its color theme. read_document shows its slides and their numbers. ' +
+      'The changes run in order, and each slide number means the slide at that step. update replaces only the fields it gives (and a new layout keeps the slide\'s text). The user can undo with Ctrl+Z.',
+    inputSchema: { type: 'object', properties: { id: DOC_ID, theme: THEME, transition: TRANSITION, changes: { type: 'array', items: { type: 'object', properties: {
+      action: { type: 'string', enum: ['add', 'update', 'delete', 'move'] },
+      slide: { type: 'number', description: 'update, delete, move: the slide\'s number (1 is the first).' },
+      at: { type: 'number', description: 'add: the number the new slide gets (default: the end). move: the number it moves to.' },
+      ...SLIDE }, required: ['action'] } } } } },
+  { name: 'create_spreadsheet', description: 'Create a new spreadsheet (like Excel) and open it on the user\'s screen: one or more sheets of cells with values, formulas and formatting. ' +
+      'Use it for tables, budgets, schedules, lists with totals and anything the user wants to calculate. Put a header row on top (bold, with a fill, frozen), give numbers a number_format, and total with formulas. Returns its id.',
+    inputSchema: { type: 'object', properties: { title: { type: 'string' }, direction: SHEET.direction, sheets: { type: 'array', items: { type: 'object', properties: SHEET } }, names: NAMES }, required: ['title', 'sheets'] } },
+  { name: 'read_spreadsheet', description: 'Read a spreadsheet: the names of its sheets, its defined names, and for one sheet (the one on screen, or `sheet`) what each cell shows (the cells of pivot tables too), the formulas, notes and links in it, and its tables, pivot tables, pictures, charts, conditional formatting and data validation (drop-down lists and limits on what may be typed). Without a range, reads the part that is used.',
+    inputSchema: { type: 'object', properties: { id: DOC_ID, sheet: { type: 'string' }, range: { type: 'string', description: 'Like A1:F40.' } } }, annotations: { readOnlyHint: true } },
+  { name: 'write_cells', description: 'Write values, formulas and formatting into a spreadsheet (it opens on screen, and the user can undo it with Ctrl+Z). The fields are the same as a sheet in create_spreadsheet. ' +
+      '`sheet` picks a sheet by name (a new sheet is added if none has that name; leave out for the sheet on screen), `clear` empties a range first, and `names` defines, changes or deletes defined names.',
+    inputSchema: { type: 'object', properties: { id: DOC_ID, sheet: { type: 'string' }, clear: { type: 'string', description: 'A range to empty before writing, like A1:H50.' }, ...Object.fromEntries(Object.entries(SHEET).filter(([k]) => k !== 'name')), names: NAMES,
+      refresh_pivots: { type: 'boolean', description: 'true refreshes every pivot table of the spreadsheet after this call\'s writing (Excel\'s Refresh All): they take their data as it is now.' } } } },
   { name: 'create_document', description: 'Create a new document from Markdown and open it on the user\'s screen. Returns its id.',
     inputSchema: { type: 'object', properties: { title: { type: 'string' }, content: { type: 'string', description: 'Markdown' } }, required: ['title', 'content'] } },
   { name: 'write_in_document', description: 'Add Markdown content to a document (it opens on screen). where: "end" (default), "start", "after_selection" or "replace_selection" (the text the user selected).',
@@ -154,7 +362,7 @@ const server = http.createServer(async (req, res) => {
   // the Floating Ink page
   if (path === '/events' && req.method === 'GET') {
     if (!origin || !appOrigin(origin)) { res.writeHead(403).end(); return; }
-    if (app) app.end();                     // the newest window takes over
+    if (app) { app.write('event: replaced\ndata: {}\n\n'); app.end(); }   // the newest window takes over, and the old one is told so it stops coming back
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
     res.write('event: hello\ndata: ' + JSON.stringify({ version: VERSION }) + '\n\n');
     app = res;
@@ -293,13 +501,18 @@ async function handle(msg) {
     inflight.set(id, hooks);
     const tick = keepAlive(name, params);
     try {
-      const out = await callApp(name, (params && params.arguments) || {}, clientName, hooks);
+      const out = await callApp(name, { ...((params && params.arguments) || {}), __img: 1 }, clientName, hooks);
       if (hooks.cancelled || out === CANCELLED) return;
-      const { result, pending } = out;
+      const { pending } = out;
+      let { result } = out, images = [];
+      if (result && typeof result === 'object' && Array.isArray(result.__images)) {
+        images = result.__images.filter(i => i && typeof i.data === 'string' && /^image\/(png|jpeg|webp)$/.test(i.mimeType)).map(i => ({ type: 'image', data: i.data, mimeType: i.mimeType }));
+        result = { ...result }; delete result.__images;
+      }
       const nothing = name === 'wait_for_message' && Array.isArray(result) && !result.length;
       let text = nothing ? NO_MSG : typeof result === 'string' ? result : JSON.stringify(result, null, 2);
       if (pending && pending.length) text += '\n\n' + NEW_MSG + pending.map(m => '\n- "' + m.text + '"').join('');
-      return reply(id, { content: [{ type: 'text', text }] });
+      return reply(id, { content: [{ type: 'text', text }, ...images] });
     } catch (e) {
       if (hooks.cancelled) return;
       return reply(id, { content: [{ type: 'text', text: e.message }], isError: true });
