@@ -3401,7 +3401,19 @@ window.INK_I18N = {
 "תיאור": "Description",
 "תנועה": "Mouvement",
 "תנועה אוטומטית": "Mouvement automatique",
-"תנועה לכל הבלונים, מילות הצליל, הדמויות והאפקטים בכל הדפים בבת אחת": "Du mouvement pour toutes les bulles, bruitages, personnages et effets de toutes les pages d’un coup"
+"תנועה לכל הבלונים, מילות הצליל, הדמויות והאפקטים בכל הדפים בבת אחת": "Du mouvement pour toutes les bulles, bruitages, personnages et effets de toutes les pages d’un coup",
+"מטה קסם": "Baguette magique",
+"הסרת רקע": "Retirer le fond",
+"קצוות רכים": "Bords doux",
+"אפשר להסיר את הרקע של התמונה": "Tu peux retirer le fond de l'image",
+"הרקע של התמונה נעלם, למשל הרקע האפור מאחורי דמות: בתמונה שהכנסת עכשיו, או בשכבה": "Le fond de l'image disparaît, comme le fond gris derrière un personnage : dans l'image que tu viens d'ajouter, ou sur le calque",
+"הרקע הוסר. נשארו חתיכות? מטה הקסם מוחק אותן בלחיצה.": "Le fond est retiré. Il reste des morceaux ? La baguette magique les efface d'un clic.",
+"הרקע לא אחיד, אז אולי נשארו ממנו חתיכות. מטה הקסם מוחק אותן בלחיצה.": "Le fond n'est pas uni, il en reste peut-être des morceaux. La baguette magique les efface d'un clic.",
+"כל התמונה נראתה כמו רקע, אז לא מחקתי כלום.": "Toute l'image ressemblait au fond, donc rien n'a été effacé.",
+"כמה דומה לצבע שלוחצים עליו צריך להיות צבע כדי להימחק. גם להסרת רקע": "À quel point une couleur doit ressembler à celle cliquée pour être effacée. Aussi pour retirer le fond",
+"לא מצאתי כאן רקע: הקצוות של התמונה כבר שקופים. מה שנשאר אפשר למחוק במטה הקסם.": "Pas de fond ici : les bords de l'image sont déjà transparents. Ce qui reste s'efface avec la baguette magique.",
+"לא מצאתי רקע אחיד ליד הקצוות של התמונה.": "Pas de fond uni près des bords de l'image.",
+"אין כאן מה למחוק: השכבה שבחרת שקופה במקום הזה.": "Rien à effacer ici : le calque choisi est transparent à cet endroit."
 },
 "plurals": {
 "{n} מילים": {

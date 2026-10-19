@@ -3401,7 +3401,19 @@ window.INK_I18N = {
 "תיאור": "Description",
 "תנועה": "Motion",
 "תנועה אוטומטית": "Automatic motion",
-"תנועה לכל הבלונים, מילות הצליל, הדמויות והאפקטים בכל הדפים בבת אחת": "Motion for all the bubbles, sound words, characters and effects on every page at once"
+"תנועה לכל הבלונים, מילות הצליל, הדמויות והאפקטים בכל הדפים בבת אחת": "Motion for all the bubbles, sound words, characters and effects on every page at once",
+"מטה קסם": "Magic wand",
+"הסרת רקע": "Remove background",
+"קצוות רכים": "Soft edges",
+"אפשר להסיר את הרקע של התמונה": "You can remove the picture's background",
+"הרקע של התמונה נעלם, למשל הרקע האפור מאחורי דמות: בתמונה שהכנסת עכשיו, או בשכבה": "The picture's background disappears, like the gray background behind a character: in the picture you just put in, or on the layer",
+"הרקע הוסר. נשארו חתיכות? מטה הקסם מוחק אותן בלחיצה.": "The background is gone. Pieces left? The magic wand removes them with a click.",
+"הרקע לא אחיד, אז אולי נשארו ממנו חתיכות. מטה הקסם מוחק אותן בלחיצה.": "The background isn't plain, so some pieces of it may be left. The magic wand removes them with a click.",
+"כל התמונה נראתה כמו רקע, אז לא מחקתי כלום.": "The whole picture looked like background, so nothing was removed.",
+"כמה דומה לצבע שלוחצים עליו צריך להיות צבע כדי להימחק. גם להסרת רקע": "How alike to the color you click a color must be to be removed. Also for removing a background",
+"לא מצאתי כאן רקע: הקצוות של התמונה כבר שקופים. מה שנשאר אפשר למחוק במטה הקסם.": "No background found here: the picture's edges are already see-through. What's left can be removed with the magic wand.",
+"לא מצאתי רקע אחיד ליד הקצוות של התמונה.": "No plain background found near the picture's edges.",
+"אין כאן מה למחוק: השכבה שבחרת שקופה במקום הזה.": "Nothing to remove here: the layer you chose is see-through at this spot."
 },
 "plurals": {
 "{n} מילים": {

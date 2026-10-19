@@ -3401,7 +3401,19 @@ window.INK_I18N = {
 "תיאור": "Beschreibung",
 "תנועה": "Bewegung",
 "תנועה אוטומטית": "Automatische Bewegung",
-"תנועה לכל הבלונים, מילות הצליל, הדמויות והאפקטים בכל הדפים בבת אחת": "Bewegung für alle Sprechblasen, Lautwörter, Figuren und Effekte auf allen Seiten auf einmal"
+"תנועה לכל הבלונים, מילות הצליל, הדמויות והאפקטים בכל הדפים בבת אחת": "Bewegung für alle Sprechblasen, Lautwörter, Figuren und Effekte auf allen Seiten auf einmal",
+"מטה קסם": "Zauberstab",
+"הסרת רקע": "Hintergrund entfernen",
+"קצוות רכים": "Weiche Kanten",
+"אפשר להסיר את הרקע של התמונה": "Du kannst den Hintergrund des Bildes entfernen",
+"הרקע של התמונה נעלם, למשל הרקע האפור מאחורי דמות: בתמונה שהכנסת עכשיו, או בשכבה": "Der Hintergrund des Bildes verschwindet, etwa der graue Hintergrund hinter einer Figur: im Bild, das du gerade eingefügt hast, oder auf der Ebene",
+"הרקע הוסר. נשארו חתיכות? מטה הקסם מוחק אותן בלחיצה.": "Der Hintergrund ist weg. Reste übrig? Der Zauberstab entfernt sie mit einem Klick.",
+"הרקע לא אחיד, אז אולי נשארו ממנו חתיכות. מטה הקסם מוחק אותן בלחיצה.": "Der Hintergrund ist nicht einfarbig, also sind vielleicht Reste übrig. Der Zauberstab entfernt sie mit einem Klick.",
+"כל התמונה נראתה כמו רקע, אז לא מחקתי כלום.": "Das ganze Bild sah wie Hintergrund aus, also wurde nichts entfernt.",
+"כמה דומה לצבע שלוחצים עליו צריך להיות צבע כדי להימחק. גם להסרת רקע": "Wie ähnlich eine Farbe der angeklickten sein muss, um entfernt zu werden. Auch beim Entfernen des Hintergrunds",
+"לא מצאתי כאן רקע: הקצוות של התמונה כבר שקופים. מה שנשאר אפשר למחוק במטה הקסם.": "Hier ist kein Hintergrund: Die Ränder des Bildes sind schon durchsichtig. Was übrig ist, entfernt der Zauberstab.",
+"לא מצאתי רקע אחיד ליד הקצוות של התמונה.": "An den Rändern des Bildes ist kein einfarbiger Hintergrund.",
+"אין כאן מה למחוק: השכבה שבחרת שקופה במקום הזה.": "Hier gibt es nichts zu entfernen: Die gewählte Ebene ist an dieser Stelle durchsichtig."
 },
 "plurals": {
 "{n} מילים": {

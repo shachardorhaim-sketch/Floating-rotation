@@ -3401,7 +3401,19 @@ window.INK_I18N = {
 "תיאור": "Descrição",
 "תנועה": "Movimento",
 "תנועה אוטומטית": "Movimento automático",
-"תנועה לכל הבלונים, מילות הצליל, הדמויות והאפקטים בכל הדפים בבת אחת": "Movimento para todos os balões, onomatopeias, personagens e efeitos de todas as páginas de uma vez"
+"תנועה לכל הבלונים, מילות הצליל, הדמויות והאפקטים בכל הדפים בבת אחת": "Movimento para todos os balões, onomatopeias, personagens e efeitos de todas as páginas de uma vez",
+"מטה קסם": "Varinha mágica",
+"הסרת רקע": "Remover fundo",
+"קצוות רכים": "Bordas suaves",
+"אפשר להסיר את הרקע של התמונה": "Você pode remover o fundo da imagem",
+"הרקע של התמונה נעלם, למשל הרקע האפור מאחורי דמות: בתמונה שהכנסת עכשיו, או בשכבה": "O fundo da imagem some, como o fundo cinza atrás de um personagem: na imagem que você acabou de colocar, ou na camada",
+"הרקע הוסר. נשארו חתיכות? מטה הקסם מוחק אותן בלחיצה.": "O fundo foi removido. Sobraram pedaços? A varinha mágica os apaga com um clique.",
+"הרקע לא אחיד, אז אולי נשארו ממנו חתיכות. מטה הקסם מוחק אותן בלחיצה.": "O fundo não é liso, então talvez tenham sobrado pedaços. A varinha mágica os apaga com um clique.",
+"כל התמונה נראתה כמו רקע, אז לא מחקתי כלום.": "A imagem inteira parecia fundo, então nada foi apagado.",
+"כמה דומה לצבע שלוחצים עליו צריך להיות צבע כדי להימחק. גם להסרת רקע": "O quanto uma cor precisa parecer com a que você clica para ser apagada. Também para remover o fundo",
+"לא מצאתי כאן רקע: הקצוות של התמונה כבר שקופים. מה שנשאר אפשר למחוק במטה הקסם.": "Não há fundo aqui: as bordas da imagem já são transparentes. O que sobrou dá para apagar com a varinha mágica.",
+"לא מצאתי רקע אחיד ליד הקצוות של התמונה.": "Não há um fundo liso perto das bordas da imagem.",
+"אין כאן מה למחוק: השכבה שבחרת שקופה במקום הזה.": "Não há nada para apagar aqui: a camada que você escolheu é transparente neste ponto."
 },
 "plurals": {
 "{n} מילים": {
