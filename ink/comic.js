@@ -467,6 +467,111 @@ function inside(P, box, m, maxY = box.y) {
   const w = Math.min(box.w, best.room);
   return { ...box, y: best.y, w, x: clamp(box.x, best.s.lo + m, best.s.hi - m - w) };
 }
+/* whether a box is in the panel, m from its sides, and under its top (the panel's own box when it has no shape) */
+function fitsIn(p, r, m, u) {
+  if (r.y < p.box.y + 8 * u - 0.5 || r.y + r.h > p.box.y + p.box.h - m + 0.5) return false;
+  const s = p.P ? spanAt(p.P, r.y, r.y + r.h) : { lo: p.box.x, hi: p.box.x + p.box.w };
+  return r.x >= s.lo + m - 0.5 && r.x + r.w <= s.hi - m + 0.5;
+}
+/* how far a bubble's shape reaches past the oval in its box: a shout's spikes, a cloud's bumps */
+const reach = b => b.k === 'shout' ? 1.2 : b.k === 'thought' ? 1.06 : 1;
+const bubExt = (b, g) => { const k = b.k === 'box' ? 1 : reach(b), rx = b.w / 2 * k + g, ry = b.h / 2 * k + g; return { cx: b.x + b.w / 2, cy: b.y + b.h / 2, rx, ry }; };
+/* whether two bubbles (or narration boxes) would come closer than g: their shapes, an oval or a box, a little apart */
+function touches(a, c, g) {
+  const A = bubExt(a, g / 2), B = bubExt(c, g / 2), dx = Math.abs(A.cx - B.cx), dy = Math.abs(A.cy - B.cy);
+  if (dx >= A.rx + B.rx || dy >= A.ry + B.ry) return false;
+  if (dx < (A.rx + B.rx) * 0.7 && dy < (A.ry + B.ry) * 0.7) return true;   // the boxes inside the ovals already overlap
+  return a.k === 'box' && c.k === 'box' || rimIn(a, A, c, B) || rimIn(c, B, a, A);
+}
+const RIM = Array.from({ length: 40 }, (_, i) => [Math.cos(i / 20 * Math.PI), Math.sin(i / 20 * Math.PI)]);
+/* whether the middle of a, or a point on its outline, is inside c (A and B: their extents) */
+function rimIn(a, A, c, B) {
+  const has = c.k === 'box' ? (x, y) => Math.abs(x - B.cx) <= B.rx && Math.abs(y - B.cy) <= B.ry : (x, y) => ((x - B.cx) / B.rx) ** 2 + ((y - B.cy) / B.ry) ** 2 <= 1;
+  if (has(A.cx, A.cy)) return true;
+  if (a.k !== 'box') return RIM.some(([cs, sn]) => has(A.cx + cs * A.rx, A.cy + sn * A.ry));
+  for (let i = 0; i <= 10; i++) { const f = i / 5 - 1; if (has(A.cx + f * A.rx, A.cy - A.ry) || has(A.cx + f * A.rx, A.cy + A.ry) || has(A.cx - A.rx, A.cy + f * A.ry) || has(A.cx + A.rx, A.cy + f * A.ry)) return true; }
+  return false;
+}
+/* whether the line from the middle of bubble a to t, once out of a, runs over where bubble c has its words */
+function crosses(a, t, c) {
+  const A = bubExt(a, 0), E = bubExt(c, 0);
+  for (let i = 1; i <= 20; i++) {
+    const x = A.cx + (t.x - A.cx) * i / 20, y = A.cy + (t.y - A.cy) * i / 20;
+    if (((x - A.cx) / A.rx) ** 2 + ((y - A.cy) / A.ry) ** 2 < 1) continue;
+    if (c.k === 'box' ? Math.abs(x - E.cx) < E.rx && Math.abs(y - E.cy) < E.ry : ((x - E.cx) / E.rx) ** 2 + ((y - E.cy) / E.ry) ** 2 < 0.8) return true;
+  }
+  return false;
+}
+const tailOver = (a, c) => a !== c && a.tl && a.k !== 'box' && crosses(a, { x: a.tx, y: a.ty }, c);
+/* how many tails would run over words with bubble r there: its own (toward tg) and those of the ones already placed */
+const tailsCrossed = (r, tg, taken) => taken.reduce((n, t) => n + (tg && crosses(r, tg, t) ? 1 : 0) + (t.tg && crosses(t, t.tg, r) ? 1 : 0), 0);
+/* whether bubble c is read after bubble a: clearly lower, or not higher and further along the way the page is read
+   (the order panelScript shows them in while the comic is read) */
+const readAfter = (c, a, rtl) => c.y >= a.y + a.h * 0.6 || (c.y >= a.y - 2 && (rtl ? c.x + c.w < a.x + a.w && c.x + c.w / 2 < a.x + a.w / 2 : c.x > a.x && c.x + c.w / 2 > a.x + a.w / 2));
+/* a place for a bubble Claude wrote when the one meant for it is taken (s: its kind, size, the middle it wants to have
+   and the bubbles read before it). Never on another bubble and never out of the panel: the place nearest to where it
+   was meant to be, high in the panel, read after the ones before it and above where the heads will be drawn; wider and
+   lower, or smaller with its words, only as much as it has to be */
+function bubbleSpot(p, s, taken, earlier, rtl, u, most = 1, least = 0.5) {
+  const b = p.box, m = 10 * u, g = 12 * u, top = b.y + 8 * u, e = (reach(s) - 1) / 2, sizes = [];   // e: a shout's spikes stay in the panel too
+  for (const a of [1, 1.3, 0.8, 1.6, 0.65]) for (let k = most; k > least - 0.01; k -= 0.08) {
+    const w = Math.min(s.w * Math.sqrt(a) * k, (b.w - 2 * m) / (1 + 2 * e)), h = Math.min(s.h / Math.sqrt(a) * k, (b.h - 8 * u - m) / (1 + 2 * e));
+    if (w >= 40 * u && h >= 30 * u) { const zc = sizeCost(s, w, h); sizes.push({ w, h, zc, cost: spotCost(p, { x: s.cx - w / 2, y: top + h * e, w, h }, s, [], rtl, u, zc) }); }
+  }
+  sizes.sort((x, y) => x.cost - y.cost);
+  let best = null, hit = null;
+  for (const { w, h, zc, cost: z0 } of sizes) {
+    if (best && z0 >= best.cost) break;
+    const y0 = top + h * e, y1 = b.y + b.h - m - h * (1 + e);
+    for (let iy = 0; iy <= 12 && y1 >= y0; iy++) {
+      const y = y0 + (y1 - y0) * iy / 12;
+      if (best && spotCost(p, { x: s.cx - w / 2, y, w, h }, s, [], rtl, u, zc) >= best.cost) break;   // lower only costs more
+      const sp = p.P ? spanAt(p.P, y - h * e, y + h * (1 + e)) : { lo: b.x, hi: b.x + b.w }, lo = sp.lo + m + w * e, room = sp.hi - m - w * e - w - lo;
+      if (!(room >= 0)) continue;
+      // nearest to where it wants to be first: the first that fits and is read in turn is the best on this line
+      const xs = [clamp(s.cx - w / 2, lo, lo + room)];
+      for (let ix = 0; ix <= 12; ix++) xs.push(lo + room * ix / 12);
+      xs.sort((x0, x1) => Math.abs(x0 + w / 2 - s.cx) - Math.abs(x1 + w / 2 - s.cx));
+      for (const x of xs) {
+        const r = { k: s.k, x, y, w, h };
+        let cost = spotCost(p, r, s, earlier, rtl, u, zc);
+        if (best && cost >= best.cost) continue;
+        if (hit && touches(r, hit, g)) continue;   // the one met last is the likeliest to be met again
+        if ((hit = taken.find(t => touches(r, t, g)))) continue;
+        const n = tailsCrossed(r, s.to && s.to(r), taken);
+        cost += n * 1.5;
+        if (best && cost >= best.cost) continue;
+        best = { ...r, cost };
+        if (!n && earlier.every(q => readAfter(r, q, rtl))) break;
+      }
+    }
+  }
+  return best;
+}
+/* how far a place r for a bubble is from the one it was meant to have (s: its size, the middle it wants, and how many
+   are still to come after it): its size and shape (zc, sizeCost's), moved aside, lower (more so with more to come
+   below it), below where the heads will be, or read before one said before it */
+function spotCost(p, r, s, earlier, rtl, u, zc = sizeCost(s, r.w, r.h)) {
+  const b = p.box;
+  return zc + Math.abs(r.x + r.w / 2 - s.cx) / b.w + Math.max(0, r.y - b.y - 8 * u) / b.h * (1 + (s.rest || 0))
+    + Math.max(0, r.y + r.h - b.y - b.h * 0.8) / b.h * 6 + earlier.filter(e => !readAfter(r, e, rtl)).length * 5;
+}
+/* what bubble s costs w by h: its words smaller than in the size it was meant to have (one made much smaller costs far
+   more than two made a little smaller), a word broken in two (in every shape when the words have no spaces, as in
+   Chinese, so it changes nothing there), and a little for another shape */
+function sizeCost(s, w, h) {
+  // laid out once for each shape at the size it was meant to have: made smaller, the words get smaller with it
+  const q = Math.round(w / h * 12) / 12, memo = s.memo || (s.memo = new Map());
+  let t = memo.get(q);
+  if (!t) { const w0 = Math.sqrt(s.w * s.h * q); t = wordsIn(s, w0, s.w * s.h / w0); memo.set(q, t); }
+  const k = 1 - Math.min(1, t.s * Math.sqrt(w * h / (s.w * s.h)) / s.ws.s);
+  return k * 2 + k * k * 10 + (t.cut ? 3 : 0) + Math.abs(Math.log(w / h * s.h / s.w)) * 0.3;
+}
+/* bubble s's words in a box w by h, laid out as they will be drawn: their size, and whether a word is broken in two */
+function wordsIn(s, w, h) {
+  const L = layoutText({ k: s.k, w, h, f: s.f, b: s.b, fs: s.fs, sw: s.sw, txt: s.txt }), whole = new Set(s.txt.split(/\s+/));
+  return { s: L.s, cut: !!L.over || L.lines.some(l => l.split(/\s+/).some(x => x && !whole.has(x))) };
+}
 function inPoly(P, p) {
   for (let i = 0; i < P.length; i++) if (cross(P[i], P[(i + 1) % P.length], p) < 0) return false;
   return true;
@@ -2521,9 +2626,12 @@ function aimTail(b, pg = page()) {
   const bc = center(b), bp = geom(pg).panels.find(p => p.P && inPoly(p.P, bc)), mine = pg.its.filter(it => it.t === 'chr' && it.c === b.who);
   if (!mine.length) return false;
   const d = it => Math.hypot(center(it).x - bc.x, center(it).y - bc.y);
-  const at = mine.find(it => bp && it.pn === bp.id) || mine.reduce((a, x) => d(x) < d(a) ? x : a), hd = headOf(at);
+  const at = mine.find(it => bp && it.pn === bp.id) || mine.reduce((a, x) => d(x) < d(a) ? x : a), rx = b.w / 2, ry = b.h / 2;
+  let hd = headOf(at);
+  // a head under the bubble itself: down toward the rest of the one saying it, never up across the words above
+  if (((hd.x - bc.x) / rx) ** 2 + ((hd.y - bc.y) / ry) ** 2 < 1) hd = { x: hd.x, y: Math.min(at.y + at.h, Math.max(center(at).y, b.y + b.h + 40 * unit())) };
   // along the line to the head: a little short of it, but always long enough to be seen outside the bubble
-  const dx = hd.x - bc.x, dy = hd.y - bc.y, L = Math.hypot(dx, dy) || 1, rx = b.w / 2, ry = b.h / 2;
+  const dx = hd.x - bc.x, dy = hd.y - bc.y, L = Math.hypot(dx, dy) || 1;
   const edge = 1 / Math.sqrt((dx / L / rx) ** 2 + (dy / L / ry) ** 2), t = Math.max(edge + Math.max(0.7 * Math.min(rx, ry), 40 * unit()), L - Math.min(L * 0.15, 60 * unit()));
   b.tx = bc.x + dx / L * t; b.ty = bc.y + dy / L * t;
   return true;
@@ -3833,35 +3941,83 @@ function aiCast(name) {
 function fillPanel(pg, p, spec) {
   const u = unit(), b = p.box, rtl = C.dir === 'rtl', d = DEF.bub(u);
   if (typeof spec.note === 'string' && spec.note.trim()) pg.pan[p.id] = { bg: '#ffffff', art: '', ...(pg.pan[p.id] || {}), nt: spec.note.trim().slice(0, 3000) };
-  // the characters in it first, standing on its bottom, so what they say can point at them
-  const at = {};
-  for (const nm of (Array.isArray(spec.characters) ? spec.characters : []).slice(0, 5)) { const ch = aiCast(nm); if (ch && !at[ch.id]) at[ch.id] = pg.its.find(it => it.t === 'chr' && it.c === ch.id && it.pn === p.id) || placeChar(pg, p, ch); }
-  const mine = pg.its.filter(it => it.t === 'bub' && b.x <= center(it).x && center(it).x <= b.x + b.w && b.y <= center(it).y && center(it).y <= b.y + b.h);
-  let y = mine.length ? Math.max(...mine.map(it => it.y + it.h)) + 12 * u : b.y + 14 * u, side = mine.length, prev = null;
-  const taken = mine.map(it => ({ x: it.x, y: it.y, w: it.w, h: it.h })), said = [];
+  // the characters in it first, standing on its bottom, so what they say can point at them. When more than one thing
+  // is said, the one who speaks first stands where the panel is read from, so the words start there and go on in the
+  // order they are said
+  const cast = [];
+  for (const nm of (Array.isArray(spec.characters) ? spec.characters : []).slice(0, 5)) { const ch = aiCast(nm); if (ch && !cast.includes(ch)) cast.push(ch); }
   const bubs = (Array.isArray(spec.bubbles) ? spec.bubbles : []).map(x => ({ k: kindOf(x.kind), txt: String(x.text).trim().slice(0, 2000), ch: x.character != null && kindOf(x.kind) !== 'box' ? aiCast(x.character) : null }));
-  for (const s of [...bubs.filter(x => x.k === 'box'), ...bubs.filter(x => x.k !== 'box')]) {
-    const box = s.k === 'box', sz = bubbleSize(s.txt, d.fs * (box ? 0.8 : 1), b.w * (box ? 0.7 : 0.62), b.h * 0.42);
-    const w = clamp(sz.w, (box ? 180 : 230) * u, b.w * 0.92), hh = clamp(sz.h, (box ? 70 : 140) * u, b.h * 0.6), first = side % 2 === 0, by = s.ch && at[s.ch.id];
-    let x, y0 = y;
-    if (box) x = rtl ? b.x + b.w - w - 10 * u : b.x + 10 * u;
-    else if (by) {
-      // over the one saying it, as high as it can be while it is still read after the bubble before it
-      x = clamp(center(by).x - w / 2, b.x + b.w * 0.04, b.x + b.w * 0.96 - w);
-      y0 = b.y + 14 * u;
-      if (prev) { const after = rtl ? x + w / 2 < prev.x + prev.w / 2 : x + w / 2 > prev.x + prev.w / 2; y0 = Math.max(y0, after ? prev.y : prev.y + prev.h * 0.6); }
-      for (let n = 0; n < 12; n++) { const hit = taken.find(r => r.x < x + w + 6 * u && x < r.x + r.w + 6 * u && r.y < y0 + hh + 6 * u && y0 < r.y + r.h + 6 * u); if (!hit) break; y0 = hit.y + hit.h + 8 * u; }
-    } else x = (rtl === first) ? b.x + b.w - w - b.w * 0.04 : b.x + b.w * 0.04;   // first on the side the panel is read from, then the other
-    const fit = inside(p.P, { x, y: Math.max(b.y + 8 * u, Math.min(y0, b.y + b.h * 0.8 - hh)), w, h: hh }, 10 * u, b.y + b.h * 0.8 - hh), yy = fit.y;
-    const mid = fit.x + fit.w / 2, tx = mid + (b.x + b.w / 2 - mid) * 0.35;
-    const it = { id: rid('i'), t: 'bub', k: s.k, x: fit.x, y: yy, w: fit.w, h: hh, txt: s.txt, f: d.f, fs: Math.round(d.fs * (box ? 0.8 : 1)), b: s.k === 'shout', fc: d.fc, fill: box ? '#fff6cc' : d.fill, sc: d.sc, sw: d.sw, tl: !box,
-      tx, ty: clamp(yy + hh + Math.max(70 * u, hh * 0.9), yy + hh + 30 * u, b.y + b.h * 0.85) };   // toward where the characters will be drawn, not too far
+  const speaks = ch => { const i = bubs.findIndex(x => x.ch === ch); return i < 0 ? bubs.length : i; };
+  if (bubs.filter(x => x.ch).length > 1) cast.sort((a, c) => speaks(a) - speaks(c));
+  const at = {};
+  for (const ch of cast) at[ch.id] = pg.its.find(it => it.t === 'chr' && it.c === ch.id && it.pn === p.id) || placeChar(pg, p, ch);
+  // the words already in it (in its shape: a slanted panel's box reaches into the panels beside it)
+  const mine = pg.its.filter(it => it.t === 'bub' && (p.P ? inPoly(p.P, center(it)) : b.x <= center(it).x && center(it).x <= b.x + b.w && b.y <= center(it).y && center(it).y <= b.y + b.h));
+  const near = pg.its.filter(it => it.t === 'bub' && it.x < b.x + b.w && b.x < it.x + it.w && it.y < b.y + b.h && b.y < it.y + it.h);
+  const list = [...bubs.filter(x => x.k === 'box'), ...bubs.filter(x => x.k !== 'box')], said = [];
+  // the bubbles one after another, each where it is meant to be, or (search) each in the best place bubbleSpot finds
+  // at most sc times its size, and never under least times it
+  const lay = (search, sc, least = 0.5) => {
+    let y = mine.length ? Math.max(...mine.map(it => it.y + it.h)) + 12 * u : b.y + 14 * u, side = mine.length, prev = null, cost = 0, bad = false, lost = false, small = 1, late = 0;
+    // kept clear of every bubble that reaches into the panel's box, read after the ones in the panel
+    const was = it => ({ k: it.k, x: it.x, y: it.y, w: it.w, h: it.h, tg: it.tl && it.k !== 'box' ? { x: it.tx, y: it.ty } : null });
+    const taken = near.map(was), earlier = mine.map(was), out = [];
+    for (const s of list) {
+      const box = s.k === 'box', sz = bubbleSize(s.txt, d.fs * (box ? 0.8 : 1), b.w * (box ? 0.7 : 0.62), b.h * 0.42);
+      const w = clamp(sz.w, (box ? 180 : 230) * u, b.w * 0.92), hh = clamp(sz.h, (box ? 70 : 140) * u, b.h * 0.6), first = side % 2 === 0, by = s.ch && at[s.ch.id];
+      let x, y0 = y;
+      if (box) x = rtl ? b.x + b.w - w - 10 * u : b.x + 10 * u;
+      else if (by) {
+        // over the one saying it, as high as it can be while it is still read after the bubble before it
+        x = clamp(center(by).x - w / 2, b.x + b.w * 0.04, b.x + b.w * 0.96 - w);
+        y0 = b.y + 14 * u;
+        if (prev) { const after = rtl ? x + w / 2 < prev.x + prev.w / 2 : x + w / 2 > prev.x + prev.w / 2; y0 = Math.max(y0, after ? prev.y : prev.y + prev.h * 0.6); }
+        for (let n = 0; n < 12; n++) { const hit = taken.find(r => r.x < x + w + 6 * u && x < r.x + r.w + 6 * u && r.y < y0 + hh + 6 * u && y0 < r.y + r.h + 6 * u); if (!hit) break; y0 = hit.y + hit.h + 8 * u; }
+      } else x = (rtl === first) ? b.x + b.w - w - b.w * 0.04 : b.x + b.w * 0.04;   // first on the side the panel is read from, then the other
+      // where its tail will point: the head of the one saying it (down to the rest of it when the bubble covers the
+      // head, as aimTail does), or toward the bottom of the panel
+      const to = box ? null : by ? r => ({ x: by.x + by.w / 2, y: Math.min(by.y + by.h, Math.max(by.y + by.h * 0.1, r.y + r.h + 40 * u)) })
+        : r => { const mid = r.x + r.w / 2; return { x: mid + (b.x + b.w / 2 - mid) * 0.35, y: clamp(r.y + r.h + Math.max(70 * u, r.h * 0.9), r.y + r.h + 30 * u, b.y + b.h * 0.85) }; };
+      const want = { k: s.k, w, h: hh, cx: x + w / 2, to, rest: list.length - 1 - out.length, txt: s.txt, f: d.f, b: s.k === 'shout', fs: Math.round(d.fs * (box ? 0.8 : 1)), sw: d.sw };
+      want.ws = s.ws || (s.ws = wordsIn(want, w, hh));
+      want.memo = s.memo || (s.memo = new Map());   // kept for the next time the panel is laid out
+      let fit = { k: s.k, ...inside(p.P, { x, y: Math.max(b.y + 8 * u, Math.min(y0, b.y + b.h * 0.8 - hh)), w, h: hh }, 10 * u, b.y + b.h * 0.8 - hh) };
+      // where it was meant to be is out of the panel, on a bubble already there, or would be read too soon, or its shape
+      // breaks a word in two: another place, or another shape
+      const here = !search && fitsIn(p, fit, 10 * u, u) && !taken.some(t => touches(fit, t, 6 * u)) && earlier.every(e => readAfter(fit, e, rtl)) && !tailsCrossed(fit, to && to(fit), taken);
+      if (!here || (want.ws.cut && /\s/.test(s.txt))) {
+        const sp = bubbleSpot(p, want, taken, earlier, rtl, u, sc, least);
+        // where it was meant to be only a word was broken in two: another shape only if it mends that
+        if (!here || (sp && !wordsIn(want, sp.w, sp.h).cut)) {
+          if (!sp || sp.w * sp.h < w * hh * 0.97 || !earlier.every(e => readAfter(sp, e, rtl))) bad = true;   // made smaller, or read out of turn
+          if (sp) fit = sp; else { lost = true; cost += 50; }
+        }
+      }
+      cost += spotCost(p, fit, want, earlier, rtl, u) + tailsCrossed(fit, to && to(fit), taken) * 1.5;
+      small = Math.min(small, Math.sqrt(fit.w * fit.h / (w * hh)));
+      if (!earlier.every(e => readAfter(fit, e, rtl))) late++;
+      out.push({ s, fit });
+      prev = { k: s.k, x: fit.x, y: fit.y, w: fit.w, h: fit.h, tg: to && to(fit) };
+      taken.push(prev); earlier.push(prev);
+      y = Math.max(y, fit.y + fit.h * (box ? 1 : 0.8) + 8 * u);
+      if (!box) side++;
+    }
+    return { out, cost, lost, bad, small, late, taken };
+  };
+  // when one of them had to be made smaller where the others were meant to be, they are all placed again from the
+  // start, and the best is kept (a slanted panel's first bubble moved far down leaves no room for the next). Where
+  // there is no room for all of them, all are made a little smaller together, not only the last; with no room even
+  // at half their size, smaller still, but never on another bubble
+  let L = lay(false, 1);
+  if (L.bad) for (const sc of [1, 0.86, 0.74, 0.62]) { const L2 = lay(true, sc); if (L2.cost < L.cost) L = L2; if (!L2.lost && !L2.late && L2.small > 0.72) break; }
+  if (L.lost) { const L2 = lay(true, 0.5, 0.3); if (L2.cost < L.cost) L = L2; }
+  const taken = L.taken;
+  for (const { s, fit } of L.out) {
+    const box = s.k === 'box', yy = fit.y, hb = fit.h, mid = fit.x + fit.w / 2, tx = mid + (b.x + b.w / 2 - mid) * 0.35;
+    const it = { id: rid('i'), t: 'bub', k: s.k, x: fit.x, y: yy, w: fit.w, h: hb, txt: s.txt, f: d.f, fs: Math.round(d.fs * (box ? 0.8 : 1)), b: s.k === 'shout', fc: d.fc, fill: box ? '#fff6cc' : d.fill, sc: d.sc, sw: d.sw, tl: !box,
+      tx, ty: clamp(yy + hb + Math.max(70 * u, hb * 0.9), yy + hb + 30 * u, b.y + b.h * 0.85) };   // toward where the characters will be drawn, not too far
     if (s.ch) it.who = s.ch.id;
     pg.its.push(it); said.push(it);
-    prev = { x: fit.x, y: yy, w: fit.w, h: hh };
-    taken.push(prev);
-    y = Math.max(y, yy + hh * (box ? 1 : 0.8) + 8 * u);
-    if (!box) side++;
   }
   // a character with words over its head gets shorter where it stands, so its head is under them (never under 45% of the panel)
   for (const it of Object.values(at)) {
@@ -3873,6 +4029,17 @@ function fillPanel(pg, p, spec) {
     Object.assign(it, { h: nh, w: it.w * k, x: cx0 - it.w * k / 2, y: bottom - nh });
   }
   for (const it of said) if (it.who) aimTail(it, pg);
+  // a tail that would run over the words of a bubble drawn before it goes under that bubble instead
+  for (const it of said) {
+    const i = pg.its.indexOf(it), j = pg.its.findIndex((o, n) => n < i && o.t === 'bub' && tailOver(it, o) && !tailOver(o, it));
+    if (j >= 0) { pg.its.splice(i, 1); pg.its.splice(j, 0, it); }
+  }
+  // and when two tails cross each other's bubbles, the one drawn later stops short of the other bubble
+  for (const it of said) for (const o of pg.its) {
+    if (o.t !== 'bub' || pg.its.indexOf(o) > pg.its.indexOf(it) || !tailOver(it, o)) continue;
+    const A = bubExt(it, 0), E = bubExt(o, 8 * u), dx = it.tx - A.cx, dy = it.ty - A.cy;
+    for (let i = 1; i <= 40; i++) if (((A.cx + dx * i / 40 - E.cx) / E.rx) ** 2 + ((A.cy + dy * i / 40 - E.cy) / E.ry) ** 2 < 1) { it.tx = A.cx + dx * (i - 1) / 40; it.ty = A.cy + dy * (i - 1) / 40; break; }
+  }
   (Array.isArray(spec.sounds) ? spec.sounds : Array.isArray(spec.sfx) ? spec.sfx : []).forEach((t, i) => {
     const txt = String(t || '').trim().slice(0, 300);
     if (!txt) return;
