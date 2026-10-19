@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.16.0';
+const VERSION = '1.17.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -35,7 +35,9 @@ const INSTRUCTIONS = 'Floating Ink is a word processor open in the user\'s brows
   'and read_document shows a drawing as a picture. Look at a drawing before adding to it, and at the picture each drawing call returns, to fix what looks wrong. ' +
   'It also makes comics and manga: create_comic turns a story into pages and panels, with the words of each panel in speech, thought, shout, whisper ' +
   'and narration bubbles, sound words, effects, and a note in each panel of what should be drawn there. The user draws the panels themselves. ' +
-  'edit_comic changes the pages, the panels and the words, and read_document reads a comic panel by panel with a picture of a page. ' +
+  'A comic keeps its characters: list them once (with what they look like), name who is in each panel and who says each bubble, and the user draws each character once for every place it appears. ' +
+  'A comic can also be a webtoon (one long strip read by scrolling on a phone), and can move while it is read (motion on the bubbles and characters, a camera in the panels, page turns). ' +
+  'edit_comic changes the pages, the panels, the words, the characters and the motion, and read_document reads a comic panel by panel with a picture of a page. ' +
   'The chat panel inside Floating Ink is shared: send_message leaves a note there, and read_messages shows ' +
   'what the user or another connected assistant wrote. The user often keeps writing to you from that panel instead of ' +
   'switching back to this window, so when they may still be talking to you there, call wait_for_message: it comes back ' +
@@ -52,21 +54,27 @@ const THEME = { type: 'string', enum: ['ink', 'night', 'sand', 'forest', 'sunset
     'business (navy and gold), gaming (neon on dark purple), history (old parchment), space (stars and planets), nature (green leaves), ' +
     'books (a library in burgundy), party (pink confetti), sports (black and orange), music (purple, sound waves), minimal (quiet, black on light gray), ' +
     'travel (sky and sea), food (a warm kitchen), math (graph paper), tech (dark blue circuits), creator (red on black, like a video channel), art (bright paint blobs).' };
-const COMIC_LAYOUT = { type: 'string', enum: ['g1', 'g2', 'g2v', 'g4', 'g6', 'g8', 'g9', 'c3', 'c4', 'r3', 'r4', 'r121', 'r212', 'r122', 'r221', 'r232', 'r1222', 'm212', 'm2d', 'm3d', 'mside', 'mact', 'mz', 'mbig'],
+const COMIC_LAYOUT = { type: 'string', enum: ['g1', 'g2', 'g2v', 'g4', 'g6', 'g8', 'g9', 'c3', 'c4', 'r3', 'r4', 'r121', 'r212', 'r122', 'r221', 'r232', 'r1222', 'm212', 'm2d', 'm3d', 'mside', 'mact', 'mz', 'mbig', 'w1', 'w2', 'w3', 'wt2', 'w12', 'w21', 'wl2', 'wz'],
   description: 'How the page is cut, by the number of panels. 1: g1 (one big panel). 2: g2 (one above the other), g2v (side by side), m2d (cut on a diagonal). 3: r3 (three rows), c3 (three side by side, for strips). ' +
     '4: g4 (2 x 2), r121 (one wide, two, one wide), r4 (four rows), m3d (the same, leaning, manga style), mside (a tall panel beside three), c4 (four side by side). ' +
     '5: r212 (two, one wide, two), r122 (a big one on top, then two and two), r221, m212 (r212 leaning), mbig (two, a big one, two). ' +
     '6: g6 (three rows of two), mact (one wide, two on a diagonal, three). 7: r232, r1222, mz (four leaning rows). 8: g8. 9: g9. ' +
-    'Without a layout, the page gets a plain one for its number of panels; choose leaning (m...) ones for action and excitement.' };
+    'Without a layout, the page gets a plain one for its number of panels; choose leaning (m...) ones for action and excitement. ' +
+    'A webtoon\'s parts also have their own: w1 (one panel), w2 and w3 (two or three, one under another), wt2 (a tall one and a short one), w12 (one wide, two side by side), w21, wl2 (two, cut on a slant), wz (three, leaning).' };
 const COMIC_KIND = { type: 'string', enum: ['speech', 'thought', 'shout', 'whisper', 'narration'], description: 'speech (an oval with a tail toward the speaker), thought (a cloud), shout (spikes), whisper (a dashed line), narration (a box for the narrator, with no tail).' };
 const COMIC_EFFECT = { type: 'string', enum: ['speed', 'focus', 'tone'], description: 'speed (speed lines, for fast movement), focus (manga focus lines toward the middle: surprise, tension, something important), tone (manga screentone dots, for shade and mood).' };
+const COMIC_MOTION = { type: 'string', enum: ['none', 'fade', 'pop', 'slide', 'zoom', 'shake', 'type'], description: 'How it comes in when its panel is read: fade, pop (springs in), slide (flies in from a side, see "from"), zoom (comes from close and big), shake, type (a bubble\'s words write themselves letter by letter), or none.' };
+const COMIC_CAMERA = { type: 'string', enum: ['none', 'in', 'out', 'pan', 'shake'], description: 'The camera inside a panel while it is read: in (moves slowly closer), out (moves away), pan (moves along it, see "toward"), shake (the panel shakes, as in an explosion), or none.' };
+const COMIC_TRANSITION = { type: 'string', enum: ['push', 'fade', 'turn', 'zoom', 'none'], description: 'How a page gives way to the next while reading: push (the next one slides in), fade, turn (like a book\'s page), zoom, none.' };
 const COMIC_PAGES = { type: 'array', description: 'The pages, in order. A page has 1 to 9 panels; a comic page usually has 4 to 6.', items: { type: 'object', properties: {
   layout: COMIC_LAYOUT,
   panels: { type: 'array', description: 'The panels in reading order (for a comic read from right to left, the first one is at the top right).', items: { type: 'object', properties: {
     note: { type: 'string', description: 'What should be drawn in the panel: the place, who is there and what they do, the angle. It shows in the empty panel for the one drawing, and is never printed.' },
-    bubbles: { type: 'array', description: 'What is said or thought in the panel, in the order it is read. A panel holds about one to three bubbles.', items: { type: 'object', properties: { kind: COMIC_KIND, text: { type: 'string' } }, required: ['text'] } },
+    characters: { type: 'array', items: { type: 'string' }, description: 'The names of the characters standing in the panel (from "characters"; a new name becomes a new character). Each appears there as the user draws it once.' },
+    bubbles: { type: 'array', description: 'What is said or thought in the panel, in the order it is read. A panel holds about one to three bubbles.', items: { type: 'object', properties: { kind: COMIC_KIND, text: { type: 'string' }, character: { type: 'string', description: 'Who says or thinks it: its tail then points at that character in the panel.' } }, required: ['text'] } },
     sounds: { type: 'array', items: { type: 'string' }, description: 'Big sound words drawn in the panel, like "BOOM!".' },
-    effect: COMIC_EFFECT } } } }, required: ['panels'] } };
+    effect: COMIC_EFFECT } } },
+  height: { type: 'number', description: 'Only for a webtoon: this part\'s height in pixels (640 to 4096; 2560 when left out), taller for a long scene such as a fall.' } }, required: ['panels'] } };
 const SLIDE = {
   layout: { type: 'string', enum: ['title', 'content', 'two_columns', 'big_image', 'image_and_text', 'title_only', 'section', 'blank'],
     description: 'title: the opening slide (title and subtitle). content: a title and text. two_columns: a title and two columns. big_image: a title, a big picture the user adds, and a caption. ' +
@@ -247,26 +255,41 @@ const TOOLS = [
         description: 'The filters and their settings: ' + FILTERS + '.' },
       settings: { type: 'object', description: 'Only the settings that change, like {"r": 12}; the rest start where the filter starts.' },
       all_frames: { type: 'boolean' } }, required: ['action'] } } }, required: ['actions'] } },
-  { name: 'create_comic', description: 'Create a new comic (or manga) from a story and open it on the user\'s screen: pages, each cut into panels, ' +
+  { name: 'create_comic', description: 'Create a new comic (or manga, or webtoon) from a story and open it on the user\'s screen: pages, each cut into panels, ' +
       'with the words of each panel in bubbles and a note in each panel of what to draw there. The user draws the pictures themselves, so write the notes for them: ' +
-      'who is in the panel, where, doing what, and from how close. Keep each bubble short (a comic bubble holds about one or two sentences), and keep the words ' +
+      'who is in the panel, where, doing what, and from how close. List the characters once in "characters", name the ones in each panel and who says each bubble: ' +
+      'the user then draws each character once, and it appears in every panel it is in. Keep each bubble short (a comic bubble holds about one or two sentences), and keep the words ' +
       'in the story\'s language (Hebrew stories become comics read from right to left). Returns the comic as read_document reads it, and a picture of its first page.',
     inputSchema: { type: 'object', properties: { title: { type: 'string' }, pages: COMIC_PAGES,
+      characters: { type: 'array', description: 'The story\'s characters, each once.', items: { type: 'object', properties: { name: { type: 'string' }, description: { type: 'string', description: 'What it looks like, for the one drawing it: age, hair, clothes, what makes it easy to recognize.' } }, required: ['name'] } },
       direction: { type: 'string', enum: ['rtl', 'ltr'], description: 'The way it is read: rtl (manga, and comics in Hebrew or Arabic) or ltr (comics in English and most languages). By default, from the language of the words.' },
-      size: { type: 'string', enum: ['comic', 'manga', 'a4', 'square', 'strip'], description: 'comic (a comic book page, the default), manga (a manga book page), a4, square (for sharing), strip (one short row of panels, like a newspaper strip; give its pages 3 or 4 panels with the layout c3 or c4).' } },
+      size: { type: 'string', enum: ['comic', 'manga', 'a4', 'square', 'strip', 'webtoon'], description: 'comic (a comic book page, the default), manga (a manga book page), a4, square (for sharing), strip (one short row of panels, like a newspaper strip; give its pages 3 or 4 panels with the layout c3 or c4), webtoon (one long strip read by scrolling down on a phone: its pages are parts one under another, usually 1 to 3 wide panels each, with the w... layouts).' },
+      motion: { type: 'boolean', description: 'true gives everything motion while it is read: bubbles pop in, narration fades in, sound words shake, characters slide in.' },
+      transition: COMIC_TRANSITION },
       required: ['pages'] } },
   { name: 'edit_comic', description: 'Change a comic: add, delete or move pages, cut a page into panels another way, write the note of what to draw in a panel, ' +
-      'add bubbles, sound words and effects to a panel, change or delete them, or change the way it is read. read_document shows the pages, the panels (numbered ' +
+      'add bubbles, sound words and effects to a panel, change or delete them, or change the way it is read; add, change and place characters and say who says a bubble; ' +
+      'give things motion, a panel a camera, and the pages a way to turn. read_document shows the pages, the panels (numbered ' +
       'in reading order) and the ids of the bubbles. The actions run in order, all or none, as one step the user can undo with Ctrl+Z.',
     inputSchema: { type: 'object', properties: { id: DOC_ID, actions: { type: 'array', items: { type: 'object', properties: {
-      action: { type: 'string', enum: ['add_pages', 'delete_page', 'move_page', 'set_layout', 'set_note', 'add_bubble', 'add_sound', 'add_effect', 'set_text', 'delete_item', 'set_direction'] },
-      page: { type: 'number', description: 'The page, 1 for the first (every action but add_pages and set_direction).' },
-      panel: { type: 'number', description: 'set_note, add_bubble, add_sound, add_effect: the panel, numbered in reading order on its page.' },
+      action: { type: 'string', enum: ['add_pages', 'delete_page', 'move_page', 'set_layout', 'set_height', 'set_note', 'add_bubble', 'add_sound', 'add_effect', 'set_text', 'delete_item', 'set_direction',
+        'add_character', 'change_character', 'delete_character', 'place_character', 'set_speaker', 'set_motion', 'set_camera', 'set_transition', 'auto_motion'] },
+      page: { type: 'number', description: 'The page, 1 for the first (every action but add_pages, set_direction, add_character, change_character, delete_character, set_transition and auto_motion).' },
+      panel: { type: 'number', description: 'set_note, add_bubble, add_sound, add_effect, place_character, set_camera: the panel, numbered in reading order on its page.' },
+      character: { type: 'string', description: 'A character\'s name: the one to change or delete, place in a panel, or who says a bubble (add_bubble, set_speaker; empty for nobody).' },
+      name: { type: 'string', description: 'add_character, change_character: its name.' }, description: { type: 'string', description: 'add_character, change_character: what it looks like.' },
+      look: { type: 'number', description: 'place_character: which of its looks (1 for the first).' },
+      height: { type: 'number', description: 'set_height: a webtoon part\'s height in pixels, 640 to 4096.' },
+      motion: COMIC_MOTION, from: { type: 'string', enum: ['r', 'l', 't', 'b'], description: 'set_motion with slide: the side it flies in from.' },
+      delay: { type: 'number', description: 'set_motion: seconds it waits before coming in.' }, duration: { type: 'number', description: 'set_motion: seconds it takes.' },
+      camera: COMIC_CAMERA, toward: { type: 'string', enum: ['r', 'l', 't', 'b'], description: 'set_camera with pan: the way the camera moves.' },
+      strength: { type: 'number', description: 'set_camera: how much it moves, 0.05 to 0.5.' },
+      transition: COMIC_TRANSITION, clear: { type: 'boolean', description: 'auto_motion: true takes all the motion away instead.' },
       pages: COMIC_PAGES, at: { type: 'number', description: 'add_pages: the number the first new page gets (default: after the last).' },
       to: { type: 'number', description: 'move_page: the number it moves to.' },
       layout: COMIC_LAYOUT, note: { type: 'string', description: 'set_note: what should be drawn in the panel.' },
       kind: COMIC_KIND, text: { type: 'string', description: 'add_bubble, add_sound, set_text: the words.' },
-      effect: COMIC_EFFECT, item: { type: 'string', description: 'set_text, delete_item: the id of a bubble, a sound word or an effect, from read_document.' },
+      effect: COMIC_EFFECT, item: { type: 'string', description: 'set_text, delete_item, set_speaker, set_motion: the id of a bubble, a sound word, an effect or a character in a panel, from read_document.' },
       direction: { type: 'string', enum: ['rtl', 'ltr'] } }, required: ['action'] } }, look_page: { type: 'number', description: 'The page whose picture comes back (default: the one on screen).' } },
       required: ['actions'] } },
   { name: 'create_presentation', description: 'Create a new presentation and open it on the user\'s screen, where they watch the slides come in one by one. ' +

@@ -106,7 +106,8 @@ let D = null, LOADED = null, GEN = 0;   // the drawing on screen: { w, h, bg, la
 /* a comic's panel being drawn in (comic.js, through embed): the drawing is then the panel's, not a document of its own.
    { body, under, over (canvases the page's size, shown below and above the layers), clip ([[x, y]...]: the layers show only
    inside it), focus ({ x, y, w, h }: what "the whole drawing" fits), onBody(body) (each time the layers are written),
-   dirty(), done() }. LOADED is then HOST, so nothing here takes it for the document on screen */
+   dirty(), done(), w and h (when given: the size it has now, for a webtoon's part that grew) }. LOADED is then HOST, so
+   nothing here takes it for the document on screen */
 let HOST = null;
 /* the drawing on screen belongs to what is open: a drawing of its own, or a comic's panel */
 const live = () => !!(D && LOADED && (HOST ? LOADED === HOST : S.cur === LOADED));
@@ -228,9 +229,20 @@ const blankBody = (w, hh, bg) => JSON.stringify({ v: 1, w, h: hh, bg, active: 'L
 const bodyOf = d => bodyFrom(d, (L, k) => { const c = L.cells.get(k); return c && c.ver > 0 && c.enc ? c.enc.src : ''; });
 /* the order the frames play in: forward, and for "back and forth" back again (without showing the ends twice) */
 const seqOf = (n, loop) => { const a = [...Array(n).keys()]; return loop === 'ping' && n > 2 ? a.concat(a.slice(1, -1).reverse()) : a; };
+/* the frame showing t milliseconds after an animation starts: round and round, or the last one once it has played once
+   (a comic plays the drawings in its panels with it) */
+function frameAtMs(frames, fps, loop, t) {
+  const seq = seqOf(frames.length, loop), ticks = seq.reduce((s, i) => s + frames[i].d, 0);
+  let k = Math.floor(Math.max(0, t) * fps / 1000);
+  if (k >= ticks) { if (loop === 'once') return seq[seq.length - 1]; k %= ticks; }
+  for (const i of seq) { k -= frames[i].d; if (k < 0) return i; }
+  return seq[seq.length - 1];
+}
+const cycleMs = (frames, fps, loop) => seqOf(frames.length, loop).reduce((s, i) => s + frames[i].d, 0) * 1000 / fps;
 /* each frame as a picture, from the drawing on screen or from any body: { w, h, bg, frames, fps, loop, draw(cx, i, cw, ch) }.
    A body's pictures are decoded as they are needed; only the pinned layers' are kept */
 async function framesOf(body) {
+  if (body && typeof body === 'object' && typeof body.draw === 'function') return body;   // frames made elsewhere: a comic's page as it is read (comic.js)
   if (body == null) {
     commitPending();
     const d = D;
@@ -455,6 +467,7 @@ const CSS = `
 .dw-tgrip{position:absolute;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;cursor:move;touch-action:none;box-shadow:0 1px 4px rgba(0,0,0,.3);z-index:3;border:2px solid #fff;padding:0}
 .dw-tgrip .ms{font-size:15px}
 #app:not(.cdraw) .dw-host,#app:not(.cdraw) .dw-hostbar{display:none!important}
+#app.cdraw .dw-own{display:none!important}
 .dw-hostbar{position:absolute;top:10px;inset-inline-start:10px;z-index:5;box-shadow:var(--shadow)}
 .dw-paper canvas.dw-host-cv{pointer-events:none}
 .dw-zoom{position:absolute;bottom:10px;inset-inline-end:10px;display:flex;align-items:center;gap:2px;padding:3px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);z-index:4}
@@ -629,6 +642,8 @@ const CSS = `
 const rbtn = (cmd, ic, label, o = {}) => h('button', { class: 'rb' + (o.big ? ' big' : '') + (o.cls ? ' ' + o.cls : ''), type: 'button', 'data-cmd': cmd, 'data-arg': o.arg, title: o.title || label, 'aria-label': label },
   ic ? icon(ic, o.flip ? 'flip' : null) : null, o.big || o.text ? h('span', { text: o.text || label }) : null);
 const group = (name, cls, ...kids) => h('div', { class: 'grp' }, h('div', { class: 'gb' + (cls ? ' ' + cls : '') }, kids), h('div', { class: 'gn', text: name }));
+/* a group only a drawing of its own has: a comic's panel is saved with its comic */
+const own = g => { g.classList.add('dw-own'); return g; };
 const toolTitle = k => `${T(TOOLS[k].n)} (${TOOLS[k].key.slice(3)})`;
 const toolBtn = (k, big) => h('button', { class: 'rb' + (big ? ' big' : ''), type: 'button', 'data-cmd': 'dwTool', 'data-arg': k, 'data-tool': k, title: toolTitle(k), 'aria-label': T(TOOLS[k].n), 'aria-pressed': 'false' },
   icon(TOOLS[k].ic), big ? h('span', { text: T(TOOLS[k].n) }) : null);
@@ -665,7 +680,7 @@ function ribbonPanels() {
     group(T('ניגון'), '', rbtn('dwPlay', 'play_arrow', T('ניגון'), { big: true }), h('div', { class: 'dw-col' }, h('label', { class: 'dw-sl' }, h('span', { text: T('מהירות') }), V.fps), h('label', { class: 'dw-sl' }, h('span', { text: T('חזרה@loop') }), V.loop))),
     group(T('שכבות בצל'), '', rbtn('dwOnion', 'auto_awesome_motion', T('שכבות בצל'), { big: true, title: T('הפריימים שלפני ושאחרי מופיעים חלש מתחת לפריים, כדי שיהיה קל לצייר את הצעד הבא') }),
       h('div', { class: 'dw-col' }, h('label', { class: 'dw-sl' }, h('span', { text: T('לפני') }), V.onBf), h('label', { class: 'dw-sl' }, h('span', { text: T('אחרי') }), V.onAf))),
-    group(T('שמירה כקובץ'), '', rbtn('dwAnimExport', 'gif', 'GIF', { big: true, arg: 'gif', title: T('תמונה שזזה לבד, לשליחה ולשיתוף') }), rbtn('dwAnimExport', 'movie', T('סרטון'), { big: true, arg: 'video', title: T('סרטון MP4, למשל ליוטיוב') })));
+    own(group(T('שמירה כקובץ'), '', rbtn('dwAnimExport', 'gif', 'GIF', { big: true, arg: 'gif', title: T('תמונה שזזה לבד, לשליחה ולשיתוף') }), rbtn('dwAnimExport', 'movie', T('סרטון'), { big: true, arg: 'video', title: T('סרטון MP4, למשל ליוטיוב') }))));
   const fxBtn = (k, f) => h('button', { class: 'rb big', type: 'button', 'data-cmd': 'dwFx', 'data-arg': k, 'data-fx': k, title: T(f.d), 'aria-label': T(f.n), 'aria-pressed': 'false' }, icon(f.ic), h('span', { text: T(f.n) }));
   V.fxP = h('div', { class: 'panel draw-only', 'data-panel': 'dwfx', hidden: true }, FX_GROUPS.map(([g, name]) => {
     const list = Object.entries(FXL).filter(([, f]) => f.g === g);
@@ -2224,7 +2239,10 @@ async function embed(o) {
   reset();
   HOST = LOADED = o;
   V.wait.hidden = false;
-  const j = parseBody(o.body), layers = await layersFrom(j, gen);
+  const j = parseBody(o.body);
+  // a webtoon's part that grew since its panel was drawn: the drawing grows with it (what is drawn stays where it was)
+  if (o.w && o.h) { j.w = clamp(Math.round(o.w), MIN_SIDE, MAX_SIDE); j.h = clamp(Math.round(o.h), MIN_SIDE, MAX_SIDE); }
+  const layers = await layersFrom(j, gen);
   if (gen !== GEN || HOST !== o) { if (gen === GEN) HOST = LOADED = null; layers.forEach(L => { for (const c of L.cells.values()) freeCanvas(c.cv); }); return false; }
   D = { w: j.w, h: j.h, bg: j.bg, layers, active: j.active, frames: j.frames, f: j.f, fps: j.fps, loop: j.loop };
   BODY = bodyOf(D);
@@ -2243,11 +2261,6 @@ function unembed() {
   const out = REV ? BODY : null;
   GEN++; reset();
   return out;
-}
-/* any drawing's body as one picture on cx, cw x ch (a comic shows its panels with it) */
-async function paintBody(cx, body, cw, ch) {
-  const src = await framesOf(body);
-  try { await src.draw(cx, src.f, cw, ch); } finally { src.done(); }
 }
 
 /* what Claude is told about a drawing: its size, its frames, and its layers, the top one first */
@@ -2495,9 +2508,9 @@ async function makeGif(body, { k = 1, max = 0, prog } = {}) {
   } finally { freeCanvas(c); src.done(); }
 }
 /* MP4 made frame by frame with the browser's own video encoder (no waiting for it to play); where there is none,
-   the frames are played into a recording, in real time */
-async function makeVideo({ k = 1, times = 1, prog } = {}) {
-  const src = await framesOf(null), seq = seqOf(src.frames.length, src.loop), fps = src.fps;
+   the frames are played into a recording, in real time. from: frames made elsewhere (a comic as it is read) */
+async function makeVideo({ k = 1, times = 1, prog, from = null } = {}) {
+  const src = await framesOf(from), seq = seqOf(src.frames.length, src.loop), fps = src.fps;
   let [w, hh] = fitSize(Math.round(src.w * k), Math.round(src.h * k), 1920);
   w = Math.max(2, w - w % 2); hh = Math.max(2, hh - hh % 2);   // H.264 wants even sizes
   const c = newCanvas(w, hh), x = c.getContext('2d'), list = [];
@@ -4393,7 +4406,9 @@ const COMMANDS = {
 
 window.INK_DRAW = {
   load, unload: reset, replace, preview, chooser, flush, body, norm, pickInto,
-  embed, unembed, paint: paintBody, blank: blankBody,
+  embed, unembed, blank: blankBody,
+  // for a comic: a drawing's frames as pictures, which frame shows when, and its pages made into GIFs and videos
+  source: framesOf, frameAt: frameAtMs, cycleMs, encode: { gif: (src, o) => makeGif(src, o), video: (src, o) => makeVideo({ ...o, from: src }) },
   png, jpg, pdf, print,
   key: onKey, esc: onEsc, stat,
   image: f => placeImage(f, true),

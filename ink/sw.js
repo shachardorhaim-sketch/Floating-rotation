@@ -2,7 +2,7 @@
 // The app's own files are fetched fresh when online (so updates arrive) and fall back
 // to the saved copy offline. Fonts and the Word/PDF/Excel libraries are kept after first use. sheet.js (the
 // spreadsheets), draw.js (the drawings) and comic.js (the comics) are saved at install, so they open offline even if none was opened before.
-const SHELL = 'ink-shell-v7';
+const SHELL = 'ink-shell-v8';
 const LIBS = 'ink-libs-v1';
 const LANGS = ['en', 'ar', 'zh', 'es', 'fr', 'pt', 'ru', 'de'];
 const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './floating-ink.webp', './icons/icon-192.png', './icons/icon-512.png', './icons/favicon-32.png', './icons/mark-64.png', './pptx-shapes.json', './sheet.js', './draw.js', './comic.js', ...LANGS.map(l => `./lang/${l}.js`)];
