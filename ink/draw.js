@@ -39,6 +39,7 @@ const TOOLS = {
   select: { ic: 'select', n: N_('בחירה'), key: 'KeyM' },
   lasso: { ic: 'lasso_select', n: N_('בחירה חופשית'), key: 'KeyL' },
   move: { ic: 'open_with', n: N_('הזזה'), key: 'KeyV' },
+  wand: { ic: 'auto_fix_high', n: N_('מטה קסם'), key: 'KeyQ' },
   line: { ic: 'horizontal_rule', n: N_('קו'), key: 'KeyU', shape: true },
   arrow: { ic: 'arrow_right_alt', n: N_('חץ'), key: 'KeyW', shape: true },
   rect: { ic: 'rectangle', n: N_('מלבן'), key: 'KeyR', shape: true },
@@ -55,9 +56,10 @@ const BR = {
   spray: { kind: 'spray', pr: [1, 1] },
   eraser: { kind: 'cap', pr: [0.35, 1], erase: true },
 };
-/* s: size in the drawing's pixels, o: opacity %, sm: smoothing %, tol: how alike colors the bucket takes in % */
+/* s: size in the drawing's pixels, o: opacity %, sm: smoothing %, tol: how alike colors the bucket (or the magic wand, and
+   the background taken away) takes in %, soft: how soft the edge the wand leaves is in % */
 const DEF = { pen: { s: 6, o: 100, sm: 50 }, pencil: { s: 3, o: 90, sm: 40 }, marker: { s: 22, o: 70, sm: 45 }, brush: { s: 36, o: 100, sm: 45 }, spray: { s: 50, o: 100, sm: 0 },
-  eraser: { s: 34, o: 100, sm: 30 }, shape: { s: 6, o: 100 }, fill: { o: 100, tol: 30 }, text: { s: 64, o: 100 } };
+  eraser: { s: 34, o: 100, sm: 30 }, shape: { s: 6, o: 100 }, fill: { o: 100, tol: 30 }, text: { s: 64, o: 100 }, wand: { tol: 50, soft: 25 } };
 const setKey = t => TOOLS[t] && TOOLS[t].shape ? 'shape' : t;
 const SIZE_MAX = 400;
 /* the classic 20 colors of a paint program, and more in the color window */
@@ -106,7 +108,8 @@ let D = null, LOADED = null, GEN = 0;   // the drawing on screen: { w, h, bg, la
 /* a comic's panel being drawn in (comic.js, through embed): the drawing is then the panel's, not a document of its own.
    { body, under, over (canvases the page's size, shown below and above the layers), clip ([[x, y]...]: the layers show only
    inside it), focus ({ x, y, w, h }: what "the whole drawing" fits), onBody(body) (each time the layers are written),
-   dirty(), done(), w and h (when given: the size it has now, for a webtoon's part that grew) }. LOADED is then HOST, so
+   dirty(), done(), w and h (when given: the size it has now, for a webtoon's part that grew), look (a character's look: a
+   picture whose background is taken away fills it) }. LOADED is then HOST, so
    nothing here takes it for the document on screen */
 let HOST = null;
 /* the drawing on screen belongs to what is open: a drawing of its own, or a comic's panel */
@@ -417,20 +420,22 @@ function undo() {
   if (ACT) return;
   if (FXS) { fxCancel(); return; }   // the filter being tried goes first
   if (TX) { cancelText(); return; }   // the text being written, or the pixels being moved, go back first
-  if (FL) { cancelFloat(); return; }
+  if (FL) { if (FL.hist && FL.hist.length) flStep(true); else cancelFloat(); return; }   // a background taken from it comes back first
   if (!HIST.at) return;
   const s = HIST.steps[--HIST.at];
   s.undo(); SEL = null; drawOverlay(); undoUI();
 }
 function redo() {
-  if (ACT || HIST.at >= HIST.steps.length) return;
+  if (ACT) return;
+  if (FL && FL.fwd && FL.fwd.length) { flStep(false); return; }
+  if (HIST.at >= HIST.steps.length) return;
   commitPending();
   const s = HIST.steps[HIST.at++];
   s.redo(); SEL = null; drawOverlay(); undoUI();
 }
 function undoUI() {
   for (const b of document.querySelectorAll('#ribbon [data-cmd="dwUndo"]')) b.disabled = !HIST.at && !FL && !TX;
-  for (const b of document.querySelectorAll('#ribbon [data-cmd="dwRedo"]')) b.disabled = HIST.at >= HIST.steps.length;
+  for (const b of document.querySelectorAll('#ribbon [data-cmd="dwRedo"]')) b.disabled = HIST.at >= HIST.steps.length && !(FL && FL.fwd && FL.fwd.length);
 }
 const clipR = (x, y, w, hh) => { const x0 = clamp(Math.floor(x), 0, D.w), y0 = clamp(Math.floor(y), 0, D.h), x1 = clamp(Math.ceil(x + w), 0, D.w), y1 = clamp(Math.ceil(y + hh), 0, D.h); return x1 > x0 && y1 > y0 ? { x: x0, y: y0, w: x1 - x0, h: y1 - y0 } : null; };
 const unionR = (a, b) => !a ? b : !b ? a : { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.max(a.x + a.w, b.x + b.w) - Math.min(a.x, b.x), h: Math.max(a.y + a.h, b.y + b.h) - Math.min(a.y, b.y) };
@@ -647,13 +652,14 @@ const own = g => { g.classList.add('dw-own'); return g; };
 const toolTitle = k => `${T(TOOLS[k].n)} (${TOOLS[k].key.slice(3)})`;
 const toolBtn = (k, big) => h('button', { class: 'rb' + (big ? ' big' : ''), type: 'button', 'data-cmd': 'dwTool', 'data-arg': k, 'data-tool': k, title: toolTitle(k), 'aria-label': T(TOOLS[k].n), 'aria-pressed': 'false' },
   icon(TOOLS[k].ic), big ? h('span', { text: T(TOOLS[k].n) }) : null);
+const bgCutBtn = () => rbtn('dwBgCut', 'background_replace', T('הסרת רקע'), { text: T('הסרת רקע'), cls: 'txt', title: T('הרקע של התמונה נעלם, למשל הרקע האפור מאחורי דמות: בתמונה שהכנסת עכשיו, או בשכבה') });
 const sw = (c, cmd = 'dwSw') => h('button', { class: 'sw', type: 'button', style: { background: c }, 'data-cmd': cmd, 'data-arg': c, title: c, 'aria-label': c });
 function ribbonPanels() {
   const done = group(T('קומיקס'), '', rbtn('dwDone', 'check_circle', T('סיום הציור'), { big: true, title: T('הציור נשאר במשבצת, וחוזרים לדף של הקומיקס (Esc)') }));
   done.classList.add('dw-host');   // only while a comic's panel is drawn in
   V.home = h('div', { class: 'panel draw-only', 'data-panel': 'dwhome', hidden: true }, done,
     group(T('ביטול@undo'), 'col', rbtn('dwUndo', 'undo', T('ביטול (Ctrl+Z)'), { flip: true }), rbtn('dwRedo', 'redo', T('חזרה (Ctrl+Y)'), { flip: true })),
-    group(T('כלים'), '', h('div', { class: 'dw-tg' }, ['select', 'lasso', 'move', 'fill', 'pick', 'text'].map(k => toolBtn(k)))),
+    group(T('כלים'), '', h('div', { class: 'dw-tg' }, ['select', 'lasso', 'move', 'wand', 'fill', 'pick', 'text'].map(k => toolBtn(k)))),
     group(T('מברשות'), '', BRUSHES.map(k => toolBtn(k, true))),
     group(T('צורות'), '', h('div', { class: 'dw-sg' }, ['line', 'arrow', 'rect', 'ellipse'].map(k => toolBtn(k)), rbtn('dwShapeFill', 'format_color_fill', T('צורה מלאה'), { cls: 'dw-shf', title: T('מלבן ועיגול מלאים בצבע, ולא רק המסגרת') }))),
     V.opts = group(T('הגדרות'), 'col dw-opts'),
@@ -999,6 +1005,7 @@ function onDown(e) {
   else if (TOOLS[t].shape) startShape(p, c);
   else if (t === 'fill') fillAt(c);
   else if (t === 'pick') startPick(p, c, false);
+  else if (t === 'wand') wandAt(c);
   else if (t === 'text') openText(c);
   else startSelect(e, p, c);
 }
@@ -1331,6 +1338,11 @@ function flood(img, sx, sy, tol) {
   const nr = near(d[k0]), ng = near(d[k0 + 1]), nb = near(d[k0 + 2]), na = near(d[k0 + 3]);
   if (d[k0 + 3] === 0) for (let i = 0, k = 3; i < n; i++, k += 4) m[i] = na[d[k]];   // see-through is see-through, whatever color it hides
   else for (let i = 0, k = 0; i < n; i++, k += 4) m[i] = nr[d[k]] & ng[d[k + 1]] & nb[d[k + 2]] & na[d[k + 3]];
+  const box = growArea(m, W, H, sx, sy);
+  return box ? { m, box } : null;
+}
+/* the pixels marked 1 in m (W by H) joined to sx, sy, marked 2. Returns the box around them, or null */
+function growArea(m, W, H, sx, sy) {
   let x0 = W, y0 = H, x1 = -1, y1 = -1;
   const stack = [sx, sy];
   while (stack.length) {
@@ -1350,7 +1362,7 @@ function flood(img, sx, sy, tol) {
       }
     }
   }
-  return x1 < 0 ? null : { m, box: { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 } };
+  return x1 < 0 ? null : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
 }
 const nextFrame = () => Promise.race([new Promise(r => requestAnimationFrame(() => setTimeout(r, 0))), sleep(60)]);
 /* the bucket's paint: the area of alike colors around x, y in color, on L. Returns the rectangle it changed and the
@@ -1403,6 +1415,490 @@ async function fillAt(c) {
     V.vp.classList.remove('c-wait');
   }
 }
+
+/* =========================================================
+   taking away a picture's background, such as the plain backdrop behind a character an AI drew. One click ("הסרת רקע")
+   takes all of it: the backdrop's colors are learned from the picture's edges, as a smooth surface (so a gradient, or a
+   spot of light behind the figure, is part of it), and what touches the edges and is near those colors goes, with the
+   closed gaps of the same color (between an arm and the body). The magic wand takes away one area of alike colors, where
+   it is clicked, for what is left. Both leave soft edges: a pixel on the edge is part backdrop and part figure, so it
+   keeps only the figure's part, in the figure's own color, and none of the backdrop's color shows around the figure
+   ========================================================= */
+/* A x = y for a 6 by 6 A, for three y's at once (one per channel, one after another in Y); the answers go into Y.
+   false when there is no answer */
+function solve6(A, Y) {
+  for (let c = 0; c < 6; c++) {
+    let p = c;
+    for (let r = c + 1; r < 6; r++) if (Math.abs(A[r * 6 + c]) > Math.abs(A[p * 6 + c])) p = r;
+    if (Math.abs(A[p * 6 + c]) < 1e-12) return false;
+    if (p !== c) {
+      for (let k = 0; k < 6; k++) { const t = A[c * 6 + k]; A[c * 6 + k] = A[p * 6 + k]; A[p * 6 + k] = t; }
+      for (let ch = 0; ch < 18; ch += 6) { const t = Y[ch + c]; Y[ch + c] = Y[ch + p]; Y[ch + p] = t; }
+    }
+    for (let r = 0; r < 6; r++) {
+      const q = r === c ? 0 : A[r * 6 + c] / A[c * 6 + c];
+      if (!q) continue;
+      for (let k = c; k < 6; k++) A[r * 6 + k] -= q * A[c * 6 + k];
+      for (let ch = 0; ch < 18; ch += 6) Y[ch + r] -= q * Y[ch + c];
+    }
+  }
+  for (let r = 0; r < 6; r++) for (let ch = 0; ch < 18; ch += 6) Y[ch + r] /= A[r * 6 + r];
+  return true;
+}
+const medianOf = (a, n) => n ? a.subarray(0, n).sort()[n >> 1] : 0;   // (a is a scratch array: it is sorted)
+/* the backdrop's colors as a smooth surface: per channel a + b·u + c·v + d·u² + e·u·v + f·v², u and v from -0.5 to 0.5
+   across the box (bw by bh), fitted to the samples (S: x, y, r, g, b for each of n) by least squares, again and again
+   without the ones far from it: what stands in front, where it touches the edges. Returns the 18 numbers, and which
+   part of the samples fit (fit, 0 to 1), and how far from it a sample may be to fit (cut) */
+function bgFit(S, n, bw, bh) {
+  const keep = new Uint8Array(n).fill(1), e = new Float32Array(n), tmp = new Float32Array(n), f = new Float64Array(6);
+  let c = null, fit = 1, cut = 255;
+  for (let it = 0; it < 6; it++) {
+    const A = new Float64Array(36), Y = new Float64Array(18);
+    let m = 0;
+    for (let i = 0, k = 0; i < n; i++, k += 5) {
+      if (!keep[i]) continue;
+      m++;
+      const u = S[k] / bw - 0.5, v = S[k + 1] / bh - 0.5;
+      f[0] = 1; f[1] = u; f[2] = v; f[3] = u * u; f[4] = u * v; f[5] = v * v;
+      for (let a = 0; a < 6; a++) {
+        const fa = f[a];
+        for (let b = a; b < 6; b++) A[a * 6 + b] += fa * f[b];
+        Y[a] += fa * S[k + 2]; Y[6 + a] += fa * S[k + 3]; Y[12 + a] += fa * S[k + 4];
+      }
+    }
+    if (m < 6) break;
+    for (let a = 0; a < 6; a++) for (let b = 0; b < a; b++) A[a * 6 + b] = A[b * 6 + a];
+    for (let a = 1; a < 6; a++) A[a * 7] += m * 1e-5;   // steadier when the samples hardly spread one way
+    if (!solve6(A, Y)) break;
+    c = Y;
+    let k2 = 0;
+    for (let i = 0, k = 0; i < n; i++, k += 5) {
+      const u = S[k] / bw - 0.5, v = S[k + 1] / bh - 0.5, uu = u * u, uv = u * v, vv = v * v;
+      let far = 0;
+      for (let ch = 0, o = 0; ch < 3; ch++, o += 6) { const dd = Math.abs(S[k + 2 + ch] - (c[o] + c[o + 1] * u + c[o + 2] * v + c[o + 3] * uu + c[o + 4] * uv + c[o + 5] * vv)); if (dd > far) far = dd; }
+      e[i] = far;
+      if (keep[i]) tmp[k2++] = far;
+    }
+    cut = Math.max(6, 4.5 * medianOf(tmp, k2));
+    let same = true, kept = 0;
+    for (let i = 0; i < n; i++) { const kk = e[i] <= cut ? 1 : 0; if (kk !== keep[i]) { same = false; keep[i] = kk; } kept += kk; }
+    fit = kept / n;
+    if (same) break;
+  }
+  if (!c) {   // no surface fits: the samples' average color, the same everywhere
+    c = new Float64Array(18);
+    for (let i = 0, k = 0; i < n; i++, k += 5) for (let ch = 0; ch < 3; ch++) c[ch * 6] += S[k + 2 + ch] / n;
+  }
+  return { c, fit, cut };
+}
+/* the surface as colors, for each pixel of the box */
+function bgPaint(c, bw, bh) {
+  const out = new Uint8ClampedArray(bw * bh * 3);
+  for (let y = 0, j = 0; y < bh; y++) {
+    const v = (y + 0.5) / bh - 0.5, a = [0, 6, 12].map(o => [c[o] + c[o + 2] * v + c[o + 5] * v * v, c[o + 1] + c[o + 4] * v, c[o + 3]]);
+    for (let x = 0; x < bw; x++, j += 3) {
+      const u = (x + 0.5) / bw - 0.5, uu = u * u;
+      out[j] = a[0][0] + a[0][1] * u + a[0][2] * uu; out[j + 1] = a[1][0] + a[1][1] * u + a[1][2] * uu; out[j + 2] = a[2][0] + a[2][1] * u + a[2][2] * uu;
+    }
+  }
+  return out;
+}
+/* the backdrop behind everything, from where it was found (st 1 in the box, bw by bh; at(x, y) is a pixel's place in d):
+   the box in cells, each the average color of the backdrop in it (again without what is far from that), the cells with
+   too little of it filled in from the cells around them, wave after wave, and smoothly from cell to cell for each pixel.
+   null when no cell has enough backdrop */
+function bgMap(d, at, st, bw, bh, t) {
+  const cs = Math.max(12, Math.round(Math.min(bw, bh) / 24)), gw = Math.ceil(bw / cs), gh = Math.ceil(bh / cs), G = gw * gh;
+  const sum = new Float64Array(G * 4), col = new Float32Array(G * 3), ok = new Uint8Array(G), enough = cs * cs * 0.12;
+  for (let pass = 0; pass < 2; pass++) {
+    sum.fill(0);
+    for (let y = 0, j = 0; y < bh; y++) for (let x = 0, o = at(0, y); x < bw; x++, j++, o += 4) {
+      if (st[j] !== 1) continue;
+      const g = ((y / cs) | 0) * gw + ((x / cs) | 0), g3 = g * 3;
+      if (pass && (!ok[g] || Math.max(Math.abs(d[o] - col[g3]), Math.abs(d[o + 1] - col[g3 + 1]), Math.abs(d[o + 2] - col[g3 + 2])) > 2.5 * t)) continue;
+      sum[g * 4] += d[o]; sum[g * 4 + 1] += d[o + 1]; sum[g * 4 + 2] += d[o + 2]; sum[g * 4 + 3]++;
+    }
+    for (let g = 0; g < G; g++) {
+      const n = sum[g * 4 + 3];
+      if (pass ? !ok[g] || n < enough / 2 : n < enough) { ok[g] = 0; continue; }
+      ok[g] = 1; col[g * 3] = sum[g * 4] / n; col[g * 3 + 1] = sum[g * 4 + 1] / n; col[g * 3 + 2] = sum[g * 4 + 2] / n;
+    }
+  }
+  if (!ok.some(v => v)) return null;
+  // the cells behind the figure: from their neighbours, wave after wave, then smoothed a little (only those)
+  const known = ok.slice();
+  for (let more = true; more;) {
+    more = false;
+    const now = ok.slice();
+    for (let gy = 0; gy < gh; gy++) for (let gx = 0; gx < gw; gx++) {
+      const g = gy * gw + gx;
+      if (ok[g]) continue;
+      let r = 0, gg = 0, b = 0, n = 0;
+      for (let yy = Math.max(0, gy - 1); yy <= Math.min(gh - 1, gy + 1); yy++) for (let xx = Math.max(0, gx - 1); xx <= Math.min(gw - 1, gx + 1); xx++) {
+        const h3 = (yy * gw + xx) * 3;
+        if (ok[yy * gw + xx]) { r += col[h3]; gg += col[h3 + 1]; b += col[h3 + 2]; n++; }
+      }
+      if (n) { col[g * 3] = r / n; col[g * 3 + 1] = gg / n; col[g * 3 + 2] = b / n; now[g] = 1; } else more = true;
+    }
+    ok.set(now);
+  }
+  for (let it = 0; it < 2; it++) {
+    const c2 = col.slice();
+    for (let gy = 0; gy < gh; gy++) for (let gx = 0; gx < gw; gx++) {
+      const g = gy * gw + gx;
+      if (known[g]) continue;
+      let r = 0, gg = 0, b = 0, n = 0;
+      for (let yy = Math.max(0, gy - 1); yy <= Math.min(gh - 1, gy + 1); yy++) for (let xx = Math.max(0, gx - 1); xx <= Math.min(gw - 1, gx + 1); xx++) { const h3 = (yy * gw + xx) * 3; r += col[h3]; gg += col[h3 + 1]; b += col[h3 + 2]; n++; }
+      c2[g * 3] = r / n; c2[g * 3 + 1] = gg / n; c2[g * 3 + 2] = b / n;
+    }
+    col.set(c2);
+  }
+  // each pixel: between the middles of the four cells around it
+  const out = new Uint8ClampedArray(bw * bh * 3);
+  for (let y = 0, j = 0; y < bh; y++) {
+    const fy = (y + 0.5) / cs - 0.5, ya = clamp(Math.floor(fy), 0, gh - 1), yb = Math.min(gh - 1, ya + 1), wy = clamp(fy - ya, 0, 1);
+    for (let x = 0; x < bw; x++, j += 3) {
+      const fx = (x + 0.5) / cs - 0.5, xa = clamp(Math.floor(fx), 0, gw - 1), xb = Math.min(gw - 1, xa + 1), wx = clamp(fx - xa, 0, 1);
+      const a = (ya * gw + xa) * 3, b = (ya * gw + xb) * 3, c = (yb * gw + xa) * 3, e = (yb * gw + xb) * 3;
+      for (let ch = 0; ch < 3; ch++) out[j + ch] = (col[a + ch] * (1 - wx) + col[b + ch] * wx) * (1 - wy) + (col[c + ch] * (1 - wx) + col[e + ch] * wx) * wy;
+    }
+  }
+  return out;
+}
+/* the background of the picture in img taken away (img changes). k: how eagerly (0 to 1), fp: by how many pixels the edge
+   is softened. Returns { none: true } when the picture's edges are see-through already, or else how many pixels went
+   (gone), how plain the backdrop was (fit, 0 to 1) and the box of what is left (box, null when nothing is) */
+function bgCut(img, k, fp) {
+  const W = img.width, H = img.height, d = img.data;
+  // the box of what is not see-through, and a ring along its edges, a little wide
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0, i = 3; y < H; y++) for (let x = 0; x < W; x++, i += 4) if (d[i] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; y1 = y; }
+  if (x1 - x0 < 8 || y1 - y0 < 8) return { none: true };
+  const bw = x1 - x0 + 1, bh = y1 - y0 + 1, N = bw * bh, rw = Math.max(2, Math.round(Math.min(bw, bh) * 0.012));
+  const at = (x, y) => ((y + y0) * W + x + x0) * 4;
+  const ring = fn => { for (let y = 0; y < bh; y++) { if (y < rw || y >= bh - rw) for (let x = 0; x < bw; x++) fn(x, y); else { for (let x = 0; x < rw; x++) fn(x, y); for (let x = bw - rw; x < bw; x++) fn(x, y); } } };
+  // the ring's colors (a few thousand of them) are the backdrop's, where nothing stands in front; and how much the color
+  // changes there from a pixel to the next (the backdrop's grain, or the JPEG's noise)
+  const ringN = N - Math.max(0, bw - 2 * rw) * Math.max(0, bh - 2 * rw), step = Math.max(1, Math.floor(ringN / 6000));
+  const S = new Float32Array((Math.floor(ringN / step) + 2) * 5), nz = new Float32Array(Math.floor(ringN / step) + 2);
+  let ns = 0, solid = 0;
+  ring((x, y) => {
+    const o = at(x, y);
+    if (d[o + 3] < 200 || solid++ % step) return;
+    S.set([x + 0.5, y + 0.5, d[o], d[o + 1], d[o + 2]], ns * 5);
+    const p = x < bw - 1 ? o + 4 : o - 4;
+    nz[ns++] = Math.max(Math.abs(d[o] - d[p]), Math.abs(d[o + 1] - d[p + 1]), Math.abs(d[o + 2] - d[p + 2]));
+  });
+  if (solid < ringN * 0.5 || ns < 12) return { none: true };
+  const M = bgFit(S, ns, bw, bh), fit = M.fit;
+  const grain = medianOf(nz, ns), t = clamp(5 + 2 * grain, 6, 22) * (0.4 + 1.2 * k);   // how near the backdrop's color a pixel must be to go
+  /* the backdrop grows from where it is known to each next pixel near enough in color to the one it came from. Each
+     pixel taken keeps the color it was compared to, moved a little toward its own: so the backdrop may follow a slow
+     change (a gradient, a spot of light behind the figure, a shadow on the floor), but not a sudden one, at the edge of
+     the figure. Where it has gone far from the backdrop's color as it is known there (B), only very small steps go on:
+     light and shadow change slowly, while the edge of a figure a little like them (black clothes beside the shadow
+     under the shoes) is a step. And never more than lo darker or hi lighter than it. On its way it only gets lighter or
+     only darker (top and low: the lightest and the darkest it was on the way there): a light is lighter toward its
+     middle and a shadow darker, so what is darker than the light around it, or lighter than the shadow, is the figure.
+     st: 1 goes, 2 was see-through already, 3, 4 and 5 looked at */
+  const st = new Uint8Array(N), ref = new Float32Array(N * 3), top = new Uint8ClampedArray(N), low = new Uint8ClampedArray(N), q = new Int32Array(N);
+  // smooth all round a pixel, as light and shadow are: no edge passes by it (no more change in the 3 by 3 around it than grain allows)
+  const flat = (x, y) => {
+    let r0 = 255, r1 = 0, g0 = 255, g1 = 0, b0 = 255, b1 = 0;
+    for (let yy = Math.max(0, y - 1); yy <= Math.min(bh - 1, y + 1); yy++) for (let xx = Math.max(0, x - 1), o = at(xx, yy); xx <= Math.min(bw - 1, x + 1); xx++, o += 4) {
+      const r = d[o], g = d[o + 1], b = d[o + 2];
+      if (r < r0) r0 = r; if (r > r1) r1 = r; if (g < g0) g0 = g; if (g > g1) g1 = g; if (b < b0) b0 = b; if (b > b1) b1 = b;
+    }
+    return Math.max(r1 - r0, g1 - g0, b1 - b0) <= 2 * grain + 3;
+  };
+  const spread = (qh, qt) => {
+    while (qh < qt) {
+      const i = q[qh++], x = i % bw, y = (i - x) / bw, p3 = i * 3, from = st[i] === 1;
+      for (let s = 0; s < 4; s++) {
+        const nx = s === 0 ? x - 1 : s === 1 ? x + 1 : x, ny = s === 2 ? y - 1 : s === 3 ? y + 1 : y;
+        if (nx < 0 || ny < 0 || nx >= bw || ny >= bh) continue;
+        const j = ny * bw + nx;
+        if (st[j]) continue;
+        const o = at(nx, ny), j3 = j * 3;
+        let far = 0, off = 0, L = 0;
+        for (let ch = 0; ch < 3; ch++) {
+          const m = B[j3 + ch], r = from ? clamp(ref[p3 + ch], m - lo, m + hi) : m, v = d[o + ch], dd = v > r ? v - r : r - v, dm = r > m ? r - m : m - r;
+          if (dd > far) far = dd;
+          if (dm > off) off = dm;
+          L += ref[j3 + ch] = r + 0.3 * (v - r);
+        }
+        L /= 3;
+        const tp = from ? top[i] : L, lw = from ? low[i] : L;
+        if ((off > 0.5 * t ? far <= 0.45 * t && flat(nx, ny) : far <= t) && (L >= tp - 0.5 * t || L <= lw + 0.5 * t)) { st[j] = 1; top[j] = Math.max(tp, L); low[j] = Math.min(lw, L); q[qt++] = j; }
+      }
+    }
+    return qt;
+  };
+  const offB = (o, j3) => Math.max(Math.abs(d[o] - B[j3]), Math.abs(d[o + 1] - B[j3 + 1]), Math.abs(d[o + 2] - B[j3 + 2]));
+  const take = (j, o) => { st[j] = 1; top[j] = low[j] = (d[o] + d[o + 1] + d[o + 2]) / 3; ref[j * 3] = d[o]; ref[j * 3 + 1] = d[o + 1]; ref[j * 3 + 2] = d[o + 2]; };
+  const near4 = (i, fn) => { const x = i % bw, y = (i - x) / bw; if (x > 0) fn(i - 1); if (x < bw - 1) fn(i + 1); if (y > 0) fn(i - bw); if (y < bh - 1) fn(i + bw); };
+  const pxOf = i => { const x = i % bw; return at(x, (i - x) / bw); };
+  // it is known at first along the edges (where the surface fitted to them says nothing stands in front), and between them
+  const Q = bgPaint(M.c, bw, bh), qcut = Math.max(M.cut, 2 * t);
+  ring((x, y) => { const j = y * bw + x, o = at(x, y), j3 = j * 3; if (d[o + 3] > 8 && Math.max(Math.abs(d[o] - Q[j3]), Math.abs(d[o + 1] - Q[j3 + 1]), Math.abs(d[o + 2] - Q[j3 + 2])) <= qcut) st[j] = 1; });
+  let B = bgMap(d, at, st, bw, bh, t) || Q, lo = 0, hi = 40;
+  const find = (l, u) => {
+    lo = l; hi = u; st.fill(0);
+    let qt = 0, kept = 0;
+    for (let y = 0, j = 0; y < bh; y++) for (let x = 0, o = at(0, y); x < bw; x++, j++, o += 4) if (d[o + 3] <= 8) { st[j] = 2; q[qt++] = j; }
+    ring((x, y) => { const j = y * bw + x, o = at(x, y); if (!st[j] && offB(o, j * 3) <= t) { take(j, o); q[qt++] = j; } });
+    spread(0, qt);
+    for (let j = 0; j < N; j++) if (!st[j]) kept++;
+    return kept;
+  };
+  // first only toward the light (a backdrop is lit where the figure stands), to know what stays at the least: when the
+  // shadows then take most of that too, they went into a figure as dark as they are, so they stay
+  const least = find(0, 40), safe = st.slice();
+  if (find(40, 40) < least * 0.25) st.set(safe);
+  // the backdrop as found, cell by cell, knows it behind the figure too
+  B = bgMap(d, at, st, bw, bh, t) || B;
+  /* a piece of what stays (in q, n pixels, marked 5): its color, how grainy it is (gr: the change from a pixel to the
+     next inside it), how sharp its edge is (sharp: the part of its edge where the color changes much), and how far its
+     color is from the backdrop found around it (dev; from the backdrop as known behind it, when none was found near) */
+  const pad = Math.max(24, Math.round(Math.min(bw, bh) * 0.08));
+  const piece = n => {
+    let r = 0, g = 0, b = 0, br = 0, bg = 0, bb = 0, edge = 0, sharp = 0, gr = 0, gn = 0, xa = bw, ya = bh, xb = 0, yb = 0;
+    for (let m = 0; m < n; m++) {
+      const i = q[m], p = pxOf(i), x = i % bw, y = (i - x) / bw;
+      r += d[p]; g += d[p + 1]; b += d[p + 2]; br += B[i * 3]; bg += B[i * 3 + 1]; bb += B[i * 3 + 2];
+      if (x < xa) xa = x; if (x > xb) xb = x; if (y < ya) ya = y; if (y > yb) yb = y;
+      near4(i, jj => {
+        const u = pxOf(jj), step = Math.max(Math.abs(d[u] - d[p]), Math.abs(d[u + 1] - d[p + 1]), Math.abs(d[u + 2] - d[p + 2]));
+        if (st[jj] === 5) { if (jj > i) { gr += step; gn++; } }
+        else if (st[jj] !== 1 && st[jj] !== 2) { edge++; if (step > 0.75 * t) sharp++; }
+      });
+    }
+    xa = Math.max(0, xa - pad); ya = Math.max(0, ya - pad); xb = Math.min(bw - 1, xb + pad); yb = Math.min(bh - 1, yb + pad);
+    const every = Math.max(1, Math.round(Math.sqrt((xb - xa + 1) * (yb - ya + 1) / 4000)));
+    let cr = 0, cg = 0, cb = 0, cn = 0;
+    for (let y = ya; y <= yb; y += every) for (let x = xa; x <= xb; x += every) if (st[y * bw + x] === 1) { const u = at(x, y); cr += d[u]; cg += d[u + 1]; cb += d[u + 2]; cn++; }
+    if (!cn) { cr = br; cg = bg; cb = bb; cn = n; }
+    const dev = Math.max(Math.abs(r - cr * n / cn), Math.abs(g - cg * n / cn), Math.abs(b - cb * n / cn)) / n;
+    return { dev, gr: gr / Math.max(1, gn), sharp: sharp / Math.max(1, edge) };
+  };
+  /* closed gaps of the backdrop's color, as between an arm and the body (each grown from a pixel near the backdrop's
+     color, by small steps): each goes unless it is tiny, its color is far from the backdrop's around it, it is grainier
+     than the backdrop (cloth), or its edge is mostly soft (a lighter patch on the clothes fades into them) */
+  const small = Math.max(40, N * 0.0003);
+  for (let y = 0, j = 0; y < bh; y++) for (let x = 0, o = at(0, y); x < bw; x++, j++, o += 4) {
+    if (st[j] || offB(o, j * 3) > t) continue;
+    take(j, o); st[j] = 5; q[0] = j;
+    let n = 1;
+    for (let h = 0; h < n; h++) {
+      const i3 = q[h] * 3;
+      near4(q[h], jj => {
+        if (st[jj]) return;
+        const u = pxOf(jj), j3 = jj * 3;
+        if (Math.max(Math.abs(d[u] - ref[i3]), Math.abs(d[u + 1] - ref[i3 + 1]), Math.abs(d[u + 2] - ref[i3 + 2])) > 0.6 * t) return;
+        for (let ch = 0; ch < 3; ch++) ref[j3 + ch] = ref[i3 + ch] + 0.3 * (d[u + ch] - ref[i3 + ch]);
+        st[jj] = 5; q[n++] = jj;
+      });
+    }
+    const P = n < small ? null : piece(n), keep = !P || P.dev > 1.5 * t || P.gr > 1.5 * grain + 1 || P.sharp < 0.25;
+    for (let m = 0; m < n; m++) st[q[m]] = keep ? 3 : 1;
+  }
+  for (let j = 0; j < N; j++) if (st[j] === 3) st[j] = 0;
+  // pieces left alone in the backdrop go too: specks (noise it went round), and small patches of the backdrop's color
+  const speck = Math.max(12, N * 0.00005), patch = N * 0.003;
+  for (let j = 0; j < N; j++) {
+    if (st[j]) continue;
+    st[j] = 5; q[0] = j;
+    let n = 1;
+    for (let h = 0; h < n; h++) near4(q[h], jj => { if (!st[jj]) { st[jj] = 5; q[n++] = jj; } });
+    const go = n <= speck || (n <= patch && piece(n).dev <= 1.5 * t);
+    for (let m = 0; m < n; m++) st[q[m]] = go ? 1 : 4;
+  }
+  for (let j = 0; j < N; j++) if (st[j] === 4) st[j] = 0;
+  return { ...bgEdges(img, x0, y0, bw, bh, st, t, fp, j => [B[j * 3], B[j * 3 + 1], B[j * 3 + 2]]), fit };
+}
+/* the edge between what goes (st 1; 2 was see-through already) and what stays (0), in a box of img: each pixel that stays,
+   up to two pixels from what goes, keeps only its share of the figure (from where its color lies between the backdrop's
+   color near it and the figure's color near it) and gets the figure's own color; then the edge is softened by fp pixels,
+   inward only, so no backdrop comes back. back(j): the backdrop's color where none of it is near. Writes the pixels, and
+   returns how many went (gone) and the box of what is left in the box (box, in img's pixels; null when nothing is) */
+function bgEdges(img, x0, y0, bw, bh, st, t, fp, back) {
+  const W = img.width, d = img.data, N = bw * bh, RB = 2, R = 5, at = (x, y) => ((y + y0) * W + x + x0) * 4;
+  // how far each pixel is from what goes now, in steps to any of its 8 neighbours (up to 255)
+  const dist = new Uint8Array(N);
+  for (let j = 0; j < N; j++) dist[j] = st[j] === 1 ? 0 : 255;
+  for (let y = 0, j = 0; y < bh; y++) for (let x = 0; x < bw; x++, j++) {
+    let m = dist[j];
+    if (!m) continue;
+    if (x > 0 && dist[j - 1] + 1 < m) m = dist[j - 1] + 1;
+    if (y > 0) { const u = j - bw; if (dist[u] + 1 < m) m = dist[u] + 1; if (x > 0 && dist[u - 1] + 1 < m) m = dist[u - 1] + 1; if (x < bw - 1 && dist[u + 1] + 1 < m) m = dist[u + 1] + 1; }
+    dist[j] = m;
+  }
+  for (let y = bh - 1, j = N - 1; y >= 0; y--) for (let x = bw - 1; x >= 0; x--, j--) {
+    let m = dist[j];
+    if (!m) continue;
+    if (x < bw - 1 && dist[j + 1] + 1 < m) m = dist[j + 1] + 1;
+    if (y < bh - 1) { const u = j + bw; if (dist[u] + 1 < m) m = dist[u] + 1; if (x > 0 && dist[u - 1] + 1 < m) m = dist[u - 1] + 1; if (x < bw - 1 && dist[u + 1] + 1 < m) m = dist[u + 1] + 1; }
+    dist[j] = m;
+  }
+  const al = new Float32Array(N).fill(1);   // how much of each pixel stays
+  for (let j = 0; j < N; j++) if (st[j] === 1) al[j] = 0;
+  const sm = (a, b, v) => { const s = clamp((v - a) / (b - a), 0, 1); return s * s * (3 - 2 * s); };
+  for (let y = 0, j = 0; y < bh; y++) for (let x = 0; x < bw; x++, j++) {
+    if (st[j] || dist[j] > RB) continue;
+    const o = at(x, y);
+    if (d[o + 3] <= 8) continue;
+    // the backdrop near it (what goes), and the figure near it (what stays, further from the edge)
+    let br = 0, bg = 0, bb = 0, bn = 0, fr = 0, fg = 0, fb = 0, fn = 0;
+    for (let yy = Math.max(0, y - R), y2 = Math.min(bh - 1, y + R); yy <= y2; yy++) for (let xx = Math.max(0, x - R), x2 = Math.min(bw - 1, x + R); xx <= x2; xx++) {
+      const jj = yy * bw + xx;
+      if (st[jj] === 1) { const p = at(xx, yy); br += d[p]; bg += d[p + 1]; bb += d[p + 2]; bn++; }
+      else if (!st[jj] && dist[jj] > RB) { const p = at(xx, yy); if (d[p + 3] > 200) { fr += d[p]; fg += d[p + 1]; fb += d[p + 2]; fn++; } }
+    }
+    const Bc = bn ? [br / bn, bg / bn, bb / bn] : back(j), dl = [d[o] - Bc[0], d[o + 1] - Bc[1], d[o + 2] - Bc[2]];
+    const far = Math.max(Math.abs(dl[0]), Math.abs(dl[1]), Math.abs(dl[2]));
+    let a = sm(1.2 * t, 3 * t, far), F = null;   // far from the backdrop's color: figure, whatever is near
+    if (fn) F = [fr / fn, fg / fn, fb / fn];
+    const e = F && [F[0] - Bc[0], F[1] - Bc[1], F[2] - Bc[2]], l2 = e ? e[0] * e[0] + e[1] * e[1] + e[2] * e[2] : 0;
+    // its color between the two: C = a·F + (1 - a)·B. With the figure too near the backdrop's color, by the distance alone
+    a = Math.max(a, l2 >= 64 ? clamp((dl[0] * e[0] + dl[1] * e[1] + dl[2] * e[2]) / l2, 0, 1) : sm(0.6 * t, 2 * t, far));
+    if (a < 0.06) a = 0; else if (a > 0.94) a = 1;
+    al[j] = a;
+    if (a > 0 && a < 1) for (let ch = 0; ch < 3; ch++) {   // the figure's part alone: F = B + (C - B) / a
+      let v = Bc[ch] + dl[ch] / a;
+      if (F && a < 0.4) v = F[ch] + (v - F[ch]) * a / 0.4;   // (where it is little of the pixel, mostly the figure's color near it)
+      d[o + ch] = v;
+    }
+  }
+  // softer: each pixel keeps no more than the average around it, fp pixels each way
+  if (fp > 0) {
+    const tmp = new Float32Array(N), w = 2 * fp + 1;
+    for (let y = 0; y < bh; y++) {
+      const r = y * bw;
+      let s = 0;
+      for (let x = -fp; x <= fp; x++) s += al[r + clamp(x, 0, bw - 1)];
+      for (let x = 0; x < bw; x++) { tmp[r + x] = s / w; s += al[r + Math.min(bw - 1, x + fp + 1)] - al[r + Math.max(0, x - fp)]; }
+    }
+    for (let x = 0; x < bw; x++) {
+      let s = 0;
+      for (let y = -fp; y <= fp; y++) s += tmp[clamp(y, 0, bh - 1) * bw + x];
+      for (let y = 0; y < bh; y++) { const j = y * bw + x; if (s / w < al[j]) al[j] = s / w; s += tmp[Math.min(bh - 1, y + fp + 1) * bw + x] - tmp[Math.max(0, y - fp) * bw + x]; }
+    }
+  }
+  let gone = 0, bx0 = bw, by0 = bh, bx1 = -1, by1 = -1;
+  for (let y = 0, j = 0; y < bh; y++) for (let x = 0, o = at(0, y); x < bw; x++, j++, o += 4) {
+    if (al[j] < 1) {
+      if (st[j] === 1 && d[o + 3] > 8) gone++;
+      const a = d[o + 3] * al[j];
+      if (a < 1) d[o] = d[o + 1] = d[o + 2] = d[o + 3] = 0; else d[o + 3] = a;
+    }
+    if (d[o + 3] > 40) { if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; by1 = y; }
+  }
+  return { gone, box: bx1 < 0 ? null : { x: bx0 + x0, y: by0 + y0, w: bx1 - bx0 + 1, h: by1 - by0 + 1 } };
+}
+/* the magic wand: the area of colors alike to the one at sx, sy (k: how alike, 0 to 1) and joined to it goes from img, with
+   soft edges (fp). Returns the rectangle that changed, or null when there is nothing there to take */
+function wandCut(img, sx, sy, k, fp) {
+  const W = img.width, H = img.height, d = img.data, o0 = (sy * W + sx) * 4;
+  if (d[o0 + 3] <= 8) return null;
+  const t = Math.max(1, k * 60), c0 = [d[o0], d[o0 + 1], d[o0 + 2]], m = new Uint8Array(W * H);
+  const near = v0 => { const a = new Uint8Array(256); for (let v = 0; v < 256; v++) a[v] = Math.abs(v - v0) <= t ? 1 : 0; return a; };
+  const nr = near(c0[0]), ng = near(c0[1]), nb = near(c0[2]);
+  for (let i = 0, o = 0; i < W * H; i++, o += 4) m[i] = d[o + 3] > 8 ? nr[d[o]] & ng[d[o + 1]] & nb[d[o + 2]] : 0;
+  const A = growArea(m, W, H, sx, sy);
+  if (!A) return null;
+  // its edge is worked out in a box a little bigger than it
+  const pad = fp + 8, bx = Math.max(0, A.x - pad), by = Math.max(0, A.y - pad), bw = Math.min(W, A.x + A.w + pad) - bx, bh = Math.min(H, A.y + A.h + pad) - by;
+  const st = new Uint8Array(bw * bh);
+  for (let y = 0, j = 0; y < bh; y++) for (let x = 0, i = (y + by) * W + bx; x < bw; x++, j++, i++) st[j] = m[i] === 2 ? 1 : d[i * 4 + 3] <= 8 ? 2 : 0;
+  bgEdges(img, bx, by, bw, bh, st, t, fp, () => c0);
+  return { x: bx, y: by, w: bw, h: bh };
+}
+const softPx = o => Math.round(clamp(o.soft, 0, 100) / 25);
+/* a picture with a backdrop all round it: its edges are not see-through */
+function hasBackdrop(cv) {
+  const x = cv.getContext('2d'), w = cv.width, hh = cv.height;
+  let n = 0, s = 0;
+  for (const im of [x.getImageData(0, 0, w, 1), x.getImageData(0, hh - 1, w, 1), x.getImageData(0, 0, 1, hh), x.getImageData(w - 1, 0, 1, hh)]) for (let k = 3; k < im.data.length; k += 4) { n++; if (im.data[k] > 200) s++; }
+  return s > n * 0.9;
+}
+/* what "הסרת רקע" did, told. false when nothing is to change */
+function bgSaid(r) {
+  if (r.none) { toast(T('לא מצאתי כאן רקע: הקצוות של התמונה כבר שקופים. מה שנשאר אפשר למחוק במטה הקסם.'), { icon: 'auto_fix_high', ms: 6000 }); return false; }
+  if (!r.gone) { toast(T('לא מצאתי רקע אחיד ליד הקצוות של התמונה.'), { icon: 'background_replace' }); return false; }
+  if (!r.box) { toast(T('כל התמונה נראתה כמו רקע, אז לא מחקתי כלום.'), { icon: 'background_replace' }); return false; }
+  toast(r.fit < 0.6 ? T('הרקע לא אחיד, אז אולי נשארו ממנו חתיכות. מטה הקסם מוחק אותן בלחיצה.') : T('הרקע הוסר. נשארו חתיכות? מטה הקסם מוחק אותן בלחיצה.'),
+    { icon: 'background_replace', ms: 6000, action: { label: T('מטה קסם'), run: () => setTool('wand') } });
+  return true;
+}
+let BG_OFFER = null;   // the note offering to take a picture's background away, while it shows
+/* the wait cursor while a big picture is worked on, and nothing else starts meanwhile */
+async function busyDo(fn) {
+  if (ACT) return;
+  const busy = ACT = { kind: 'busy', id: null }, d0 = D;
+  V.vp.classList.add('c-wait');
+  try { await nextFrame(); if (D === d0) fn(); }
+  finally { if (ACT === busy) ACT = null; V.vp.classList.remove('c-wait'); }
+}
+/* "הסרת רקע", on the picture floating (one just put in), or on the layer being drawn on (inside the selection, when there
+   is one): one step to undo. On a floating picture its own step until it is put down; what is left of it then floats
+   in a box its own size, and in a character's look it fills the look */
+function bgCutNow() {
+  if (BG_OFFER) { BG_OFFER.remove(); BG_OFFER = null; }
+  if (!D || !live() || ACT) return;
+  stopPlay(); if (FXS) fxApply(); if (TX) commitText();
+  const f = FL, L = f ? f.L : layerOf();
+  if (!f && !canDraw(L)) return;
+  return busyDo(() => {
+    const o = opt('wand');
+    if (f) {
+      if (FL !== f) return;
+      const img = f.cv.getContext('2d').getImageData(0, 0, f.cv.width, f.cv.height), r = bgCut(img, o.tol / 100, softPx(o));
+      if (!bgSaid(r)) return;
+      const b = r.box, cv = newCanvas(b.w, b.h), kx = f.w / f.ow, ky = f.h / f.oh, first = !(f.hist && f.hist.length);
+      cv.getContext('2d').putImageData(img, -b.x, -b.y);
+      cv.className = 'dw-lc dw-fl';
+      flKeep(f);
+      Object.assign(f, { cv, x: f.x + b.x * kx, y: f.y + b.y * ky, w: b.w * kx, h: b.h * ky, ow: b.w, oh: b.h, dx: (f.dx || 0) + b.x, dy: (f.dy || 0) + b.y });
+      if (HOST && HOST.look && first && f.kind !== 'lift') { const s = Math.min(D.w * 0.94 / b.w, D.h * 0.96 / b.h); Object.assign(f, { w: b.w * s, h: b.h * s, x: (D.w - b.w * s) / 2, y: (D.h - b.h * s) / 2 }); }
+      paintPaper(); placeFloat(); undoUI(); optsUI();
+      return;
+    }
+    if (!D.layers.includes(L)) return;
+    const R = (SEL && clipR(SEL.box.x, SEL.box.y, SEL.box.w, SEL.box.h)) || { x: 0, y: 0, w: D.w, h: D.h };
+    const img = L.cx.getImageData(R.x, R.y, R.w, R.h), before = new ImageData(img.data.slice(), R.w, R.h);
+    if (!bgSaid(bgCut(img, o.tol / 100, softPx(o)))) return;
+    L.cx.putImageData(img, R.x, R.y);
+    push(pxStep(L, R, before)); changed(L);
+  });
+}
+/* the magic wand, clicked at c: one step to undo */
+function wandAt(c) {
+  if (FL) drop();
+  const L = layerOf();
+  if (!canDraw(L)) return;
+  const x = Math.floor(c.x), y = Math.floor(c.y);
+  if (x < 0 || y < 0 || x >= D.w || y >= D.h) return;
+  return busyDo(() => {
+    if (!D.layers.includes(L)) return;
+    const o = opt('wand'), img = L.cx.getImageData(0, 0, D.w, D.h), R = wandCut(img, x, y, o.tol / 100, softPx(o));
+    if (!R) { toast(T('אין כאן מה למחוק: השכבה שבחרת שקופה במקום הזה.'), { icon: 'auto_fix_high' }); return; }
+    const before = L.cx.getImageData(R.x, R.y, R.w, R.h);
+    L.cx.putImageData(img, 0, 0, R.x, R.y, R.w, R.h);
+    push(pxStep(L, R, before)); changed(L);
+  });
+}
+/* a floating picture's own undo: how it was before its background was taken (hist), and after, for redo (fwd) */
+const flSnap = f => ({ cv: f.cv, x: f.x, y: f.y, w: f.w, h: f.h, ow: f.ow, oh: f.oh, dx: f.dx || 0, dy: f.dy || 0 });
+function flKeep(f) { (f.hist = f.hist || []).push(flSnap(f)); flFree(f, true); f.fwd = []; }
+function flStep(back) {
+  const f = FL, s = (back ? f.hist : f.fwd).pop();
+  (back ? f.fwd : f.hist).push(flSnap(f));
+  Object.assign(f, s);
+  paintPaper(); placeFloat(); undoUI(); optsUI();
+}
+/* the canvases kept for that, let go (with fwd, only the ones for redo) */
+function flFree(f, fwd) { for (const s of [...(f.fwd || []), ...(fwd ? [] : f.hist || [])]) if (s.cv !== f.cv) freeCanvas(s.cv); }
 
 /* =========================================================
    text: a box on the drawing to write in, with the font, size and color from the ribbon. Clicking outside it
@@ -1579,11 +2075,14 @@ function drop() {
   if (!f) return;
   FL = null; f.cv.remove();
   const L = f.L;
-  if (!D || !D.layers.includes(L)) { freeCanvas(f.cv); paintPaper(); return; }
+  if (!D || !D.layers.includes(L)) { flFree(f); freeCanvas(f.cv); paintPaper(); return; }
   const to = clipR(f.x, f.y, f.w, f.h);
-  const put = () => { const x = L.cx; x.save(); x.imageSmoothingQuality = 'high'; x.drawImage(f.cv, 0, 0, f.ow, f.oh, f.x, f.y, f.w, f.h); x.restore(); };
+  const put = (s = f) => { const x = L.cx; x.save(); x.imageSmoothingQuality = 'high'; x.drawImage(s.cv, 0, 0, s.ow, s.oh, s.x, s.y, s.w, s.h); x.restore(); };
+  // a picture whose background was taken away while it floated: as it came, around what is left of it where it is now
+  const o0 = f.hist && f.hist.length ? f.hist[0] : null, kx = f.w / f.ow, ky = f.h / f.oh;
+  const o = o0 && { cv: o0.cv, ow: o0.ow, oh: o0.oh, x: f.x - (f.dx || 0) * kx, y: f.y - (f.dy || 0) * ky, w: o0.ow * kx, h: o0.oh * ky };
   if (f.kind === 'lift') {
-    if (f.x === f.from.x && f.y === f.from.y && f.w === f.ow && f.h === f.oh) {   // back where it came from: nothing changed
+    if (!o && f.x === f.from.x && f.y === f.from.y && f.w === f.ow && f.h === f.oh) {   // back where it came from: nothing changed
       const b = f.from, x = L.cx;
       x.save(); x.beginPath(); x.rect(b.x, b.y, b.w, b.h); x.clip(); x.clearRect(b.x, b.y, b.w, b.h); x.drawImage(HX.bk, 0, 0); x.restore();
     } else {
@@ -1593,16 +2092,24 @@ function drop() {
       changed(L);
     }
   } else {
-    const before = to && L.cx.getImageData(to.x, to.y, to.w, to.h);
-    put();
-    const px = to ? pxStep(L, to, before) : null;
+    // that picture is put down as it came, and then without its background: two steps to undo, as when it is taken
+    // away from the layer
+    const R = o ? unionR(clipR(o.x, o.y, o.w, o.h), to) : to;
+    const before = R && L.cx.getImageData(R.x, R.y, R.w, R.h);
+    put(o || f);
+    const px = R ? pxStep(L, R, before) : null;
     if (f.kind === 'layer') {
       const { a, b } = f.pre;
       push({ bytes: (px ? px.bytes : 0) + D.w * D.h * 4, undo() { if (px) px.undo(); setLayers(a); changed(); }, redo() { setLayers(b); if (px) px.redo(); changed(); } });
       changed(L);
     } else if (px) { push(px); changed(L); }
+    if (o && R) {
+      const withBg = L.cx.getImageData(R.x, R.y, R.w, R.h);
+      L.cx.putImageData(before, R.x, R.y); put();
+      push(pxStep(L, R, withBg)); changed(L);
+    }
   }
-  freeCanvas(f.cv);
+  flFree(f); freeCanvas(f.cv);
   paintPaper(); layersUI(); undoUI(); optsUI();
 }
 /* the floating pixels go back: lifted ones to where they were, a pasted picture away (with the layer made for it) */
@@ -1612,7 +2119,7 @@ function cancelFloat() {
   FL = null; f.cv.remove();
   if (f.kind === 'lift' && D.layers.includes(f.L)) { const b = f.from, x = f.L.cx; x.save(); x.beginPath(); x.rect(b.x, b.y, b.w, b.h); x.clip(); x.clearRect(b.x, b.y, b.w, b.h); x.drawImage(HX.bk, 0, 0); x.restore(); }
   else if (f.kind === 'layer') setLayers(f.pre.a);
-  freeCanvas(f.cv);
+  flFree(f); freeCanvas(f.cv);
   paintPaper(); layersUI(); undoUI(); optsUI();
 }
 function commitPending() { stopPlay(); if (FXS) fxApply(); if (TX) commitText(); if (FL) drop(); }
@@ -1627,7 +2134,7 @@ function delSel() {
   if (FL) {
     const f = FL;
     if (f.kind !== 'lift') { cancelFloat(); return; }
-    FL = null; f.cv.remove(); freeCanvas(f.cv);
+    FL = null; f.cv.remove(); flFree(f); freeCanvas(f.cv);
     push(pxStep(f.L, f.from, keptRect(f.from)));   // the hole stays: what was lifted is gone
     changed(f.L); paintPaper(); undoUI(); optsUI();
     return;
@@ -1694,6 +2201,8 @@ async function placeImage(src, newLayer, at) {
   FL = { L, cv, x, y, w, h: hh, ow: cv.width, oh: cv.height, kind: newLayer ? 'layer' : 'paste', pre };
   SEL = null;
   paintPaper(); placeFloat(); layersUI(); undoUI(); optsUI();
+  // a picture with a background all round it (a photo, or a character an AI drew): taking it away is offered
+  if (!(src instanceof HTMLCanvasElement) && hasBackdrop(cv)) BG_OFFER = toast(T('אפשר להסיר את הרקע של התמונה'), { icon: 'background_replace', ms: 7000, action: { label: T('הסרת רקע'), run: () => bgCutNow() } });
 }
 function onPaste(e) {
   if (!live() || MODALS.length || (!HOST && !drawOpen())) return;
@@ -1794,10 +2303,15 @@ function optsUI() {
     const bold = h('button', { class: 'rb' + (s.bold ? ' on' : ''), type: 'button', title: T('מודגש'), 'aria-label': T('מודגש'), 'aria-pressed': String(s.bold), onclick: () => { prefs().bold = !textStyle().bold; savePrefs(); optsUI(); styleText(); if (TX) TX.el.focus(); } }, icon('format_bold'));
     gb.append(h('div', { class: 'dw-sl' }, font, size, bold), seeSlider(o));
   } else if (t === 'pick') gb.append(h('div', { class: 'dw-hint', text: T('לוחצים על הציור כדי לקחת ממנו צבע. עם כל מברשת אפשר גם להחזיק Alt וללחוץ.') }));
-  else {
+  else if (t === 'wand') {
+    const tol = pctSlider('tune', T('רגישות'), o, 'tol'), soft = pctSlider('lens_blur', T('קצוות רכים'), o, 'soft');
+    tol.title = T('כמה דומה לצבע שלוחצים עליו צריך להיות צבע כדי להימחק. גם להסרת רקע');
+    gb.append(tol, soft, bgCutBtn());
+  } else {
     const has = !!(SEL || FL);
     gb.append(h('div', { class: 'row' }, rbtn('dwSelAll', 'select_all', T('בחירת הכל'), { text: T('בחירת הכל'), title: T('בחירת הכל (Ctrl+A)') }), rbtn('dwSelDel', 'delete', T('מחיקה'), { text: T('מחיקה'), title: T('מחיקת מה שנבחר (Delete)'), cls: has ? '' : 'dw-dis' })),
-      h('div', { class: 'dw-hint', text: t === 'move' ? T('גוררים כדי להזיז את כל השכבה, או את מה שבחרתם.') : T('גוררים כדי לבחור, ואז גוררים את הבחירה כדי להזיז אותה. הפינות משנות את הגודל.') }));
+      // a picture just put in: taking its background away, in the hint's place
+      FL && FL.kind !== 'lift' ? bgCutBtn() : h('div', { class: 'dw-hint', text: t === 'move' ? T('גוררים כדי להזיז את כל השכבה, או את מה שבחרתם.') : T('גוררים כדי לבחור, ואז גוררים את הבחירה כדי להזיז אותה. הפינות משנות את הגודל.') }));
     for (const b of gb.querySelectorAll('.dw-dis')) b.disabled = true;
   }
 }
@@ -2162,6 +2676,7 @@ function pickInto() {
    ========================================================= */
 function reset() {
   fxClose();
+  if (BG_OFFER) { BG_OFFER.remove(); BG_OFFER = null; }
   if (PLAY) { cancelAnimationFrame(PLAY.raf); PLAY = null; }
   if (V.play) { V.play.remove(); V.play.width = V.play.height = 1; }
   if (V.paper) V.paper.classList.remove('playing');
@@ -2173,7 +2688,7 @@ function reset() {
   if (ACT && ACT.timer) clearInterval(ACT.timer);
   ACT = null; PTR.clear(); SPACE = false;
   if (TX) { TX.el.remove(); TX.grip.remove(); TX = null; }
-  if (FL) { FL.cv.remove(); freeCanvas(FL.cv); FL = null; }
+  if (FL) { FL.cv.remove(); flFree(FL); freeCanvas(FL.cv); FL = null; }
   SEL = null;
   if (D) for (const c of cellsOf(D)) freeCanvas(c.cv);
   HIST.steps = []; HIST.at = 0; HIST.bytes = 0;
@@ -4427,6 +4942,7 @@ const COMMANDS = {
   dwAnimExport: a => animDialog(a),
   dwFx: a => fxOpen(a), dwFxMenu: (a, b) => fxMenu(a, b),
   dwScan: () => scanStart('layer'),
+  dwBgCut: () => bgCutNow(),
   dwDone: () => { if (HOST && HOST.done) HOST.done(); },
   dwPhotoBg: () => photoLayer('bg'), dwPhotoErase: () => photoLayer('erase'),
 };

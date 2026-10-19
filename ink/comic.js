@@ -3186,7 +3186,7 @@ async function drawLook(cid, lkid, tab) {
   const cur = LOADED, busy = toast(T('פותח את הדמות לציור…'), { icon: 'brush', ms: 30000 });
   const look = () => { if (!C || LOADED !== cur) return null; const x = castOf(cid); return x && x.lk.find(l => l.id === lkid); };
   const host = {
-    body: lk.art || K.blank(ch.w, ch.h, ''), under: lk.art ? null : lookGuide(ch), over: null, clip: null, focus: null,
+    body: lk.art || K.blank(ch.w, ch.h, ''), under: lk.art ? null : lookGuide(ch), over: null, clip: null, focus: null, look: true,
     onBody: b => { if (S.cur !== cur) return; const x = look(); if (x) { x.art = b; markDirty(); } },
     dirty: () => { if (S.cur === cur && !cur.isSample) setSave('dirty'); },
     done: () => endDraw(),
