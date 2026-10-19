@@ -1384,6 +1384,7 @@ function ribbonUI() {
   const pg = page(), u = unit();
   for (const el of V.pageP.querySelectorAll('[data-pg]')) {
     const k = el.dataset.pg;
+    if (k === 'gut') el.max = isWt(C) ? '200' : '120';
     el.value = k === 'bc' || k === 'bg' ? pg[k] : k === 'h' ? String(pgH(pg)) : String(Math.round(pg[k] / u));
   }
   for (const b of document.querySelectorAll('#ribbon [data-cmd="cmDir"]')) b.classList.toggle('on', b.dataset.arg === C.dir);
@@ -2134,7 +2135,7 @@ function sideUI() {
     V.stitle.textContent = pageName(page());
     body.append(h('p', { class: 'muted small', text: T('לוחצים על משבצת כדי לבחור אותה, ופעמיים כדי לצייר בה. גוררים את הרווח בין משבצות כדי לשנות את הגודל שלהן, ואת הקצוות שלו כדי להטות אותו.') }),
       h('div', { class: 'cm-btns' }, act('view_quilt', T('חלוקה'), e => layoutPop(e.currentTarget)), act('auto_stories', T('קריאה'), () => openReader())),
-      slider(T('בין משבצות'), page().gut / u, 0, 120, 1, px, v => { page().gut = v * u; }),
+      slider(T('בין משבצות'), page().gut / u, 0, isWt(C) ? 200 : 120, 1, px, v => { page().gut = v * u; }),   // a webtoon's white between panels is wide
       slider(T('שוליים'), page().mar / u, 0, 200, 1, px, v => { page().mar = v * u; }),
       slider(T('מסגרת'), page().bw / u, 0, 24, 0.5, v => String(r1(v)), v => { page().bw = v * u; }),
       isWt(C) ? slider(T('גובה הקטע'), pgH(page()), MIN_SEG, MAX_SIDE, 10, px, v => { setPartH(page(), v, LIVE.pages[C.p]); }) : null,
