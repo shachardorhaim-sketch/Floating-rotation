@@ -557,8 +557,8 @@ function spotCost(p, r, s, earlier, rtl, u, zc = sizeCost(s, r.w, r.h)) {
     + Math.max(0, r.y + r.h - b.y - b.h * 0.8) / b.h * 6 + earlier.filter(e => !readAfter(r, e, rtl)).length * 5;
 }
 /* what bubble s costs w by h: its words smaller than in the size it was meant to have (one made much smaller costs far
-   more than two made a little smaller), a word broken in two (in every shape when the words have no spaces, as in
-   Chinese, so it changes nothing there), and a little for another shape */
+   more than two made a little smaller; layoutText makes them smaller rather than break a word), a word broken in two
+   all the same, and a little for another shape */
 function sizeCost(s, w, h) {
   // laid out once for each shape at the size it was meant to have: made smaller, the words get smaller with it
   const q = Math.round(w / h * 12) / 12, memo = s.memo || (s.memo = new Map());
@@ -569,8 +569,8 @@ function sizeCost(s, w, h) {
 }
 /* bubble s's words in a box w by h, laid out as they will be drawn: their size, and whether a word is broken in two */
 function wordsIn(s, w, h) {
-  const L = layoutText({ k: s.k, w, h, f: s.f, b: s.b, fs: s.fs, sw: s.sw, txt: s.txt }), whole = new Set(s.txt.split(/\s+/));
-  return { s: L.s, cut: !!L.over || L.lines.some(l => l.split(/\s+/).some(x => x && !whole.has(x))) };
+  const L = layoutText({ k: s.k, w, h, f: s.f, b: s.b, fs: s.fs, sw: s.sw, txt: s.txt });
+  return { s: L.s, cut: !!(L.over || L.cut) };
 }
 function inPoly(P, p) {
   for (let i = 0; i < P.length; i++) if (cross(P[i], P[(i + 1) % P.length], p) < 0) return false;
@@ -771,8 +771,10 @@ function roomOf(b) {
   return { ey, half: y => ey > 0 && y < ey ? ex * Math.sqrt(1 - (y / ey) ** 2) : 0 };
 }
 /* the text broken into lines for these widths, or null when it needs more lines. A word wider than its line is broken
-   between letters (Chinese has no spaces at all) */
-function fillLines(paras, widths) {
+   between letters (Chinese has no spaces at all); o: with whole, null instead of breaking a word of a language written
+   with spaces, and cut set when one was broken */
+const NO_SPACES = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}]/u;
+function fillLines(paras, widths, o = {}) {
   const lines = [];
   let j = 0;
   const fits = t => MX.measureText(t).width <= widths[j] + 0.01;
@@ -784,6 +786,7 @@ function fillLines(paras, widths) {
       if (fits(t)) { cur = t; continue; }
       if (cur) { lines.push(cur); j++; cur = ''; if (j >= widths.length) return null; }
       if (fits(w)) { cur = w; continue; }
+      if (!NO_SPACES.test(w)) { if (o.whole) return null; o.cut = true; }
       let part = '';
       for (const ch of Array.from(w)) {
         if (!part || fits(part + ch)) part += ch;
@@ -802,26 +805,32 @@ function layoutText(b) {
   if (L0) return L0;
   const txt = b.txt.replace(/\r/g, '').trim(), room = roomOf(b), paras = txt.split('\n');
   const slots = (n, lh) => Array.from({ length: n }, (_, j) => { const y = (j - (n - 1) / 2) * lh, yy = Math.abs(y) + lh * 0.5; return Math.max(0, 2 * Math.min(room.half(Math.abs(y)), room.half(yy))); });
-  const tryAt = s => {
+  const tryAt = (s, whole) => {
     MX.font = fontOf(b.f, b.b, s);
     const lh = s * 1.18, max = Math.floor(2 * room.ey / lh);
     for (let n = Math.max(1, paras.length); n <= max; n++) {
-      const lines = fillLines(paras, slots(n, lh));
+      const o = { whole }, lines = fillLines(paras, slots(n, lh), o);
       if (!lines) continue;
-      if (lines.length < n) { const again = fillLines(paras, slots(lines.length, lh)); if (again && again.length === lines.length) return { s, lh, lines }; }
-      return { s, lh, lines };
+      if (lines.length < n) { const again = fillLines(paras, slots(lines.length, lh), { whole }); if (again && again.length === lines.length) return { s, lh, lines, cut: o.cut }; }
+      return { s, lh, lines, cut: o.cut };
     }
     return null;
   };
+  // the biggest size, from 6 up to the bubble's own, at which the text fits (whole: without breaking a word)
+  const fit = whole => {
+    let lo = 6, hi = Math.max(6, b.fs), out = tryAt(hi, whole);
+    if (out) return out;
+    out = tryAt(lo, whole);
+    if (out) for (let i = 0; i < 9 && hi - lo > 0.5; i++) { const m = (lo + hi) / 2, r = tryAt(m, whole); if (r) { lo = m; out = r; } else hi = m; }
+    return out;
+  };
   let out = null;
   if (txt) {
-    let lo = 6, hi = Math.max(6, b.fs);
-    out = tryAt(hi);
-    if (!out) {
-      out = tryAt(lo);
-      if (out) { for (let i = 0; i < 9 && hi - lo > 0.5; i++) { const m = (lo + hi) / 2, r = tryAt(m); if (r) { lo = m; out = r; } else hi = m; } }
-      else { MX.font = fontOf(b.f, b.b, lo); const lines = fillLines(paras, Array(400).fill(Math.max(20, 2 * room.half(0)))) || [txt]; out = { s: lo, lh: lo * 1.18, lines, over: true }; }
-    }
+    // a word is broken in two only when even the smallest size can't keep it whole: smaller words instead (where
+    // nothing had to be broken, the words come out as they always did)
+    out = fit(false);
+    if (out && out.cut) out = fit(true) || out;
+    if (!out) { MX.font = fontOf(b.f, b.b, 6); const lines = fillLines(paras, Array(400).fill(Math.max(20, 2 * room.half(0)))) || [txt]; out = { s: 6, lh: 6 * 1.18, lines, over: true }; }
   }
   L0 = out ? { ...out, dir: textDir(txt) } : { s: b.fs, lh: b.fs * 1.18, lines: [], dir: UI_DIR };
   if (LAY.size > 800) LAY.clear();
@@ -3985,7 +3994,7 @@ function fillPanel(pg, p, spec) {
       // where it was meant to be is out of the panel, on a bubble already there, or would be read too soon, or its shape
       // breaks a word in two: another place, or another shape
       const here = !search && fitsIn(p, fit, 10 * u, u) && !taken.some(t => touches(fit, t, 6 * u)) && earlier.every(e => readAfter(fit, e, rtl)) && !tailsCrossed(fit, to && to(fit), taken);
-      if (!here || (want.ws.cut && /\s/.test(s.txt))) {
+      if (!here || want.ws.cut) {
         const sp = bubbleSpot(p, want, taken, earlier, rtl, u, sc, least);
         // where it was meant to be only a word was broken in two: another shape only if it mends that
         if (!here || (sp && !wordsIn(want, sp.w, sp.h).cut)) {
