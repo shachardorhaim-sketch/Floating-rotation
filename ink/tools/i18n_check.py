@@ -115,7 +115,7 @@ class StaticText(HTMLParser):
 html = io.open(os.path.join(INK, 'index.html'), encoding='utf-8').read()
 js = html[html.rindex('<script>') + 8:html.rindex('</script>')]
 # the spreadsheets and the drawings live in their own files, loaded when one is opened
-for f in ('sheet.js', 'draw.js', 'comic.js'):
+for f in ('sheet.js', 'draw.js', 'comic.js', 'photo.js'):
     js += chr(10) + ';' + chr(10) + io.open(os.path.join(INK, f), encoding='utf-8').read()
 strings, plurals = set(), set()
 call = re.compile(r'(?<![\w$.])(T|TN|N_)\(\s*$')

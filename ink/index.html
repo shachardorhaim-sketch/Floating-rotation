@@ -1535,6 +1535,10 @@ body.aud{margin:0;height:100vh;background:#000;display:grid;place-items:center;o
         </div>
       </div><div class="gn">סגנונות תמונה</div></div>
       <div class="grp"><div class="gb">
+        <button class="rb big" data-cmd="photoBg" data-need="img" title="לוחצים על מה שרוצים להשאיר, והרקע נעלם"><span class="ms">auto_fix_high</span>הסרת רקע</button>
+        <button class="rb big" data-cmd="photoErase" data-need="img" title="לוחצים על מה שרוצים להעלים מהתמונה, והמקום מתמלא"><span class="ms">ink_eraser</span>מחיקת אובייקט</button>
+      </div><div class="gn">עריכת תמונה</div></div>
+      <div class="grp"><div class="gb">
         <button class="rb big" data-cmd="crop" data-need="img" title="גוררים את הידיות השחורות כדי לחתוך. Enter לסיום"><span class="ms">crop</span>חיתוך</button>
       </div><div class="gn">גודל</div></div>
       <div class="grp"><div class="gb">
@@ -1805,6 +1809,9 @@ body.aud{margin:0;height:100vh;background:#000;display:grid;place-items:center;o
   <button class="rb" data-cmd="imgAlign" data-arg="right" title="בצד ימין, הטקסט מסביב" aria-label="תמונה בצד ימין"><span class="ms">format_align_right</span></button>
   <button class="rb" data-cmd="imgAlign" data-arg="center" title="במרכז" aria-label="תמונה במרכז"><span class="ms">format_align_center</span></button>
   <button class="rb" data-cmd="imgAlign" data-arg="left" title="בצד שמאל, הטקסט מסביב" aria-label="תמונה בצד שמאל"><span class="ms">format_align_left</span></button>
+  <span class="sep"></span>
+  <button class="rb txt" data-cmd="photoBg" title="לוחצים על מה שרוצים להשאיר, והרקע נעלם"><span class="ms">auto_fix_high</span>הסרת רקע</button>
+  <button class="rb txt" data-cmd="photoErase" title="לוחצים על מה שרוצים להעלים מהתמונה, והמקום מתמלא"><span class="ms">ink_eraser</span>מחיקת אובייקט</button>
   <span class="sep"></span>
   <button class="rb" data-cmd="imgDelete" title="מחיקת התמונה" aria-label="מחיקת התמונה"><span class="ms">delete</span></button>
 </div>
@@ -2655,6 +2662,29 @@ async function storeImage(blob) {
   const url = await blobToDataURL(blob);
   if (S.mode === 'local' && url.length > 1.5e6) throw new Error('too_big');
   return url;
+}
+/* a picture without its background, or with something taken out of it: photo.js, loaded the first time it is used
+   (from a document's picture, a slide's, a comic's or a drawing's layer). Resolves to the new picture, or null */
+const loadPhotoKit = () => loadScript('photo.js').then(() => { if (!window.INK_PHOTO) throw new Error('lib'); return window.INK_PHOTO; });
+async function photoEdit(mode, src, title, o = {}) {
+  let K;
+  try { K = await loadPhotoKit(); } catch { toast(T('לא הצלחתי לטעון את עריכת התמונה. כדאי לבדוק את החיבור לאינטרנט.'), { ms: 6000 }); return null; }
+  return K.edit(src, { mode, title, ...o });
+}
+async function photoStore(blob) {
+  try { return await storeImage(blob); }
+  catch (e) { toast(e && e.message === 'too_big' ? T('התמונה גדולה מדי לשמירה בדפדפן הזה') : T('לא הצלחתי לשמור את התמונה')); return null; }
+}
+/* the picture chosen in a document */
+async function docPhoto(mode) {
+  const img = selectedImg;
+  if (!img) return;
+  const cur = S.cur, blob = await photoEdit(mode, img.src, T('תמונה'));
+  if (!blob || S.cur !== cur || !ed.contains(img)) return;
+  const src = await photoStore(blob);
+  if (!src || S.cur !== cur || !ed.contains(img)) return;
+  snapshot(); img.src = src; afterChange();
+  requestAnimationFrame(placeImgBar);
 }
 async function insertImageBlob(blob, widthPct) {
   const t = toast(T('מוסיף את התמונה…'), { icon: 'image', ms: 30000 });
@@ -7870,6 +7900,20 @@ function applyQuickStyle(i) {
   });
   for (const el of els) refreshEl(el);
   drawSel(); updateThumbSoon(); updateDeckUI();
+}
+/* the picture chosen on a slide (its crop and its look stay: the picture keeps its size) */
+async function deckPhoto(mode) {
+  const el = curEl();
+  if (!el || el.t !== 'img' || !el.src) return;
+  endCrop(); exitEdit();
+  const cur = S.cur, idx = DK.idx, id = el.id, blob = await photoEdit(mode, el.src, T('תמונה'));
+  if (!blob || S.cur !== cur || !deckOpen()) return;
+  const src = await photoStore(blob);
+  const s = src && S.cur === cur && DK.deck && DK.deck.slides[idx], e = s && s.els.find(x => x.id === id);
+  if (!e) return;
+  if (DK.idx !== idx) goSlide(idx);
+  dEdit(() => { e.src = src; });
+  renderStage(); setSel([id]); updateThumb(idx); updateDeckUI();
 }
 function resetPic() {
   const els = selEls().filter(isImg); if (!els.length) return;
@@ -15604,6 +15648,7 @@ const CMD = {
   chartType: (a, b) => openChartPick(b, true), chartData: () => { const el = curEl(); if (el) openChartData(el.id); }, chartColors: (a, b) => openChartColors(b),
   vidPlay: () => previewVideo(),
   crop: () => startCrop(), replacePic: () => { const el = curEl(); if (el) pickSlideImage(el.id); }, resetPic: () => resetPic(),
+  photoBg: () => deckOpen() ? deckPhoto('bg') : docPhoto('bg'), photoErase: () => deckOpen() ? deckPhoto('erase') : docPhoto('erase'),
   theme: a => { closePopover(); setTheme(a); }, allThemes: (a, b) => openThemes(b), slideBg: (a, b) => openBackground(b),
   showStart: () => startShow(null), showHere: () => startShow(DK.idx), presenter: () => startShow(DK.idx, true), toggleNotes: () => toggleNotes(),
   trans: a => setTrans(a), trPreview: () => previewTrans(), trAll: () => transAll(), hideSlide: () => toggleHidden(),

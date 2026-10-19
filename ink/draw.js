@@ -682,7 +682,10 @@ function ribbonPanels() {
       h('div', { class: 'dw-col' }, h('label', { class: 'dw-sl' }, h('span', { text: T('לפני') }), V.onBf), h('label', { class: 'dw-sl' }, h('span', { text: T('אחרי') }), V.onAf))),
     own(group(T('שמירה כקובץ'), '', rbtn('dwAnimExport', 'gif', 'GIF', { big: true, arg: 'gif', title: T('תמונה שזזה לבד, לשליחה ולשיתוף') }), rbtn('dwAnimExport', 'movie', T('סרטון'), { big: true, arg: 'video', title: T('סרטון MP4, למשל ליוטיוב') }))));
   const fxBtn = (k, f) => h('button', { class: 'rb big', type: 'button', 'data-cmd': 'dwFx', 'data-arg': k, 'data-fx': k, title: T(f.d), 'aria-label': T(f.n), 'aria-pressed': 'false' }, icon(f.ic), h('span', { text: T(f.n) }));
-  V.fxP = h('div', { class: 'panel draw-only', 'data-panel': 'dwfx', hidden: true }, FX_GROUPS.map(([g, name]) => {
+  // "חכמה": the drawing also has the one-click "הסרת רקע" for a plain backdrop (bgCutBtn); this one finds what is clicked
+  const photo = group(T('תמונה'), '', rbtn('dwPhotoBg', 'auto_fix_high', T('הסרת רקע חכמה'), { big: true, title: T('לוחצים על מה שרוצים להשאיר בשכבה, והשאר נעלם') }),
+    rbtn('dwPhotoErase', 'ink_eraser', T('מחיקת אובייקט'), { big: true, title: T('לוחצים על מה שרוצים להעלים מהשכבה, והמקום מתמלא') }));
+  V.fxP = h('div', { class: 'panel draw-only', 'data-panel': 'dwfx', hidden: true }, photo, FX_GROUPS.map(([g, name]) => {
     const list = Object.entries(FXL).filter(([, f]) => f.g === g);
     return group(T(name), '', list.filter(([, f]) => f.big).map(([k, f]) => fxBtn(k, f)),
       list.some(([, f]) => !f.big) ? rbtn('dwFxMenu', 'expand_more', T('עוד'), { big: true, arg: g, title: T('עוד פילטרים') }) : null);
@@ -4382,6 +4385,29 @@ function scanDialog(im, target) {
     { label: T('ביטול'), value: false }] });
 }
 
+/* the layer's picture without its background, or with something taken out of it (photo.js, through index.html's
+   photoEdit), as one step that can be undone */
+async function photoLayer(mode) {
+  if (!live() || ACT) return;
+  commitPending();
+  const L = layerOf();
+  if (!L) return;
+  const d = L.cx.getImageData(0, 0, D.w, D.h).data;
+  let any = false;
+  for (let i = 3; i < d.length; i += 64) if (d[i]) { any = true; break; }
+  if (!any) { toast(T('אין עדיין כלום בשכבה הזאת. אפשר להכניס אליה תמונה, או לבחור שכבה אחרת.'), { ms: 5000 }); return; }
+  const host = LOADED, cell = L.cell, blob = await photoEdit(mode, L.cv, L.name, { max: MAX_SIDE });
+  if (!blob || LOADED !== host || !live() || !D.layers.includes(L) || L.cell !== cell) return;
+  const url = URL.createObjectURL(blob);
+  let im;
+  try { im = await loadImg(url); } catch { return; } finally { URL.revokeObjectURL(url); }
+  if (LOADED !== host || L.cell !== cell) return;
+  const R = { x: 0, y: 0, w: D.w, h: D.h }, before = L.cx.getImageData(0, 0, D.w, D.h);
+  L.cx.clearRect(0, 0, D.w, D.h);
+  L.cx.imageSmoothingQuality = 'high';
+  L.cx.drawImage(im, 0, 0, D.w, D.h);
+  push(pxStep(L, R, before)); changed(L);
+}
 const COMMANDS = {
   dwUndo: () => undo(), dwRedo: () => redo(),
   dwTool: a => setTool(a),
@@ -4402,6 +4428,7 @@ const COMMANDS = {
   dwFx: a => fxOpen(a), dwFxMenu: (a, b) => fxMenu(a, b),
   dwScan: () => scanStart('layer'),
   dwDone: () => { if (HOST && HOST.done) HOST.done(); },
+  dwPhotoBg: () => photoLayer('bg'), dwPhotoErase: () => photoLayer('erase'),
 };
 
 window.INK_DRAW = {

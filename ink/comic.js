@@ -2227,6 +2227,7 @@ function sideUI() {
     } else if (it.t === 'img') {
       V.stitle.textContent = T('תמונה');
       body.append(h('div', { class: 'cm-btns' }, act('crop_free', T('מילוי המשבצת'), on(x => coverPanel(x))), act('image', T('החלפה'), on(x => pickImage(x.pn, x.id)))),
+        h('div', { class: 'cm-btns' }, act('auto_fix_high', T('הסרת רקע'), on(x => photoItem(x.id, 'bg'))), act('ink_eraser', T('מחיקת אובייקט'), on(x => photoItem(x.id, 'erase')))),
         h('p', { class: 'muted small', text: T('התמונה נחתכת לפי המשבצת. גוררים אותה כדי להזיז, ואת הפינות כדי לשנות גודל') }));
     }
     if (it.t !== 'img') body.append(...motionRows(it));
@@ -2590,6 +2591,16 @@ async function imageItem(file, pid, replaceId) {
   if (p.id) { it.pn = p.id; it.fit = true; }
   edit(() => { page().its.unshift(it); SEL = { k: 'item', id: it.id }; });
   sideUI(); ribbonUI();
+}
+/* the picture without its background, or with something taken out of it (photo.js, through index.html's photoEdit) */
+async function photoItem(id, mode) {
+  const it = findItem(id);
+  if (!it) return;
+  const cur = LOADED, pgId = page().id, blob = await photoEdit(mode, it.src, T('תמונה'));
+  if (!blob || !C || LOADED !== cur) return;
+  const src = await blobToDataURL(blob);
+  edit(() => { const pg = C.pages.find(q => q.id === pgId), x = pg && pg.its.find(i => i.id === id); if (!x || !IMG_RE.test(src)) return false; x.src = src; });
+  sideUI();
 }
 function pickImage(pid, replaceId) {
   const target = pid || targetPanel(true);
