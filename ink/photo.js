@@ -394,7 +394,7 @@ async function open(src, o, resolve) {
     prog.hidden = p == null; if (p != null) prog.firstChild.style.width = Math.round(p * 100) + '%';
   }
   const hint = () => E.mode === 'bg' ? T('לוחצים על מה שרוצים להשאיר. מה שלא נבחר יהיה שקוף.') : T('לוחצים על מה שרוצים להעלים, או צובעים עליו במכחול.');
-  DL.on = (p, all) => { if (ED !== E || !E.busy) return; if (p < 1) say(T('מוריד את הכלים, פעם אחת (בערך {0}MB)… {1}%', Math.round((all + (ORTM ? 0 : 27e6)) / 1e6), Math.round(p * 100)), p); else say(E.label); };
+  DL.on = (p, all) => { if (ED !== E || !E.busy) return; if (p < 1) say(T('מוריד את הכלים, פעם אחת (בערך {0}MB)… {1}%', Math.round(all / 1e6), Math.round(p * 100)), p); else say(E.label); };
   /* work that takes a moment: the window waits, and says so */
   async function work(txt, fn) {
     E.busy++; E.label = txt; stage.classList.add('wait'); say(txt);
