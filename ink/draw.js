@@ -103,6 +103,13 @@ const now = () => performance.now();
    state
    ========================================================= */
 let D = null, LOADED = null, GEN = 0;   // the drawing on screen: { w, h, bg, layers, active, frames, f, fps, loop }, and the app's S.cur it belongs to
+/* a comic's panel being drawn in (comic.js, through embed): the drawing is then the panel's, not a document of its own.
+   { body, under, over (canvases the page's size, shown below and above the layers), clip ([[x, y]...]: the layers show only
+   inside it), focus ({ x, y, w, h }: what "the whole drawing" fits), onBody(body) (each time the layers are written),
+   dirty(), done() }. LOADED is then HOST, so nothing here takes it for the document on screen */
+let HOST = null;
+/* the drawing on screen belongs to what is open: a drawing of its own, or a comic's panel */
+const live = () => !!(D && LOADED && (HOST ? LOADED === HOST : S.cur === LOADED));
 let TOOL = 'pen', BEFORE_PICK = null;
 let COLOR = '#000000';
 const VIEW = { z: 1, x: 0, y: 0 };   // the paper is at x, y in the viewport, z screen pixels to a drawing pixel
@@ -227,7 +234,7 @@ async function framesOf(body) {
   if (body == null) {
     commitPending();
     const d = D;
-    return { w: d.w, h: d.h, bg: d.bg, frames: d.frames.map(f => ({ ...f })), fps: d.fps, loop: d.loop, done() {},
+    return { w: d.w, h: d.h, bg: d.bg, frames: d.frames.map(f => ({ ...f })), f: d.f, fps: d.fps, loop: d.loop, done() {},
       async draw(cx, i, cw, ch, under) {
         const list = [];
         for (const L of d.layers) {
@@ -238,7 +245,7 @@ async function framesOf(body) {
       } };
   }
   const j = parseBody(body), kept = new Map();
-  return { w: j.w, h: j.h, bg: j.bg, frames: j.frames, fps: j.fps, loop: j.loop, done() { kept.clear(); },
+  return { w: j.w, h: j.h, bg: j.bg, frames: j.frames, f: j.f, fps: j.fps, loop: j.loop, done() { kept.clear(); },
     async draw(cx, i, cw, ch, under) {
       const list = [];
       for (const l of j.layers) {
@@ -286,7 +293,8 @@ const encodeSoon = debounce(() => encodeNow(), 450);
 function changed(L, cell) {
   if (L) (cell || L.cell).ver++;
   REV++;
-  if (LOADED && S.cur === LOADED && !S.cur.isSample) setSave('dirty');
+  if (HOST) { if (HOST.dirty) HOST.dirty(); }
+  else if (LOADED && S.cur === LOADED && !S.cur.isSample) setSave('dirty');
   encodeSoon();
   thumbsSoon(); framesSoon();
   stat();
@@ -315,11 +323,10 @@ async function encodeNow() {
   const d = D, cur = LOADED, rev = REV;
   try {
     for (const c of cellsOf(d)) if (stale(c)) await encodeCell(c);
-    if (D !== d || S.cur !== cur) return;
+    if (D !== d || LOADED !== cur || !live()) return;
     if (cellsOf(d).some(stale)) { AGAIN = true; return; }   // drawn on while it was being written
     BODY = bodyOf(d); DONE_REV = rev;
-    metaOf(d, cur);
-    markDirty();
+    written(d, cur);
   } catch (e) { console.warn(e); AGAIN = true; }
   finally { ENCODING = false; if (AGAIN) { AGAIN = false; encodeSoon(); } }
 }
@@ -331,9 +338,14 @@ function flush() {
   encodeSoon.cancel();
   for (const c of cellsOf(D)) if (stale(c)) c.enc = { ver: c.ver, src: c.cv.toDataURL('image/png') };
   BODY = bodyOf(D); DONE_REV = REV;
-  metaOf(D, LOADED);
-  markDirty();
+  written(D, LOADED);
   return true;
+}
+/* the body was written: a drawing of its own is saved by the app, a comic's panel goes back to its comic */
+function written(d, cur) {
+  if (HOST) { if (cur === HOST) HOST.onBody(BODY); return; }
+  metaOf(d, cur);
+  markDirty();
 }
 /* what the app saves: the body as of the last time the cells were written (a newer change is written a moment later, and saved then) */
 const body = cur => D && LOADED === cur ? BODY : null;
@@ -442,6 +454,9 @@ const CSS = `
 .dw-txt{position:absolute;margin:0;padding:0 2px;border:1px dashed var(--accent);background:rgba(255,255,255,.12);outline:none;resize:none;overflow:hidden;white-space:pre;line-height:1.25;min-width:16px;box-sizing:content-box;z-index:2}
 .dw-tgrip{position:absolute;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;cursor:move;touch-action:none;box-shadow:0 1px 4px rgba(0,0,0,.3);z-index:3;border:2px solid #fff;padding:0}
 .dw-tgrip .ms{font-size:15px}
+#app:not(.cdraw) .dw-host,#app:not(.cdraw) .dw-hostbar{display:none!important}
+.dw-hostbar{position:absolute;top:10px;inset-inline-start:10px;z-index:5;box-shadow:var(--shadow)}
+.dw-paper canvas.dw-host-cv{pointer-events:none}
 .dw-zoom{position:absolute;bottom:10px;inset-inline-end:10px;display:flex;align-items:center;gap:2px;padding:3px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);z-index:4}
 .dw-zoom .rb{min-width:32px;height:32px}
 .dw-zp{min-width:56px;font-variant-numeric:tabular-nums;direction:ltr}
@@ -619,7 +634,9 @@ const toolBtn = (k, big) => h('button', { class: 'rb' + (big ? ' big' : ''), typ
   icon(TOOLS[k].ic), big ? h('span', { text: T(TOOLS[k].n) }) : null);
 const sw = (c, cmd = 'dwSw') => h('button', { class: 'sw', type: 'button', style: { background: c }, 'data-cmd': cmd, 'data-arg': c, title: c, 'aria-label': c });
 function ribbonPanels() {
-  V.home = h('div', { class: 'panel draw-only', 'data-panel': 'dwhome', hidden: true },
+  const done = group(T('קומיקס'), '', rbtn('dwDone', 'check_circle', T('סיום הציור'), { big: true, title: T('הציור נשאר במשבצת, וחוזרים לדף של הקומיקס (Esc)') }));
+  done.classList.add('dw-host');   // only while a comic's panel is drawn in
+  V.home = h('div', { class: 'panel draw-only', 'data-panel': 'dwhome', hidden: true }, done,
     group(T('ביטול@undo'), 'col', rbtn('dwUndo', 'undo', T('ביטול (Ctrl+Z)'), { flip: true }), rbtn('dwRedo', 'redo', T('חזרה (Ctrl+Y)'), { flip: true })),
     group(T('כלים'), '', h('div', { class: 'dw-tg' }, ['select', 'lasso', 'move', 'fill', 'pick', 'text'].map(k => toolBtn(k)))),
     group(T('מברשות'), '', BRUSHES.map(k => toolBtn(k, true))),
@@ -675,7 +692,8 @@ function mount() {
   V.zp = h('button', { class: 'rb dw-zp', type: 'button', 'data-cmd': 'dwZoom', 'data-arg': '1', title: T('גודל אמיתי (Ctrl+1)') }, '100%');
   V.zoom = h('div', { class: 'dw-zoom' }, h('button', { class: 'rb dw-ltog', type: 'button', 'data-cmd': 'dwLayers', title: T('שכבות'), 'aria-label': T('שכבות') }, icon('layers')), h('i'),
     rbtn('dwZoom', 'remove', T('הקטנה'), { arg: 'out' }), V.zp, rbtn('dwZoom', 'add', T('הגדלה@zoom'), { arg: 'in' }), rbtn('dwZoom', 'fit_screen', T('כל הציור'), { arg: 'fit' }));
-  V.stage = h('div', { class: 'dw-stage' }, V.vp, V.zoom, V.wait);
+  V.hostBar = h('button', { class: 'btn primary dw-hostbar', type: 'button', 'data-cmd': 'dwDone', title: T('הציור נשאר במשבצת, וחוזרים לדף של הקומיקס (Esc)') }, icon('check_circle'), T('סיום הציור'));
+  V.stage = h('div', { class: 'dw-stage' }, V.vp, V.zoom, V.hostBar, V.wait);
   // the frames, under the drawing
   V.onion = newCanvas(1, 1); V.onion.className = 'dw-on';
   V.frs = h('div', { class: 'dw-frs', role: 'listbox', 'aria-label': T('פריימים') });
@@ -777,7 +795,7 @@ function mount() {
   document.addEventListener('keyup', e => { if (e.code === 'Space' && SPACE) { SPACE = false; cursorUI(); } });
   addEventListener('blur', () => { if (SPACE) { SPACE = false; cursorUI(); } });
   document.addEventListener('paste', onPaste);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && D && LOADED && S.cur === LOADED && REV !== DONE_REV) { flush(); saveNow(); } });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && live() && REV !== DONE_REV) { flush(); saveNow(); } });
   Object.assign(CMD, COMMANDS);
   // the tab chosen before these tabs existed is shown now
   if (DRAW_TABS.includes(S.tab)) selectTab(S.tab);
@@ -818,9 +836,9 @@ function fit() {
   const r = vpRect();
   if (r.width < 20 || r.height < 20) { NEED_FIT = true; return; }
   NEED_FIT = false;
-  const pad = r.width < 500 ? 10 : 28;
-  VIEW.z = clampZ(Math.min((r.width - 2 * pad) / D.w, (r.height - 2 * pad) / D.h));
-  VIEW.x = (r.width - D.w * VIEW.z) / 2; VIEW.y = (r.height - D.h * VIEW.z) / 2;
+  const pad = r.width < 500 ? 10 : 28, F = (HOST && HOST.focus) || { x: 0, y: 0, w: D.w, h: D.h };   // a comic's panel: the panel fills the window
+  VIEW.z = clampZ(Math.min((r.width - 2 * pad) / F.w, (r.height - 2 * pad) / F.h));
+  VIEW.x = (r.width - F.w * VIEW.z) / 2 - F.x * VIEW.z; VIEW.y = (r.height - F.h * VIEW.z) / 2 - F.y * VIEW.z;
   applyView();
 }
 function zoomAt(z, sx, sy) {
@@ -857,6 +875,12 @@ function paintPaper() {
   }
   if (PLAY && V.play) kids.push(V.play);
   V.stack.replaceChildren(...kids);
+  // a comic's panel: the rest of the page under the layers and over them, and the layers seen only inside the panel
+  const host = [HOST && HOST.under, HOST && HOST.over].filter(Boolean);
+  for (const c of V.paper.querySelectorAll('.dw-host-cv')) if (!host.includes(c)) c.remove();
+  if (HOST && HOST.under) { HOST.under.classList.add('dw-host-cv'); V.paper.insertBefore(HOST.under, V.stack); }
+  if (HOST && HOST.over) { HOST.over.classList.add('dw-host-cv'); V.paper.append(HOST.over); }
+  V.stack.style.clipPath = HOST && HOST.clip ? `polygon(${HOST.clip.map(([x, y]) => `${x}px ${y}px`).join(',')})` : '';
   V.paper.style.width = D.w + 'px'; V.paper.style.height = D.h + 'px';
   V.paper.classList.toggle('clear', !D.bg);
   V.stack.style.backgroundColor = D.bg || '';
@@ -1654,7 +1678,7 @@ async function placeImage(src, newLayer, at) {
   paintPaper(); placeFloat(); layersUI(); undoUI(); optsUI();
 }
 function onPaste(e) {
-  if (!D || !LOADED || S.cur !== LOADED || MODALS.length || !drawOpen()) return;
+  if (!live() || MODALS.length || (!HOST && !drawOpen())) return;
   if (e.target && e.target.closest && e.target.closest('input,textarea,[contenteditable="true"]')) return;   // text pasted into a box
   const item = [...((e.clipboardData && e.clipboardData.items) || [])].find(i => i.kind === 'file' && /^image\//.test(i.type));
   const f = item && item.getAsFile();
@@ -2138,7 +2162,9 @@ function reset() {
   for (const k of Object.keys(HX)) { freeCanvas(HX[k]); HX[k] = null; }
   encodeSoon.cancel();
   D = null; LOADED = null; BODY = null; REV = DONE_REV = 0;
-  if (V.stack) V.stack.replaceChildren();
+  HOST = null;
+  if (V.paper) for (const c of V.paper.querySelectorAll('.dw-host-cv')) c.remove();
+  if (V.stack) { V.stack.replaceChildren(); V.stack.style.clipPath = ''; }
   if (V.ov) V.ov.textContent = '';
   if (V.list) V.list.textContent = '';
   if (V.cur) V.cur.style.display = 'none';
@@ -2190,6 +2216,40 @@ async function replace(html) {
   });
   fit();
 }
+/* a comic's panel, drawn in with everything a drawing has (comic.js). o: see HOST. The comic's own view is hidden
+   meanwhile, and this one shows in #drawView. Resolves false when something else was opened before it was ready */
+async function embed(o) {
+  mount();
+  const gen = ++GEN;
+  reset();
+  HOST = LOADED = o;
+  V.wait.hidden = false;
+  const j = parseBody(o.body), layers = await layersFrom(j, gen);
+  if (gen !== GEN || HOST !== o) { if (gen === GEN) HOST = LOADED = null; layers.forEach(L => { for (const c of L.cells.values()) freeCanvas(c.cv); }); return false; }
+  D = { w: j.w, h: j.h, bg: j.bg, layers, active: j.active, frames: j.frames, f: j.f, fps: j.fps, loop: j.loop };
+  BODY = bodyOf(D);
+  V.wait.hidden = true;
+  TOOL = TOOLS[prefs().tool] ? prefs().tool : 'pen';
+  COLOR = hex6(prefs().color) || '#000000';
+  paintPaper(); fit(); layersUI(); toolUI(); colorUI(); undoUI(); cursorUI(); framesUI(); onionNow();
+  for (const b of document.querySelectorAll('.dw-ltog')) b.classList.toggle('on', !V.side.hidden);
+  V.vp.focus({ preventScroll: true });
+  return true;
+}
+/* the panel is done: its body when anything was drawn (null when nothing changed), and the drawing view is emptied */
+function unembed() {
+  if (!HOST) return null;
+  flush();
+  const out = REV ? BODY : null;
+  GEN++; reset();
+  return out;
+}
+/* any drawing's body as one picture on cx, cw x ch (a comic shows its panels with it) */
+async function paintBody(cx, body, cw, ch) {
+  const src = await framesOf(body);
+  try { await src.draw(cx, src.f, cw, ch); } finally { src.done(); }
+}
+
 /* what Claude is told about a drawing: its size, its frames, and its layers, the top one first */
 const infoOf = d => ({ width: d.w, height: d.h, background: d.bg || 'transparent',
   ...(d.frames.length > 1 ? { frames: d.frames.length, frame_on_screen: d.f + 1, frames_per_second: d.fps, loop: d.loop } : {}),
@@ -4328,10 +4388,12 @@ const COMMANDS = {
   dwAnimExport: a => animDialog(a),
   dwFx: a => fxOpen(a), dwFxMenu: (a, b) => fxMenu(a, b),
   dwScan: () => scanStart('layer'),
+  dwDone: () => { if (HOST && HOST.done) HOST.done(); },
 };
 
 window.INK_DRAW = {
   load, unload: reset, replace, preview, chooser, flush, body, norm, pickInto,
+  embed, unembed, paint: paintBody, blank: blankBody,
   png, jpg, pdf, print,
   key: onKey, esc: onEsc, stat,
   image: f => placeImage(f, true),

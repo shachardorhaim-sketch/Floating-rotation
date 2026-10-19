@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.15.0';
+const VERSION = '1.16.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -33,6 +33,9 @@ const INSTRUCTIONS = 'Floating Ink is a word processor open in the user\'s brows
   'It also makes drawings, like a paint program: create_drawing starts one (or an animation, with several frames), draw paints on it while the user watches ' +
   '(exact shapes in SVG, hand-drawn lines with its brushes, the paint bucket, text), edit_drawing changes its layers, frames and background and applies filters, ' +
   'and read_document shows a drawing as a picture. Look at a drawing before adding to it, and at the picture each drawing call returns, to fix what looks wrong. ' +
+  'It also makes comics and manga: create_comic turns a story into pages and panels, with the words of each panel in speech, thought, shout, whisper ' +
+  'and narration bubbles, sound words, effects, and a note in each panel of what should be drawn there. The user draws the panels themselves. ' +
+  'edit_comic changes the pages, the panels and the words, and read_document reads a comic panel by panel with a picture of a page. ' +
   'The chat panel inside Floating Ink is shared: send_message leaves a note there, and read_messages shows ' +
   'what the user or another connected assistant wrote. The user often keeps writing to you from that panel instead of ' +
   'switching back to this window, so when they may still be talking to you there, call wait_for_message: it comes back ' +
@@ -49,6 +52,21 @@ const THEME = { type: 'string', enum: ['ink', 'night', 'sand', 'forest', 'sunset
     'business (navy and gold), gaming (neon on dark purple), history (old parchment), space (stars and planets), nature (green leaves), ' +
     'books (a library in burgundy), party (pink confetti), sports (black and orange), music (purple, sound waves), minimal (quiet, black on light gray), ' +
     'travel (sky and sea), food (a warm kitchen), math (graph paper), tech (dark blue circuits), creator (red on black, like a video channel), art (bright paint blobs).' };
+const COMIC_LAYOUT = { type: 'string', enum: ['g1', 'g2', 'g2v', 'g4', 'g6', 'g8', 'g9', 'c3', 'c4', 'r3', 'r4', 'r121', 'r212', 'r122', 'r221', 'r232', 'r1222', 'm212', 'm2d', 'm3d', 'mside', 'mact', 'mz', 'mbig'],
+  description: 'How the page is cut, by the number of panels. 1: g1 (one big panel). 2: g2 (one above the other), g2v (side by side), m2d (cut on a diagonal). 3: r3 (three rows), c3 (three side by side, for strips). ' +
+    '4: g4 (2 x 2), r121 (one wide, two, one wide), r4 (four rows), m3d (the same, leaning, manga style), mside (a tall panel beside three), c4 (four side by side). ' +
+    '5: r212 (two, one wide, two), r122 (a big one on top, then two and two), r221, m212 (r212 leaning), mbig (two, a big one, two). ' +
+    '6: g6 (three rows of two), mact (one wide, two on a diagonal, three). 7: r232, r1222, mz (four leaning rows). 8: g8. 9: g9. ' +
+    'Without a layout, the page gets a plain one for its number of panels; choose leaning (m...) ones for action and excitement.' };
+const COMIC_KIND = { type: 'string', enum: ['speech', 'thought', 'shout', 'whisper', 'narration'], description: 'speech (an oval with a tail toward the speaker), thought (a cloud), shout (spikes), whisper (a dashed line), narration (a box for the narrator, with no tail).' };
+const COMIC_EFFECT = { type: 'string', enum: ['speed', 'focus', 'tone'], description: 'speed (speed lines, for fast movement), focus (manga focus lines toward the middle: surprise, tension, something important), tone (manga screentone dots, for shade and mood).' };
+const COMIC_PAGES = { type: 'array', description: 'The pages, in order. A page has 1 to 9 panels; a comic page usually has 4 to 6.', items: { type: 'object', properties: {
+  layout: COMIC_LAYOUT,
+  panels: { type: 'array', description: 'The panels in reading order (for a comic read from right to left, the first one is at the top right).', items: { type: 'object', properties: {
+    note: { type: 'string', description: 'What should be drawn in the panel: the place, who is there and what they do, the angle. It shows in the empty panel for the one drawing, and is never printed.' },
+    bubbles: { type: 'array', description: 'What is said or thought in the panel, in the order it is read. A panel holds about one to three bubbles.', items: { type: 'object', properties: { kind: COMIC_KIND, text: { type: 'string' } }, required: ['text'] } },
+    sounds: { type: 'array', items: { type: 'string' }, description: 'Big sound words drawn in the panel, like "BOOM!".' },
+    effect: COMIC_EFFECT } } } }, required: ['panels'] } };
 const SLIDE = {
   layout: { type: 'string', enum: ['title', 'content', 'two_columns', 'big_image', 'image_and_text', 'title_only', 'section', 'blank'],
     description: 'title: the opening slide (title and subtitle). content: a title and text. two_columns: a title and two columns. big_image: a title, a big picture the user adds, and a caption. ' +
@@ -188,10 +206,11 @@ const FILTERS = 'hsl (hue -180..180, sat -100..100, light -100..100, col: true c
   'half (halftone dots: cell 3..60, mono), glitch (amt 0..100, seed), chroma (amt 0..100, c [x, y]), vig (vignette: amt 0..100, size 0..100, col color, c [x, y]), edges (line art: amt 0..100, soft 0..10, white), ' +
   'emboss (amt 0..300, ht 1..10, ang -180..180, col), outline (w 1..64 px, col color), shadow (dist 0..200, ang -180..180, soft 0..100, see transparency 0..100, col color)';
 const TOOLS = [
-  { name: 'list_documents', description: 'List the documents, presentations, spreadsheets and drawings in Floating Ink: id, title, kind, word count, last change, and which one is open on screen.',
+  { name: 'list_documents', description: 'List the documents, presentations, spreadsheets, drawings and comics in Floating Ink: id, title, kind, word count, last change, and which one is open on screen.',
     inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true } },
-  { name: 'read_document', description: 'Read a document as Markdown, a presentation slide by slide, a spreadsheet\'s cells, or a drawing (its layers and frames, and a picture of it). Without an id, reads the one open on screen; for a document, also returns the text the user has selected in it.',
-    inputSchema: { type: 'object', properties: { id: DOC_ID, frame: { type: 'number', description: 'For a drawing that is an animation: the frame to see, 1 for the first (the one on screen by default).' } } }, annotations: { readOnlyHint: true } },
+  { name: 'read_document', description: 'Read a document as Markdown, a presentation slide by slide, a spreadsheet\'s cells, a drawing (its layers and frames, and a picture of it), or a comic (its pages, each panel in reading order with its note and its words, and a picture of a page). Without an id, reads the one open on screen; for a document, also returns the text the user has selected in it.',
+    inputSchema: { type: 'object', properties: { id: DOC_ID, frame: { type: 'number', description: 'For a drawing that is an animation: the frame to see, 1 for the first (the one on screen by default).' },
+      page: { type: 'number', description: 'For a comic: the page to see as a picture, 1 for the first (the one on screen by default).' } } }, annotations: { readOnlyHint: true } },
   { name: 'create_drawing', description: 'Create a new drawing, like a paint program, and open it on the user\'s screen. For an animation give it frames, then draw on each one (draw with frame). ' +
       'items draws on it straight away (the same items as draw). Returns its id, its layers, and a picture of it.',
     inputSchema: { type: 'object', properties: { title: { type: 'string' },
@@ -228,6 +247,28 @@ const TOOLS = [
         description: 'The filters and their settings: ' + FILTERS + '.' },
       settings: { type: 'object', description: 'Only the settings that change, like {"r": 12}; the rest start where the filter starts.' },
       all_frames: { type: 'boolean' } }, required: ['action'] } } }, required: ['actions'] } },
+  { name: 'create_comic', description: 'Create a new comic (or manga) from a story and open it on the user\'s screen: pages, each cut into panels, ' +
+      'with the words of each panel in bubbles and a note in each panel of what to draw there. The user draws the pictures themselves, so write the notes for them: ' +
+      'who is in the panel, where, doing what, and from how close. Keep each bubble short (a comic bubble holds about one or two sentences), and keep the words ' +
+      'in the story\'s language (Hebrew stories become comics read from right to left). Returns the comic as read_document reads it, and a picture of its first page.',
+    inputSchema: { type: 'object', properties: { title: { type: 'string' }, pages: COMIC_PAGES,
+      direction: { type: 'string', enum: ['rtl', 'ltr'], description: 'The way it is read: rtl (manga, and comics in Hebrew or Arabic) or ltr (comics in English and most languages). By default, from the language of the words.' },
+      size: { type: 'string', enum: ['comic', 'manga', 'a4', 'square', 'strip'], description: 'comic (a comic book page, the default), manga (a manga book page), a4, square (for sharing), strip (one short row of panels, like a newspaper strip; give its pages 3 or 4 panels with the layout c3 or c4).' } },
+      required: ['pages'] } },
+  { name: 'edit_comic', description: 'Change a comic: add, delete or move pages, cut a page into panels another way, write the note of what to draw in a panel, ' +
+      'add bubbles, sound words and effects to a panel, change or delete them, or change the way it is read. read_document shows the pages, the panels (numbered ' +
+      'in reading order) and the ids of the bubbles. The actions run in order, all or none, as one step the user can undo with Ctrl+Z.',
+    inputSchema: { type: 'object', properties: { id: DOC_ID, actions: { type: 'array', items: { type: 'object', properties: {
+      action: { type: 'string', enum: ['add_pages', 'delete_page', 'move_page', 'set_layout', 'set_note', 'add_bubble', 'add_sound', 'add_effect', 'set_text', 'delete_item', 'set_direction'] },
+      page: { type: 'number', description: 'The page, 1 for the first (every action but add_pages and set_direction).' },
+      panel: { type: 'number', description: 'set_note, add_bubble, add_sound, add_effect: the panel, numbered in reading order on its page.' },
+      pages: COMIC_PAGES, at: { type: 'number', description: 'add_pages: the number the first new page gets (default: after the last).' },
+      to: { type: 'number', description: 'move_page: the number it moves to.' },
+      layout: COMIC_LAYOUT, note: { type: 'string', description: 'set_note: what should be drawn in the panel.' },
+      kind: COMIC_KIND, text: { type: 'string', description: 'add_bubble, add_sound, set_text: the words.' },
+      effect: COMIC_EFFECT, item: { type: 'string', description: 'set_text, delete_item: the id of a bubble, a sound word or an effect, from read_document.' },
+      direction: { type: 'string', enum: ['rtl', 'ltr'] } }, required: ['action'] } }, look_page: { type: 'number', description: 'The page whose picture comes back (default: the one on screen).' } },
+      required: ['actions'] } },
   { name: 'create_presentation', description: 'Create a new presentation and open it on the user\'s screen, where they watch the slides come in one by one. ' +
       'Start with a "title" slide; keep each slide to a title and a few short points. The user adds the pictures themselves. Returns its id.',
     inputSchema: { type: 'object', properties: { title: { type: 'string' }, theme: THEME, transition: TRANSITION, slides: { type: 'array', items: { type: 'object', properties: SLIDE } } }, required: ['title', 'slides'] } },
