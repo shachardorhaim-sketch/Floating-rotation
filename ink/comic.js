@@ -357,13 +357,21 @@ function spanAt(P, y0, y1) {
   const [a0, a1] = at(y0), [b0, b1] = at(y1);
   return { lo: Math.max(a0, b0), hi: Math.min(a1, b1) };
 }
-/* a box moved sideways (and made narrower if it must) to stay inside the panel at its height */
-function inside(P, box, m) {
+/* a box moved sideways to stay inside the panel; where a slanted panel is too narrow for it, it moves down first
+   (as far as maxY), and only then is it made narrower */
+function inside(P, box, m, maxY = box.y) {
   if (!P) return box;
-  const s = spanAt(P, box.y, box.y + box.h);
-  if (!(s.hi > s.lo)) return box;
-  const w = Math.min(box.w, s.hi - s.lo - 2 * m);
-  return { ...box, w, x: clamp(box.x, s.lo + m, s.hi - m - w) };
+  let best = null;
+  for (let y = box.y, i = 0; i < 24; i++, y += Math.max(4, box.h * 0.12)) {
+    if (i && y > maxY) break;
+    const s = spanAt(P, y, y + box.h), room = s.hi - s.lo - 2 * m;
+    if (!(room > 0)) continue;
+    if (box.x >= s.lo + m - 0.5 && box.x + box.w <= s.hi - m + 0.5) return { ...box, y };   // it fits where it is meant to be, at this height
+    if (!best || room > best.room + 0.5) best = { y, s, room };
+  }
+  if (!best) return box;
+  const w = Math.min(box.w, best.room);
+  return { ...box, y: best.y, w, x: clamp(box.x, best.s.lo + m, best.s.hi - m - w) };
 }
 function inPoly(P, p) {
   for (let i = 0; i < P.length; i++) if (cross(P[i], P[(i + 1) % P.length], p) < 0) return false;
@@ -1870,7 +1878,7 @@ function addBubble(k) {
     x = (rtl === first) ? b.x + b.w - w - b.w * 0.05 : b.x + b.w * 0.05; y = b.y + b.h * 0.05 + mine * hh * 0.55;
     y = Math.min(y, b.y + b.h - hh - 10 * u);
   }
-  if (p.P) ({ x, w } = inside(p.P, { x, y, w, h: hh }, 10 * u));
+  if (p.P) ({ x, y, w } = inside(p.P, { x, y, w, h: hh }, 10 * u, b.y + b.h * 0.7 - hh));
   const it = { id: rid('i'), t: 'bub', k, x, y, w, h: hh, txt: '', f: d.f, fs: d.fs, b: k === 'shout', fc: d.fc, fill: k === 'box' ? '#fff6cc' : d.fill, sc: d.sc, sw: d.sw, tl: k !== 'box',
     tx: x + w / 2 + (rtl ? -1 : 1) * w * 0.12, ty: Math.min(b.y + b.h - 20 * u, y + hh + b.h * 0.2) };
   addItem(it);
@@ -2499,8 +2507,8 @@ function aiCheckPage(pg, n) {
 }
 /* about how big a bubble must be for its words at the usual size: the words take about half of its box */
 function bubbleSize(txt, fs, maxW, maxH) {
-  const n = Math.max(4, Array.from(txt).length), A = n * fs * 0.6 * fs * 1.25 / 0.48;
-  let w = Math.sqrt(A * 1.7), hh = A / w;
+  const n = Math.max(6, Array.from(txt).length), A = n * fs * 0.6 * fs * 1.25 / 0.36;
+  let w = Math.sqrt(A * 1.6), hh = A / w;
   if (w > maxW) { w = maxW; hh = A / w; }
   return { w, h: Math.min(hh, maxH) };
 }
@@ -2514,12 +2522,12 @@ function fillPanel(pg, p, spec) {
   const bubs = (Array.isArray(spec.bubbles) ? spec.bubbles : []).map(x => ({ k: kindOf(x.kind), txt: String(x.text).trim().slice(0, 2000) }));
   for (const s of [...bubs.filter(x => x.k === 'box'), ...bubs.filter(x => x.k !== 'box')]) {
     const box = s.k === 'box', sz = bubbleSize(s.txt, d.fs * (box ? 0.8 : 1), b.w * (box ? 0.7 : 0.62), b.h * 0.42);
-    const w = clamp(sz.w, 150 * u, b.w * 0.92), hh = clamp(sz.h, (box ? 60 : 100) * u, b.h * 0.6), first = side % 2 === 0;
+    const w = clamp(sz.w, (box ? 180 : 230) * u, b.w * 0.92), hh = clamp(sz.h, (box ? 70 : 140) * u, b.h * 0.6), first = side % 2 === 0;
     const x = box ? (rtl ? b.x + b.w - w - 10 * u : b.x + 10 * u) : (rtl === first) ? b.x + b.w - w - b.w * 0.04 : b.x + b.w * 0.04;
-    const yy = Math.max(b.y + 8 * u, Math.min(y, b.y + b.h * 0.8 - hh)), fit = inside(p.P, { x, y: yy, w, h: hh }, 10 * u);
+    const fit = inside(p.P, { x, y: Math.max(b.y + 8 * u, Math.min(y, b.y + b.h * 0.8 - hh)), w, h: hh }, 10 * u, b.y + b.h * 0.8 - hh), yy = fit.y;
     const mid = fit.x + fit.w / 2, tx = mid + (b.x + b.w / 2 - mid) * 0.35;
     pg.its.push({ id: rid('i'), t: 'bub', k: s.k, x: fit.x, y: yy, w: fit.w, h: hh, txt: s.txt, f: d.f, fs: Math.round(d.fs * (box ? 0.8 : 1)), b: s.k === 'shout', fc: d.fc, fill: box ? '#fff6cc' : d.fill, sc: d.sc, sw: d.sw, tl: !box,
-      tx, ty: Math.max(yy + hh + 30 * u, b.y + b.h * 0.78) });
+      tx, ty: clamp(yy + hh + Math.max(70 * u, hh * 0.9), yy + hh + 30 * u, b.y + b.h * 0.85) });   // toward where the characters will be drawn, not too far
     y = yy + hh * (box ? 1 : 0.8) + 8 * u;
     if (!box) side++;
   }
