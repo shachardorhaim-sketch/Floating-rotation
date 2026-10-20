@@ -3294,6 +3294,8 @@ function setFilter(f) { S.filter = f; for (const c of $$('.chip')) c.setAttribut
 const renderDocsSoon = debounce(() => renderDocs(), 150);
 function renderDocs() {
   const list = $('#docList'), q = S.query.trim().toLowerCase();
+  // the list keeps the keyboard when it is drawn again: on the same document, or on the one that took its place
+  const fe = document.activeElement, kept = fe && fe.matches && fe.matches('#docList .di') ? { id: fe.dataset.id, i: $$('#docList .di[tabindex]').indexOf(fe) } : null;
   let docs = allDocs().filter(d => S.filter === 'trash' ? d.trashed : !d.trashed);
   if (S.filter === 'star') docs = docs.filter(d => d.starred);
   if (q) docs = docs.filter(d => (displayTitle(d) + ' ' + (d.snippet || '')).toLowerCase().includes(q));
@@ -3310,14 +3312,65 @@ function renderDocs() {
     const star = d.trashed ? null : h('button', { class: 'icon-btn star' + (d.starred ? ' on' : ''), title: d.starred ? T('הסרה מהמועדפים') : T('הוספה למועדפים'), 'aria-label': T('מועדף'), 'aria-pressed': String(!!d.starred), onclick: e => { e.stopPropagation(); toggleStar(d.id); } }, icon('star', d.starred ? 'fill' : ''));
     const deck = isDeck(d), pdfa = isPdfa(d), sht = isSheet(d), drw = isDraw(d), cmc = isComic(d);
     list.append(h('div', {
-      class: 'di' + (cur ? ' cur' : '') + (d.trashed ? ' trashed' : '') + (deck ? ' deck' : '') + (pdfa ? ' pdfa' : '') + (sht ? ' sheet' : '') + (drw ? ' draw' : '') + (cmc ? ' comic' : ''), role: 'listitem', tabindex: d.trashed ? null : 0,
-      onclick: () => { if (!d.trashed) openDoc(d.id); },
-      onkeydown: e => { if (e.key === 'Enter' && !d.trashed && e.target === e.currentTarget) openDoc(d.id); },
+      class: 'di' + (cur ? ' cur' : '') + (d.trashed ? ' trashed' : '') + (deck ? ' deck' : '') + (pdfa ? ' pdfa' : '') + (sht ? ' sheet' : '') + (drw ? ' draw' : '') + (cmc ? ' comic' : ''), role: 'listitem', tabindex: d.trashed ? null : 0, 'data-id': d.id,
+      onclick: () => { if (!d.trashed) openDoc(d.id).then(focusOpenDoc); },
+      onkeydown: e => { if (e.key === 'Enter' && !d.trashed && e.target === e.currentTarget) openDoc(d.id).then(focusOpenDoc); },
     },
     icon(deck ? 'slideshow' : pdfa ? 'picture_as_pdf' : sht ? 'table_view' : drw ? 'palette' : cmc ? 'auto_stories' : 'description', 'di-ic'),
     h('div', { class: 'di-main' }, h('div', { class: 'di-t', text: displayTitle(d) }), h('div', { class: 'di-m', text: `${relTime(d.updatedAt || Date.now())} · ${deck ? TN('{n} שקופיות', d.slides || 1) : pdfa ? TN('{n} עמודים', d.pages || 1) : sht ? TN('{n} גיליונות', d.sheets || 1) : drw ? (d.frames > 1 ? TN('{n} פריימים', d.frames) : TN('{n} שכבות', d.layers || 1)) : cmc ? TN('{n} דפים', d.pages || 1) : wordsLabel(d.words || 0)}` }), d.snippet ? h('div', { class: 'di-s', text: d.snippet }) : null),
     star, more));
   }
+  if (kept) focusDocRow(LIST_FOCUS || kept.id, kept.i);
+}
+/* the list keeps the keyboard: on a document by its id, or on the one now at place i. A document not in the list yet
+   (one just brought back from the bin) takes it when the list shows it */
+let LIST_FOCUS = null;
+function focusDocRow(id, i) {
+  const rows = $$('#docList .di[tabindex]'), mine = id && rows.find(r => r.dataset.id === id);
+  LIST_FOCUS = id && !mine ? id : null;
+  const el = mine || rows[Math.max(0, Math.min(i == null ? 0 : i, rows.length - 1))];
+  if (el) el.focus();
+}
+/* a document opened from the list takes the keyboard, so a Backspace meant for a letter never reaches the list */
+function focusOpenDoc() {
+  const a = document.activeElement;
+  if (a && a.closest && a.closest('#drawer')) a.blur();
+  if (!S.cur || MODALS.length) return;
+  if (sheetOpen()) { if (S.sheetReady) S.sheetReady.then(() => { if (sheetOpen() && SK) SK.focus(); }); }
+  else if (!deckOpen() && !pdfaOpen() && !drawOpen() && !comicOpen() && document.activeElement !== ed) ed.focus({ preventScroll: true });
+}
+/* the list's own keys. Delete or Backspace on the document whose row has the keyboard (reached with Tab or the arrows
+   of the keyboard; a click opens the document instead) sends it to the recycle bin, with the note and its undo, and a
+   key held down sends one. Ctrl+Z, while the list still has the keyboard, brings back the last one sent from here */
+const LIST_TRASH = [];
+function docListKey(e) {
+  const row = e.target && e.target.matches && e.target.matches('#docList .di[tabindex]') ? e.target : null;
+  if (!row || MODALS.length) return false;
+  const mod = e.ctrlKey || e.metaKey;
+  if ((e.key === 'Delete' || e.key === 'Backspace') && !mod && !e.altKey) {
+    e.preventDefault();
+    if (!e.repeat) trashFromList(row.dataset.id);
+    return true;
+  }
+  if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !mod && !e.altKey) {   // from document to document (not the slides or frames of the open one)
+    e.preventDefault();
+    const rows = $$('#docList .di[tabindex]'), next = rows[rows.indexOf(row) + (e.key === 'ArrowDown' ? 1 : -1)];
+    if (next) next.focus();
+    return true;
+  }
+  if (mod && !e.altKey && !e.shiftKey && e.code === 'KeyZ') {
+    for (let id; (id = LIST_TRASH.pop());) {
+      const m = findMeta(id);
+      if (m && m.trashed) { e.preventDefault(); restoreDoc(id).then(() => focusDocRow(id)); return true; }
+    }
+  }
+  return false;
+}
+async function trashFromList(id) {
+  const i = $$('#docList .di[tabindex]').findIndex(r => r.dataset.id === id);
+  await trashDoc(id);
+  LIST_TRASH.push(id);
+  focusDocRow(null, i);   // the next one down, as in a folder (also when it was open, and another document opened instead)
 }
 function openDocMenu(anchor, d) {
   const items = d.trashed
@@ -15778,6 +15831,7 @@ function onGlobalKey(e) {
     if (S.panel && $('#side').contains(document.activeElement)) { closePanel(); if (!deckOpen() && !pdfaOpen() && !sheetOpen() && !drawOpen() && !comicOpen()) restoreSel(); if (sheetOpen() && SK) SK.focus(); }
     return;
   }
+  if (docListKey(e)) return;   // the documents' list first: its Delete is not for what is chosen in the open one
   if (deckOpen() && deckKey(e)) return;
   if (pdfaOpen() && paKey(e)) return;
   if (sheetOpen() && SK && SK.key(e)) return;
