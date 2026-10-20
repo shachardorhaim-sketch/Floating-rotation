@@ -3468,6 +3468,7 @@ function loadIntoEditor({ id, meta, html, isSample }) {
   $('#docTitle').placeholder = S.cur.meta.auto || untitled(meta);
   updateDocTitle();
   applyPage(); resetHistory();
+  if (S.panel === 'link') renderLinkWait();   // each document can have its own listening chat
   if (deck) deckLoad(html);
   else if (pdfa) pdfaLoad(html);
   else if (sht) sheetLoad(html);
@@ -5129,7 +5130,7 @@ async function restoreDocs(rows, j) {
    ========================================================= */
 /* a copy served from localhost can be pointed at a test connector (fink:linkPort), so a test never reaches the real one */
 const LINK_URL = 'http://127.0.0.1:' + ((location.hostname === 'localhost' && +lsGet('fink:linkPort', 0)) || 47821);
-const LINK = { es: null, state: 'off', timer: 0, wait: 2000, waiting: 0, queue: Promise.resolve(), log: lsGet('fink:aichat', []) };
+const LINK = { es: null, state: 'off', timer: 0, wait: 2000, waiting: 0, waitDocs: [], queue: Promise.resolve(), log: lsGet('fink:aichat', []) };
 function linkStart() {
   linkStop();
   if (!PREFS.aiLink || S.inClaude) return;
@@ -5140,7 +5141,7 @@ function linkStart() {
   es.addEventListener('hello', () => { LINK.wait = 2000; setLinkState('ready'); });
   // another Floating Ink window connected after this one: it keeps the link, and this one stops coming back for it
   es.addEventListener('replaced', () => { es.close(); if (LINK.es === es) { LINK.es = null; clearTimeout(LINK.timer); setLinkState('elsewhere'); } });
-  es.addEventListener('waiting', e => { try { LINK.waiting = JSON.parse(e.data).n || 0; } catch {} if (S.panel === 'link') renderLinkWait(); });
+  es.addEventListener('waiting', e => { try { const d = JSON.parse(e.data); LINK.waiting = d.n || 0; LINK.waitDocs = Array.isArray(d.docs) ? d.docs : []; } catch {} if (S.panel === 'link') renderLinkWait(); });
   es.addEventListener('call', e => {
     let c = null;
     try { c = JSON.parse(e.data); } catch {}
@@ -5447,11 +5448,14 @@ function renderLinkState() {
   renderLinkWait();
 }
 /* is an assistant listening to the panel right this second (wait_for_message), or will it see the message later */
+/* someone hears what is written here: a chat listening to everything, or the open document's own chat */
+const linkCurId = () => (S.cur && !S.cur.isSample ? S.cur.id : '');
+const hearsHere = () => LINK.waiting > LINK.waitDocs.length || LINK.waitDocs.includes(linkCurId());
 function renderLinkWait() {
-  const p = $('#linkWait');
+  const p = $('#linkWait'), on = hearsHere();
   p.hidden = LINK.state !== 'ready';
-  p.classList.toggle('on', LINK.waiting > 0);
-  p.textContent = LINK.waiting > 0 ? T('קלוד מקשיב עכשיו — מה שכותבים כאן יגיע אליו מיד.')
+  p.classList.toggle('on', on);
+  p.textContent = on ? T('קלוד מקשיב עכשיו — מה שכותבים כאן יגיע אליו מיד.')
     : T('כדי שקלוד יענה כאן, כותבים לו בשיחה איתו: תתחבר ל-Floating Ink.');
 }
 function renderLinkLog() {
@@ -5469,7 +5473,8 @@ function sendLinkMsg() {
   $('#linkMsg').value = '';
   linkAdd({ from: 'user', kind: 'msg', text: t });
   // and straight to the connector, so an assistant that is listening answers now instead of when the user goes back to it
-  if (LINK.state === 'ready') fetch(LINK_URL + '/msg', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ text: t }) }).catch(() => {});
+  // with the open document's id, so a chat tied to that document is the one that hears it
+  if (LINK.state === 'ready') fetch(LINK_URL + '/msg', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ text: t, doc: linkCurId() }) }).catch(() => {});
 }
 
 /* =========================================================

@@ -14,7 +14,7 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.FLOATING_INK_PORT) || 47821;   // another port is only for testing
-const VERSION = '1.17.0';
+const VERSION = '1.18.0';
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 const log = (...a) => process.stderr.write('[floating-ink] ' + a.join(' ') + '\n');   // stdout is only for MCP
 
@@ -44,7 +44,14 @@ const INSTRUCTIONS = 'Floating Ink is a word processor open in the user\'s brows
   'the moment they send something. When the user asks you to connect to Floating Ink, or to stay with them there, keep a ' +
   'loop going: wait_for_message, answer what they wrote with send_message (and do in the documents whatever they asked for), ' +
   'then wait_for_message again, until they say to stop. One wait lasts ten minutes and costs nothing while it waits, so stay ' +
-  'in the wait instead of ending your turn.';
+  'in the wait instead of ending your turn. ' +
+  // the better way where it exists: the session sleeps, and the user's message wakes it
+  'If you can run a shell command in the background and get called back when it ends (Claude Code can, with run_in_background), ' +
+  'stay connected that way instead, as the chat of one document: find the document the user means (list_documents shows which one is open), then run ' +
+  ' node "' + __filename + '" --wait --doc <its id>  in the background and end your turn. It waits as long as it takes, costs nothing while it waits, ' +
+  'and ends the moment the user writes in the panel while that document is open, which calls you back. Its output is what they wrote: ' +
+  'answer it with send_message (and do what they asked in that document), then start the same command in the background again before you finish, so you keep listening. ' +
+  'Tell the user once that from now on they can simply write to you in Floating Ink while that document is open.';
 
 const DOC_ID = { type: 'string', description: 'Document id from list_documents. Leave out to use the document open on screen.' };
 const THEME = { type: 'string', enum: ['ink', 'night', 'sand', 'forest', 'sunset', 'chalk', 'plain', 'notebook', 'science', 'business', 'gaming', 'history',
@@ -329,8 +336,10 @@ const TOOLS = [
       'instead of hearing about it only when they come back to this window. Call it whenever the user may keep talking to you from inside Floating Ink: ' +
       'right after you write something there, after send_message, or when they ask you to stay available. Waiting here is free - nothing is spent while it waits - ' +
       'so one long call is far cheaper than asking again and again, and you should leave `seconds` alone unless the user asked for something else. ' +
-      'It returns nothing if the whole wait went by in silence; call it again if the user is still expecting you there.',
-    inputSchema: { type: 'object', properties: { seconds: { type: 'number', description: 'How long to keep listening, 5 to 1800 seconds. Default 600 (ten minutes), which is what you normally want.' } } }, annotations: { readOnlyHint: true } },
+      'It returns nothing if the whole wait went by in silence; call it again if the user is still expecting you there. ' +
+      'Give `doc` (a document id from list_documents) to hear only what is written while that document is open: that is how a chat becomes the one chat of that document.',
+    inputSchema: { type: 'object', properties: { seconds: { type: 'number', description: 'How long to keep listening, 5 to 1800 seconds. Default 600 (ten minutes), which is what you normally want.' },
+      doc: { type: 'string', description: 'A document id: hear only what is written while it is open.' } } }, annotations: { readOnlyHint: true } },
 ];
 const NEW_MSG = 'While you were working, the user wrote this to you in the Floating Ink chat panel. Answer it (send_message puts your answer in that panel), and call wait_for_message to stay with them:';
 const NO_MSG = 'No message from the user in Floating Ink yet. If they are still working there and waiting for you, call wait_for_message again; otherwise finish your turn.';
@@ -375,17 +384,20 @@ async function sendToApp(tool, args, client) {
 /* ---------- the user's messages, and the assistants listening for them ----------
    An assistant that calls wait_for_message stays here until the user writes in Floating Ink's chat panel,
    so it answers straight away instead of hearing about the message only later. */
-const msgs = [];                      // { text, t, taken } - what the user wrote, newest last
-const waiters = new Set();            // { resolve, timer }, in the order they started waiting
+const msgs = [];                      // { text, doc, t, taken } - what the user wrote, newest last, and in which document
+const waiters = new Set();            // { resolve, timer, doc }, in the order they started waiting
+const bound = new Map();              // document -> when a listener tied to it last waited
 const CANCELLED = Symbol('cancelled');
-const tellApp = () => { if (app) app.write('event: waiting\ndata: ' + JSON.stringify({ n: waiters.size }) + '\n\n'); };
+const tellApp = () => { if (app) app.write('event: waiting\ndata: ' + JSON.stringify({ n: waiters.size, docs: [...waiters].map(w => w.doc).filter(Boolean) }) + '\n\n'); };
 
 /* a message belongs to whoever picks it up first, so one message gets one answer even when
-   two assistants are connected */
-function takeMessages() {
-  const fresh = msgs.filter(m => !m.taken);
+   two assistants are connected. A document can have its own chat: a listener tied to it (doc) takes
+   only what was written while it was open, and for a few hours nobody else takes those */
+const reserved = m => !!m.doc && Date.now() - (bound.get(m.doc) || 0) < 3 * 3600e3;
+function takeMessages(doc) {
+  const fresh = msgs.filter(m => !m.taken && (doc ? m.doc === doc : !reserved(m)));
   for (const m of fresh) m.taken = true;
-  return fresh.map(m => ({ from: 'the user', text: m.text, time: new Date(m.t).toISOString() }));
+  return fresh.map(m => ({ from: 'the user', text: m.text, time: new Date(m.t).toISOString(), ...(m.doc ? { document: m.doc } : {}) }));
 }
 function endWait(w, result) {
   if (!waiters.delete(w)) return;
@@ -393,18 +405,23 @@ function endWait(w, result) {
   tellApp();
   w.resolve(result);
 }
-function newMessage(text) {
-  msgs.push({ text, t: Date.now(), taken: false });
+function newMessage(text, doc) {
+  const m = { text, doc, t: Date.now(), taken: false };
+  msgs.push(m);
   if (msgs.length > 200) msgs.shift();
-  const first = waiters.values().next().value;           // the one that has been waiting longest
-  if (first) endWait(first, takeMessages());
+  // that document's own chat if it is listening, else the listener without a document that has waited longest
+  let w = [...waiters].find(x => x.doc && x.doc === doc);
+  if (!w && !reserved(m)) w = [...waiters].find(x => !x.doc);
+  if (w) endWait(w, takeMessages(w.doc));
 }
 function hubWait(args, hooks) {
   const secs = Math.min(Math.max(Number(args && args.seconds) || 600, 5), 1800);   // long on purpose: waiting should cost almost nothing
-  const already = takeMessages();                        // a message that arrived while it was busy working
+  const doc = args && typeof args.doc === 'string' ? args.doc.slice(0, 64) : '';
+  if (doc) bound.set(doc, Date.now());
+  const already = takeMessages(doc);                     // a message that arrived while it was busy working
   if (already.length) return Promise.resolve(already);
   return new Promise(resolve => {
-    const w = { resolve };
+    const w = { resolve, doc };
     w.timer = setTimeout(() => endWait(w, []), secs * 1000);
     waiters.add(w);
     if (hooks) hooks.cancel = () => endWait(w, CANCELLED);
@@ -447,7 +464,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const m = await readBody(req);
       const text = String((m && m.text) || '').trim().slice(0, 4000);
-      if (text) newMessage(text);
+      if (text) newMessage(text, typeof m.doc === 'string' ? m.doc.slice(0, 64) : '');
       res.writeHead(204).end();
     } catch { res.writeHead(400).end(); }
     return;
@@ -585,12 +602,33 @@ async function handle(msg) {
   return fail(id, -32601, 'Method not found: ' + method);
 }
 
-const rl = readline.createInterface({ input: process.stdin });
-rl.on('line', line => {
-  if (!line.trim()) return;
-  let msg;
-  try { msg = JSON.parse(line); } catch { return fail(null, -32700, 'Parse error'); }
-  handle(msg).catch(e => log('error', e.message));
-});
-rl.on('close', () => process.exit(0));
-becomeHub();
+/* ---------- node index.js --wait: the user's message wakes a sleeping Claude ----------
+   Claude Code calls a session back when a command it left running in the background ends. So a session that
+   wants to hear from the user runs this in the background and goes idle: it waits for free until the user
+   writes in Floating Ink's chat panel, prints what they wrote, and ends - and that wakes the session up */
+const WAIT_DOC = process.argv.includes('--doc') ? String(process.argv[process.argv.indexOf('--doc') + 1] || '').slice(0, 64) : '';   // --doc <id>: the chat of that document
+async function waitMode() {
+  for (;;) {
+    let out = null;
+    try { out = await callApp('wait_for_message', { seconds: 1800, doc: WAIT_DOC }, 'Claude Code', {}); }
+    catch { await new Promise(r => setTimeout(r, 3000)); continue; }   // the connector holding the page is changing hands
+    const msgs = out && Array.isArray(out.result) ? out.result : [];
+    if (!msgs.length) continue;                         // half an hour of quiet: keep waiting, nobody is woken for nothing
+    process.stdout.write('The user wrote to you in the Floating Ink chat panel:\n' + msgs.map(m => '- ' + m.text).join('\n') +
+      '\n\nAnswer there with send_message (and do what they asked), then run this same command again in the background to keep listening.\n',
+      () => process.exit(0));
+    return;
+  }
+}
+if (process.argv.includes('--wait')) waitMode();
+else {
+  const rl = readline.createInterface({ input: process.stdin });
+  rl.on('line', line => {
+    if (!line.trim()) return;
+    let msg;
+    try { msg = JSON.parse(line); } catch { return fail(null, -32700, 'Parse error'); }
+    handle(msg).catch(e => log('error', e.message));
+  });
+  rl.on('close', () => process.exit(0));
+  becomeHub();
+}
