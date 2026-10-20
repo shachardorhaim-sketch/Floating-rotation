@@ -2323,7 +2323,8 @@ function ensureBlocks() {
    ========================================================= */
 function toast(msg, o = {}) {
   const t = h('div', { class: 'toast', role: 'status' }, o.icon ? icon(o.icon) : null, h('span', { text: msg }));
-  if (o.action) t.append(h('button', { text: o.action.label, onclick: () => { t.remove(); o.action.run(); } }));
+  // a button that does what the note says (action), or a few side by side (actions)
+  for (const a of o.actions || (o.action ? [o.action] : [])) t.append(h('button', { text: a.label, onclick: () => { t.remove(); a.run(); } }));
   $('#toasts').append(t);
   const ms = o.ms || 3400;
   setTimeout(() => t.classList.add('out'), ms);

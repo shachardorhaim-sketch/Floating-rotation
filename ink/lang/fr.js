@@ -3449,7 +3449,8 @@ window.INK_I18N = {
 "קודם בוחרים משהו: לוחצים עליו": "Sélectionne d'abord quelque chose : clique dessus",
 "קודם בוחרים משהו: לוחצים עליו או צובעים עליו": "Sélectionne d'abord quelque chose : clique dessus ou peins dessus",
 "רכות הקצוות": "Douceur des bords",
-"הסרת רקע חכמה": "Retrait du fond intelligent"
+"הסרת רקע חכמה": "Retrait du fond intelligent",
+"{0} בהסרת רקע חכמה לוחצים על מה שרוצים להשאיר.": "{0} Avec le retrait du fond intelligent, clique sur ce que tu veux garder."
 },
 "plurals": {
 "{n} מילים": {
