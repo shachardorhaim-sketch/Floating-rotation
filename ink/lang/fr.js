@@ -3405,7 +3405,6 @@ window.INK_I18N = {
 "מטה קסם": "Baguette magique",
 "הסרת רקע": "Retirer le fond",
 "קצוות רכים": "Bords doux",
-"אפשר להסיר את הרקע של התמונה": "Tu peux retirer le fond de l'image",
 "הרקע של התמונה נעלם, למשל הרקע האפור מאחורי דמות: בתמונה שהכנסת עכשיו, או בשכבה": "Le fond de l'image disparaît, comme le fond gris derrière un personnage : dans l'image que tu viens d'ajouter, ou sur le calque",
 "הרקע הוסר. נשארו חתיכות? מטה הקסם מוחק אותן בלחיצה.": "Le fond est retiré. Il reste des morceaux ? La baguette magique les efface d'un clic.",
 "הרקע לא אחיד, אז אולי נשארו ממנו חתיכות. מטה הקסם מוחק אותן בלחיצה.": "Le fond n'est pas uni, il en reste peut-être des morceaux. La baguette magique les efface d'un clic.",
@@ -3450,7 +3449,9 @@ window.INK_I18N = {
 "קודם בוחרים משהו: לוחצים עליו או צובעים עליו": "Sélectionne d'abord quelque chose : clique dessus ou peins dessus",
 "רכות הקצוות": "Douceur des bords",
 "הסרת רקע חכמה": "Retrait du fond intelligent",
-"{0} בהסרת רקע חכמה לוחצים על מה שרוצים להשאיר.": "{0} Avec le retrait du fond intelligent, clique sur ce que tu veux garder."
+"{0} בהסרת רקע חכמה לוחצים על מה שרוצים להשאיר.": "{0} Avec le retrait du fond intelligent, clique sur ce que tu veux garder.",
+"אפשר להסיר את הרקע של התמונה, או למחוק ממנה משהו": "Tu peux retirer le fond de l'image, ou en effacer quelque chose",
+"מסיר את הרקע…": "Retrait du fond…"
 },
 "plurals": {
 "{n} מילים": {

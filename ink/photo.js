@@ -9,6 +9,7 @@
    They are downloaded once from Hugging Face and kept (Cache API, 'floating-ink-models': a name sw.js doesn't
    clean up), and onnxruntime-web comes from jsDelivr, which sw.js keeps for working offline.
    INK_PHOTO.edit(src, { mode: 'bg' | 'erase', title }) -> Promise<Blob | null> (null when nothing changed).
+   INK_PHOTO.tidy(src, cut) -> how many pixels went: what a drawing's one-click "הסרת רקע" left, kept only near the figure.
    It works with the app's own helpers from index.html (h, T, icon, toast, confirmBox, MODALS...) */
 (() => {
 'use strict';
@@ -123,7 +124,10 @@ function embed(img) {
   return e;
 }
 /* the thing the points are on (label 1) and not on (label 0), as a soft mask the picture's size */
-async function decode(img, points) {
+const decode = async (img, points) => maskOf(await decodeLow(img, points));
+/* that thing on SAM's own 256 grid: the logits of the answer taken (m, from o), which cells belong (keep), and how sure
+   SAM is of it (score), of its surest answer (top), and how firm its edge is (firm) */
+async function decodeLow(img, points) {
   const [, dec] = await samSessions(), ort = await runtime(), E = await embed(img);
   const pts = new Float32Array(points.flatMap(p => [p.x * E.k, p.y * E.k])), lab = BigInt64Array.from(points.map(p => BigInt(p.l)));
   // a copy every time: without a graphics card the model runs in a worker, and what is sent there is handed over and
@@ -132,11 +136,23 @@ async function decode(img, points) {
   const out = await run(dec, { input_points: new ort.Tensor('float32', pts, [1, 1, points.length, 2]), input_labels: new ort.Tensor('int64', lab, [1, 1, points.length]),
     image_embeddings: copy(E.emb), image_positional_embeddings: copy(E.pos) });
   const sc = [...out.iou_scores.data], m = out.pred_masks.data, n = 256 * 256;
-  // of the three answers, the one it is surest of (a single click on a part often means the whole thing)
-  const best = sc.indexOf(Math.max(...sc));
+  // of the three answers (a part, a bigger part, the whole thing), the biggest it is nearly as sure of as of its surest:
+  // a click on a shirt means the whole person. The surest alone was a part (a shirt, a face, hair) in 7 of 10 pictures
+  const area = [0, 1, 2].map(j => { let c = 0; for (let i = j * n; i < j * n + n; i++) if (m[i] > 0) c++; return c; });
+  const top = Math.max(...sc);
+  let best = sc.indexOf(top);
+  for (let j = 0; j < 3; j++) if (sc[j] >= top - 0.1 && area[j] > area[best]) best = j;
   const keep = islands(m.subarray(best * n, best * n + n), points.filter(p => p.l).map(p => [p.x * E.k / 4, p.y * E.k / 4]));
-  const s = newCanvas(256, 256), sx = ctx(s), id = sx.createImageData(256, 256);
-  for (let i = 0; i < n; i++) { id.data[i * 4] = id.data[i * 4 + 1] = id.data[i * 4 + 2] = 255; id.data[i * 4 + 3] = keep[i] ? Math.round(255 / (1 + Math.exp(-m[best * n + i]))) : 0; }
+  // and how firm its edge is (SAM's stability: what is in it at a logit over 1, against over -1): a figure's is, a
+  // misty patch of forest's isn't
+  let hi = 0, lo = 0;
+  for (let i = best * n; i < best * n + n; i++) { if (m[i] > 1) hi++; if (m[i] > -1) lo++; }
+  return { E, m, o: best * n, keep, score: sc[best], top, firm: hi / Math.max(1, lo) };
+}
+/* such an answer as a soft mask the picture's size */
+function maskOf({ E, m, o, keep }) {
+  const n = 256 * 256, s = newCanvas(256, 256), sx = ctx(s), id = sx.createImageData(256, 256);
+  for (let i = 0; i < n; i++) { id.data[i * 4] = id.data[i * 4 + 1] = id.data[i * 4 + 2] = 255; id.data[i * 4 + 3] = keep[i] ? Math.round(255 / (1 + Math.exp(-m[o + i]))) : 0; }
   sx.putImageData(id, 0, 0);
   const mc = newCanvas(E.W, E.H), mx = ctx(mc);
   mx.imageSmoothingQuality = 'high';
@@ -222,6 +238,182 @@ async function fill(img, mask) {
   ox.drawImage(c, 0, 0, N, N, sx, sy, cw, ch);
   freeCanvas(c);
   return out;
+}
+/* --- "הסרת רקע" in a drawing (draw.js bgCut) finds the backdrop by its colors. What it leaves of it, a floor's shadow or
+   the darker corners of a backdrop, is no part of the figure for SAM: each big part that is left is clicked where the
+   figure most likely is, and what is not near what those clicks find goes. cut: what bgCut left (ImageData, changed in
+   place); src: the picture as it was (a canvas the same size); onProgress(p, bytes) while the models download.
+   Well inside the figure, what the colors took away comes back. Resolves to how many pixels changed: 0 when none
+   did, or when nothing SAM found looked like the figure --- */
+async function tidy(src, cut, onProgress) {
+  const W = cut.width, H = cut.height, d = cut.data, sd = ctx(src).getImageData(0, 0, W, H).data;
+  // only once the colors found a backdrop (a fifth of the picture went): when they took little, as in a busy room, which
+  // thing is the figure is anyone's guess
+  let was = 0, left = 0;
+  for (let o = 3; o < d.length; o += 4) { if (sd[o] > 128) was++; if (d[o] > 128) left++; }
+  if (left > was * 0.8) return 0;
+  // only the part with something left in it, and a margin: a picture put small on a big drawing is then seen big
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0, o = 3; y < H; y++) for (let x = 0; x < W; x++, o += 4) if (d[o] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; y1 = y; }
+  if (x1 < 0) return 0;
+  const mg = Math.round(Math.max(x1 - x0, y1 - y0) * 0.04);
+  x0 = Math.max(0, x0 - mg); y0 = Math.max(0, y0 - mg); x1 = Math.min(W - 1, x1 + mg); y1 = Math.min(H - 1, y1 + mg);
+  const cw = x1 - x0 + 1, ch = y1 - y0 + 1, row = (y, from, to) => [((y + y0) * W + x0) * 4 + from, ((y + y0) * W + x0) * 4 + to];
+  const sc = newCanvas(cw, ch), part = new ImageData(cw, ch);
+  ctx(sc).drawImage(src, x0, y0, cw, ch, 0, 0, cw, ch);
+  for (let y = 0; y < ch; y++) part.data.set(d.subarray(...row(y, 0, cw * 4)), y * cw * 4);   // copied, not through a canvas: its soft edge keeps its colors
+  let went = 0;
+  try { went = await tidyPart(sc, part, onProgress); } finally { freeCanvas(sc); }
+  if (went) for (let y = 0; y < ch; y++) d.set(part.data.subarray(y * cw * 4, (y + 1) * cw * 4), row(y, 0, 0)[0]);
+  return went;
+}
+async function tidyPart(src, cut, onProgress) {
+  const W = cut.width, H = cut.height, a = cut.data;
+  // what is left, on a grid of up to 256 cells a side: a cell is on when most of it is
+  const k = Math.min(1, 256 / Math.max(W, H)), gw = Math.max(1, Math.round(W * k)), gh = Math.max(1, Math.round(H * k)), G = gw * gh;
+  const cc = newCanvas(W, H), gc = newCanvas(gw, gh), gx = ctx(gc);
+  ctx(cc).putImageData(cut, 0, 0);
+  gx.drawImage(cc, 0, 0, gw, gh);
+  freeCanvas(cc);
+  const gd = gx.getImageData(0, 0, gw, gh).data, on = new Uint8Array(G);
+  for (let i = 0; i < G; i++) on[i] = gd[i * 4 + 3] > 128 ? 1 : 0;
+  freeCanvas(gc);
+  // its parts, and how deep inside its part each cell is (steps to the nearest cell that is off, or to the edge)
+  const lab = new Int32Array(G), sizes = [0];
+  for (let i = 0; i < G; i++) {
+    if (!on[i] || lab[i]) continue;
+    const id = sizes.length, q = [i];
+    lab[i] = id;
+    let cnt = 0;
+    while (q.length) {
+      const c = q.pop(), x = c % gw, y = (c - x) / gw;
+      cnt++;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const xx = x + dx, yy = y + dy, j = yy * gw + xx;
+        if (xx >= 0 && yy >= 0 && xx < gw && yy < gh && on[j] && !lab[j]) { lab[j] = id; q.push(j); }
+      }
+    }
+    sizes.push(cnt);
+  }
+  const big = Math.max(0, ...sizes.slice(1));
+  if (big < 16) return 0;
+  const dist = new Float32Array(G), at = (x, y) => x < 0 || y < 0 || x >= gw || y >= gh ? 0 : dist[y * gw + x];
+  for (let i = 0; i < G; i++) dist[i] = on[i] ? 1e9 : 0;
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) { const i = y * gw + x; if (on[i]) dist[i] = Math.min(dist[i], at(x - 1, y) + 1, at(x, y - 1) + 1, at(x - 1, y - 1) + 1.4, at(x + 1, y - 1) + 1.4); }
+  for (let y = gh - 1; y >= 0; y--) for (let x = gw - 1; x >= 0; x--) { const i = y * gw + x; if (on[i]) dist[i] = Math.min(dist[i], at(x + 1, y) + 1, at(x, y + 1) + 1, at(x + 1, y + 1) + 1.4, at(x - 1, y + 1) + 1.4); }
+  // where to click: in each part at least a sixth the size of the biggest (a second figure), its thickest places, up to
+  // six and apart from each other; and first the very middle, even where the colors took it (a black apron there).
+  // Every answer that looks like a figure is kept (figureLike), so a woman and the frame she holds both stay. The
+  // smaller parts (a shadow by the feet) stay only where they are near what is kept
+  const pts = [Math.floor(gh / 2) * gw + Math.floor(gw / 2)], R = Math.max(3, Math.round(Math.max(gw, gh) * 0.15));
+  for (let l = 1; l < sizes.length; l++) {
+    if (sizes[l] * 6 < big) continue;
+    const mine = [], took = [];
+    for (let i = 0; i < G; i++) if (lab[i] === l && dist[i] >= 2) mine.push(i);
+    mine.sort((p, q) => dist[q] - dist[p]);
+    for (const i of mine) {
+      const x = i % gw, y = (i - x) / gw;
+      if (!took.every(j => Math.hypot(j % gw - x, Math.floor(j / gw) - y) >= R)) continue;
+      took.push(i);
+      if (took.length === 6) break;
+    }
+    pts.push(...took);
+  }
+  const prev = DL.on, got = new Uint8Array(G), found = [];
+  DL.on = onProgress || null;
+  try {
+    for (const i of pts) {
+      if (got[i]) continue;   // inside something found already
+      const r = await decodeLow(src, [{ x: ((i % gw) + 0.5) / k, y: (Math.floor(i / gw) + 0.5) / k, l: 1 }]), cells = figureLike(r, on, got, gw, gh);
+      if (cells) found.push({ r, cells, mid: i === pts[0] });
+    }
+  } finally { DL.on = prev; }
+  if (!found.length) return 0;
+  // the figure: what the very middle found (or else the biggest), with the firm things that touch it, again and again
+  // (the frame she holds; misty forest by a monkey isn't firm). When it is most of what the colors left, the backdrop
+  // was plain, and a firm thing at least a third its size, in a part of what was left of its own, is a second figure
+  // (one in the same part was a branch over a monkey, kept on one run and not the next). Otherwise the backdrop was
+  // busy, and a thing apart is a piece of it SAM saw as a thing (pine needles, a lamp on a shelf): only the figure stays
+  const main = found.find(f => f.mid) || found.reduce((p, q) => q.cells.length > p.cells.length ? q : p);
+  const near = new Uint8Array(G), group = [];
+  const join = f => {
+    group.push(f);
+    for (const g of f.cells) { const x = g % gw, y = (g - x) / gw; for (let yy = Math.max(0, y - 2); yy <= Math.min(gh - 1, y + 2); yy++) for (let xx = Math.max(0, x - 2); xx <= Math.min(gw - 1, x + 2); xx++) near[yy * gw + xx] = 1; }
+  };
+  join(main);
+  for (let more = true; more;) {
+    more = false;
+    for (const f of found) if (!group.includes(f) && f.r.firm >= 0.75 && f.cells.some(g => near[g])) { join(f); more = true; }
+  }
+  let onN = 0, onIn = 0;
+  for (let g = 0; g < G; g++) if (on[g]) { onN++; if (near[g]) onIn++; }
+  const plain = onIn >= onN * 0.5, size = Math.max(...group.map(f => f.cells.length));
+  // which of the colors' parts a thing is mostly in: a second figure stands apart, in a part of its own
+  const partOf = f => { const c = new Map(); for (const g of f.cells) if (lab[g]) c.set(lab[g], (c.get(lab[g]) || 0) + 1); let b = 0, bn = 0; for (const [l, n] of c) if (n > bn) { b = l; bn = n; } return b; };
+  const mainPart = partOf(main);
+  const keepers = plain ? found.filter(f => group.includes(f) || (f.r.firm >= 0.75 && f.cells.length * 3 >= size && partOf(f) !== mainPart)) : group;
+  const U = newCanvas(W, H), ux = ctx(U);
+  let any = false;
+  for (const { r } of keepers) {
+    const mc = maskOf(r);
+    ux.drawImage(mc, 0, 0);
+    freeCanvas(mc);
+    any = true;
+  }
+  if (!any) { freeCanvas(U); return 0; }
+  // well inside what is taken, what the colors took away comes back (black clothes by a dark floor)
+  const core = newCanvas(W, H), cx2 = ctx(core);
+  cx2.filter = `blur(${Math.max(2, Math.round(Math.max(W, H) * 0.003))}px)`; cx2.drawImage(U, 0, 0); cx2.filter = 'none';
+  const cd = cx2.getImageData(0, 0, W, H).data, od = ctx(src).getImageData(0, 0, W, H).data;
+  freeCanvas(core);
+  // near it stays: SAM's answer grown by about one of its own pixels (blurred, and from a line between 100 and 200 of
+  // 255), for the hair and fingers it draws a little thin. Two kept a floor's shadow around the shoes
+  const g = newCanvas(W, H), gx2 = ctx(g);
+  gx2.filter = `blur(${Math.max(2, Math.round(Math.max(W, H) * 0.003))}px)`; gx2.drawImage(U, 0, 0); gx2.drawImage(U, 0, 0); gx2.filter = 'none';
+  const gate = gx2.getImageData(0, 0, W, H).data, ud = ux.getImageData(0, 0, W, H).data;
+  freeCanvas(g); freeCanvas(U);
+  // what is kept has to hold a tenth of what is left at least (a waitress was 18% of what a restaurant left); less
+  // means SAM found something small, and the cut stays
+  let kept = 0, inside = 0;
+  for (let o = 3; o < a.length; o += 4) if (a[o] > 128) { kept++; if (gate[o] > 8) inside++; }
+  if (!kept || inside < kept * 0.1) return 0;
+  // after a busy backdrop its colors are right next to the figure too (a light wall by a waitress's arm stayed as a
+  // white line): there the edge is SAM's own
+  const busy = !plain;
+  let went = 0;
+  for (let o = 3; o < a.length; o += 4) {
+    if (cd[o] >= 250) {   // well inside: as in the picture
+      if (a[o] < od[o]) { a[o - 3] = od[o - 3]; a[o - 2] = od[o - 2]; a[o - 1] = od[o - 1]; a[o] = od[o]; went++; }
+      continue;
+    }
+    if (!a[o] || (!busy && gate[o] >= 200) || (busy && ud[o] >= 250)) continue;
+    const na = Math.round(a[o] * (busy ? ud[o] / 255 : Math.max(0, (gate[o] - 100) / 100)));
+    if (a[o] > 8 && na <= 8) went++;
+    if (na) a[o] = na; else a[o - 3] = a[o - 2] = a[o - 1] = a[o] = 0;
+  }
+  return went;
+}
+/* whether SAM's answer r looks like a figure: SAM is sure of it, it doesn't touch the top or the sides (a wall does; a
+   figure stands on the bottom at most), it is neither tiny nor most of the picture, and most of it is what the colors
+   left too (on: the grid, gw by gh). When it does, its cells go into got (the same grid), and it gives them (null when
+   it doesn't) */
+function figureLike(r, on, got, gw, gh) {
+  if (r.top < 0.85 || r.score < 0.75) return null;   // the surest answer: the one taken can be a little less sure, and right at a line it flipped from run to run
+  const { E, m, o, keep } = r, cw = Math.max(1, Math.floor(E.rw / 4)), chh = Math.max(1, Math.floor(E.rh / 4)), cells = [];
+  let rimN = 0, rimOn = 0, inK = 0;
+  for (let y = 0; y < chh; y++) for (let x = 0; x < cw; x++) {
+    const hit = keep[y * 256 + x] && m[o + y * 256 + x] > 0, rim = y < 2 || x < 2 || x >= cw - 2;
+    if (rim) rimN++;
+    if (!hit) continue;
+    if (rim) rimOn++;
+    const g = Math.min(gh - 1, Math.floor(y * gh / chh)) * gw + Math.min(gw - 1, Math.floor(x * gw / cw));
+    cells.push(g);
+    if (on[g]) inK++;
+  }
+  const area = cells.length / (cw * chh);
+  if (rimOn > rimN * 0.03 || area < 0.005 || area > 0.7 || inK < cells.length * 0.5) return null;
+  for (const g of cells) got[g] = 1;
+  return cells;
 }
 
 /* =========================================================
@@ -635,6 +827,6 @@ function peek() {
   for (let i = 3; i < d.length; i += 4) if (d[i] > 127) on++;
   return { mode: E.mode, tool: E.tool, busy: E.busy, points: E.st.points.length, strokes: E.st.strokes.length, sam: !!E.sam, samNow: E.samFor === E.st, selected: on / (W * H), changed: E.changed, undo: E.hist.length, w: W, h: H, view: { ...E.view }, gpu: GPU };
 }
-window.INK_PHOTO = { edit, peek, parts: { toCanvas, embed, decode, fill, gpuKind } };   // parts: for checking each step from outside
+window.INK_PHOTO = { edit, tidy, peek, parts: { toCanvas, embed, decode, fill, gpuKind } };   // parts: for checking each step from outside
 // ==PHOTO-END==
 })();

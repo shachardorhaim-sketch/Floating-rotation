@@ -3405,7 +3405,6 @@ window.INK_I18N = {
 "מטה קסם": "Magic wand",
 "הסרת רקע": "Remove background",
 "קצוות רכים": "Soft edges",
-"אפשר להסיר את הרקע של התמונה": "You can remove the picture's background",
 "הרקע של התמונה נעלם, למשל הרקע האפור מאחורי דמות: בתמונה שהכנסת עכשיו, או בשכבה": "The picture's background disappears, like the gray background behind a character: in the picture you just put in, or on the layer",
 "הרקע הוסר. נשארו חתיכות? מטה הקסם מוחק אותן בלחיצה.": "The background is gone. Pieces left? The magic wand removes them with a click.",
 "הרקע לא אחיד, אז אולי נשארו ממנו חתיכות. מטה הקסם מוחק אותן בלחיצה.": "The background isn't plain, so some pieces of it may be left. The magic wand removes them with a click.",
@@ -3450,7 +3449,9 @@ window.INK_I18N = {
 "קודם בוחרים משהו: לוחצים עליו או צובעים עליו": "First select something: click it or paint over it",
 "רכות הקצוות": "Edge Softness",
 "הסרת רקע חכמה": "Smart background removal",
-"{0} בהסרת רקע חכמה לוחצים על מה שרוצים להשאיר.": "{0} In Smart background removal, you click what you want to keep."
+"{0} בהסרת רקע חכמה לוחצים על מה שרוצים להשאיר.": "{0} In Smart background removal, you click what you want to keep.",
+"אפשר להסיר את הרקע של התמונה, או למחוק ממנה משהו": "You can remove the picture's background, or erase something from it",
+"מסיר את הרקע…": "Removing the background…"
 },
 "plurals": {
 "{n} מילים": {

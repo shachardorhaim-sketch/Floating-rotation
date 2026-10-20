@@ -654,6 +654,8 @@ const toolTitle = k => `${T(TOOLS[k].n)} (${TOOLS[k].key.slice(3)})`;
 const toolBtn = (k, big) => h('button', { class: 'rb' + (big ? ' big' : ''), type: 'button', 'data-cmd': 'dwTool', 'data-arg': k, 'data-tool': k, title: toolTitle(k), 'aria-label': T(TOOLS[k].n), 'aria-pressed': 'false' },
   icon(TOOLS[k].ic), big ? h('span', { text: T(TOOLS[k].n) }) : null);
 const bgCutBtn = () => rbtn('dwBgCut', 'background_replace', T('הסרת רקע'), { text: T('הסרת רקע'), cls: 'txt', title: T('הרקע של התמונה נעלם, למשל הרקע האפור מאחורי דמות: בתמונה שהכנסת עכשיו, או בשכבה') });
+// beside it, where a picture is worked on: in the "פילטרים" tab alone it wasn't found
+const eraseObjBtn = () => rbtn('dwPhotoErase', 'ink_eraser', T('מחיקת אובייקט'), { text: T('מחיקת אובייקט'), cls: 'txt', title: T('לוחצים על מה שרוצים להעלים מהשכבה, והמקום מתמלא') });
 const sw = (c, cmd = 'dwSw') => h('button', { class: 'sw', type: 'button', style: { background: c }, 'data-cmd': cmd, 'data-arg': c, title: c, 'aria-label': c });
 function ribbonPanels() {
   const done = group(T('קומיקס'), '', rbtn('dwDone', 'check_circle', T('סיום הציור'), { big: true, title: T('הציור נשאר במשבצת, וחוזרים לדף של הקומיקס (Esc)') }));
@@ -1859,7 +1861,7 @@ async function busyDo(fn) {
   if (ACT) return;
   const busy = ACT = { kind: 'busy', id: null }, d0 = D;
   V.vp.classList.add('c-wait');
-  try { await nextFrame(); if (D === d0) fn(); }
+  try { await nextFrame(); if (D === d0) await fn(); }
   finally { if (ACT === busy) ACT = null; V.vp.classList.remove('c-wait'); }
 }
 /* "הסרת רקע", on the picture floating (one just put in), or on the layer being drawn on (inside the selection, when there
@@ -1872,11 +1874,13 @@ function bgCutNow() {
   const f = FL, L = f ? f.L : layerOf();
   if (!f && !canDraw(L)) return;
   const g = { d: D, L, cell: L.cell, fk: L.fx ? null : D.frames[D.f].id }, smart = () => bgSmart(g);
-  return busyDo(() => {
+  return busyDo(async () => {
     const o = opt('wand');
     if (f) {
       if (FL !== f) return;
       const img = f.cv.getContext('2d').getImageData(0, 0, f.cv.width, f.cv.height), r = bgCut(img, o.tol / 100, softPx(o));
+      await tidyCut(f.cv, img, r);
+      if (FL !== f || D !== g.d) return;
       if (!bgSaid(r, smart)) return;
       const b = r.box, cv = newCanvas(b.w, b.h), kx = f.w / f.ow, ky = f.h / f.oh, first = !(f.hist && f.hist.length);
       cv.getContext('2d').putImageData(img, -b.x, -b.y);
@@ -1889,11 +1893,39 @@ function bgCutNow() {
     }
     if (!D.layers.includes(L)) return;
     const R = (SEL && clipR(SEL.box.x, SEL.box.y, SEL.box.w, SEL.box.h)) || { x: 0, y: 0, w: D.w, h: D.h };
-    const img = L.cx.getImageData(R.x, R.y, R.w, R.h), before = new ImageData(img.data.slice(), R.w, R.h);
-    if (!bgSaid(bgCut(img, o.tol / 100, softPx(o)), smart)) return;
+    const img = L.cx.getImageData(R.x, R.y, R.w, R.h), before = new ImageData(img.data.slice(), R.w, R.h), r = bgCut(img, o.tol / 100, softPx(o));
+    if (r.gone && r.box) {
+      const src = newCanvas(R.w, R.h);
+      src.getContext('2d').putImageData(before, 0, 0);
+      await tidyCut(src, img, r);
+      freeCanvas(src);
+      if (D !== g.d || !D.layers.includes(L) || L.cell !== g.cell) return;
+    }
+    if (!bgSaid(r, smart)) return;
     L.cx.putImageData(img, R.x, R.y);
     push(Object.assign(pxStep(L, R, before), { cut: true })); changed(L);
   });
+}
+/* what "הסרת רקע" left, kept only near the figure: photo.js asks SAM what the figure is (tidy), and a floor's shadow, or
+   the darker corners of a backdrop, go. The first time its models download, and a note says how far along; a note says
+   when it takes a moment. Without them (no internet the first time) the cut stays as it was. r.box follows */
+async function tidyCut(src, img, r) {
+  if (!r.gone || !r.box) return;
+  let note = null;
+  const say = s => { if (!note) note = toast(s, { icon: 'background_replace', ms: 600000 }); else note.querySelector('span:not(.ms)').textContent = s; };
+  const slow = setTimeout(() => say(T('מסיר את הרקע…')), 600);
+  try {
+    const K = await loadPhotoKit();
+    if (await K.tidy(src, img, (p, all) => say(p < 1 ? T('מוריד את הכלים, פעם אחת (בערך {0}MB)… {1}%', Math.round(all / 1e6), Math.round(p * 100)) : T('מסיר את הרקע…')))) r.box = boxOf(img);
+  } catch (e) { console.warn(e); }
+  finally { clearTimeout(slow); if (note) note.remove(); }
+}
+/* the box of what is left in img (alpha over 40, as bgCut counts it), or null when nothing is */
+function boxOf(img) {
+  const W = img.width, d = img.data;
+  let x0 = W, y0 = -1, x1 = -1, y1 = -1;
+  for (let i = 3, p = 0; i < d.length; i += 4, p++) if (d[i] > 40) { const x = p % W, y = (p - x) / W; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y0 < 0) y0 = y; y1 = y; }
+  return x1 < 0 ? null : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
 }
 /* the magic wand, clicked at c: one step to undo */
 function wandAt(c) {
@@ -2225,7 +2257,7 @@ async function placeImage(src, newLayer, at) {
   SEL = null;
   paintPaper(); placeFloat(); layersUI(); undoUI(); optsUI();
   // a picture with a background all round it (a photo, or a character an AI drew): taking it away is offered
-  if (!(src instanceof HTMLCanvasElement) && hasBackdrop(cv)) BG_OFFER = toast(T('אפשר להסיר את הרקע של התמונה'), { icon: 'background_replace', ms: 7000, action: { label: T('הסרת רקע'), run: () => bgCutNow() } });
+  if (!(src instanceof HTMLCanvasElement) && hasBackdrop(cv)) BG_OFFER = toast(T('אפשר להסיר את הרקע של התמונה, או למחוק ממנה משהו'), { icon: 'background_replace', ms: 8000, actions: [{ label: T('הסרת רקע'), run: () => bgCutNow() }, { label: T('מחיקת אובייקט'), run: () => photoLayer('erase') }] });
 }
 function onPaste(e) {
   if (!live() || MODALS.length || (!HOST && !drawOpen())) return;
@@ -2333,8 +2365,9 @@ function optsUI() {
   } else {
     const has = !!(SEL || FL);
     gb.append(h('div', { class: 'row' }, rbtn('dwSelAll', 'select_all', T('בחירת הכל'), { text: T('בחירת הכל'), title: T('בחירת הכל (Ctrl+A)') }), rbtn('dwSelDel', 'delete', T('מחיקה'), { text: T('מחיקה'), title: T('מחיקת מה שנבחר (Delete)'), cls: has ? '' : 'dw-dis' })),
-      // a picture just put in: taking its background away, in the hint's place
-      FL && FL.kind !== 'lift' ? bgCutBtn() : h('div', { class: 'dw-hint', text: t === 'move' ? T('גוררים כדי להזיז את כל השכבה, או את מה שבחרתם.') : T('גוררים כדי לבחור, ואז גוררים את הבחירה כדי להזיז אותה. הפינות משנות את הגודל.') }));
+      // a picture just put in: taking its background away, or something out of it, in the hint's place (one under the
+      // other, so the ribbon is no wider)
+      ...(FL && FL.kind !== 'lift' ? [bgCutBtn(), eraseObjBtn()] : [h('div', { class: 'dw-hint', text: t === 'move' ? T('גוררים כדי להזיז את כל השכבה, או את מה שבחרתם.') : T('גוררים כדי לבחור, ואז גוררים את הבחירה כדי להזיז אותה. הפינות משנות את הגודל.') })]));
     for (const b of gb.querySelectorAll('.dw-dis')) b.disabled = true;
   }
 }
@@ -2454,7 +2487,8 @@ function renameLayer(id) {
   inp.addEventListener('blur', () => end(true));
 }
 function layerMenu(anchor) {
-  const L = layerOf(), items = [['edit', T('שינוי שם'), () => renameLayer(L.id)], ['ink_eraser', T('ניקוי השכבה'), clearLayer], ['vertical_align_bottom', T('מיזוג עם השכבה שמתחת'), mergeDown]];
+  const L = layerOf(), items = [['edit', T('שינוי שם'), () => renameLayer(L.id)], ['ink_eraser', T('ניקוי השכבה'), clearLayer], ['vertical_align_bottom', T('מיזוג עם השכבה שמתחת'), mergeDown],
+    ['auto_fix_high', T('הסרת רקע חכמה'), () => photoLayer('bg')], ['ink_eraser', T('מחיקת אובייקט'), () => photoLayer('erase')]];
   openPop(anchor, h('div', { class: 'menu' }, items.map(([ic, label, fn]) => h('button', { class: 'mi', type: 'button', onclick: () => { closePopover(); fn(); } }, icon(ic), label))));
 }
 

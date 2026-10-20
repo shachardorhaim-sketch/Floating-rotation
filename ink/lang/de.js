@@ -3405,7 +3405,6 @@ window.INK_I18N = {
 "מטה קסם": "Zauberstab",
 "הסרת רקע": "Hintergrund entfernen",
 "קצוות רכים": "Weiche Kanten",
-"אפשר להסיר את הרקע של התמונה": "Du kannst den Hintergrund des Bildes entfernen",
 "הרקע של התמונה נעלם, למשל הרקע האפור מאחורי דמות: בתמונה שהכנסת עכשיו, או בשכבה": "Der Hintergrund des Bildes verschwindet, etwa der graue Hintergrund hinter einer Figur: im Bild, das du gerade eingefügt hast, oder auf der Ebene",
 "הרקע הוסר. נשארו חתיכות? מטה הקסם מוחק אותן בלחיצה.": "Der Hintergrund ist weg. Reste übrig? Der Zauberstab entfernt sie mit einem Klick.",
 "הרקע לא אחיד, אז אולי נשארו ממנו חתיכות. מטה הקסם מוחק אותן בלחיצה.": "Der Hintergrund ist nicht einfarbig, also sind vielleicht Reste übrig. Der Zauberstab entfernt sie mit einem Klick.",
@@ -3450,7 +3449,9 @@ window.INK_I18N = {
 "קודם בוחרים משהו: לוחצים עליו או צובעים עליו": "Wähl zuerst etwas aus: Klick darauf oder mal darüber",
 "רכות הקצוות": "Kantenweichheit",
 "הסרת רקע חכמה": "Intelligente Hintergrundentfernung",
-"{0} בהסרת רקע חכמה לוחצים על מה שרוצים להשאיר.": "{0} Bei der intelligenten Hintergrundentfernung klickst du auf das, was bleiben soll."
+"{0} בהסרת רקע חכמה לוחצים על מה שרוצים להשאיר.": "{0} Bei der intelligenten Hintergrundentfernung klickst du auf das, was bleiben soll.",
+"אפשר להסיר את הרקע של התמונה, או למחוק ממנה משהו": "Du kannst den Hintergrund des Bildes entfernen oder etwas daraus löschen",
+"מסיר את הרקע…": "Der Hintergrund wird entfernt…"
 },
 "plurals": {
 "{n} מילים": {

@@ -3405,7 +3405,6 @@ window.INK_I18N = {
 "מטה קסם": "Varinha mágica",
 "הסרת רקע": "Remover fundo",
 "קצוות רכים": "Bordas suaves",
-"אפשר להסיר את הרקע של התמונה": "Você pode remover o fundo da imagem",
 "הרקע של התמונה נעלם, למשל הרקע האפור מאחורי דמות: בתמונה שהכנסת עכשיו, או בשכבה": "O fundo da imagem some, como o fundo cinza atrás de um personagem: na imagem que você acabou de colocar, ou na camada",
 "הרקע הוסר. נשארו חתיכות? מטה הקסם מוחק אותן בלחיצה.": "O fundo foi removido. Sobraram pedaços? A varinha mágica os apaga com um clique.",
 "הרקע לא אחיד, אז אולי נשארו ממנו חתיכות. מטה הקסם מוחק אותן בלחיצה.": "O fundo não é liso, então talvez tenham sobrado pedaços. A varinha mágica os apaga com um clique.",
@@ -3450,7 +3449,9 @@ window.INK_I18N = {
 "קודם בוחרים משהו: לוחצים עליו או צובעים עליו": "Primeiro selecione algo: clique nele ou pinte por cima",
 "רכות הקצוות": "Suavidade das bordas",
 "הסרת רקע חכמה": "Remoção de fundo inteligente",
-"{0} בהסרת רקע חכמה לוחצים על מה שרוצים להשאיר.": "{0} Na remoção de fundo inteligente, clique no que você quer manter."
+"{0} בהסרת רקע חכמה לוחצים על מה שרוצים להשאיר.": "{0} Na remoção de fundo inteligente, clique no que você quer manter.",
+"אפשר להסיר את הרקע של התמונה, או למחוק ממנה משהו": "Você pode remover o fundo da imagem ou apagar algo dela",
+"מסיר את הרקע…": "Removendo o fundo…"
 },
 "plurals": {
 "{n} מילים": {
