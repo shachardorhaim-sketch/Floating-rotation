@@ -1992,7 +1992,7 @@ function onKey(e) {
   if (DRAWING) return window.INK_DRAW.key(e);
   if (PREVIEW && !e.ctrlKey && !e.metaKey && !e.altKey && e.key !== 'Shift') stopPreview();
   if (MODALS.length || READ) return false;
-  const t = e.target, typing = t && t.closest && t.closest('input,textarea,select,[contenteditable="true"]');
+  const t = e.target, typing = t && t.closest && t.closest('input,textarea,select,[contenteditable="true"]') && !delKey(e);   // Delete from a checkbox or a slider goes on to what is chosen
   const mod = e.ctrlKey || e.metaKey, c = e.code;
   if (typing) {
     if (t === V.ta && ((e.key === 'Enter' && mod) || e.key === 'Tab')) { e.preventDefault(); commitText(); V.vp.focus(); return true; }
@@ -2006,13 +2006,18 @@ function onKey(e) {
   if (mod && (c === 'Digit0' || c === 'Numpad0')) { e.preventDefault(); fit(); return true; }
   if (e.key === 'PageDown' || (mod && e.key === 'ArrowDown')) { e.preventDefault(); goPage(C.p + 1); return true; }
   if (e.key === 'PageUp' || (mod && e.key === 'ArrowUp')) { e.preventDefault(); goPage(C.p - 1); return true; }
+  // Delete takes what is chosen, even right after a button of the side or the ribbon (a list, such as the pages,
+  // keeps its own Delete). A key held down deletes one thing, and not the panel chosen after it
+  if ((e.key === 'Delete' || e.key === 'Backspace') && !mod && !e.altKey && !(t && t.closest && t.closest('[role=option],.cm-strip,.menu,#drawer'))) {
+    const it = selItem(), pn = !it && selPanel();
+    if (it || pn) { e.preventDefault(); if (!e.repeat) { if (it) delItem(); else mergePanel(); } return true; }
+  }
   // the rest is for the page itself: a button, the strip or the side keep their own keys
   if (t && t.closest && t.closest('button,a,[role=option],[role=tab],.cm-strip,.cm-side,#ribbon,#tabs,#drawer,.menu') && t !== V.vp) return false;
   if (c === 'Space' && !mod) { if (!SPACE) { SPACE = true; setCursor('grab'); } e.preventDefault(); return true; }
   const it = selItem();
   if (mod && c === 'KeyD' && it) { e.preventDefault(); dupItem(); return true; }
   if (mod && (c === 'KeyC' || c === 'KeyX') && it) { e.preventDefault(); CLIP = clone(it); if (c === 'KeyX') delItem(); return true; }
-  if ((e.key === 'Delete' || e.key === 'Backspace') && it) { e.preventDefault(); delItem(); return true; }
   if (e.key === 'Enter' && !mod) {
     if (it && (it.t === 'bub' || it.t === 'sfx')) { e.preventDefault(); startText(it); return true; }
     if (it && it.t === 'chr') { e.preventDefault(); drawLook(it.c, it.lk); return true; }
@@ -2324,12 +2329,14 @@ function pageMenu(anchor, i) {
 /* --- the strip of pages: a click goes to one, dragging moves it, its menu does the rest --- */
 function stripUI() {
   if (!V.list || !C) return;
+  const kept = V.list.contains(document.activeElement);   // the strip keeps the keyboard when it is drawn again (Delete deletes the page chosen)
   const kids = C.pages.map((pg, i) => {
     const im = pg.th ? h('img', { src: pg.th, alt: '' }) : h('div', { class: 'ph', style: { aspectRatio: `${C.w} / ${pgH(pg)}` } });
     return h('div', { class: 'cm-pg' + (i === C.p ? ' on' : ''), role: 'option', 'aria-selected': String(i === C.p), 'data-i': String(i), 'data-id': pg.id, tabindex: '0', title: pageName(pg) },
       im, h('span', { class: 'n', text: String(i + 1) }), h('button', { class: 'rb m', type: 'button', title: T('פעולות'), 'aria-label': T('פעולות על הדף') }, icon('more_horiz')));
   });
   V.list.replaceChildren(...kids);
+  if (kept && kids[C.p]) kids[C.p].focus({ preventScroll: true });
   V.list.setAttribute('aria-label', T('דפים'));
   if (V.pgn) V.pgn.textContent = `${C.p + 1} / ${C.pages.length}`;
   fillThumbs();
@@ -2393,7 +2400,7 @@ function stripEvents() {
     const i = +el.dataset.i;
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goPage(i); }
     else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const j = clamp(i + (e.key === 'ArrowDown' ? 1 : -1), 0, C.pages.length - 1); goPage(j); L0.children[j].focus(); }
-    else if (e.key === 'Delete') { e.preventDefault(); delPage(i); }
+    else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); if (!e.repeat) delPage(i); }   // held down, it deletes one page
   });
 }
 

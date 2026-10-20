@@ -4780,8 +4780,7 @@ function gridKey(e) {
   if (k === 'F2') { e.preventDefault(); startEdit('edit'); return true; }
   if (k === 'F3' && e.shiftKey && !mod) { e.preventDefault(); fnDialog(); return true; }
   if (k === 'F3' && mod) { e.preventDefault(); if (e.shiftKey) namesFromSelection(); else nameManager(); return true; }
-  if (k === 'Delete' && !mod) { e.preventDefault(); clearSel('v'); return true; }
-  if (k === 'Backspace' && !mod) { e.preventDefault(); startEdit('enter', ''); return true; }
+  if ((k === 'Delete' || k === 'Backspace') && !mod) { e.preventDefault(); if (!e.repeat) clearSel('v'); return true; }   // both empty every chosen cell, as in Google Sheets
   if (k === 'Escape') return onEsc();
   if (k === 'ContextMenu' || (e.shiftKey && k === 'F10')) { e.preventDefault(); const r = V.ed.getBoundingClientRect(); openCellMenu(r.left + 10, r.bottom); return true; }
   if (e.altKey && !mod && (k === '=' || c === 'Equal')) { e.preventDefault(); autoSum('SUM'); return true; }
@@ -6796,7 +6795,7 @@ function nameManager() {
     const names = all(), i = names.findIndex(x => nameKey(x) === pick), step = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
     if (step && names[i + step]) { pick = nameKey(names[i + step]); draw(); }
     else if (e.key === 'Enter') editPick();
-    else if (e.key === 'Delete') drop();
+    else if (e.key === 'Delete' || e.key === 'Backspace') { if (!e.repeat) drop(); }   // a key held down takes one name, not the whole list
     else if (!step) return;
     e.preventDefault(); e.stopPropagation();
   });

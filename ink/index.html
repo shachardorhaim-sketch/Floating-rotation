@@ -6359,7 +6359,7 @@ function paDelSel() {
   paDrawSel(); paToolbar(); paThumbSoon(s.i);
 }
 function paKey(e) {
-  if (!PA.doc || MODALS.length || PA.edit || isField(e.target)) return false;
+  if (!PA.doc || MODALS.length || PA.edit || (isField(e.target) && !delKey(e))) return false;
   const mod = e.ctrlKey || e.metaKey, c = e.code, k = e.key;
   if (mod && !e.altKey && (c === 'KeyZ' || c === 'KeyY')) { e.preventDefault(); if (c === 'KeyY' || e.shiftKey) paRedo(); else paUndo(); return true; }
   if (!PA.sel || mod || e.altKey) return false;
@@ -7414,7 +7414,8 @@ function deckStat() { if (DK.deck) $('#stPage').textContent = T('שקופית {0
 function setSel(ids) { const s = curSlide(); DK.sel = [...new Set(ids)].filter(id => s && s.els.some(e => e.id === id)); drawSel(); updateDeckUI(); }
 function select(id) { setSel(id ? [id] : []); }
 function renderStrip() {
-  const strip = $('#strip');
+  const strip = $('#strip'), fe = document.activeElement;
+  const kept = !!(fe && fe.closest && fe.closest('#strip .thumb'));   // the slide chosen in the list keeps the keyboard when the list is drawn again (Delete deletes the next one chosen)
   strip.textContent = '';
   if (!DK.deck) return;
   const n = DK.reveal || DK.deck.slides.length, secs = hasSecs(DK.deck);
@@ -7424,6 +7425,8 @@ function renderStrip() {
     const t = thumbNode(s, i); if (fold) t.hidden = true; strip.append(t);
   });
   if (!DK.reveal) strip.append(h('div', { class: 'strip-add' }, h('button', { class: 'btn small', 'data-cmd': 'newSlide', title: T('שקופית חדשה (Ctrl+M)') }, icon('add'), T('שקופית חדשה'))));
+  const cur = kept && strip.querySelector(`.thumb[data-i="${DK.idx}"]`);
+  if (cur) cur.focus({ preventScroll: true });
   thumbScale(); roomThumbs();
 }
 function thumbNode(s, i) {
@@ -8265,7 +8268,7 @@ function onStripDown(e) {
     if (line) line.remove();
     t.classList.remove('drag');
     if (drag) moveSlidesCmd(new Set([DK.deck.slides[i].id]), to, join);
-    else { goSlide(i); const cur = $(`#strip .thumb[data-i="${i}"]`); if (cur) cur.focus({ preventScroll: true }); }
+    else { if (DK.sel.length) select(null); goSlide(i); const cur = $(`#strip .thumb[data-i="${i}"]`); if (cur) cur.focus({ preventScroll: true }); }   // the slide is chosen now, not what was chosen on it
   };
   addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
 }
@@ -8284,10 +8287,14 @@ function onStripMenu(e) {
 
 /* --- keys, and copy / paste of what's on a slide --- */
 const isField = t => !!(t && t.closest && t.closest('input,textarea,select,#editor'));
+/* Delete and Backspace edit the letters of a field that takes text. A checkbox, a slider or a list to pick from has no
+   use for them, so there they go on to what is chosen (a box, a picture, a bubble), in every kind of document */
+const TEXT_FIELD = 'textarea,[contenteditable="true"],#editor,input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=button]):not([type=submit]):not([type=reset]):not([type=file])';
+const delKey = e => (e.key === 'Delete' || e.key === 'Backspace') && !(e.target && e.target.closest && e.target.closest(TEXT_FIELD));
 function deckKey(e) {
   if (!DK.deck || MODALS.length) return false;
   const t = e.target, writing = !!DK.edit && t.classList && (t.classList.contains('tx') || t.classList.contains('tc'));
-  if (!writing && isField(t)) return false;
+  if (!writing && isField(t) && !delKey(e)) return false;
   const mod = e.ctrlKey || e.metaKey, c = e.code, k = e.key;
   if (DK.crop && (k === 'Enter' || k === 'Escape')) { e.preventDefault(); endCrop(); return true; }
   if (mod && !e.altKey && (c === 'KeyZ' || c === 'KeyY')) { e.preventDefault(); if (c === 'KeyY' || e.shiftKey) dRedo(); else dUndo(); return true; }
@@ -8296,6 +8303,7 @@ function deckKey(e) {
     if (mod && !e.altKey && !e.shiftKey && (c === 'KeyB' || c === 'KeyI' || c === 'KeyU')) { e.preventDefault(); deckStyle({ KeyB: 'b', KeyI: 'i', KeyU: 'u' }[c]); return true; }
     if (k === 'Tab' && t.classList.contains('tc')) { e.preventDefault(); cellStep(e.shiftKey ? -1 : 1); return true; }
     if (k === 'Tab') { e.preventDefault(); const s = getSelection(), n = s.anchorNode; if (n && (n.nodeType === 1 ? n : n.parentElement).closest('li')) document.execCommand(e.shiftKey ? 'outdent' : 'indent'); return true; }
+    if ((k === 'Delete' || k === 'Backspace') && !mod && t.classList.contains('tc') && clearCells()) { e.preventDefault(); return true; }
     return false;
   }
   if (k === 'F5') { e.preventDefault(); if (e.altKey) startShow(DK.idx, true); else startShow(e.shiftKey ? DK.idx : null); return true; }
@@ -8308,7 +8316,7 @@ function deckKey(e) {
   const els = selEls(), inStrip = !!(t.closest && t.closest('#strip'));
   if (k === 'Delete' || k === 'Backspace') {
     if (els.length) { e.preventDefault(); delEls(); return true; }
-    if (inStrip) { e.preventDefault(); delSlide(DK.idx); return true; }
+    if (inStrip) { e.preventDefault(); if (!e.repeat) delSlide(DK.idx); return true; }   // held down, it deletes one slide
     return false;
   }
   if (els.length) {
@@ -10062,6 +10070,15 @@ function tblCells(fn, whole) {
     for (let r = g.r1; r <= g.r2; r++) for (let c = g.c1; c <= g.c2; c++) { const x = el.cells[r][c]; if (!x.m) fn(x); }
   });
   tblRedraw(el, cell);
+}
+/* Delete or Backspace with several cells chosen empties them all, as in PowerPoint: one step to undo */
+function clearCells() {
+  const el = curEl();
+  if (!el || el.t !== 'table' || DK.edit !== el.id || !DK.cell) return false;
+  const g = cellRange(el, DK.cell);
+  if (g.r1 === g.r2 && g.c1 === g.c2) return false;   // in one cell the letters go, as always
+  tblCells(x => { x.h = ''; });
+  return true;
 }
 function tblRedraw(el, cell) {
   if (cell && DK.edit === el.id) {   // drawn again, then back to writing in the same cell
@@ -12182,7 +12199,7 @@ function sorterKey(e) {
   if (mod && e.code === 'KeyM') { addSlide(); return true; }
   if (mod || e.altKey) return false;
   if (k === 'Enter') { setSorter(false); goSlide(DK.idx); return true; }
-  if (k === 'Delete' || k === 'Backspace') { delSlides(new Set(DK.ssel)); return true; }
+  if (k === 'Delete' || k === 'Backspace') { if (!e.repeat) delSlides(new Set(DK.ssel)); return true; }
   const cards = $$('#sorter .scard'), top0 = cards[0] ? cards[0].offsetTop : 0, cols = Math.max(1, cards.filter(c => c.offsetTop === top0).length);
   const vis = cards.map(c => +c.dataset.i), at = Math.max(0, vis.indexOf(DK.idx));
   const step = { ArrowRight: rtl ? -1 : 1, ArrowLeft: rtl ? 1 : -1, ArrowDown: cols, ArrowUp: -cols, Home: -1e9, End: 1e9 }[k];
@@ -15745,7 +15762,13 @@ function onGlobalKey(e) {
     if (PREV.ov) { e.preventDefault(); stopPreview(); return; }
     if (deckOpen() && DK.sorter) { e.preventDefault(); setSorter(false); return; }   // back from all the slides to the one chosen
     if (deckOpen() && (DK.edit || DK.sel.length || DK.tool || DK.crop)) { e.preventDefault(); if (DK.crop) endCrop(); else if (DK.tool) disarm(); else if (DK.edit) exitEdit(); else select(null); return; }   // cropping, drawing, writing, then selecting, one step at a time
-    if (pdfaOpen() && (PA.edit || PA.sel)) { e.preventDefault(); if (PA.edit) paCommitEdit(); else paSelect(null); return; }
+    if (pdfaOpen() && (PA.edit || PA.sel)) {   // writing ends with the box chosen, as on a slide (Delete then deletes it), and the next Esc lets it go
+      e.preventDefault();
+      if (!PA.edit) { paSelect(null); return; }
+      const E = PA.edit; paCommitEdit();
+      if (paEl(E.id)) paSelect(E.id, E.i);
+      return;
+    }
     if (sheetOpen() && SK && SK.esc()) { e.preventDefault(); return; }
     if (drawOpen() && DRAWK && DRAWK.esc()) { e.preventDefault(); return; }
     if (comicOpen() && CMK && CMK.esc()) { e.preventDefault(); return; }

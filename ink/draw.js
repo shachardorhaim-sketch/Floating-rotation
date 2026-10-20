@@ -430,7 +430,8 @@ function redo() {
   if (ACT) return;
   if (FL && FL.fwd && FL.fwd.length) { flStep(false); return; }
   if (HIST.at >= HIST.steps.length) return;
-  commitPending();
+  if (!FL || HIST.steps[HIST.at].fl !== FL) commitPending();   // a picture that undo brought back is deleted again, not put down
+  if (HIST.at >= HIST.steps.length) { undoUI(); return; }   // putting down what floated was a new step, and nothing is left to redo
   const s = HIST.steps[HIST.at++];
   s.redo(); SEL = null; drawOverlay(); undoUI();
 }
@@ -934,17 +935,19 @@ function thumbsNow() {
 function layersUI() {
   if (!V.list || !D) return;
   if (V.side.hidden) { layerButtons(); return; }
+  const kept = V.list.contains(document.activeElement);   // the list keeps the keyboard when it is drawn again (Delete deletes the chosen layer)
   V.list.textContent = '';
   const anim = D.frames.length > 1;
   for (const L of D.layers.slice().reverse()) {
     if (!L.th) L.th = newCanvas(1, 1);
     const on = L.id === D.active;
-    V.list.append(h('div', { class: 'dw-row' + (on ? ' on' : '') + (L.vis ? '' : ' off'), role: 'option', 'aria-selected': String(on), 'data-id': L.id, title: L.name },
+    V.list.append(h('div', { class: 'dw-row' + (on ? ' on' : '') + (L.vis ? '' : ' off'), role: 'option', 'aria-selected': String(on), 'data-id': L.id, title: L.name, tabindex: on ? '0' : '-1' },
       h('div', { class: 'dw-th' }, L.th), h('div', { class: 'dw-nm', text: L.name }),
       L.bm && L.bm !== 'normal' ? h('span', { class: 'dw-bmk', text: T(BLENDS.find(b => b[0] === L.bm)[1]), title: T('מיזוג@blend') }) : null,
       anim || L.fx ? h('button', { class: 'rb dw-pin' + (L.fx ? ' on' : ''), type: 'button', title: L.fx ? T('נעוצה: מופיעה בכל הפריימים. לחיצה משחררת') : T('נעיצה: השכבה תופיע בכל הפריימים, כמו רקע'), 'aria-label': T('נעיצה בכל הפריימים'), 'aria-pressed': String(L.fx) }, icon('push_pin')) : null,
       h('button', { class: 'rb dw-eye', type: 'button', title: L.vis ? T('הסתרת השכבה') : T('הצגת השכבה'), 'aria-label': L.vis ? T('הסתרת השכבה') : T('הצגת השכבה'), 'aria-pressed': String(!L.vis) }, icon(L.vis ? 'visibility' : 'visibility_off'))));
   }
+  if (kept) { const on = V.list.querySelector('.dw-row.on'); if (on) on.focus({ preventScroll: true }); }
   thumbsNow(); layerButtons();
 }
 function layerButtons() {
@@ -977,6 +980,8 @@ const pressureOf = e => e.pointerType === 'pen' ? clamp(e.pressure || 0, 0, 1) :
 function onDown(e) {
   if (!D || !LOADED) return;
   if (ACT && ACT.kind === 'busy') return;   // Claude, or the bucket, is drawing
+  const fe = document.activeElement;   // the keyboard leaves the layers' list and the frames' strip: Delete is for the drawing again
+  if (fe && ((V.list && V.list.contains(fe)) || (V.frs && V.frs.contains(fe)))) fe.blur();
   if (PLAY) { stopPlay(); return; }   // a touch on the drawing stops it playing
   if (TX && (e.target === TX.el || TX.grip.contains(e.target))) return;   // writing in the text box, or moving it
   const p = { ...viewPt(e), t: e.pointerType, id: e.pointerId };
@@ -2185,10 +2190,35 @@ function selectAll() {
   SEL = rectSel({ x: 0, y: 0, w: D.w, h: D.h }); drawOverlay(); optsUI();
 }
 function deselect() { if (FL) drop(); SEL = null; drawOverlay(); optsUI(); }
+/* a picture not yet put down, deleted: one step, whose undo brings it back floating where it was (with the layer
+   made for it). The step keeps the picture's canvases; once the picture is put down or taken back they are let go,
+   and the step does nothing */
+function delFloat() {
+  const f = FL, fk = D.frames[D.f].id;
+  const gone = () => {
+    FL = null; f.cv.remove();
+    if (f.kind === 'layer') setLayers(f.pre.a);
+    paintPaper(); layersUI(); undoUI(); optsUI();
+  };
+  gone();
+  push({
+    fl: f, bytes: [f.cv, ...[...(f.hist || []), ...(f.fwd || [])].map(s => s.cv)].reduce((n, c) => n + c.width * c.height * 4, 0),
+    undo() {
+      if (!f.cv.width) return;
+      const i = D.frames.findIndex(x => x.id === fk);
+      if (i >= 0 && i !== D.f) goFrame(i, true);
+      if (f.kind === 'layer') setLayers(f.pre.b);
+      if (!MOVE_TOOLS.includes(TOOL)) setTool('move');
+      FL = f;
+      paintPaper(); placeFloat(); layersUI(); undoUI(); optsUI();
+    },
+    redo() { if (FL === f) gone(); },
+  });
+}
 function delSel() {
   if (FL) {
     const f = FL;
-    if (f.kind !== 'lift') { cancelFloat(); return; }
+    if (f.kind !== 'lift') { delFloat(); return; }
     FL = null; f.cv.remove(); flFree(f); freeCanvas(f.cv);
     push(pxStep(f.L, f.from, keptRect(f.from)));   // the hole stays: what was lifted is gone
     changed(f.L); paintPaper(); undoUI(); optsUI();
@@ -2502,7 +2532,8 @@ function onKey(e) {
     if (e.code === 'Enter' && !(tg && tg.closest && tg.closest('button,select'))) { e.preventDefault(); fxApply(); return true; }
     if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyZ' || e.code === 'KeyY')) { e.preventDefault(); fxCancel(); return true; }
   }
-  if (tg && tg.closest && tg.closest('input,textarea,select,[contenteditable="true"]')) return false;   // typing in a box, the text tool's too
+  // typing in a box, the text tool's too (Delete from a slider or a checkbox goes on to what is chosen, as in the app; not while a filter is tried)
+  if (tg && tg.closest && tg.closest('input,textarea,select,[contenteditable="true"]') && !(delKey(e) && !FXS)) return false;
   const mod = e.ctrlKey || e.metaKey, c = e.code;
   if (mod && !e.altKey) {
     if (c === 'KeyZ') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return true; }
@@ -2518,7 +2549,12 @@ function onKey(e) {
   }
   if (e.altKey) return false;
   if (c === 'Space') { e.preventDefault(); if (!SPACE) { SPACE = true; cursorUI(); } return true; }
-  if ((c === 'Delete' || c === 'Backspace') && (SEL || FL)) { e.preventDefault(); delSel(); return true; }
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (SEL || FL) { e.preventDefault(); delSel(); return true; }
+    // the layer or the frame chosen in its list (a click there leaves the keyboard on it); a key held down deletes only one
+    const row = tg && tg.closest && tg.closest('.dw-row,.dw-fr');
+    if (row) { e.preventDefault(); if (!e.repeat) { if (row.classList.contains('dw-row')) delLayer(); else delFrame(D.f); } return true; }
+  }
   if (c === 'Enter' && FL) { e.preventDefault(); drop(); return true; }
   if (FL && /^Arrow/.test(e.key)) {   // the arrows move what floats a pixel at a time (ten with Shift)
     e.preventDefault();
@@ -3007,19 +3043,21 @@ function framesUI() {
   const on = stripOn();
   V.time.hidden = !on;
   if (!on) return;
+  const kept = V.frs.contains(document.activeElement);   // as the layers' list: the strip keeps the keyboard
   V.frs.textContent = '';
   for (const k of [...FTH.keys()]) if (!D.frames.some(f => f.id === k)) { freeCanvas(FTH.get(k)); FTH.delete(k); }
   D.frames.forEach((f, i) => {
     let th = FTH.get(f.id);
     if (!th) FTH.set(f.id, th = newCanvas(1, 1));
     const cur = i === D.f;
-    V.frs.append(h('div', { class: 'dw-fr' + (cur ? ' on' : ''), role: 'option', 'aria-selected': String(cur), 'data-i': i, title: T('פריים {0}', i + 1) },
+    V.frs.append(h('div', { class: 'dw-fr' + (cur ? ' on' : ''), role: 'option', 'aria-selected': String(cur), 'data-i': i, title: T('פריים {0}', i + 1), tabindex: cur ? '0' : '-1' },
       h('div', { class: 'dw-fth' }, th), h('span', { class: 'dw-fn', text: String(i + 1) }), f.d > 1 ? h('span', { class: 'dw-fd', text: '×' + f.d }) : null,
       cur ? h('button', { class: 'dw-fm', type: 'button', title: T('פעולות על הפריים'), 'aria-label': T('פעולות על הפריים') }, icon('more_horiz')) : null));
   });
   frameThumbs(); playUI();
   const el = V.frs.children[D.f];
   if (el) { const r = el.getBoundingClientRect(), s = V.frs.getBoundingClientRect(); if (r.left < s.left || r.right > s.right) V.frs.scrollLeft += (r.left + r.right) / 2 - (s.left + s.right) / 2; }
+  if (el && kept) el.focus({ preventScroll: true });
 }
 function frameThumbs() {
   if (!D || !V.time || V.time.hidden) return;
