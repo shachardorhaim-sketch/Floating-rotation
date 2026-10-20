@@ -381,6 +381,7 @@ function pxStep(L, R, before, cell = L.cell, fk = L.fx ? null : D.frames[D.f].id
   const show = () => { if (fk && D.frames[D.f].id !== fk) { const i = D.frames.findIndex(f => f.id === fk); if (i >= 0) goFrame(i, true); } };
   const st = {
     bytes: R.w * R.h * 4,
+    L, cell, R, was: before,   // what it changed, and how that was before (for "הסרת רקע חכמה" after a cut)
     undo() { show(); if (!after) { after = cell.cx.getImageData(R.x, R.y, R.w, R.h); st.bytes *= 2; HIST.bytes += R.w * R.h * 4; } cell.cx.putImageData(before, R.x, R.y); changed(L, cell); },
     redo() { show(); cell.cx.putImageData(after, R.x, R.y); changed(L, cell); },
   };
@@ -1822,25 +1823,35 @@ function hasBackdrop(cv) {
   for (const im of [x.getImageData(0, 0, w, 1), x.getImageData(0, hh - 1, w, 1), x.getImageData(0, 0, 1, hh), x.getImageData(w - 1, 0, 1, hh)]) for (let k = 3; k < im.data.length; k += 4) { n++; if (im.data[k] > 200) s++; }
   return s > n * 0.9;
 }
-/* what "הסרת רקע" did, told. false when nothing is to change. Where the backdrop was hard to tell (not plain, or none
-   found), "הסרת רקע חכמה" is offered too: smart opens it */
+/* what "הסרת רקע" did, told. false when nothing is to change. After a cut, and where no plain backdrop was found,
+   "הסרת רקע חכמה" is offered too (smart opens it): a busy backdrop can leave pieces even where it looked plain enough */
 function bgSaid(r, smart) {
   const sm = { label: T('הסרת רקע חכמה'), run: smart }, wand = { label: T('מטה קסם'), run: () => setTool('wand') };
   const also = s => T('{0} בהסרת רקע חכמה לוחצים על מה שרוצים להשאיר.', s);
   if (r.none) { toast(T('לא מצאתי כאן רקע: הקצוות של התמונה כבר שקופים. מה שנשאר אפשר למחוק במטה הקסם.'), { icon: 'auto_fix_high', ms: 6000 }); return false; }
   if (!r.gone) { toast(also(T('לא מצאתי רקע אחיד ליד הקצוות של התמונה.')), { icon: 'background_replace', ms: 7000, action: sm }); return false; }
   if (!r.box) { toast(T('כל התמונה נראתה כמו רקע, אז לא מחקתי כלום.'), { icon: 'background_replace' }); return false; }
-  if (r.fit < 0.6) toast(also(T('הרקע לא אחיד, אז אולי נשארו ממנו חתיכות. מטה הקסם מוחק אותן בלחיצה.')), { icon: 'background_replace', ms: 8000, actions: [wand, sm] });
-  else toast(T('הרקע הוסר. נשארו חתיכות? מטה הקסם מוחק אותן בלחיצה.'), { icon: 'background_replace', ms: 6000, action: wand });
+  toast(also(r.fit < 0.6 ? T('הרקע לא אחיד, אז אולי נשארו ממנו חתיכות. מטה הקסם מוחק אותן בלחיצה.') : T('הרקע הוסר. נשארו חתיכות? מטה הקסם מוחק אותן בלחיצה.')),
+    { icon: 'background_replace', ms: 8000, actions: [wand, sm] });
   return true;
 }
 /* "הסרת רקע חכמה" from that note (g: the drawing, the layer and the frame "הסרת רקע" worked on): a picture still
-   floating is put down first, and the window opens on that layer, on that frame, even when another was chosen since */
+   floating is put down first, and the window opens on that layer, on that frame, even when another was chosen since.
+   While the cut is the last thing done, the window starts from the picture as it was before it, so what the cut took
+   from the figure (black clothes by a dark floor) is there to keep; leaving the window keeps the cut */
 function bgSmart(g) {
   if (D !== g.d || !live() || ACT || !D.layers.includes(g.L)) return;
   commitPending();
   if (g.L.cell !== g.cell) { const i = D.frames.findIndex(f => f.id === g.fk); if (i >= 0) goFrame(i, true); }
-  if (g.L.cell === g.cell) photoLayer('bg', g.L);
+  if (g.L.cell !== g.cell) return;
+  const s = HIST.steps[HIST.at - 1];
+  let src = null;
+  if (s && s.cut && s.L === g.L && s.cell === g.cell) {
+    src = newCanvas(D.w, D.h);
+    const x = src.getContext('2d');
+    x.drawImage(g.L.cv, 0, 0); x.putImageData(s.was, s.R.x, s.R.y);
+  }
+  photoLayer('bg', g.L, src).finally(() => { if (src) freeCanvas(src); });
 }
 let BG_OFFER = null;   // the note offering to take a picture's background away, while it shows
 /* the wait cursor while a big picture is worked on, and nothing else starts meanwhile */
@@ -1881,7 +1892,7 @@ function bgCutNow() {
     const img = L.cx.getImageData(R.x, R.y, R.w, R.h), before = new ImageData(img.data.slice(), R.w, R.h);
     if (!bgSaid(bgCut(img, o.tol / 100, softPx(o)), smart)) return;
     L.cx.putImageData(img, R.x, R.y);
-    push(pxStep(L, R, before)); changed(L);
+    push(Object.assign(pxStep(L, R, before), { cut: true })); changed(L);
   });
 }
 /* the magic wand, clicked at c: one step to undo */
@@ -2118,7 +2129,7 @@ function drop() {
     if (o && R) {
       const withBg = L.cx.getImageData(R.x, R.y, R.w, R.h);
       L.cx.putImageData(before, R.x, R.y); put();
-      push(pxStep(L, R, withBg)); changed(L);
+      push(Object.assign(pxStep(L, R, withBg), { cut: true })); changed(L);
     }
   }
   flFree(f); freeCanvas(f.cv);
@@ -4913,8 +4924,9 @@ function scanDialog(im, target) {
 }
 
 /* the picture of layer L (the one chosen when none is given) without its background, or with something taken out of
-   it (photo.js, through index.html's photoEdit), as one step that can be undone */
-async function photoLayer(mode, L = null) {
+   it (photo.js, through index.html's photoEdit), as one step that can be undone. src: what the window starts from,
+   when not the layer as it is (a canvas the drawing's size) */
+async function photoLayer(mode, L = null, src = null) {
   if (!live() || ACT) return;
   commitPending();
   L = L || layerOf();
@@ -4923,7 +4935,7 @@ async function photoLayer(mode, L = null) {
   let any = false;
   for (let i = 3; i < d.length; i += 64) if (d[i]) { any = true; break; }
   if (!any) { toast(T('אין עדיין כלום בשכבה הזאת. אפשר להכניס אליה תמונה, או לבחור שכבה אחרת.'), { ms: 5000 }); return; }
-  const host = LOADED, cell = L.cell, blob = await photoEdit(mode, L.cv, L.name, { max: MAX_SIDE });
+  const host = LOADED, cell = L.cell, blob = await photoEdit(mode, src || L.cv, L.name, { max: MAX_SIDE });
   if (!blob || LOADED !== host || !live() || !D.layers.includes(L) || L.cell !== cell) return;
   const url = URL.createObjectURL(blob);
   let im;
