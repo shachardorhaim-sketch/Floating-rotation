@@ -7,44 +7,48 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800;900&display=swap">
-<link rel="stylesheet" href="style.css?v=hub-2">
+<link rel="stylesheet" href="style.css?v=hub-3">
 </head>
 <body class="site">
 
 <!-- ============ החנות (מסך ראשי) ============ -->
 <div id="store">
-  <header class="site-head">
-    <button class="side-toggle" id="sideToggle" aria-controls="side" aria-expanded="true">☰</button>
-    <a class="logo" id="homeLink" href="./">Floating<span>rotation</span></a>
-  </header>
-
   <div class="site-body">
-    <!-- הקטגוריות בצד, עם כפתור ☰ שמסתיר אותן (נבנות ב-hub.js) -->
+    <!-- הקטגוריות: פס לכל אורך הצד הימני, בכל השפות. כפתור ☰ מסתיר אותו (נבנה ב-hub.js) -->
     <aside class="side" id="side">
+      <div class="side-head">
+        <span class="side-title" id="sideTitle">קטגוריות</span>
+        <button class="side-close" id="sideClose">×</button>
+      </div>
       <nav class="side-nav" id="sideNav"></nav>
     </aside>
     <div class="side-shade" id="sideShade"></div>
 
-    <main class="site-main">
-      <!-- דף הבית: כאן יופיעו דברים בתשלום. כרגע אין — אז הוא ריק -->
-      <section class="view-home" id="view-home">
-        <p class="home-hint" id="homeHint">בחר קטגוריה מהתפריט</p>
-      </section>
+    <div class="site-col">
+      <header class="site-head">
+        <button class="side-toggle" id="sideToggle" aria-controls="side" aria-expanded="true">☰</button>
+        <a class="logo" id="homeLink" href="./">Floating<span>rotation</span></a>
+      </header>
 
-      <!-- קטגוריה: משחקים חינמיים -->
-      <section class="cat-sec" id="cat-games" hidden>
-        <div class="cat-head"></div>
-        <div class="grid" id="grid"></div>
-      </section>
+      <main class="site-main">
+        <!-- דף הבית: כאן יופיעו דברים בתשלום. כרגע אין — אז הוא ריק -->
+        <section class="view-home" id="view-home"></section>
 
-      <!-- קטגוריה: התקנות חינמיות -->
-      <section class="cat-sec" id="cat-apps" hidden>
-        <div class="cat-head"></div>
-        <div class="grid dl-grid" id="dlGrid"></div>
-      </section>
+        <!-- קטגוריה: משחקים חינמיים -->
+        <section class="cat-sec" id="cat-games" hidden>
+          <div class="cat-head"></div>
+          <div class="grid" id="grid"></div>
+        </section>
 
-      <footer class="site-foot">נבנה על ידי שחר דור-חיים ורובין שמואלי · Floating rotation 2026</footer>
-    </main>
+        <!-- קטגוריה: התקנות חינמיות -->
+        <section class="cat-sec" id="cat-apps" hidden>
+          <div class="cat-head"></div>
+          <div class="grid dl-grid" id="dlGrid"></div>
+        </section>
+
+        <footer class="site-foot">נבנה על ידי שחר דור-חיים ורובין שמואלי · Floating rotation 2026</footer>
+      </main>
+    </div>
   </div>
 </div>
 
@@ -87,7 +91,7 @@
 <script src="bookmarklet.js"></script>
 
 <!-- 7. הקטגוריות: ניווט, אריחים וכותרות (אחרון — סופר את הכרטיסים של כולם) -->
-<script src="hub.js?v=hub-2"></script>
+<script src="hub.js?v=hub-3"></script>
 
 </body>
 </html>

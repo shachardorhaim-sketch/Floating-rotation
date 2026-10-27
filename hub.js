@@ -1,8 +1,8 @@
 // ============================================================
 //  Floating rotation — הקטגוריות של האתר
-//  תפריט בצד (ימין בעברית) עם כפתור ☰ קטן שמסתיר אותו,
+//  תפריט בפס לכל אורך הצד הימני (בכל השפות), עם כפתור ☰ קטן שמסתיר אותו,
 //  ודף לכל קטגוריה. כשלא נכנסים לקטגוריה — דף הבית
-//  (שם יופיעו בעתיד דברים בתשלום; כרגע הוא ריק).
+//  (שם יופיעו בעתיד דברים בתשלום; עד שנוסיף אותם הוא ריק).
 //
 //  להוספת קטגוריה חדשה:
 //    1. שורה חדשה ב-CATS (מזהה, אייקון, צבע, ה-id של הרשת)
@@ -18,38 +18,38 @@
   ];
 
   const HT = {
-    he: { side: 'קטגוריות', home: 'דף הבית', hint: 'בחר קטגוריה מהתפריט', toggle: 'הצגה או הסתרה של הקטגוריות',
+    he: { side: 'קטגוריות', home: 'דף הבית', toggle: 'הצגה או הסתרה של הקטגוריות', close: 'סגירה',
           games: 'משחקים חינמיים', games_d: 'משחקים קטנים שבנינו, שחר ורובין. משחקים ישר בדפדפן, בלי הורדה.',
           apps: 'התקנות חינמיות', apps_d: 'דברים שימושיים שבנינו: מסמכים ומצגות, ותרגום של כל אתר.' },
-    en: { side: 'Categories', home: 'Home', hint: 'Pick a category from the menu', toggle: 'Show or hide categories',
+    en: { side: 'Categories', home: 'Home', toggle: 'Show or hide categories', close: 'Close',
           games: 'Free games', games_d: 'Small games built by Shachar and Robin. Play right in your browser, nothing to download.',
           apps: 'Free installs', apps_d: 'Useful things we built: documents and presentations, and translation for any website.' },
-    ar: { side: 'الفئات', home: 'الرئيسية', hint: 'اختر فئة من القائمة', toggle: 'إظهار الفئات أو إخفاؤها',
+    ar: { side: 'الفئات', home: 'الرئيسية', toggle: 'إظهار الفئات أو إخفاؤها', close: 'إغلاق',
           games: 'ألعاب مجانية', games_d: 'ألعاب صغيرة بناها شاحار وروبين. العب مباشرة في المتصفح، بلا تحميل.',
           apps: 'تثبيتات مجانية', apps_d: 'أشياء مفيدة بنيناها: مستندات وعروض تقديمية، وترجمة لأي موقع.' },
-    zh: { side: '分类', home: '首页', hint: '从菜单中选择一个分类', toggle: '显示或隐藏分类',
+    zh: { side: '分类', home: '首页', toggle: '显示或隐藏分类', close: '关闭',
           games: '免费游戏', games_d: 'Shachar 和 Robin 制作的小游戏。直接在浏览器里玩，无需下载。',
           apps: '免费安装', apps_d: '我们做的实用工具：文档和演示文稿，以及任何网站的翻译。' },
-    es: { side: 'Categorías', home: 'Inicio', hint: 'Elige una categoría del menú', toggle: 'Mostrar u ocultar categorías',
+    es: { side: 'Categorías', home: 'Inicio', toggle: 'Mostrar u ocultar categorías', close: 'Cerrar',
           games: 'Juegos gratis', games_d: 'Juegos pequeños creados por Shachar y Robin. Se juegan en el navegador, sin descargar nada.',
           apps: 'Instalaciones gratis', apps_d: 'Cosas útiles que creamos: documentos y presentaciones, y traducción de cualquier sitio web.' },
-    fr: { side: 'Catégories', home: 'Accueil', hint: 'Choisis une catégorie dans le menu', toggle: 'Afficher ou masquer les catégories',
+    fr: { side: 'Catégories', home: 'Accueil', toggle: 'Afficher ou masquer les catégories', close: 'Fermer',
           games: 'Jeux gratuits', games_d: 'Des petits jeux créés par Shachar et Robin. On y joue dans le navigateur, sans rien télécharger.',
           apps: 'Installations gratuites', apps_d: "Des outils utiles qu'on a créés : documents et présentations, et la traduction de n'importe quel site." },
-    pt: { side: 'Categorias', home: 'Início', hint: 'Escolha uma categoria no menu', toggle: 'Mostrar ou ocultar categorias',
+    pt: { side: 'Categorias', home: 'Início', toggle: 'Mostrar ou ocultar categorias', close: 'Fechar',
           games: 'Jogos grátis', games_d: 'Joguinhos criados por Shachar e Robin. Jogue direto no navegador, sem baixar nada.',
           apps: 'Instalações grátis', apps_d: 'Coisas úteis que criamos: documentos e apresentações, e tradução de qualquer site.' },
-    ru: { side: 'Категории', home: 'Главная', hint: 'Выбери категорию в меню', toggle: 'Показать или скрыть категории',
+    ru: { side: 'Категории', home: 'Главная', toggle: 'Показать или скрыть категории', close: 'Закрыть',
           games: 'Бесплатные игры', games_d: 'Небольшие игры, которые сделали Шахар и Робин. Играй прямо в браузере, ничего не скачивая.',
           apps: 'Бесплатные установки', apps_d: 'Полезные вещи, которые мы сделали: документы и презентации, а ещё перевод любого сайта.' },
-    de: { side: 'Kategorien', home: 'Startseite', hint: 'Wähle eine Kategorie im Menü', toggle: 'Kategorien ein- oder ausblenden',
+    de: { side: 'Kategorien', home: 'Startseite', toggle: 'Kategorien ein- oder ausblenden', close: 'Schließen',
           games: 'Kostenlose Spiele', games_d: 'Kleine Spiele von Shachar und Robin. Direkt im Browser spielen, ohne Download.',
           apps: 'Kostenlose Installationen', apps_d: 'Nützliche Dinge, die wir gebaut haben: Dokumente und Präsentationen und Übersetzung für jede Website.' },
   };
 
   const $ = id => document.getElementById(id);
   const side = $('side'), nav = $('sideNav'), toggle = $('sideToggle'), shade = $('sideShade');
-  const home = $('view-home'), hint = $('homeHint'), logo = $('homeLink');
+  const title = $('sideTitle'), closeBtn = $('sideClose'), home = $('view-home'), logo = $('homeLink');
   if (!side || !nav || !toggle || !home) return;
 
   const MOBILE = window.matchMedia('(max-width: 760px)');
@@ -59,7 +59,7 @@
   const count = c => { const g = $(c.grid); return g ? g.children.length : 0; };
   const sec = c => $('cat-' + c.id);
 
-  // ---------- בניית התפריט (פעם אחת) ----------
+  // ---------- בניית התפריט (פעם אחת): דף הבית, קו, ואז הקטגוריות ----------
   function item(c) {
     const b = document.createElement('button');
     b.className = 'side-item'; b.dataset.go = c.id;
@@ -70,9 +70,9 @@
     nav.appendChild(b);
   }
   item({ id: '', icon: '🏠' });
-  const title = document.createElement('div');
-  title.className = 'side-title';
-  nav.appendChild(title);
+  const sep = document.createElement('div');
+  sep.className = 'side-sep';
+  nav.appendChild(sep);
   CATS.forEach(item);
 
   CATS.forEach(c => {
@@ -95,6 +95,7 @@
     if (remember && !MOBILE.matches) { try { localStorage.setItem(SIDE_KEY, open ? '1' : '0'); } catch (e) {} }
   }
   toggle.onclick = () => setSide(document.body.classList.contains('side-hidden'), true);
+  if (closeBtn) closeBtn.onclick = () => setSide(false, false);
   if (shade) shade.onclick = () => setSide(false, false);
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && MOBILE.matches && !document.body.classList.contains('side-hidden')) setSide(false, false);
@@ -127,14 +128,14 @@
   // ---------- טקסטים (בכל החלפת שפה) ----------
   function apply(lg) {
     lang = HT[lg] ? lg : 'he';
-    title.textContent = tx('side');
+    if (title) title.textContent = tx('side');
     nav.setAttribute('aria-label', tx('side'));
     nav.querySelectorAll('.side-item').forEach(b => {
       b.querySelector('.si-name').textContent = tx(b.dataset.go || 'home');
     });
     toggle.title = tx('toggle');
     toggle.setAttribute('aria-label', tx('toggle'));
-    if (hint) hint.textContent = tx('hint');
+    if (closeBtn) { closeBtn.title = tx('close'); closeBtn.setAttribute('aria-label', tx('close')); }
     CATS.forEach(c => {
       const s = sec(c);
       if (!s) return;
