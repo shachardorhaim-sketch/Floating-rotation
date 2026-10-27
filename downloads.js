@@ -44,7 +44,7 @@
   // ---------- תרגומים ----------
   const T = {
     he: {
-      sec:'להורדה', ext:'תוסף לכרום', get:'⬇ הורדה', how:'איך מתקינים?', close:'סגור',
+      ext:'תוסף לכרום', get:'⬇ הורדה', how:'איך מתקינים?', close:'סגור',
       installH:'התקנה', usageH:'שימוש', noteH:'שים לב',
       app:"אפליקציה", openApp:"↗ פתיחה והתקנה",
       ink_t:"Floating Ink — מסמכים, מצגות וגיליונות",
@@ -111,7 +111,7 @@
       fullGuide:'🎬 המדריך המלא — צעד אחרי צעד'
     },
     en: {
-      sec:'Downloads', ext:'Chrome extension', get:'⬇ Download', how:'How to install?', close:'Close',
+      ext:'Chrome extension', get:'⬇ Download', how:'How to install?', close:'Close',
       installH:'Installation', usageH:'Usage', noteH:'Note',
       app:"APP", openApp:"↗ Open & install",
       ink_t:"Floating Ink — Documents, Presentations & Spreadsheets",
@@ -178,7 +178,7 @@
       fullGuide:'🎬 The full guide — step by step'
     },
     ar: {
-      sec:'للتحميل', ext:'إضافة كروم', get:'⬇ تحميل', how:'كيف أثبّتها؟', close:'إغلاق',
+      ext:'إضافة كروم', get:'⬇ تحميل', how:'كيف أثبّتها؟', close:'إغلاق',
       installH:'التثبيت', usageH:'الاستخدام', noteH:'ملاحظة',
       app:"تطبيق", openApp:"↗ فتح وتثبيت",
       ink_t:"Floating Ink — مستندات وعروض تقديمية وجداول بيانات",
@@ -245,7 +245,7 @@
       fullGuide:'🎬 الدليل الكامل — خطوة بخطوة'
     },
     zh: {
-      sec:'下载', ext:'Chrome 扩展', get:'⬇ 下载', how:'如何安装?', close:'关闭',
+      ext:'Chrome 扩展', get:'⬇ 下载', how:'如何安装?', close:'关闭',
       installH:'安装', usageH:'使用方法', noteH:'注意',
       app:"应用", openApp:"↗ 打开并安装",
       ink_t:"Floating Ink — 文档、演示文稿和电子表格",
@@ -312,7 +312,7 @@
       fullGuide:'🎬 完整教程——一步一步来'
     },
     es: {
-      sec:'Descargas', ext:'Extensión de Chrome', get:'⬇ Descargar', how:'¿Cómo se instala?', close:'Cerrar',
+      ext:'Extensión de Chrome', get:'⬇ Descargar', how:'¿Cómo se instala?', close:'Cerrar',
       installH:'Instalación', usageH:'Uso', noteH:'Nota',
       app:"APP", openApp:"↗ Abrir e instalar",
       ink_t:"Floating Ink — Documentos, presentaciones y hojas de cálculo",
@@ -379,7 +379,7 @@
       fullGuide:'🎬 La guía completa — paso a paso'
     },
     fr: {
-      sec:'Téléchargements', ext:'Extension Chrome', get:'⬇ Télécharger', how:'Comment l\'installer ?', close:'Fermer',
+      ext:'Extension Chrome', get:'⬇ Télécharger', how:'Comment l\'installer ?', close:'Fermer',
       installH:'Installation', usageH:'Utilisation', noteH:'À noter',
       app:"APPLI", openApp:"↗ Ouvrir et installer",
       ink_t:"Floating Ink — Documents, présentations et classeurs",
@@ -446,7 +446,7 @@
       fullGuide:'🎬 Le guide complet — étape par étape'
     },
     pt: {
-      sec:'Downloads', ext:'Extensão do Chrome', get:'⬇ Baixar', how:'Como instalar?', close:'Fechar',
+      ext:'Extensão do Chrome', get:'⬇ Baixar', how:'Como instalar?', close:'Fechar',
       installH:'Instalação', usageH:'Uso', noteH:'Atenção',
       app:"APP", openApp:"↗ Abrir e instalar",
       ink_t:"Floating Ink — Documentos, apresentações e planilhas",
@@ -513,7 +513,7 @@
       fullGuide:'🎬 O guia completo — passo a passo'
     },
     ru: {
-      sec:'Загрузки', ext:'Расширение Chrome', get:'⬇ Скачать', how:'Как установить?', close:'Закрыть',
+      ext:'Расширение Chrome', get:'⬇ Скачать', how:'Как установить?', close:'Закрыть',
       installH:'Установка', usageH:'Использование', noteH:'Важно',
       app:"ПРИЛОЖЕНИЕ", openApp:"↗ Открыть и установить",
       ink_t:"Floating Ink — документы, презентации и таблицы",
@@ -580,7 +580,7 @@
       fullGuide:'🎬 Полное руководство — шаг за шагом'
     },
     de: {
-      sec:'Downloads', ext:'Chrome-Erweiterung', get:'⬇ Herunterladen', how:'Wie installiere ich das?', close:'Schließen',
+      ext:'Chrome-Erweiterung', get:'⬇ Herunterladen', how:'Wie installiere ich das?', close:'Schließen',
       installH:'Installation', usageH:'Verwendung', noteH:'Hinweis',
       app:"APP", openApp:"↗ Öffnen & installieren",
       ink_t:"Floating Ink — Dokumente, Präsentationen und Tabellen",
@@ -820,8 +820,6 @@
   // ---------- החלפת שפה ----------
   function applyLang(lg) {
     lang = T[lg] ? lg : 'he';
-    const st = document.getElementById('dlSectionTitle');
-    if (st) st.textContent = t('sec');
     DOWNLOADS.forEach(d => {
       const card = grid.querySelector('[data-did="'+d.id+'"]');
       if (!card) return;
