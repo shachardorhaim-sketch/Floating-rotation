@@ -7,7 +7,7 @@ body { min-height:100vh; background:var(--bg); color:var(--text); font-family:"H
 /* הדף הראשי: לבן, עד שבוחרים צבע רקע בהגדרות.
    צבע כהה שנבחר מוסיף body.theme-dark, והטקסט נהיה בהיר (platform.js). */
 body.site { --page-bg:#ffffff; --bg:#ffffff; --surface:#ffffff; --soft:rgba(15,23,42,.045); --line:rgba(15,23,42,.10); --text:#0f172a; --muted:#5b6b7f; --ink:#0d9488; --shadow:rgba(15,23,42,.14); }
-body.site.theme-dark { --surface:rgba(255,255,255,.07); --soft:rgba(255,255,255,.06); --line:rgba(255,255,255,.12); --text:#eef3f8; --muted:#a8b6c7; --ink:#4fd1c5; --shadow:rgba(0,0,0,.55); }
+body.site.theme-dark { --page-bg:#000000; --bg:#000000; --surface:rgba(255,255,255,.07); --soft:rgba(255,255,255,.06); --line:rgba(255,255,255,.12); --text:#eef3f8; --muted:#a8b6c7; --ink:#4fd1c5; --shadow:rgba(0,0,0,.55); }
 
 /* ---------- STORE: הפס העליון ---------- */
 .site-head { display:flex; align-items:center; gap:12px; min-height:var(--head-h); padding:0 20px; position:sticky; top:0; z-index:40; border-bottom:1px solid var(--line);
