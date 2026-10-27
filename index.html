@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800;900&display=swap">
-<link rel="stylesheet" href="style.css?v=hub-6">
+<link rel="stylesheet" href="style.css?v=hub-7">
 </head>
 <body class="site">
 
@@ -46,20 +46,36 @@
           <div class="grid dl-grid" id="dlGrid"></div>
         </section>
 
+        <!-- מסך משחק (#play/<id>): המשחק במסגרת, פס עם השם והכפתורים, ועוד משחקים (hub.js) -->
+        <section class="game-view" id="gameHost" hidden>
+          <div class="player" id="player">
+            <div id="gameMount"></div>
+          </div>
+          <div class="player-bar">
+            <div class="pb-info">
+              <span class="pb-thumb" id="gameThumb"></span>
+              <div class="pb-text">
+                <h1 id="gameTitle"></h1>
+                <span class="pb-type" id="gameType"></span>
+              </div>
+            </div>
+            <div class="pb-actions">
+              <button class="pb-btn" id="fullBtn">⛶</button>
+              <button class="pb-btn" id="backBtn">✕</button>
+            </div>
+          </div>
+          <div class="more-games">
+            <h2 id="moreTitle">עוד משחקים</h2>
+            <div class="more-row" id="moreRow"></div>
+          </div>
+        </section>
+
         <footer class="site-foot">נבנה על ידי שחר דור-חיים ורובין שמואלי · Floating rotation 2026</footer>
       </main>
     </div>
   </div>
 </div>
 
-<!-- ============ מסך המשחק ============ -->
-<div id="gameHost">
-  <div class="host-bar">
-    <button id="backBtn">← חזרה לחנות</button>
-    <span id="gameTitle"></span>
-  </div>
-  <div id="gameMount"></div>
-</div>
 
 <!-- ============ הקבצים ============ -->
 <!-- חשוב: הסדר חשוב! קודם הנתונים, אחר כך המשחקים, ובסוף הפלטפורמה -->
@@ -79,7 +95,7 @@
 <script src="game-chess.js"></script>
 <script src="game-tetris.js"></script>
 <!-- 4. הפלטפורמה (חייב להיות אחרון!) -->
-<script src="platform.js?v=hub-7"></script>
+<script src="platform.js?v=hub-8"></script>
 
 <!-- 5. ההדגמה המונפשת (חייבת להיטען לפני downloads.js) -->
 <script src="demo.js"></script>
@@ -91,7 +107,7 @@
 <script src="bookmarklet.js"></script>
 
 <!-- 7. הקטגוריות: ניווט, אריחים וכותרות (אחרון — סופר את הכרטיסים של כולם) -->
-<script src="hub.js?v=hub-4"></script>
+<script src="hub.js?v=hub-5"></script>
 
 </body>
 </html>

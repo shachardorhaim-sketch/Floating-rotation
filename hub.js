@@ -19,31 +19,31 @@
   ];
 
   const HT = {
-    he: { side: 'קטגוריות', home: 'דף הבית', toggle: 'הצגה או הסתרה של הקטגוריות', close: 'סגירה', sub_2d: 'משחקי 2D', sub_3d: 'משחקי 3D',
+    he: { side: 'קטגוריות', home: 'דף הבית', toggle: 'הצגה או הסתרה של הקטגוריות', close: 'סגירה', more: 'עוד משחקים', full: 'מסך מלא', sub_2d: 'משחקי 2D', sub_3d: 'משחקי 3D',
           games: 'משחקים חינמיים', games_d: 'משחקים קטנים שבנינו, שחר ורובין. משחקים ישר בדפדפן, בלי הורדה.',
           apps: 'התקנות חינמיות', apps_d: 'דברים שימושיים שבנינו: מסמכים ומצגות, ותרגום של כל אתר.' },
-    en: { side: 'Categories', home: 'Home', toggle: 'Show or hide categories', close: 'Close', sub_2d: '2D games', sub_3d: '3D games',
+    en: { side: 'Categories', home: 'Home', toggle: 'Show or hide categories', close: 'Close', more: 'More games', full: 'Full screen', sub_2d: '2D games', sub_3d: '3D games',
           games: 'Free games', games_d: 'Small games built by Shachar and Robin. Play right in your browser, nothing to download.',
           apps: 'Free installs', apps_d: 'Useful things we built: documents and presentations, and translation for any website.' },
-    ar: { side: 'الفئات', home: 'الرئيسية', toggle: 'إظهار الفئات أو إخفاؤها', close: 'إغلاق', sub_2d: 'ألعاب 2D', sub_3d: 'ألعاب 3D',
+    ar: { side: 'الفئات', home: 'الرئيسية', toggle: 'إظهار الفئات أو إخفاؤها', close: 'إغلاق', more: 'ألعاب أخرى', full: 'ملء الشاشة', sub_2d: 'ألعاب 2D', sub_3d: 'ألعاب 3D',
           games: 'ألعاب مجانية', games_d: 'ألعاب صغيرة بناها شاحار وروبين. العب مباشرة في المتصفح، بلا تحميل.',
           apps: 'تثبيتات مجانية', apps_d: 'أشياء مفيدة بنيناها: مستندات وعروض تقديمية، وترجمة لأي موقع.' },
-    zh: { side: '分类', home: '首页', toggle: '显示或隐藏分类', close: '关闭', sub_2d: '2D 游戏', sub_3d: '3D 游戏',
+    zh: { side: '分类', home: '首页', toggle: '显示或隐藏分类', close: '关闭', more: '更多游戏', full: '全屏', sub_2d: '2D 游戏', sub_3d: '3D 游戏',
           games: '免费游戏', games_d: 'Shachar 和 Robin 制作的小游戏。直接在浏览器里玩，无需下载。',
           apps: '免费安装', apps_d: '我们做的实用工具：文档和演示文稿，以及任何网站的翻译。' },
-    es: { side: 'Categorías', home: 'Inicio', toggle: 'Mostrar u ocultar categorías', close: 'Cerrar', sub_2d: 'Juegos 2D', sub_3d: 'Juegos 3D',
+    es: { side: 'Categorías', home: 'Inicio', toggle: 'Mostrar u ocultar categorías', close: 'Cerrar', more: 'Más juegos', full: 'Pantalla completa', sub_2d: 'Juegos 2D', sub_3d: 'Juegos 3D',
           games: 'Juegos gratis', games_d: 'Juegos pequeños creados por Shachar y Robin. Se juegan en el navegador, sin descargar nada.',
           apps: 'Instalaciones gratis', apps_d: 'Cosas útiles que creamos: documentos y presentaciones, y traducción de cualquier sitio web.' },
-    fr: { side: 'Catégories', home: 'Accueil', toggle: 'Afficher ou masquer les catégories', close: 'Fermer', sub_2d: 'Jeux 2D', sub_3d: 'Jeux 3D',
+    fr: { side: 'Catégories', home: 'Accueil', toggle: 'Afficher ou masquer les catégories', close: 'Fermer', more: 'Plus de jeux', full: 'Plein écran', sub_2d: 'Jeux 2D', sub_3d: 'Jeux 3D',
           games: 'Jeux gratuits', games_d: 'Des petits jeux créés par Shachar et Robin. On y joue dans le navigateur, sans rien télécharger.',
           apps: 'Installations gratuites', apps_d: "Des outils utiles qu'on a créés : documents et présentations, et la traduction de n'importe quel site." },
-    pt: { side: 'Categorias', home: 'Início', toggle: 'Mostrar ou ocultar categorias', close: 'Fechar', sub_2d: 'Jogos 2D', sub_3d: 'Jogos 3D',
+    pt: { side: 'Categorias', home: 'Início', toggle: 'Mostrar ou ocultar categorias', close: 'Fechar', more: 'Mais jogos', full: 'Tela cheia', sub_2d: 'Jogos 2D', sub_3d: 'Jogos 3D',
           games: 'Jogos grátis', games_d: 'Joguinhos criados por Shachar e Robin. Jogue direto no navegador, sem baixar nada.',
           apps: 'Instalações grátis', apps_d: 'Coisas úteis que criamos: documentos e apresentações, e tradução de qualquer site.' },
-    ru: { side: 'Категории', home: 'Главная', toggle: 'Показать или скрыть категории', close: 'Закрыть', sub_2d: '2D-игры', sub_3d: '3D-игры',
+    ru: { side: 'Категории', home: 'Главная', toggle: 'Показать или скрыть категории', close: 'Закрыть', more: 'Ещё игры', full: 'Во весь экран', sub_2d: '2D-игры', sub_3d: '3D-игры',
           games: 'Бесплатные игры', games_d: 'Небольшие игры, которые сделали Шахар и Робин. Играй прямо в браузере, ничего не скачивая.',
           apps: 'Бесплатные установки', apps_d: 'Полезные вещи, которые мы сделали: документы и презентации, а ещё перевод любого сайта.' },
-    de: { side: 'Kategorien', home: 'Startseite', toggle: 'Kategorien ein- oder ausblenden', close: 'Schließen', sub_2d: '2D-Spiele', sub_3d: '3D-Spiele',
+    de: { side: 'Kategorien', home: 'Startseite', toggle: 'Kategorien ein- oder ausblenden', close: 'Schließen', more: 'Mehr Spiele', full: 'Vollbild', sub_2d: '2D-Spiele', sub_3d: '3D-Spiele',
           games: 'Kostenlose Spiele', games_d: 'Kleine Spiele von Shachar und Robin. Direkt im Browser spielen, ohne Download.',
           apps: 'Kostenlose Installationen', apps_d: 'Nützliche Dinge, die wir gebaut haben: Dokumente und Präsentationen und Übersetzung für jede Website.' },
   };
@@ -135,19 +135,26 @@
   MOBILE.addEventListener('change', () => setSide(!MOBILE.matches && savedOpen(), false));
   setSide(!MOBILE.matches && savedOpen(), false);
 
-  // ---------- איזה דף מוצג: דף הבית או קטגוריה ----------
-  function current() {
-    const id = decodeURIComponent(location.hash.slice(1));
-    return CATS.some(c => c.id === id) ? id : '';
+  // ---------- איזה דף מוצג: דף הבית, קטגוריה, או משחק (#play/<id>) ----------
+  function route() {
+    const h = decodeURIComponent(location.hash.slice(1));
+    if (h.startsWith('play/')) {
+      const g = GAMES.find(x => x.id === h.slice(5) && !x.url);
+      if (g) return { cat: 'games', play: g.id };
+    }
+    return { cat: CATS.some(c => c.id === h) ? h : '', play: null };
   }
   function render() {
-    const id = current();
-    home.hidden = id !== '';
-    CATS.forEach(c => { const s = sec(c); if (s) s.hidden = c.id !== id; });
-    nav.querySelectorAll('.side-item').forEach(b => b.classList.toggle('on', b.dataset.go === id));
+    const r = route();
+    if (openId && openId !== r.play) stopGame();
+    home.hidden = !!r.play || r.cat !== '';
+    CATS.forEach(c => { const s = sec(c); if (s) s.hidden = !!r.play || c.id !== r.cat; });
+    gameView.hidden = !r.play;
+    nav.querySelectorAll('.side-item').forEach(b => b.classList.toggle('on', b.dataset.go === r.cat));
+    if (r.play && openId !== r.play) startGame(r.play);
   }
   function go(id) {
-    if (id !== current()) history.pushState(null, '', id ? '#' + id : location.pathname + location.search);
+    if (id !== location.hash.slice(1)) history.pushState(null, '', id ? '#' + id : location.pathname + location.search);
     render();
     window.scrollTo(0, 0);
     if (MOBILE.matches) setSide(false, false);
@@ -155,6 +162,107 @@
   window.addEventListener('popstate', render);
   window.addEventListener('hashchange', render);
   if (logo) logo.addEventListener('click', e => { e.preventDefault(); go(''); });
+
+  // ---------- מסך המשחק ----------
+  const gameView = $('gameHost'), mount = $('gameMount'), player = $('player');
+  const fullBtn = $('fullBtn'), backBtn = $('backBtn'), grid = $('grid');
+  const BASE_TITLE = document.title;
+  let openId = null, fitObs = null, kidObs = null;
+  const cardOf = id => grid.querySelector('[data-gid="' + id + '"]');
+
+  // נקרא מכרטיס משחק (platform.js) ומ"עוד משחקים"
+  window.flrotPlay = function (id) {
+    const g = GAMES.find(x => x.id === id);
+    if (!g) return;
+    if (g.url) { openExternal(g); return; }
+    const h = '#play/' + id;
+    if (route().play) history.replaceState(history.state, '', h);   // ממשחק למשחק: בלי עוד צעד ב"אחורה"
+    else history.pushState({ fromSite: true }, '', h);
+    render();
+    window.scrollTo(0, 0);
+    if (MOBILE.matches) setSide(false, false);
+  };
+  function leaveGame() {
+    if (history.state && history.state.fromSite) history.back();   // חוזרים בדיוק לאן שהיינו
+    else { history.replaceState(null, '', '#games'); render(); }
+  }
+  function startGame(id) {
+    openGame(GAMES.find(x => x.id === id));   // platform.js מרכיב את המשחק בתוך gameMount
+    openId = id;
+    fillBar();
+    fillMore();
+    watchFit();
+  }
+  function stopGame() {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    if (fitObs) { fitObs.disconnect(); fitObs = null; }
+    if (kidObs) { kidObs.disconnect(); kidObs = null; }
+    closeGame();                               // platform.js מפרק את המשחק
+    openId = null;
+    document.title = BASE_TITLE;
+  }
+  function fillBar() {
+    const card = cardOf(openId);
+    const name = card ? card.querySelector('h3').textContent : '';
+    $('gameTitle').textContent = name;
+    $('gameType').textContent = card ? card.querySelector('.gbadge').textContent : '';
+    const th = $('gameThumb');
+    th.innerHTML = '';
+    if (card) th.appendChild(card.querySelector('.gthumb').cloneNode(true));
+    document.title = name ? name + ' · ' + BASE_TITLE : BASE_TITLE;
+  }
+  function fillMore() {
+    const row = $('moreRow');
+    row.innerHTML = '';
+    [...grid.children].forEach(card => {
+      const gid = card.dataset.gid;
+      if (!gid || gid === openId) return;
+      const b = document.createElement('button');
+      b.className = 'more-card';
+      b.appendChild(card.querySelector('.gthumb').cloneNode(true));
+      const n = document.createElement('span');
+      n.className = 'more-name';
+      n.textContent = card.querySelector('h3').textContent;
+      b.appendChild(n);
+      b.onclick = e => { e.currentTarget.blur(); window.flrotPlay(gid); };
+      row.appendChild(b);
+    });
+  }
+
+  // משחק שגדול מהמסגרת מוקטן כדי שייכנס כולו, בלי פס גלילה. משחק ב-iframe מסתדר לבד.
+  function fit() {
+    const kid = mount.firstElementChild;
+    if (!kid || kid.tagName === 'IFRAME') return;
+    const cs = getComputedStyle(mount);
+    const w = mount.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const h = mount.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    const k = Math.min(1, w / kid.offsetWidth, h / kid.offsetHeight);
+    kid.style.scale = k < 0.995 ? k.toFixed(3) : '';
+  }
+  function watchFit() {
+    fitObs = new ResizeObserver(fit);
+    fitObs.observe(mount);
+    if (mount.firstElementChild) fitObs.observe(mount.firstElementChild);
+    kidObs = new MutationObserver(() => { if (mount.firstElementChild) fitObs.observe(mount.firstElementChild); fit(); });
+    kidObs.observe(mount, { childList: true });
+    fit();
+  }
+
+  if (fullBtn) fullBtn.onclick = e => {
+    e.currentTarget.blur();
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else if (player.requestFullscreen) player.requestFullscreen().catch(() => {});
+  };
+  if (backBtn) backBtn.onclick = e => { e.currentTarget.blur(); leaveGame(); };
+
+  // בזמן משחק: חיצים ורווח שייכים למשחק — הם לא גוללים את הדף
+  const GAME_KEYS = [' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown'];
+  document.addEventListener('keydown', e => {
+    if (!openId || !GAME_KEYS.includes(e.key)) return;
+    const t = e.target;
+    if (t && (/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(t.tagName) || t.isContentEditable)) return;
+    e.preventDefault();
+  }, true);
 
   // ---------- טקסטים (בכל החלפת שפה) ----------
   function apply(lg) {
@@ -174,6 +282,10 @@
       s.querySelector('.cat-head p').textContent = tx(c.id + '_d');
       s.querySelectorAll('.sub-tab').forEach(b => { b.querySelector('.st-name').textContent = tx('sub_' + b.dataset.sub); });
     });
+    $('moreTitle').textContent = tx('more');
+    if (fullBtn) { fullBtn.title = tx('full'); fullBtn.setAttribute('aria-label', tx('full')); }
+    if (backBtn) { backBtn.title = tx('close'); backBtn.setAttribute('aria-label', tx('close')); }
+    if (openId) { fillBar(); fillMore(); }
   }
 
   document.addEventListener('flrot:lang', e => apply(e.detail));
