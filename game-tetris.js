@@ -1,5 +1,5 @@
 // ============================================================
-//  3D Tetris — מאת שחר · לפלטפורמת Floating rotation
+//  Tetris — לפלטפורמת Floating rotation
 //  קובץ עצמאי לגמרי: כל ה-CSS מוזרק מבפנים, אין צורך לגעת ב-style.css
 // ============================================================
 
@@ -13,6 +13,7 @@
     align-items: center;
     justify-content: center;
     width: 100%;
+    min-height: 100%;
     padding: 16px;
     color: #fff;
     font-family: 'Segoe UI', Tahoma, sans-serif;
@@ -27,11 +28,7 @@
     background-clip: text;
     -webkit-text-fill-color: transparent;
   }
-  .tetris-sub {
-    color: rgba(255,255,255,0.5);
-    font-size: 12px;
-    margin-bottom: 16px;
-  }
+  .tetris-stats .tetris-title { font-size: 30px; margin: 0 0 6px; text-align: center; }
   .tetris-main {
     display: flex;
     gap: 18px;
@@ -43,7 +40,7 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    min-width: 120px;
+    min-width: 140px;
   }
   .tetris-card {
     background: rgba(255,255,255,0.05);
@@ -58,7 +55,7 @@
     letter-spacing: 1px;
     margin-bottom: 3px;
   }
-  .tetris-value { font-size: 22px; font-weight: 600; }
+  .tetris-value { font-size: 26px; font-weight: 600; }
   .tetris-board-wrap {
     position: relative;
     background: #0a0a0f;
@@ -67,6 +64,7 @@
     border: 1px solid rgba(255,255,255,0.1);
     box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 4px rgba(255,255,255,0.03);
     width: min(320px, 74vw);
+    width: min(360px, 74vw, calc((var(--frame-h, 9999px) - 40px) / 2));
     line-height: 0;
   }
   .tetris-board-wrap canvas { display: block; width: 100%; height: auto; }
@@ -134,6 +132,7 @@
   }
   .tetris-tbtn:active { background: rgba(168,85,247,0.4); transform: scale(0.94); }
   .tetris-tbtn.wide { grid-column: span 5; font-size: 15px; font-weight: 600; padding: 12px 0; }
+  @media (hover: hover) and (pointer: fine) { .tetris-touch { display: none; } }
   `;
 
   function ensureCSS() {
@@ -172,11 +171,9 @@
     const TT = k => (TDICT[TLNG] && TDICT[TLNG][k]) || TDICT['he'][k] || k;
     root.innerHTML = `
       <div class="tetris-wrap" style="direction:${TRTL?'rtl':'ltr'};">
-        <div class="tetris-title">3D TETRIS</div>
-        <div class="tetris-sub">by Shachar · Floating rotation</div>
-
         <div class="tetris-main">
           <div class="tetris-stats">
+            <div class="tetris-title">TETRIS</div>
             <div class="tetris-card"><div class="tetris-label">${TT('score')}</div><div class="tetris-value" id="tetris-score">0</div></div>
             <div class="tetris-card"><div class="tetris-label">${TT('lines')}</div><div class="tetris-value" id="tetris-lines">0</div></div>
             <div class="tetris-card"><div class="tetris-label">${TT('level')}</div><div class="tetris-value" id="tetris-level">1</div></div>

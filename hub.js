@@ -198,6 +198,7 @@
     if (fitObs) { fitObs.disconnect(); fitObs = null; }
     if (kidObs) { kidObs.disconnect(); kidObs = null; }
     closeGame();                               // platform.js מפרק את המשחק
+    mount.style.backgroundColor = '';
     openId = null;
     document.title = BASE_TITLE;
   }
@@ -236,6 +237,10 @@
     const cs = getComputedStyle(mount);
     const w = mount.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     const h = mount.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    mount.style.setProperty('--frame-h', Math.round(h) + 'px');   // משחק שרוצה להתאים את עצמו לגובה (טטריס)
+    // הצדדים של המסגרת בצבע של המשחק עצמו (שחמט, כוכבים), כדי שלא יראו פס כחול
+    const bg = getComputedStyle(kid).backgroundColor;
+    mount.style.backgroundColor = (bg === 'transparent' || /,\s*0\)$/.test(bg)) ? '' : bg;
     const k = Math.min(1, w / kid.offsetWidth, h / kid.offsetHeight);
     kid.style.scale = k < 0.995 ? k.toFixed(3) : '';
   }

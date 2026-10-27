@@ -202,6 +202,18 @@ body.side-hidden .side { width:0; opacity:0; border-left-width:0; }
   background: rgba(10, 14, 30, 0.55);
   backdrop-filter: blur(2px);
 }
+/* במסך המשחק: הזיכרון בגובה המסגרת (לא בגובה כל החלון), והרקע הצבעוני עובר למסגרת עצמה,
+   כדי שימלא גם את הצדדים כשהמשחק מוקטן */
+#gameMount .mem-wrap { min-height: 100%; }
+@supports selector(:has(a)) {
+  #gameMount:has(> .mem-wrap) { background: url('memory-bg.jpg') center / cover; }
+  #gameMount:has(> .mem-wrap)::before { content: ''; position: absolute; inset: 0; background: rgba(10, 14, 30, 0.55); backdrop-filter: blur(2px); }
+  #gameMount:has(> .mem-wrap) .mem-bg { display: none; }
+}
+/* החלונות של המשחקים מכסים רק את המסגרת, לא את כל האתר:
+   בשחמט (הגדרות, הכתרה) הם עוברים ל-absolute; בזיכרון החלון נשאר fixed, והמשחק עצמו הופך לגבול שלו */
+#gameMount .ch-modal { position: absolute; }
+#gameMount .mem-wrap { contain: layout; }
 
 .mem-inner {
   position: relative;
