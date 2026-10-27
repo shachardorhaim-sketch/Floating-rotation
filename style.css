@@ -52,6 +52,12 @@ body.side-hidden .side { width:0; opacity:0; border-left-width:0; }
 .ch-text h2 { font-size:24px; font-weight:900; }
 .ch-text p { color:var(--muted); font-size:14px; margin-top:2px; line-height:1.5; }
 .ch-count { font-size:13px; font-weight:800; color:var(--text); background:color-mix(in srgb,var(--c) 24%,transparent); padding:4px 12px; border-radius:999px; }
+.cat-subs { display:inline-flex; gap:4px; padding:4px; margin-bottom:18px; background:var(--soft); border:1px solid var(--line); border-radius:14px; }
+.sub-tab { display:flex; align-items:center; gap:8px; background:transparent; border:0; border-radius:10px; padding:8px 16px; color:var(--muted); font:inherit; font-size:14px; font-weight:800; cursor:pointer; transition:background .15s,color .15s; }
+.sub-tab:hover { color:var(--text); }
+.sub-tab.on { background:var(--c); color:#0a0f17; }
+.sub-tab:focus-visible { outline:3px solid var(--c); outline-offset:2px; }
+.st-count { font-size:12px; border-radius:999px; padding:1px 8px; background:color-mix(in srgb,currentColor 14%,transparent); }
 .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(250px,100%),1fr)); gap:18px; padding-bottom:28px; }
 
 /* ---------- כרטיס ---------- */

@@ -57,6 +57,7 @@ function mountIframe(url) {
 }
 
 // ---------- קטלוג המשחקים בפלטפורמה ----------
+// dim:'3d' — משחק בתלת-ממד (מופיע בלשונית 3D של "משחקים חינמיים"). בלי dim המשחק הוא 2D.
 const GAMES = [
   { id:'zombies', title:'מתקפת הזומבים', desc:'שרוד 20 מפות, חסל זומבים ובוסים ושדרג את הנשקים שלך.', imgFile:'zombie-attack/assets/last-stand-bg.png', imgFill:true, icon:'🧟', badge:'חדש!', bg:'#151b15', mount:mountIframe('zombie-attack/') },
   { id:'dino', title:'Dino Runner', desc:'רוץ, קפוץ, אסוף מטבעות וקנה דמויות בחנות.', imgFile:'dino-logo.png', icon:'🦖', badge:'ARCADE', bg:'linear-gradient(135deg,#1b3a4b,#0d1b2a)', mount:mountDino },
@@ -73,6 +74,7 @@ GAMES.forEach(g => {
   const card = document.createElement('div');
   card.className = 'gcard';
   card.dataset.gid = g.id;
+  card.dataset.dim = g.dim || '2d';
   card.tabIndex = 0;
   // תמיכה ב-3 סוגי תמונה: קובץ (imgFile), base64 (img), או אימוג'י (icon)
   // imgFill:true — תמונת סצנה שממלאת את כל המשבצת (cover).
