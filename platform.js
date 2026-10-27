@@ -193,13 +193,31 @@ function openExternal(g) {
     colorsBox.appendChild(sw);
   });
 
+  // הרקע לבן כל עוד לא בחרו צבע. צבע כהה מעביר את הדף לטקסט בהיר (body.theme-dark).
+  function isDarkColor(col){
+    const probe = document.createElement('i');
+    probe.style.color = col;
+    document.body.appendChild(probe);
+    const m = getComputedStyle(probe).color.match(/[\d.]+/g);
+    probe.remove();
+    if(!m || m.length < 3) return false;
+    const L = (0.2126*m[0] + 0.7152*m[1] + 0.0722*m[2]) / 255;
+    return L < 0.5;
+  }
+  function applyTheme(col){
+    document.body.classList.toggle('theme-dark', !!col && isDarkColor(col));
+    if(col) document.body.style.setProperty('--page-bg', col);
+    else document.body.style.removeProperty('--page-bg');
+  }
   function setBg(col){
     document.body.style.background = col;
+    applyTheme(col);
     save('bg', col);
     ov.querySelectorAll('.set-sw').forEach(s=> s.classList.toggle('active', s.dataset.col===col));
   }
   function resetBg(){
     document.body.style.background = '';
+    applyTheme('');
     save('bg', '');
     ov.querySelectorAll('.set-sw').forEach(s=> s.classList.remove('active'));
   }
@@ -259,6 +277,6 @@ function openExternal(g) {
 
   // ---------- init: restore saved prefs ----------
   const savedBg = load('bg');
-  if(savedBg){ document.body.style.background = savedBg; ov.querySelectorAll('.set-sw').forEach(s=> s.classList.toggle('active', s.dataset.col===savedBg)); }
+  if(savedBg){ document.body.style.background = savedBg; applyTheme(savedBg); ov.querySelectorAll('.set-sw').forEach(s=> s.classList.toggle('active', s.dataset.col===savedBg)); }
   applyLanguage(curLang);
 })();
