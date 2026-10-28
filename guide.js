@@ -6,7 +6,7 @@
 (function () {
 
   var RTL = ['he', 'ar'];
-  var LANGS = [['he','עברית'],['en','English'],['ar','العربية'],['zh','中文'],
+  var LANGS = [['he','עברית'],['en','English'],['ar','العربية'],
                ['es','Español'],['fr','Français'],['pt','Português'],['ru','Русский'],['de','Deutsch']];
 
   // ---------- טקסטים ----------
@@ -64,24 +64,6 @@
       n9:'اضغط عليّ في شريط المفضلة. سأفتح في زاوية الصفحة.',
       n10:'اختر اللغة التي تريدها واضغط "ترجم الصفحة". سأمرّ على كل النص وأستبدله.',
       n11:'أثناء العمل لديك ⏹ إيقاف إن غيّرت رأيك. وفي النهاية ↩ استعادة الأصل تعيد الصفحة كما كانت تماماً. هذا كل شيء.'
-    },
-    zh: {
-      title:'怎么把我装上', sub:'完整教程——我会一步步带你做',
-      back:'← 返回网站', play:'⏸ 暂停', paused:'▶ 继续', prev:'⏮', next:'⏭',
-      chapters:'步骤', dragMe:'⇱ 把我拖到书签栏', copyMe:'📋 复制我',
-      copied:'已复制 ✓', copyManual:'全选(Ctrl+A)并复制(Ctrl+C)',
-      doIt:'现在就试——这个按钮是真的:', bmName:'翻译',
-      n1:'你好,我是翻译器。我住在浏览器的书签栏里,点一下就能翻译你正在看的任何网站。我们来把我装上,不到一分钟。',
-      n2:'这是最常见的问题:大多数人的书签栏是隐藏的。看到了吗?地址栏下面什么都没有。我没有地方待。',
-      n3:'按 Ctrl + Shift + B。Mac 上是 Cmd + Shift + B。这会打开书签栏。',
-      n4:'出来了。现在我有位置了。没有这一步,后面都不管用。',
-      n5:'现在用鼠标抓住我,把我拖到那条栏上。中途不要松手。',
-      n6:'进去了。就这样——一辈子只需做一次。从现在起我一直在那儿,任何网站都能用。',
-      n7:'拖不动?还有别的办法:复制我,按 Ctrl + Shift + O,点三点菜单选「添加新书签」,然后把我粘贴到网址栏。',
-      n8:'现在来试试。打开任何你喜欢的网站——新闻、维基百科、购物,都行。',
-      n9:'在书签栏点我一下。我会在页面角落打开。',
-      n10:'选择你想要的语言,点「翻译页面」。我会把所有文字都换掉。',
-      n11:'翻译过程中你有 ⏹ 停止,随时可以中断。结束后 ↩ 恢复原文 会把页面完全还原。就这些。'
     },
     es: {
       title:'Cómo conectarme', sub:'Guía completa — te acompaño paso a paso',
@@ -244,7 +226,6 @@
       he:['חדשות מתפרצות היום','לקריאת הכתבה המלאה','ספורט ומזג אוויר','הרשמה לעדכונים'],
       en:['Breaking news today','Read the full story','Sports and weather','Subscribe for updates'],
       ar:['أخبار عاجلة اليوم','اقرأ الخبر كاملاً','الرياضة والطقس','اشترك في التحديثات'],
-      zh:['今日突发新闻','阅读完整报道','体育与天气','订阅最新消息'],
       es:['Últimas noticias de hoy','Leer la noticia completa','Deportes y clima','Suscríbete a las novedades'],
       fr:['Dernières nouvelles du jour','Lire l\'article complet','Sports et météo','Abonne-toi aux mises à jour'],
       pt:['Notícias de última hora','Leia a matéria completa','Esportes e clima','Assine as novidades'],
