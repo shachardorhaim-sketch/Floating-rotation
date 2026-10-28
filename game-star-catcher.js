@@ -248,7 +248,7 @@ function mountCatch(root){
   }
 
   function text(value,x,y,size,color,align,weight){
-    ctx.font = (weight || '700')+' '+size+'px Arial';
+    ctx.font = (weight || '700')+' '+size+'px Heebo, Arial, sans-serif';
     ctx.fillStyle = color || '#fff';
     ctx.textAlign = align || 'center';
     ctx.textBaseline = 'middle';

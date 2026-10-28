@@ -300,9 +300,9 @@ function mountDino(root) {
   }
 
   function drawHUD(){
-    ctx.fillStyle = '#e8eef5'; ctx.font = 'bold 20px monospace'; ctx.textAlign = 'right';
+    ctx.fillStyle = '#e8eef5'; ctx.font = 'bold 20px Heebo, sans-serif'; ctx.textAlign = 'right';
     ctx.fillText(String(score).padStart(5,'0'), W-20, 32);
-    ctx.font = 'bold 14px monospace'; ctx.fillStyle = '#e8eef5';
+    ctx.font = 'bold 14px Heebo, sans-serif'; ctx.fillStyle = '#e8eef5';
     ctx.fillText('HI '+String(myBest).padStart(5,'0'), W-20, 52);
     ctx.textAlign = 'left';
   }
@@ -312,7 +312,7 @@ function mountDino(root) {
     ctx.textAlign = 'center';
     lines.forEach((l,i) => {
       ctx.fillStyle = l.c || '#e8eef5';
-      ctx.font = l.f || 'bold 20px monospace';
+      ctx.font = l.f || 'bold 20px Heebo, sans-serif';
       ctx.fillText(l.t, W/2, H/2-(lines.length-1)*18+i*36);
     });
     ctx.textAlign = 'left';
@@ -362,14 +362,14 @@ function mountDino(root) {
     drawHUD();
 
     if (state === 'menu') centerText([
-      { t:'DINO RUNNER', c:'#ffd166', f:'bold 30px monospace' },
-      { t:DT('startPrompt'), f:'bold 15px monospace', c:'#8ba0b5' }
+      { t:'DINO RUNNER', c:'#ffd166', f:'bold 30px Heebo, sans-serif' },
+      { t:DT('startPrompt'), f:'bold 15px Heebo, sans-serif', c:'#8ba0b5' }
     ]);
     if (state === 'dead') centerText([
-      { t:DT('dead'), c:'#d9856b', f:'bold 30px monospace' },
-      { t:DT('scorePrefix')+score, f:'bold 16px monospace' },
-      { t:DT('bestPrefix')+myBest, c:'#ffd166', f:'bold 15px monospace' },
-      { t:DT('againPrompt'), c:'#8ba0b5', f:'bold 14px monospace' }
+      { t:DT('dead'), c:'#d9856b', f:'bold 30px Heebo, sans-serif' },
+      { t:DT('scorePrefix')+score, f:'bold 16px Heebo, sans-serif' },
+      { t:DT('bestPrefix')+myBest, c:'#ffd166', f:'bold 15px Heebo, sans-serif' },
+      { t:DT('againPrompt'), c:'#8ba0b5', f:'bold 14px Heebo, sans-serif' }
     ]);
 
     ctx.restore();
