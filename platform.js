@@ -56,7 +56,7 @@ function mountIframe(url) {
 //   צבע ה-bg בלבד. bg צריך להיות בדיוק הצבע של רקע הלוגו, כדי שלא יראו את הריבוע שלו.
 // dim:'3d' — משחק בתלת-ממד (מופיע בלשונית 3D של "משחקים חינמיים"). בלי dim המשחק הוא 2D.
 const GAMES = [
-  { id:'zombies', title:'מתקפת הזומבים', desc:'שרוד 20 מפות, חסל זומבים ובוסים ושדרג את הנשקים שלך.', imgFile:'zombie-attack/assets/last-stand-bg.png', imgFill:true, icon:'🧟', type:'SURVIVAL', added:'2026-09-12', bg:'#151b15', mount:mountIframe('zombie-attack/') },
+  { id:'zombies', title:'מתקפת הזומבים', desc:'שרוד 20 מפות, חסל זומבים ובוסים ושדרג את הנשקים שלך.', imgFile:'zombie-card.webp', imgFill:true, icon:'🧟', type:'SURVIVAL', added:'2026-09-12', bg:'#151b15', mount:mountIframe('zombie-attack/') },
   { id:'dino', title:'Dino Runner', desc:'רוץ, קפוץ, אסוף מטבעות וקנה דמויות בחנות.', imgFile:'dino-logo.png', icon:'🦖', type:'ARCADE', added:'2026-07-15', bg:'linear-gradient(135deg,#1b3a4b,#0d1b2a)', mount:mountDino },
   { id:'catch', title:'Star Catcher', desc:'תפוס כוכבים נופלים עם הסלסלה.', imgFile:'star-logo.png', icon:'⭐', type:'CASUAL', added:'2026-07-15', bg:'#161736', mount:mountCatch },
   { id:'memory', title:'Memory Adjustment', desc:'מצא את כל הזוגות — 7 שלבים נגד השעון.', imgFile:'memory-logo.png', icon:'🧠', type:'PUZZLE', added:'2026-07-15', bg:'linear-gradient(135deg,#1b4b3a,#0d1b2a)', mount:mountMemory },
