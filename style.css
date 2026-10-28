@@ -44,8 +44,8 @@ body.side-hidden .side { width:0; opacity:0; border-left-width:0; }
 .site-col { flex:1; min-width:0; min-height:100vh; display:flex; flex-direction:column; }
 .site-main { flex:1; display:flex; flex-direction:column; }
 .view-home { flex:1; padding:20px 28px 10px; }
-/* הבאנר: כל רוחב העמודה, ולא גבוה מהמסך (במסך רחב מאוד נחתך קצת מלמעלה ומלמטה) */
-.home-banner { display:block; width:100%; height:auto; max-height:calc(100vh - var(--head-h) - 40px); object-fit:cover; border-radius:18px; box-shadow:0 18px 40px -18px rgba(0,0,0,.6); }
+/* הבאנר: פס רחב ונמוך בראש דף הבית. רואים את האמצע של התמונה, איפה שכתוב השם */
+.home-banner { display:block; width:100%; height:auto; aspect-ratio:11 / 2; object-fit:cover; object-position:center; border-radius:18px; box-shadow:0 18px 40px -18px rgba(0,0,0,.6); }
 
 /* ---------- קטגוריה: כותרת + רשת ---------- */
 .cat-sec { --c:#4fd1c5; padding:26px 28px 10px; }
@@ -94,7 +94,7 @@ body.side-hidden .side { width:0; opacity:0; border-left-width:0; }
   body.side-hidden .side-shade { opacity:0; pointer-events:none; }
   .cat-sec { padding:20px 16px 8px; }
   .view-home { padding:14px 12px 8px; }
-  .home-banner { border-radius:14px; }
+  .home-banner { border-radius:14px; aspect-ratio:3 / 1; }
   .ch-text h2 { font-size:20px; }
 }
 
