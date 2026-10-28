@@ -34,7 +34,7 @@ body.game-running .settings-btn { top:20px; }
 
 .screen { position: absolute; inset: 0; display: none; z-index: 20; }
 .screen.active { display: flex; }
-#start-screen { align-items: center; padding: clamp(24px, 7vw, 110px); background: url('assets/last-stand-bg.png') center/cover no-repeat; }
+#start-screen { align-items: center; padding: clamp(24px, 7vw, 110px); background: url('assets/start-bg.webp') center/cover no-repeat; }
 .start-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(4,5,5,.18), rgba(4,5,5,.45) 45%, rgba(4,5,5,.96) 100%), linear-gradient(0deg, rgba(6,7,7,.82), transparent 45%); }
 .start-content { position: relative; width: min(610px, 92vw); z-index: 1; }
 .eyebrow { margin: 0 0 12px; color: var(--ember-hot); font-weight: 800; letter-spacing: .15em; font-size: 13px; }
