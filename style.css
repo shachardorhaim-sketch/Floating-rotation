@@ -102,6 +102,9 @@ body.side-hidden .side { width:0; opacity:0; border-left-width:0; }
 #gameMount *:not(.ch-piece):not(.ch-tutorial-piece):not(#ch-promotion-options button):not(#ch-white-captures):not(#ch-black-captures):not(.ch-pixel-preview):not(.ch-pixel-preview *) {
   font-family: "Heebo", "Segoe UI", system-ui, sans-serif !important;
 }
+/* Heebo רחב בערך פי 1.2 מהפונט הקודם של הכותרות הגדולות בשחמט — מקטינים כדי שיישארו בשתי שורות */
+#gameMount .ch-lobby-copy h2 { font-size: clamp(36px, 4.8vw, 70px); }
+#gameMount .ch-hero-copy h1 { font-size: clamp(40px, 5vw, 84px); }
 #gameMount { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:12px; overflow:hidden; }
 .player-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; padding:10px 14px; background:var(--surface); border:1px solid var(--line); border-radius:16px; box-shadow:0 1px 3px var(--shadow); }
 .pb-info { display:flex; align-items:center; gap:12px; min-width:0; }
