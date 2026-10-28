@@ -16,6 +16,7 @@ body.site.theme-dark { --page-bg:#000000; --bg:#000000; --surface:rgba(255,255,2
 body.site .site-head { direction:rtl; }
 .logo { font-size:22px; font-weight:900; letter-spacing:.3px; white-space:nowrap; direction:ltr; color:var(--text); text-decoration:none; }
 .logo span { color:var(--ink); }
+.logo-icon { width:36px; height:36px; margin-inline-end:8px; vertical-align:middle; }
 .side-toggle, .side-close { width:40px; height:40px; flex-shrink:0; display:grid; place-items:center; border-radius:10px; border:1px solid var(--line); background:var(--soft); color:var(--text); font-size:18px; cursor:pointer; transition:background .15s; }
 .side-toggle:hover, .side-close:hover, .site-head #set-gear:hover { background:color-mix(in srgb,var(--text) 10%,transparent); }
 .site-head #set-gear { background:var(--soft); color:var(--text); border:1px solid var(--line); }
