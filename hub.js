@@ -136,7 +136,7 @@
   function route() {
     const h = decodeURIComponent(location.hash.slice(1));
     if (h.startsWith('play/')) {
-      const g = GAMES.find(x => x.id === h.slice(5) && !x.url);
+      const g = GAMES.find(x => x.id === h.slice(5));
       if (g) return { cat: 'games', play: g.id };
     }
     return { cat: CATS.some(c => c.id === h) ? h : '', play: null };
@@ -171,7 +171,6 @@
   window.flrotPlay = function (id) {
     const g = GAMES.find(x => x.id === id);
     if (!g) return;
-    if (g.url) { openExternal(g); return; }
     const h = '#play/' + id;
     if (route().play) history.replaceState(history.state, '', h);   // ממשחק למשחק: בלי עוד צעד ב"אחורה"
     else history.pushState({ fromSite: true }, '', h);

@@ -21,25 +21,39 @@ function closeGame() {
   gameMount.innerHTML = '';
 }
 
-// משחק שחי בריפו נפרד ומוטמע בתוך הפלטפורמה.
-// אותו מקור (github.io), ולכן אפשר גם למקד את המקלדת אליו.
-function mountIframe(url) {
+// משחק שחי בכתובת אחרת ומוטמע בתוך הפלטפורמה.
+// minH — למשחק שהעמוד שלו לא יורד מתחת לגובה הזה: המסגרת מוקטנת כדי שייכנס כולו, בלי פס גלילה.
+function mountIframe(url, minH) {
   return function (host) {
     const f = document.createElement('iframe');
     f.src = url;
     f.title = 'game';
-    f.allow = 'autoplay; fullscreen; gamepad';
+    f.allow = 'autoplay; fullscreen; gamepad; clipboard-write; web-share';
     f.style.cssText = 'width:100%;height:100%;border:0;display:block;background:#0d1620';
     // ה-flex המרכז של המארח מקטין את המסגרת לגובה 0
     host.style.padding = '0';
     host.style.display = 'block';
     host.appendChild(f);
+    const fit = () => {
+      const k = Math.min(1, host.clientHeight / minH);
+      f.style.width = host.clientWidth / k + 'px';
+      f.style.height = host.clientHeight / k + 'px';
+      f.style.scale = k < 1 ? k : '';
+    };
+    const fitObs = minH ? new ResizeObserver(fit) : null;
+    if (fitObs) {
+      f.style.position = 'absolute';
+      f.style.inset = '0 auto auto 0';
+      f.style.transformOrigin = '0 0';
+      fitObs.observe(host);
+    }
     // בלי מיקוד המקלדת בתוך המסגרת, רווח ומקשי הקושי לא מגיעים למשחק
     const focus = () => { try { f.contentWindow.focus(); } catch (e) {} };
     f.addEventListener('load', focus);
     host.addEventListener('mousedown', focus);
     setTimeout(focus, 250);
     return function cleanup() {
+      if (fitObs) fitObs.disconnect();
       host.removeEventListener('mousedown', focus);
       host.style.padding = '';
       host.style.display = '';
@@ -49,19 +63,20 @@ function mountIframe(url) {
 }
 
 // ---------- קטלוג המשחקים בפלטפורמה ----------
-// type — סוג המשחק שכתוב על הכרטיס: ARCADE, CASUAL, PUZZLE, STRATEGY, SPORT, SURVIVAL, FUNNY.
+// mount — איך המשחק נטען במסך המשחק של האתר. משחק שחי בכתובת אחרת: mount:mountIframe('https://...').
+// type — סוג המשחק שכתוב על הכרטיס: ARCADE, CASUAL, PUZZLE, STRATEGY, SPORT, SURVIVAL, FUNNY, SIMULATION.
 // added:'שנה-חודש-יום' — היום שבו המשחק נוסף. שבועיים מהיום הזה כתוב על הכרטיס "חדש!",
 //   ואחר כך סוג המשחק. זה מתחלף לבד, לא צריך לגעת בשום דבר.
 // plainBg:true — ללוגו יש רקע משלו (לא שקוף). אז אין מאחוריו תמונה מטושטשת, והכרטיס מקבל את
 //   צבע ה-bg בלבד. bg צריך להיות בדיוק הצבע של רקע הלוגו, כדי שלא יראו את הריבוע שלו.
 // dim:'3d' — משחק בתלת-ממד (מופיע בלשונית 3D של "משחקים חינמיים"). בלי dim המשחק הוא 2D.
 const GAMES = [
-  { id:'house-design', dim:'3d', title:'עיצוב בתים', desc:'עצב חדרים ובתים לפי בקשות הלקוחות, נהל תקציב וקבל דירוג כוכבים. למחשב ועכבר.', imgFile:'house-design-card.webp', imgFill:true, icon:'🏠', type:'SIMULATION', added:'2026-10-30', bg:'#e4ecd9', url:'https://house-design-robin.netlify.app/' },
+  { id:'house-design', dim:'3d', title:'עיצוב בתים', desc:'עצב חדרים ובתים לפי בקשות הלקוחות, נהל תקציב וקבל דירוג כוכבים. למחשב ועכבר.', imgFile:'house-design-card.webp', imgFill:true, icon:'🏠', type:'SIMULATION', added:'2026-10-30', bg:'#e4ecd9', mount:mountIframe('https://house-design-robin.netlify.app/') },
   { id:'zombies', title:'מתקפת הזומבים', desc:'שרוד 20 מפות, חסל זומבים ובוסים ושדרג את הנשקים שלך.', imgFile:'zombie-card.webp', imgFill:true, icon:'🧟', type:'SURVIVAL', added:'2026-09-12', bg:'#151b15', mount:mountIframe('zombie-attack/') },
   { id:'dino', title:'Dino Runner', desc:'רוץ, קפוץ, אסוף מטבעות וקנה דמויות בחנות.', imgFile:'dino-logo.png', icon:'🦖', type:'ARCADE', added:'2026-07-15', bg:'linear-gradient(135deg,#1b3a4b,#0d1b2a)', mount:mountDino },
   { id:'catch', title:'Star Catcher', desc:'תפוס כוכבים נופלים עם הסלסלה.', imgFile:'star-logo.png', icon:'⭐', type:'CASUAL', added:'2026-07-15', bg:'#161736', mount:mountCatch },
   { id:'memory', title:'Memory Adjustment', desc:'מצא את כל הזוגות — 7 שלבים נגד השעון.', imgFile:'memory-logo.png', icon:'🧠', type:'PUZZLE', added:'2026-07-15', bg:'linear-gradient(135deg,#1b4b3a,#0d1b2a)', mount:mountMemory },
-  { id:'button', title:'אל תלחץ על הכפתור', desc:'משחק כפתור כאוטי ומצחיק.', img:BUTTON_LOGO, icon:'🔴', type:'FUNNY', added:'2026-07-15', bg:'linear-gradient(135deg,#4b1b2a,#0d1b2a)', url:'https://unique-flan-89080c.netlify.app/' },
+  { id:'button', title:'אל תלחץ על הכפתור', desc:'משחק כפתור כאוטי ומצחיק.', img:BUTTON_LOGO, icon:'🔴', type:'FUNNY', added:'2026-07-15', bg:'linear-gradient(135deg,#4b1b2a,#0d1b2a)', mount:mountIframe('https://unique-flan-89080c.netlify.app/', 866) },
   { id:'chess', title:'Chess Prestige', desc:'שחמט נגד המחשב או מול חבר.', imgFile:'chess-logo.png', icon:'♞', type:'STRATEGY', added:'2026-07-16', bg:'#0a0a0a', mount:mountChess },
   { id:'tetris', title:'Tetris', desc:'טטריס — סובב, הפל ונקה שורות!', imgFile:'tetris-logo.png', icon:'🟪', type:'PUZZLE', added:'2026-07-18', bg:'linear-gradient(135deg,#2a1b4b,#0d1b2a)', mount:mountTetris },
   { id:'pong', dim:'3d', plainBg:true, title:'פינג פונג', desc:'מול המחשב, מול חבר על אותו מחשב, או אונליין עם קוד חדר.', imgFile:'pong-logo.jpg', icon:'🏓', type:'SPORT', added:'2026-08-29', bg:'#00000f', mount:mountIframe('https://shachardorhaim-sketch.github.io/ping-pong-3d/') },
@@ -87,18 +102,13 @@ GAMES.forEach(g => {
     '<div class="gbody"><h3>'+g.title+'</h3><p>'+g.desc+'</p>' +
     '<button class="gplay'+(g.soon?' soon':'')+'">'+(g.soon?'בקרוב':'▶ שחק')+'</button></div>';
   if (!g.soon) {
-    const open = () => { if (g.url) openExternal(g); else window.flrotPlay(g.id); };
+    const open = () => window.flrotPlay(g.id);
     card.querySelector('.gplay').onclick = open;
     card.onclick = e => { if (e.target.tagName!=='BUTTON') open(); };
     card.onkeydown = e => { if (e.key==='Enter') open(); };
   }
   grid.appendChild(card);
 });
-
-// פתיחת משחק חיצוני (של רובין) — נפתח ישר בלשונית חדשה
-function openExternal(g) {
-  window.open(g.url, '_blank');
-}
 
 // ============================================================
 //  משחק 1 — DINO RUNNER (עם חנות דמויות + שיאים)
