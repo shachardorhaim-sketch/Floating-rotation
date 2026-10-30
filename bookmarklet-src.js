@@ -1,5 +1,5 @@
 // ============================================================
-//  Floating rotation — מתרגם העמודים ללא התקנה (Bookmarklet)
+//  URotation — מתרגם העמודים ללא התקנה (Bookmarklet)
 //  זהו המקור הקריא. הקובץ bookmarklet.js בונה מזה את הקישור.
 //  אין כאן שום API של תוסף — רק fetch רגיל, ולכן זה רץ בכל דפדפן
 //  בלי התקנה ובלי מצב מפתח.
@@ -217,7 +217,7 @@
       'button.act{font:inherit;font-weight:700;font-size:12px;border:0;border-radius:7px;padding:7px 10px;cursor:pointer;width:100%}' +
       '.go{background:#4fd1c5;color:#0d1620}.stop{background:#d9856b;color:#0d1620}.res{background:#2a3b4f;color:#e8eef5}' +
       '</style>' +
-      '<div class="p"><div class="r"><span class="ttl">Floating rotation</span><button class="x">✕</button></div>' +
+      '<div class="p"><div class="r"><span class="ttl">URotation</span><button class="x">✕</button></div>' +
       '<div class="lb"></div><select>' + opts + '</select>' +
       '<div class="s"></div><div class="bar"><div class="fill"></div></div>' +
       '<button class="act"></button></div>';

@@ -1,5 +1,5 @@
 // ============================================================
-//  Floating rotation — מדריך מלא להתקנת המתרגם
+//  URotation — מדריך מלא להתקנת המתרגם
 //  המתרגם מדבר בגוף ראשון ומלווה שלב-שלב.
 //  שליטה מלאה: הפעלה/עצירה, קדימה/אחורה, וקפיצה לכל שלב.
 // ============================================================
@@ -180,7 +180,7 @@
     marks.classList.add('off'); kbd.classList.remove('on'); chip.classList.remove('in','hit');
     drag.classList.remove('show','grabbed'); ghost.classList.remove('on');
     panel.classList.remove('in'); mgr.classList.remove('on'); arrow.classList.remove('on');
-    url.textContent = 'floating-rotation';
+    url.textContent = 'urotation';
     lines.innerHTML = '';
     cur.style.left = '50%'; cur.style.top = '94%';
 

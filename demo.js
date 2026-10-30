@@ -1,5 +1,5 @@
 // ============================================================
-//  Floating rotation — הדגמה מונפשת של המתרגם ללא התקנה
+//  URotation — הדגמה מונפשת של המתרגם ללא התקנה
 //  דפדפן מדומה: גרירה לשורת הסימניות, לחיצה, ותרגום מול העיניים.
 //  אין כאן וידאו — הכל DOM, ולכן זה חד בכל גודל ומתורגם לכל שפה.
 // ============================================================
@@ -95,7 +95,7 @@
     }
     function reset() {
       ui.win.className = 'dmo-win';
-      ui.url.textContent = 'floating-rotation';
+      ui.url.textContent = 'urotation';
       ui.marks.classList.add('off');      // שורת הסימניות מתחילה מוסתרת
       ui.kbd.classList.remove('on');
       ui.chip.classList.remove('in');
@@ -118,7 +118,7 @@
 
     function buildPanel() {
       ui.panel.textContent = '';
-      var head = el('div', 'dmo-p-head', 'Floating rotation');
+      var head = el('div', 'dmo-p-head', 'URotation');
       var sel = el('div', 'dmo-p-sel');
       sel.append(el('span', null, t('d_langname')), el('b', null, '▾'));
       var bar = el('div', 'dmo-p-bar');

@@ -3,7 +3,7 @@
 // ============================================
 
 // ============================================================
-//  Floating rotation — פלטפורמת משחקים
+//  URotation — פלטפורמת משחקים
 // ============================================================
 
 // ---------- הרכבת משחק ופירוק שלו ----------
@@ -248,7 +248,7 @@ function openExternal(g) {
     document.documentElement.lang = lang;
     document.body.style.direction = rtl?'rtl':'ltr';
     const set = (sel,val)=>{ const e=document.querySelector(sel); if(e) e.textContent=val; };
-    set('.site-foot', t('builtBy')+' · Floating rotation 2026');
+    set('.site-foot', t('builtBy')+' · URotation 2026');
     document.querySelectorAll('.gcard').forEach(card=>{
       const gid = card.dataset.gid; if(!gid) return;
       const g = GAMES.find(x=>x.id===gid); if(!g) return;
