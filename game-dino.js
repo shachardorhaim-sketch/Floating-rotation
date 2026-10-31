@@ -3,11 +3,11 @@
 //  דינוזאור שמצויר בקוד · מטבעות ושיא מטבעות · טבלת שיאים
 // ============================================
 
-const DDICT = {"he":{"hint":"רווח / ↑ = קפיצה (החזק = גבוה יותר) • ↓ = התכופפות<br>ציפור גבוהה: רוץ מתחת · אמצע: קפוץ או התכופף · נמוכה: קפוץ מעל<br>אסוף מטבעות ושבור את שיא המטבעות שלך","jump":"⬆ קפיצה","duck":"⬇ התכופפות","board":"טבלת שיאים","empty":"עדיין אין שיאים — שחק כדי להתחיל!","colScore":"ניקוד","startPrompt":"רווח / ↑ להתחלה","dead":"נפסלת!","scorePrefix":"ניקוד ","bestPrefix":"השיא שלך: ","againPrompt":"רווח לשחק שוב","coinBest":"שיא מטבעות","coinsPrefix":"מטבעות: ","newCoinBest":"שיא מטבעות חדש!"},"en":{"hint":"Space / ↑ = jump (hold = higher) • ↓ = duck<br>High bird: run under · Middle: jump or duck · Low: jump over<br>Collect coins and beat your coin record","jump":"⬆ Jump","duck":"⬇ Duck","board":"Leaderboard","empty":"No scores yet — play to get started!","colScore":"Score","startPrompt":"Space / ↑ to start","dead":"Game Over!","scorePrefix":"Score ","bestPrefix":"Your best: ","againPrompt":"Space to play again","coinBest":"Coin record","coinsPrefix":"Coins: ","newCoinBest":"New coin record!"},"ar":{"hint":"مسافة / ↑ = قفز (اضغط مطولاً = أعلى) • ↓ = انحناء<br>طائر عالٍ: اركض تحته · متوسط: اقفز أو انحنِ · منخفض: اقفز فوقه<br>اجمع العملات واكسر رقمك القياسي","jump":"⬆ قفز","duck":"⬇ انحناء","board":"لوحة المتصدرين","empty":"لا توجد نتائج بعد — العب للبدء!","colScore":"النقاط","startPrompt":"مسافة / ↑ للبدء","dead":"خسرت!","scorePrefix":"النقاط ","bestPrefix":"أفضل نتيجة: ","againPrompt":"مسافة للعب مجدداً","coinBest":"رقم العملات القياسي","coinsPrefix":"العملات: ","newCoinBest":"رقم قياسي جديد للعملات!"},"es":{"hint":"Espacio / ↑ = saltar (mantén = más alto) • ↓ = agacharse<br>Pájaro alto: corre por debajo · Medio: salta o agáchate · Bajo: salta por encima<br>Junta monedas y supera tu récord de monedas","jump":"⬆ Saltar","duck":"⬇ Agacharse","board":"Clasificación","empty":"Aún no hay puntuaciones: ¡juega para empezar!","colScore":"Puntos","startPrompt":"Espacio / ↑ para empezar","dead":"¡Perdiste!","scorePrefix":"Puntos ","bestPrefix":"Tu récord: ","againPrompt":"Espacio para jugar otra vez","coinBest":"Récord de monedas","coinsPrefix":"Monedas: ","newCoinBest":"¡Nuevo récord de monedas!"},"fr":{"hint":"Espace / ↑ = sauter (maintenir = plus haut) • ↓ = se baisser<br>Oiseau haut : passe dessous · Milieu : saute ou baisse-toi · Bas : saute par-dessus<br>Récolte des pièces et bats ton record de pièces","jump":"⬆ Sauter","duck":"⬇ Se baisser","board":"Classement","empty":"Pas encore de scores — joue pour commencer !","colScore":"Score","startPrompt":"Espace / ↑ pour commencer","dead":"Perdu !","scorePrefix":"Score ","bestPrefix":"Ton record : ","againPrompt":"Espace pour rejouer","coinBest":"Record de pièces","coinsPrefix":"Pièces : ","newCoinBest":"Nouveau record de pièces !"},"pt":{"hint":"Espaço / ↑ = pular (segure = mais alto) • ↓ = agachar<br>Pássaro alto: corra por baixo · Meio: pule ou agache · Baixo: pule por cima<br>Junte moedas e bata seu recorde de moedas","jump":"⬆ Pular","duck":"⬇ Agachar","board":"Ranking","empty":"Ainda sem pontuações — jogue para começar!","colScore":"Pontos","startPrompt":"Espaço / ↑ para começar","dead":"Você perdeu!","scorePrefix":"Pontos ","bestPrefix":"Seu recorde: ","againPrompt":"Espaço para jogar de novo","coinBest":"Recorde de moedas","coinsPrefix":"Moedas: ","newCoinBest":"Novo recorde de moedas!"},"ru":{"hint":"Пробел / ↑ = прыжок (удерживай = выше) • ↓ = пригнуться<br>Высокая птица: беги под ней · Средняя: прыгай или пригнись · Низкая: перепрыгни<br>Собирай монеты и побей свой рекорд монет","jump":"⬆ Прыжок","duck":"⬇ Пригнуться","board":"Таблица рекордов","empty":"Пока нет рекордов — сыграй, чтобы начать!","colScore":"Очки","startPrompt":"Пробел / ↑ для старта","dead":"Проигрыш!","scorePrefix":"Очки ","bestPrefix":"Твой рекорд: ","againPrompt":"Пробел, чтобы сыграть снова","coinBest":"Рекорд монет","coinsPrefix":"Монеты: ","newCoinBest":"Новый рекорд монет!"},"de":{"hint":"Leertaste / ↑ = springen (halten = höher) • ↓ = ducken<br>Hoher Vogel: drunter durch · Mitte: springen oder ducken · Tief: drüber springen<br>Sammle Münzen und knack deinen Münzrekord","jump":"⬆ Springen","duck":"⬇ Ducken","board":"Bestenliste","empty":"Noch keine Punkte — spiel, um zu starten!","colScore":"Punkte","startPrompt":"Leertaste / ↑ zum Start","dead":"Vorbei!","scorePrefix":"Punkte ","bestPrefix":"Dein Rekord: ","againPrompt":"Leertaste für nochmal","coinBest":"Münzrekord","coinsPrefix":"Münzen: ","newCoinBest":"Neuer Münzrekord!"}};
+const DDICT = {"he":{"hint":"רווח / ↑ = קפיצה (החזק = גבוה יותר) • ↓ = התכופפות<br>ציפור גבוהה: רוץ מתחת · אמצע: קפוץ או התכופף · נמוכה: קפוץ מעל<br>אסוף מטבעות ושבור את שיא המטבעות שלך","jump":"⬆ קפיצה","duck":"⬇ התכופפות","board":"טבלת שיאים","empty":"עדיין אין שיאים — שחק כדי להתחיל!","colScore":"ניקוד","startPrompt":"רווח / ↑ להתחלה","dead":"נפסלת!","scorePrefix":"ניקוד ","bestPrefix":"השיא שלך: ","againPrompt":"רווח לשחק שוב","coinBest":"שיא מטבעות","coinsPrefix":"מטבעות: ","newCoinBest":"שיא מטבעות חדש!","sound":"צליל"},"en":{"hint":"Space / ↑ = jump (hold = higher) • ↓ = duck<br>High bird: run under · Middle: jump or duck · Low: jump over<br>Collect coins and beat your coin record","jump":"⬆ Jump","duck":"⬇ Duck","board":"Leaderboard","empty":"No scores yet — play to get started!","colScore":"Score","startPrompt":"Space / ↑ to start","dead":"Game Over!","scorePrefix":"Score ","bestPrefix":"Your best: ","againPrompt":"Space to play again","coinBest":"Coin record","coinsPrefix":"Coins: ","newCoinBest":"New coin record!","sound":"Sound"},"ar":{"hint":"مسافة / ↑ = قفز (اضغط مطولاً = أعلى) • ↓ = انحناء<br>طائر عالٍ: اركض تحته · متوسط: اقفز أو انحنِ · منخفض: اقفز فوقه<br>اجمع العملات واكسر رقمك القياسي","jump":"⬆ قفز","duck":"⬇ انحناء","board":"لوحة المتصدرين","empty":"لا توجد نتائج بعد — العب للبدء!","colScore":"النقاط","startPrompt":"مسافة / ↑ للبدء","dead":"خسرت!","scorePrefix":"النقاط ","bestPrefix":"أفضل نتيجة: ","againPrompt":"مسافة للعب مجدداً","coinBest":"رقم العملات القياسي","coinsPrefix":"العملات: ","newCoinBest":"رقم قياسي جديد للعملات!","sound":"الصوت"},"es":{"hint":"Espacio / ↑ = saltar (mantén = más alto) • ↓ = agacharse<br>Pájaro alto: corre por debajo · Medio: salta o agáchate · Bajo: salta por encima<br>Junta monedas y supera tu récord de monedas","jump":"⬆ Saltar","duck":"⬇ Agacharse","board":"Clasificación","empty":"Aún no hay puntuaciones: ¡juega para empezar!","colScore":"Puntos","startPrompt":"Espacio / ↑ para empezar","dead":"¡Perdiste!","scorePrefix":"Puntos ","bestPrefix":"Tu récord: ","againPrompt":"Espacio para jugar otra vez","coinBest":"Récord de monedas","coinsPrefix":"Monedas: ","newCoinBest":"¡Nuevo récord de monedas!","sound":"Sonido"},"fr":{"hint":"Espace / ↑ = sauter (maintenir = plus haut) • ↓ = se baisser<br>Oiseau haut : passe dessous · Milieu : saute ou baisse-toi · Bas : saute par-dessus<br>Récolte des pièces et bats ton record de pièces","jump":"⬆ Sauter","duck":"⬇ Se baisser","board":"Classement","empty":"Pas encore de scores — joue pour commencer !","colScore":"Score","startPrompt":"Espace / ↑ pour commencer","dead":"Perdu !","scorePrefix":"Score ","bestPrefix":"Ton record : ","againPrompt":"Espace pour rejouer","coinBest":"Record de pièces","coinsPrefix":"Pièces : ","newCoinBest":"Nouveau record de pièces !","sound":"Son"},"pt":{"hint":"Espaço / ↑ = pular (segure = mais alto) • ↓ = agachar<br>Pássaro alto: corra por baixo · Meio: pule ou agache · Baixo: pule por cima<br>Junte moedas e bata seu recorde de moedas","jump":"⬆ Pular","duck":"⬇ Agachar","board":"Ranking","empty":"Ainda sem pontuações — jogue para começar!","colScore":"Pontos","startPrompt":"Espaço / ↑ para começar","dead":"Você perdeu!","scorePrefix":"Pontos ","bestPrefix":"Seu recorde: ","againPrompt":"Espaço para jogar de novo","coinBest":"Recorde de moedas","coinsPrefix":"Moedas: ","newCoinBest":"Novo recorde de moedas!","sound":"Som"},"ru":{"hint":"Пробел / ↑ = прыжок (удерживай = выше) • ↓ = пригнуться<br>Высокая птица: беги под ней · Средняя: прыгай или пригнись · Низкая: перепрыгни<br>Собирай монеты и побей свой рекорд монет","jump":"⬆ Прыжок","duck":"⬇ Пригнуться","board":"Таблица рекордов","empty":"Пока нет рекордов — сыграй, чтобы начать!","colScore":"Очки","startPrompt":"Пробел / ↑ для старта","dead":"Проигрыш!","scorePrefix":"Очки ","bestPrefix":"Твой рекорд: ","againPrompt":"Пробел, чтобы сыграть снова","coinBest":"Рекорд монет","coinsPrefix":"Монеты: ","newCoinBest":"Новый рекорд монет!","sound":"Звук"},"de":{"hint":"Leertaste / ↑ = springen (halten = höher) • ↓ = ducken<br>Hoher Vogel: drunter durch · Mitte: springen oder ducken · Tief: drüber springen<br>Sammle Münzen und knack deinen Münzrekord","jump":"⬆ Springen","duck":"⬇ Ducken","board":"Bestenliste","empty":"Noch keine Punkte — spiel, um zu starten!","colScore":"Punkte","startPrompt":"Leertaste / ↑ zum Start","dead":"Vorbei!","scorePrefix":"Punkte ","bestPrefix":"Dein Rekord: ","againPrompt":"Leertaste für nochmal","coinBest":"Münzrekord","coinsPrefix":"Münzen: ","newCoinBest":"Neuer Münzrekord!","sound":"Ton"}};
 function dinoMakeT(){ let l='he'; try{ var _p=localStorage.getItem('flrot:lang'); if(_p) l=_p; }catch(e){} if(!DDICT[l]) l='he'; return { DT:k=>(DDICT[l]&&DDICT[l][k])||DDICT['he'][k]||k, DRTL:(l==='he'||l==='ar') }; }
 function DINO_HTML(DT,DRTL){ return `
 <div class="dinoWrap" style="direction:${DRTL?'rtl':'ltr'};">
-  <div class="dinoTop"><span class="dinoTitle">DINO RUNNER</span><span id="dinoCoinBest" style="display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#ffd166;"></span></div>
+  <div class="dinoTop"><span class="dinoTitle">DINO RUNNER</span><span id="dinoCoinBest" style="display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#ffd166;"></span><button id="dinoSound" type="button" tabindex="-1" title="${DT('sound')} (M)" aria-label="${DT('sound')}" style="width:30px;height:30px;padding:0;border:1px solid #2a3b4f;border-radius:50%;background:#141d28;font-size:15px;line-height:1;cursor:pointer;"></button></div>
   <div class="dinoStage">
     <canvas id="dc" width="820" height="300"></canvas>
   </div>
@@ -312,6 +312,39 @@ function dinoDraw(c,x,y,a){
   c.restore();
 }
 
+// ---------- צלילים: נוצרים בקוד, בלי קבצים ----------
+function dinoTone(ac,out,t,type,f0,f1,dur,vol){
+  const o=ac.createOscillator(), g=ac.createGain();
+  o.type=type;
+  o.frequency.setValueAtTime(f0,t);
+  if (f1!==f0) o.frequency.exponentialRampToValueAtTime(f1,t+dur);
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(vol,t+0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g).connect(out);
+  o.start(t); o.stop(t+dur+0.01);
+}
+function dinoNoise(ac,out,t,kind,freq,dur,vol){
+  const buf=ac.createBuffer(1,Math.ceil(ac.sampleRate*dur),ac.sampleRate), d=buf.getChannelData(0);
+  for (let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  const src=ac.createBufferSource(), f=ac.createBiquadFilter(), g=ac.createGain();
+  src.buffer=buf; f.type=kind; f.frequency.value=freq;
+  g.gain.setValueAtTime(vol,t);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  src.connect(f).connect(g).connect(out);
+  src.start(t);
+}
+// כל צליל מקבל הקשר קול, יציאה וזמן התחלה, אז אפשר גם לרנדר אותו לבדיקה בלי רמקול.
+const DINO_SFX = {
+  start(ac,out,t){ [392,523,659].forEach((f,i)=>dinoTone(ac,out,t+i*0.07,'triangle',f,f,0.11,0.2)); },
+  jump(ac,out,t){ dinoTone(ac,out,t,'triangle',290,760,0.2,0.3); dinoNoise(ac,out,t,'highpass',1800,0.07,0.04); },
+  land(ac,out,t,power){ dinoTone(ac,out,t,'sine',150,55,0.11,0.42*power); dinoNoise(ac,out,t,'lowpass',500,0.08,0.16*power); },
+  duck(ac,out,t){ dinoTone(ac,out,t,'sine',420,160,0.1,0.16); dinoNoise(ac,out,t,'bandpass',900,0.08,0.05); },
+  coin(ac,out,t,note){ const f=880*Math.pow(2,note/12); dinoTone(ac,out,t,'square',f,f,0.08,0.11); dinoTone(ac,out,t+0.06,'square',f*1.335,f*1.335,0.24,0.11); },
+  record(ac,out,t){ [659,784,988,1319].forEach((f,i)=>dinoTone(ac,out,t+i*0.085,'square',f,f,i===3?0.36:0.14,0.11)); },
+  hit(ac,out,t){ dinoTone(ac,out,t,'sawtooth',230,48,0.3,0.24); dinoNoise(ac,out,t,'lowpass',900,0.16,0.3); [330,262].forEach((f,i)=>dinoTone(ac,out,t+0.26+i*0.15,'triangle',f,f*0.98,0.17,0.17)); }
+};
+
 function mountDino(root) {
   const {DT,DRTL}=dinoMakeT();
   root.innerHTML = DINO_HTML(DT,DRTL);
@@ -377,11 +410,44 @@ function mountDino(root) {
     if (el) el.innerHTML = '<span style="width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3b0,#ffc61a 55%,#f5a800);border:1.5px solid #8a5a00;box-sizing:border-box;"></span>'+DT('coinBest')+': '+coinBest;
   }
 
+  // ---------- צליל ----------
+  let soundOn = true, audio = null;
+  try { soundOn = localStorage.getItem('dino:sound') !== '0'; } catch(e){}
+  function sfx(name, v){
+    if (!soundOn || !running) return;
+    try {
+      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+      DINO_SFX[name](audio, audio.destination, audio.currentTime+0.002, v);
+    } catch(e){}
+  }
+  const soundBtn = scope.querySelector('#dinoSound');
+  function renderSound(){ if (soundBtn) soundBtn.textContent = soundOn ? '🔊' : '🔇'; }
+  function toggleSound(){
+    soundOn = !soundOn;
+    try { localStorage.setItem('dino:sound', soundOn ? '1' : '0'); } catch(e){}
+    renderSound();
+    sfx('coin', 0);   // צליל קטן, כדי לשמוע שהקול חזר
+  }
+  if (soundBtn) {
+    soundBtn.addEventListener('mousedown', e => e.preventDefault());   // בלי מיקוד: רווח שייך למשחק ולא לכפתור
+    soundBtn.addEventListener('click', toggleSound);
+  }
+
+  // מטבעות ברצף עולים בגובה הצליל
+  const COIN_NOTES = [0,2,4,7,9,12,14,16];
+  let coinStreak = 0, lastCoinStep = -99;
+
   function gotCoin(c){
     coinCount++; coinPulse = 1;
+    coinStreak = frame-lastCoinStep < 45 ? Math.min(coinStreak+1, COIN_NOTES.length-1) : 0;
+    lastCoinStep = frame;
+    sfx('coin', COIN_NOTES[coinStreak]);
     burst(c.x-scroll, c.y, '255,209,102', 7);
     floats.push({ x:c.x-scroll, y:c.y-10, life:32 });
     if (coinCount > coinBest) {
+      // צליל שיא רק כששוברים שיא אמיתי, לא במטבעות הראשונים אי פעם
+      if (!coinRecord && coinBest >= 5) sfx('record');
       coinBest = coinCount; coinRecord = true;
       try { localStorage.setItem('dino:coinBest', String(coinBest)); } catch(e){}
       renderCoinBest();
@@ -664,6 +730,7 @@ function mountDino(root) {
         jumpBuffer = 0; dino.ground = false; dino.duck = false; dino.vy = -JUMP_V;
         anim.lead = ((anim.phi%1) >= Math.min(0.44,44/anim.stride)) ? 0 : 1;
         puff(dino.x-4, 5, 1.6);
+        sfx('jump');
       }
       if (!dino.ground) {
         const g = dino.duck ? G_DIVE : dino.vy < 0 ? (jumpHeld ? G_HOLD : G_CUT) : G_FALL;
@@ -673,6 +740,7 @@ function mountDino(root) {
           anim.land = Math.min(1, dino.vy/9); anim.phi = anim.lead ? 0.5 : 0;
           dino.y = GROUND; dino.vy = 0; dino.ground = true;
           puff(dino.x+6, 9, 2.2);
+          sfx('land', anim.land);
         }
       }
 
@@ -795,10 +863,12 @@ function mountDino(root) {
     coinCount = 0; coinRecord = false; jumpBuffer = 0;
     anim.phi = 0; anim.land = 0;
     dino.reset();
+    sfx('start');
   }
 
   function die(){
     state = 'dead'; shake = 12; deadWait = 30;
+    sfx('hit');
     const b = dino.boxes()[0];
     burst(b.x-scroll+b.w/2, b.y+b.h/2, '217,133,107', 20);
     lastScore = score;
@@ -812,13 +882,19 @@ function mountDino(root) {
   }
   function releaseJump(){ jumpHeld = false; }
 
+  function duckDown(){
+    if (!dino.duck && state === 'play') sfx('duck');
+    dino.duck = true;
+  }
+
   const isJumpKey = e => e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW';
   const kd = e => {
     if (isJumpKey(e)) {
       e.preventDefault();
       if (!e.repeat) pressJump();   // החזקה מגביהה את אותה קפיצה ולא מתחילה עוד אחת
     }
-    if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); if (!e.repeat) dino.duck = true; }
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); if (!e.repeat) duckDown(); }
+    if (e.code === 'KeyM' && !e.repeat) toggleSound();
   };
   const ku = e => {
     if (isJumpKey(e)) releaseJump();
@@ -838,7 +914,7 @@ function mountDino(root) {
   const duckBtn = scope.querySelector('#dinoDuckBtn');
   if (jumpBtn) jumpBtn.addEventListener('pointerdown', e => { e.preventDefault(); pressJump(); });
   if (duckBtn) {
-    const dOn = e => { e.preventDefault(); dino.duck = true; };
+    const dOn = e => { e.preventDefault(); duckDown(); };
     const dOff = e => { e.preventDefault(); dino.duck = false; };
     duckBtn.addEventListener('pointerdown', dOn);
     duckBtn.addEventListener('pointerup', dOff);
@@ -847,12 +923,14 @@ function mountDino(root) {
   }
 
   renderBoard();
+  renderSound();
   renderCoinBest();
   raf = requestAnimationFrame(loop);
 
   return () => {
     running = false;
     cancelAnimationFrame(raf);
+    if (audio) audio.close().catch(() => {});
     document.removeEventListener('keydown', kd);
     document.removeEventListener('keyup', ku);
     window.removeEventListener('blur', blur);
