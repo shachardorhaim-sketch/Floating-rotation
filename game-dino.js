@@ -11,12 +11,14 @@ function DINO_HTML(DT,DRTL){ return `
   <div class="dinoStage">
     <canvas id="dc" width="820" height="300"></canvas>
   </div>
-  <div class="dinoHint">${DT('hint')}</div>
   <div class="dinoTouch">
     <button id="dinoJumpBtn" style="flex:1;padding:16px 0;font-size:17px;font-weight:700;color:#fff;border:none;border-radius:14px;background:linear-gradient(90deg,#2f8f52,#57c97e);box-shadow:0 4px 16px rgba(47,143,82,.4);cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;">${DT('jump')}</button>
     <button id="dinoDuckBtn" style="flex:1;padding:16px 0;font-size:17px;font-weight:700;color:#fff;border:none;border-radius:14px;background:linear-gradient(90deg,#3a6ea5,#5a9bd4);box-shadow:0 4px 16px rgba(58,110,165,.4);cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;">${DT('duck')}</button>
   </div>
-  <div id="board"><h3>&#127942; ${DT('board')}</h3><div id="boardRows"></div></div>
+  <div class="dinoLower">
+    <div class="dinoHint"><div>${DT('hint')}</div></div>
+    <div id="board"><h3>&#127942; ${DT('board')}</h3><div id="boardRows"></div></div>
+  </div>
 </div>
 `; }
 
@@ -513,16 +515,12 @@ function mountDino(root) {
   root.innerHTML = DINO_HTML(DT,DRTL);
   const scope = root;
 
-  // תיקון פריסה: למנוע שהקנבס (והדינו והקרקע) ייחתך בחלונות נמוכים.
-  // הבעיה: .dinoWrap מכריח גובה קבוע ודוחס את המשחק. פותרים ע"י גלילה במקום דחיסה.
-  const wrapEl = scope.querySelector('.dinoWrap');
-  if (wrapEl) { wrapEl.style.justifyContent = 'flex-start'; wrapEl.style.overflowY = 'auto'; wrapEl.style.paddingTop = '6px'; }
-  const stageEl = scope.querySelector('.dinoStage');
-  if (stageEl) stageEl.style.flexShrink = '0';
+  const wrapEl = scope.querySelector('.dinoWrap'), stageEl = scope.querySelector('.dinoStage');
 
   const cv = scope.querySelector('#dc'), ctx = cv.getContext('2d');
-  // המשחק מחושב ב-820x300 ומצויר בכפול, כדי שהדינוזאור יישאר חד
-  const W = 820, H = 300, GROUND = H - 40, RES = 2;
+  // העולם תמיד 820x300, אז המשחק זהה בכל גודל מסך. רק הציור גדל (fitStage).
+  const W = 820, H = 300, GROUND = H - 40;
+  let RES = 2;
   cv.width = W*RES; cv.height = H*RES;
   ctx.direction = DRTL ? 'rtl' : 'ltr';
 
@@ -963,10 +961,9 @@ function mountDino(root) {
     if (!shopEl) buildShop();
     shopOpen = true; pick = skin; prevFx = [];
     shopEl.style.display = '';
-    wrapEl.scrollTop = 0;
     refreshShop();
-    const on = shopEl.querySelector('.dsCard.on');
-    if (on) on.scrollIntoView({ block:'nearest' });
+    const grid = shopEl.querySelector('.dsGrid'), on = grid.querySelector('.dsCard.on');
+    if (on) grid.scrollTop = on.offsetTop-grid.offsetTop-8;
   }
   function closeShop(){
     shopOpen = false;
@@ -1216,6 +1213,28 @@ function mountDino(root) {
     duckBtn.addEventListener('pointercancel', dOff);
   }
 
+  // הבמה תופסת את כל המקום ושומרת על היחס, ומשאירה מקום להסבר ולטבלת השיאים
+  const LOWER_MIN = 104;
+  function fitStage(){
+    const cs = getComputedStyle(wrapEl), gap = parseFloat(cs.rowGap) || 0, touch = scope.querySelector('.dinoTouch').offsetHeight;
+    const aw = wrapEl.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+    const ah = wrapEl.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom)-scope.querySelector('.dinoTop').offsetHeight-touch-LOWER_MIN-gap*(touch?3:2);
+    wrapEl.classList.toggle('dinoNarrow', aw < 640);
+    const k = Math.max(0.2, Math.min(aw/W, ah/H)), cw = Math.floor(W*k);
+    stageEl.style.width = cw+'px';
+    stageEl.style.height = Math.floor(H*k)+'px';
+    // רזולוציה לפי הגודל האמיתי על המסך, כדי שהציור יישאר חד גם במסך מלא
+    const res = Math.max(2, Math.min(3, Math.ceil(cw*(window.devicePixelRatio||1)/W)));
+    if (res !== RES) {
+      RES = res; cv.width = W*RES; cv.height = H*RES;
+      ctx.direction = DRTL ? 'rtl' : 'ltr';
+      render(acc/STEP_MS);
+    }
+  }
+  const stageObs = new ResizeObserver(fitStage);
+  stageObs.observe(wrapEl);
+  fitStage();
+
   renderBoard();
   renderSound();
   renderWallet();
@@ -1225,6 +1244,7 @@ function mountDino(root) {
   return () => {
     running = false;
     cancelAnimationFrame(raf);
+    stageObs.disconnect();
     if (audio) audio.close().catch(() => {});
     document.removeEventListener('keydown', kd);
     document.removeEventListener('keyup', ku);
