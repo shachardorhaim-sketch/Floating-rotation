@@ -48,8 +48,11 @@ function dinoMix(a,b,t){ const o={}; for (const k in a) o[k]=a[k]+(b[k]-a[k])*t;
 function dinoL(a,b,t){ return a+(b-a)*t; }
 
 // מיקום כף הרגל ביחס לאגן. i: 0 הקרובה, 1 הרחוקה.
+// בהתכופפות: צעד קצר יותר (ובאותו קצב קרקע, אז גם מהיר יותר), ורגל קצרה יותר
+const DINO_DUCK_STEP = 0.4, DINO_DUCK_LEG = 0.27;
+
 function dinoFoot(i,a,hipY){
-  const beta = Math.min(0.44, 44/a.stride), R = a.stride*beta/2*(1-a.duck*0.25);
+  const beta = Math.min(0.44, 44/a.stride), R = a.stride*beta/2*(1-a.duck*DINO_DUCK_STEP);
   const lift = (13+a.speedK*6)*(1-a.duck*0.35);
   const p = (a.phi+i*0.5)%1;
   let x,y,g,d;
@@ -65,7 +68,7 @@ function dinoFoot(i,a,hipY){
   x-=a.duck*5; g=dinoL(g,g*0.4+6,a.duck);
   // עמידה: שתי הרגליים נטועות
   x=dinoL(x+2, i?9:-5, a.idle); y=dinoL(y, 0, a.idle); g=dinoL(g,70,a.idle); d=dinoL(d,0,a.idle);
-  let rx=x, ry=y-3-hipY;
+  let rx=x, ry=y-(3-a.duck*0.7)-hipY;
   if (a.air > 0) {
     const role = i===a.lead ? 'lead' : 'trail', nv=Math.max(-1,Math.min(1,a.nv));
     const A=DINO_AIR_FEET.apex[role], B=nv<0?DINO_AIR_FEET.rise[role]:DINO_AIR_FEET.fall[role], k=Math.abs(nv);
@@ -77,17 +80,31 @@ function dinoFoot(i,a,hipY){
   return { x:rx, y:ry, g, d };
 }
 
-function dinoLeg(hx,hy,f,hipY){
-  const TH=16, SH=14.5, MT=10.5, rad=Math.PI/180;
+function dinoLeg(hx,hy,f,hipY,k){
+  const TH=16*k, SH=14.5*k, MT=10.5*k, rad=Math.PI/180;
   let ax=f.x-MT*Math.cos(f.g*rad), ay=hipY+f.y-MT*Math.sin(f.g*rad);
   const bx0=f.x-ax, by0=hipY+f.y-ay;
   let dx=ax-hx, dy=ay-hy, dist=Math.hypot(dx,dy);
   const reach=TH+SH-0.05;
   if (dist>reach) { ax=hx+dx/dist*reach; ay=hy+dy/dist*reach; dx=ax-hx; dy=ay-hy; dist=reach; }
-  if (dist<1) dist=1;
+  // קרוב מדי לאגן הרגל מתקפלת לגוש, אז הקרסול נדחק החוצה
+  const least=(TH+SH)*0.42;
+  if (dist<least) { const ux0=dist>0.01?dx/dist:0, uy0=dist>0.01?dy/dist:1; ax=hx+ux0*least; ay=hy+uy0*least; dx=ax-hx; dy=ay-hy; dist=least; }
   const ca=(TH*TH+dist*dist-SH*SH)/(2*TH*dist), sa=Math.sqrt(Math.max(0,1-ca*ca));
   const ux=dx/dist, uy=dy/dist;
-  return { hx,hy, kx:hx+TH*(ux*ca+uy*sa), ky:hy+TH*(uy*ca-ux*sa), ax,ay, bx:ax+bx0, by:ay+by0, d:f.d };
+  return { hx,hy, kx:hx+TH*(ux*ca+uy*sa), ky:hy+TH*(uy*ca-ux*sa), ax,ay, bx:ax+bx0, by:ay+by0, d:f.d, k };
+}
+
+// גובה האגן: עולה ויורד פעמיים במחזור, נמוך הכי הרבה כשכף רגל מתחת לאגן
+function dinoHip(a,poseHip){
+  const moving=(1-a.idle)*(1-a.air)*(1-a.dead), beta=Math.min(0.44,44/a.stride);
+  const bob=moving*(2+a.speedK*1.5)*(1-a.duck*0.6)*Math.cos(Math.PI*4*(a.phi-beta/2));
+  return -poseHip+bob+a.idle*Math.sin(a.t*0.07)*0.8+a.land*5;
+}
+// שתי הרגליים: בהתכופפות ובנחיתה הן קצרות יותר, ומחוברות גבוה יותר, כדי שהברך תישאר מעל הקרקע
+function dinoLegs(a,hipY){
+  const k=1-a.duck*DINO_DUCK_LEG-a.land*0.14, up=1-a.duck*0.6;
+  return [ dinoLeg(-1,hipY+3*up,dinoFoot(0,a,hipY),hipY,k), dinoLeg(4,hipY+1.5*up,dinoFoot(1,a,hipY),hipY,k) ];
 }
 
 function dinoCaps(c,pts,w){
@@ -105,18 +122,18 @@ function dinoCaps(c,pts,w){
 }
 
 function dinoDrawLeg(c,L,col,C,legPat){
-  const rad=Math.PI/180, d=L.d*rad;
-  const tx=L.bx+7*Math.cos(d), ty=L.by+7*Math.sin(d);
-  const pts=[[L.hx,L.hy,8.2],[L.kx,L.ky,4.8],[L.ax,L.ay,2.9],[L.bx,L.by,2.5],[tx,ty,2]];
+  const rad=Math.PI/180, d=L.d*rad, k=L.k;
+  const tx=L.bx+7*k*Math.cos(d), ty=L.by+7*k*Math.sin(d);
+  const pts=[[L.hx,L.hy,8.2*k],[L.kx,L.ky,4.8*k],[L.ax,L.ay,2.9*k],[L.bx,L.by,2.5*k],[tx,ty,2*k]];
   c.lineJoin='round'; c.strokeStyle=C.line; c.lineWidth=2.6; dinoCaps(c,pts,true);
   // טפרים
   c.lineWidth=0.7; c.fillStyle=C.claw;
   for (let n=0;n<3;n++) {
-    const f=2.8+n*2.5, x=L.bx+f*Math.cos(d), y=L.by+f*Math.sin(d), a=d+0.5;
+    const f=(2.8+n*2.5)*k, x=L.bx+f*Math.cos(d), y=L.by+f*Math.sin(d), a=d+0.5;
     c.beginPath();
-    c.moveTo(x-1.7*Math.cos(d),y-1.7*Math.sin(d)+0.6);
-    c.lineTo(x+1.7*Math.cos(d),y+1.7*Math.sin(d)+0.6);
-    c.lineTo(x+4.4*Math.cos(a),y+0.6+4.4*Math.sin(a));
+    c.moveTo(x-1.7*k*Math.cos(d),y-1.7*k*Math.sin(d)+0.6*k);
+    c.lineTo(x+1.7*k*Math.cos(d),y+1.7*k*Math.sin(d)+0.6*k);
+    c.lineTo(x+4.4*k*Math.cos(a),y+0.6*k+4.4*k*Math.sin(a));
     c.closePath(); c.stroke(); c.fill();
   }
   c.fillStyle=col; dinoCaps(c,pts,false);
@@ -124,8 +141,8 @@ function dinoDrawLeg(c,L,col,C,legPat){
   const ang=Math.atan2(L.ky-L.hy,L.kx-L.hx);
   c.save(); c.translate(L.hx,L.hy); c.rotate(ang);
   c.strokeStyle=C.blue; c.fillStyle=C.blue; c.lineWidth=1.5; c.lineCap='round';
-  if (legPat==='dots') { c.beginPath(); c.arc(3,-2.5,1.6,0,7); c.arc(8,2,1.5,0,7); c.fill(); }
-  else for (let n=0;n<3;n++) { const u=3+n*3.6, r=6.2-n*0.8; c.beginPath(); c.moveTo(u+1.2,-r); c.quadraticCurveTo(u-1.4,0,u+1.2,r); c.stroke(); }
+  if (legPat==='dots') { c.beginPath(); c.arc(3*k,-2.5*k,1.6*k,0,7); c.arc(8*k,2*k,1.5*k,0,7); c.fill(); }
+  else for (let n=0;n<3;n++) { const u=(3+n*3.6)*k, r=(6.2-n*0.8)*k; c.beginPath(); c.moveTo(u+1.2*k,-r); c.quadraticCurveTo(u-1.4*k,0,u+1.2*k,r); c.stroke(); }
   c.restore();
 }
 
@@ -365,11 +382,8 @@ function dinoDraw(c,x,y,a,S){
   }
   if (a.dead>0) q=dinoMix(q,P.dead,a.dead);
 
-  const moving=(1-a.idle)*(1-a.air)*(1-a.dead), beta=Math.min(0.44,44/a.stride), s2=Math.sin(TAU*2*a.phi);
-  // מלמעלה למטה פעמיים במחזור, והגוף נמוך הכי הרבה כשכף רגל מתחת לאגן
-  const bob=moving*(2+a.speedK*1.5)*Math.cos(TAU*2*(a.phi-beta/2));
-  const breathe=a.idle*Math.sin(a.t*0.07)*0.8;
-  const hipY=-q.hip+bob+breathe+a.land*7;
+  const moving=(1-a.idle)*(1-a.air)*(1-a.dead), s2=Math.sin(TAU*2*a.phi);
+  const hipY=dinoHip(a,q.hip);
   const body=q.body+moving*1.6*s2, neck=q.neck-moving*2*s2, head=q.head+moving*2.4*s2;
   const jaw=q.jaw+moving*3*Math.sin(TAU*a.phi*2+1)+a.idle*Math.sin(a.t*0.05)*1.5;
 
@@ -415,9 +429,7 @@ function dinoDraw(c,x,y,a,S){
   const G={ M,SX,SY,SR,NX,NY,edge,band,pts };
 
   // הרגליים והזרועות
-  const hipNx=-1, hipNy=hipY+3, hipFx=4, hipFy=hipY+1.5;
-  const legN=dinoLeg(hipNx,hipNy,dinoFoot(0,a,hipY),hipY);
-  const legF=dinoLeg(hipFx,hipFy,dinoFoot(1,a,hipY),hipY);
+  const legs=dinoLegs(a,hipY), legN=legs[0], legF=legs[1];
   const chest=pts[7], cN=Math.atan2(pts[8][1]-pts[6][1],pts[8][0]-pts[6][0]);
   const sox=-Math.sin(cN)*-3, soy=Math.cos(cN)*3;
   const armSwing=moving*20*Math.sin(TAU*a.phi);
@@ -781,7 +793,7 @@ function mountDino(root) {
     const k = Math.max(0.3, 1-(GROUND-yR)/150), low = anim.duck;
     ctx.fillStyle = 'rgba(0,0,0,'+(0.26*k)+')';
     ctx.beginPath(); ctx.ellipse(dino.x+6+low*12, GROUND+3, (40+low*12)*k, 4.5*k, 0, 0, 7); ctx.fill();
-    const a = Object.assign({}, anim, { phi: anim.phi+(state==='play'&&dino.ground?speed/anim.stride*alpha:0) });
+    const a = Object.assign({}, anim, { phi: anim.phi+(state==='play'&&dino.ground?speed/(anim.stride*(1-anim.duck*DINO_DUCK_STEP))*alpha:0) });
     dinoDraw(ctx, dino.x, yR, a, skin);
   }
 
@@ -1053,7 +1065,7 @@ function mountDino(root) {
       anim.speedK = (speed-5)/8;
       if (dino.ground) {
         const beta = Math.min(0.44,44/anim.stride), was = anim.phi;
-        anim.phi += speed/anim.stride;
+        anim.phi += speed/(anim.stride*(1-anim.duck*DINO_DUCK_STEP));
         for (const off of [0,0.5]) if ((was+off)%1 < beta && (anim.phi+off)%1 >= beta && !dino.duck) puff(dino.x-16, 1, 0.8);
       }
     } else if (state === 'dead') {
