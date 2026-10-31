@@ -489,6 +489,57 @@ function dinoDraw(c,x,y,a,S){
   c.restore();
 }
 
+// ---------- הציפור ----------
+// מצוירת פונה ימינה והופכת לשמאל. הכנף עולה לאט ויורדת מהר, הקצה שלה מפגר אחרי הכתף, והגוף עולה כשהכנף יורדת.
+const DINO_BIRD = { line:'#21130d', body:'#d0663f', wing:'#a84a2c', cover:'#d9794f', far:'#7a3320', tail:'#8f3f27', belly:'#f6d3a6', beak:'#ffb100', beakLow:'#e0900a' };
+
+function dinoBirdWing(c,s,dx,dy,col,cover){
+  const B=DINO_BIRD, lift=u=>u>0?u*17:u*11, u1=Math.sin(s), u2=Math.sin(s-0.75);
+  const fx=6+dx, fy=-5+dy, bx=-12+dx, by=-2+dy;            // בסיס הכנף על הגוף: קדימה ואחורה
+  const wx=-2+dx, wy=-4+dy-lift(u1)*0.85;                  // מפרק הכנף
+  const tx=wx-18+Math.abs(u2)*5, ty=wy-lift(u2)*0.95;      // הקצה
+  const side=wy<by?1:-1;                                   // נוצות פונות לגוף
+  c.beginPath(); c.moveTo(fx,fy); c.lineTo(wx,wy); c.lineTo(tx,ty);
+  for (let i=1;i<=4;i++) {
+    const a=(i-0.5)/4, n=i/4;
+    c.lineTo(tx+(bx-tx)*a-2, ty+(by-ty)*a+side*2.2);
+    c.lineTo(tx+(bx-tx)*n, ty+(by-ty)*n);
+  }
+  c.closePath();
+  c.strokeStyle=B.line; c.lineWidth=1.4; c.lineJoin='round'; c.stroke(); c.fillStyle=col; c.fill();
+  // נוצות קטנות ליד הכתף
+  if (cover) {
+    const mx=wx+(tx-wx)*0.3, my=wy+(ty-wy)*0.3;
+    c.fillStyle=cover; c.beginPath(); c.moveTo(fx-1,fy+.5); c.lineTo(wx,wy+side*0.8); c.lineTo(mx,my+side*1.4); c.lineTo(bx+5,by+.5); c.closePath(); c.fill();
+  }
+}
+
+function dinoBird(c,x,y,th){
+  const B=DINO_BIRD, s=th+0.55*Math.cos(th), up=Math.sin(s);
+  c.save();
+  c.translate(x,y+up*1.8); c.scale(-1,1); c.rotate(0.06*Math.cos(s)-0.04);
+  c.lineCap='round'; c.lineJoin='round';
+  dinoBirdWing(c,s+0.18,4,-1,B.far,null);
+  // זנב
+  const w=Math.sin(s-1)*1.6;
+  c.strokeStyle=B.line; c.lineWidth=1.3; c.fillStyle=B.tail;
+  [[-27,-8,-20,-7],[-29,-3,-20,-3],[-26,2,-20,1]].forEach(f=>{ c.beginPath(); c.moveTo(-12,-5); c.lineTo(f[2],f[3]-2+w*.5); c.lineTo(f[0],f[1]+w); c.lineTo(f[2]+1,f[3]+2+w*.5); c.lineTo(-12,1); c.closePath(); c.stroke(); c.fill(); });
+  // גוף וראש
+  const body=()=>{ c.beginPath(); c.moveTo(19,-4); c.bezierCurveTo(16,-11.5,5,-11,-6,-7); c.lineTo(-16,-3); c.bezierCurveTo(-11,4,2,8,11,6); c.bezierCurveTo(15,5,19,1,19,-4); c.closePath(); };
+  body(); c.strokeStyle=B.line; c.lineWidth=2.4; c.stroke(); c.fillStyle=B.body; c.fill();
+  c.save(); body(); c.clip(); c.fillStyle=B.belly; c.beginPath(); c.ellipse(5,6.5,15,6.5,0.1,0,7); c.fill(); c.restore();
+  body(); c.lineWidth=1.1; c.stroke();
+  // מקור
+  c.lineWidth=1; c.fillStyle=B.beakLow; c.beginPath(); c.moveTo(17.5,-2.5); c.lineTo(25.5,-1); c.lineTo(16.5,1.2); c.closePath(); c.stroke(); c.fill();
+  c.fillStyle=B.beak; c.beginPath(); c.moveTo(17.5,-7.5); c.lineTo(28.5,-3.2); c.lineTo(17.5,-2.2); c.closePath(); c.stroke(); c.fill();
+  // עין וגבה כועסת
+  c.fillStyle='#fff'; c.lineWidth=.9; c.beginPath(); c.arc(14.5,-6,2.9,0,7); c.stroke(); c.fill();
+  c.fillStyle='#14090a'; c.beginPath(); c.arc(15.6,-5.7,1.5,0,7); c.fill();
+  c.lineWidth=1.8; c.beginPath(); c.moveTo(10.8,-9.6); c.lineTo(18,-7.6); c.stroke();
+  dinoBirdWing(c,s,0,0,B.wing,B.cover);
+  c.restore();
+}
+
 // ---------- צלילים: נוצרים בקוד, בלי קבצים ----------
 function dinoTone(ac,out,t,type,f0,f1,dur,vol){
   const o=ac.createOscillator(), g=ac.createGain();
@@ -678,7 +729,7 @@ function mountDino(root) {
   for (let i = 0; i < 45; i++) stars.push({ x: Math.random()*W, y: Math.random()*(GROUND-40), r: Math.random()*1.5 });
 
   // ציפור גבוהה עוברת מעל הראש, אמצעית מעל דינוזאור מתכופף, נמוכה רק בקפיצה
-  const BIRD_HIGH = GROUND-96, BIRD_MID = GROUND-62, BIRD_LOW = GROUND-30;
+  const BIRD_HIGH = GROUND-96, BIRD_MID = GROUND-62, BIRD_LOW = GROUND-30, BIRD_V = 1.1;
 
   function spawnObstacle(){
     const x = nextAt;
@@ -686,7 +737,8 @@ function mountDino(root) {
     if (Math.random() < 0.32 && score > 300) {
       const lvl = ['high','mid','low'][Math.floor(Math.random()*3)];
       const y = lvl==='high' ? BIRD_HIGH : lvl==='mid' ? BIRD_MID : BIRD_LOW;
-      o = { type:'bird', level:lvl, x, y, w:46, h:24 };
+      // עפה מול הדינוזאור, מהר יותר מהקרקע. מתחילה רחוק יותר, כדי להגיע בדיוק למקום המתוכנן כשהוא שם.
+      o = { type:'bird', level:lvl, x:x+BIRD_V*(x-scroll-dino.x)/speed, y, w:46, h:24, v:BIRD_V, ph:Math.random()*6 };
     } else {
       const big = Math.random() < 0.5;
       let n;
@@ -700,7 +752,7 @@ function mountDino(root) {
     obstacles.push(o);
     // מספיק מקום לנחות ולהגיב: קפיצה מלאה, זמן תגובה, ותוספת אקראית
     nextAt = x + o.w + speed*(AIR_STEPS+16) + 60 + Math.random()*speed*44;
-    addCoins(o);
+    addCoins(o, x);
   }
 
   // ---------- מטבעות ----------
@@ -718,8 +770,8 @@ function mountDino(root) {
     }
     coinEnd = x0+span;
   }
-  function addCoins(o){
-    const r = Math.random(), cx = o.x+o.w/2;
+  function addCoins(o, x){
+    const r = Math.random(), cx = x+o.w/2;
     if (o.type === 'bird') {
       if (o.level === 'high') coinRow(cx-40, 4, 27, GROUND-26);         // רצים מתחתיה
       else if (o.level === 'mid' && r < 0.5) coinRow(cx-27, 3, 27, GROUND-14); // מתכופפים מתחתיה
@@ -728,7 +780,7 @@ function mountDino(root) {
     }
     if (r < 0.3) { coinArc(cx); return; }
     // בפער שאחרי המכשול: אחרי הנחיתה ולפני המכשול הבא
-    const from = Math.max(o.x+o.w+speed*(AIR_STEPS*0.6), coinEnd+30), room = nextAt-from-speed*(AIR_STEPS*0.75);
+    const from = Math.max(x+o.w+speed*(AIR_STEPS*0.6), coinEnd+30), room = nextAt-from-speed*(AIR_STEPS*0.75);
     const n = Math.floor(room/30);
     if (r < 0.5 && n >= 3) coinRow(from, Math.min(n,5), 30, GROUND-26);        // על הקרקע
     else if (r < 0.65 && n >= 3) coinRow(from, 3, 30, GROUND-86);               // באוויר, רק בקפיצה
@@ -833,46 +885,11 @@ function mountDino(root) {
   }
 
   function drawBird(o){
-    const cx = o.x+o.w/2, cy = o.y+o.h/2, t = ft*0.3, flap = Math.sin(t);
-    ctx.save();
+    // בין צעד לצעד היא ממשיכה לעוף, כדי שלא תקפוץ במסך מהיר
+    const cx = o.x+o.w/2+(state === 'play' ? o.v*(1-(ft-frame)) : 0), cy = o.y+o.h/2;
     ctx.fillStyle = 'rgba(0,0,0,.12)';
     ctx.beginPath(); ctx.ellipse(cx, GROUND+3, 16, 4, 0, 0, 7); ctx.fill();
-
-    ctx.strokeStyle = 'rgba(217,133,107,.35)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
-    for (let i=0;i<3;i++) {
-      const ly = cy-6+i*6;
-      ctx.beginPath(); ctx.moveTo(cx+22+i*4, ly); ctx.lineTo(cx+38+i*6, ly); ctx.stroke();
-    }
-
-    ctx.translate(cx,cy); ctx.scale(-1,1); ctx.translate(-cx,-cy);
-    ctx.translate(cx,cy); ctx.rotate(-0.12); ctx.translate(-cx,-cy);
-
-    const bg = ctx.createLinearGradient(cx-14, cy-8, cx+14, cy+8);
-    bg.addColorStop(0,'#6b3a28'); bg.addColorStop(1,'#c56b52');
-    ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(cx, cy, 16, 9, 0, 0, 7); ctx.fill();
-
-    function wing(x,y,f,len){
-      const tip = -20+f*34;
-      ctx.beginPath(); ctx.moveTo(x,y);
-      ctx.quadraticCurveTo(x-len*0.4, y+tip, x-len, y+tip*0.6);
-      ctx.quadraticCurveTo(x-len*0.5, y+4, x, y+3); ctx.closePath(); ctx.fill();
-    }
-    ctx.fillStyle = '#6b3a28'; wing(cx-2, cy, flap*0.7, 26);
-
-    ctx.fillStyle = '#b25f48'; ctx.beginPath(); ctx.arc(cx+14, cy-2, 7.5, 0, 7); ctx.fill();
-    ctx.fillStyle = '#ffb100'; ctx.beginPath();
-    ctx.moveTo(cx+20, cy-4); ctx.lineTo(cx+32, cy); ctx.lineTo(cx+20, cy+2); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#ff3b30'; ctx.beginPath(); ctx.arc(cx+16, cy-3, 2.4, 0, 7); ctx.fill();
-    ctx.fillStyle = '#0d1620'; ctx.beginPath(); ctx.arc(cx+16.5, cy-3, 1.2, 0, 7); ctx.fill();
-    ctx.strokeStyle = '#0d1620'; ctx.lineWidth = 1.8;
-    ctx.beginPath(); ctx.moveTo(cx+12, cy-8); ctx.lineTo(cx+19, cy-6); ctx.stroke();
-
-    ctx.fillStyle = '#e89478'; wing(cx, cy-1, flap, 32);
-
-    ctx.fillStyle = '#a55940'; ctx.beginPath();
-    ctx.moveTo(cx-14, cy); ctx.lineTo(cx-26, cy-6); ctx.lineTo(cx-26, cy+6); ctx.closePath(); ctx.fill();
-
-    ctx.restore();
+    dinoBird(ctx, cx, cy+Math.sin(ft*0.05+o.ph)*2, ft*0.42+o.ph);
   }
 
   function drawHUD(){
@@ -1050,6 +1067,7 @@ function mountDino(root) {
       const boxes = dino.boxes();
       for (let i = obstacles.length-1; i >= 0; i--) {
         const o = obstacles[i];
+        if (o.v) o.x -= o.v;
         const ob = o.type==='cactus' ? { x:o.x, y:o.y-o.h, w:o.w, h:o.h } : o;
         if (boxes.some(b => hit(b, ob))) { die(); break; }
         if (o.x+o.w < scroll-40) obstacles.splice(i,1);
