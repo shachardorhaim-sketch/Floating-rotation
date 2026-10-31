@@ -79,7 +79,7 @@ const GAMES = [
   { id:'button', title:'אל תלחץ על הכפתור', desc:'משחק כפתור כאוטי ומצחיק.', imgFile:'button-logo.png', icon:'🔴', type:'FUNNY', added:'2026-07-15', bg:'linear-gradient(135deg,#4b1b2a,#0d1b2a)', mount:mountIframe('https://unique-flan-89080c.netlify.app/', 866) },
   { id:'chess', title:'Chess Prestige', desc:'שחמט נגד המחשב או מול חבר.', imgFile:'chess-logo.png', icon:'♞', type:'STRATEGY', added:'2026-07-16', bg:'#0a0a0a', mount:mountChess },
   { id:'tetris', title:'Tetris', desc:'טטריס — סובב, הפל ונקה שורות!', imgFile:'tetris-logo.png', icon:'🟪', type:'PUZZLE', added:'2026-07-18', bg:'linear-gradient(135deg,#2a1b4b,#0d1b2a)', mount:mountTetris },
-  { id:'pong', dim:'3d', plainBg:true, title:'פינג פונג', desc:'מול המחשב, מול חבר על אותו מחשב, או אונליין עם קוד חדר.', imgFile:'pong-logo.jpg', icon:'🏓', type:'SPORT', added:'2026-08-29', bg:'#00000f', mount:mountIframe('https://shachardorhaim-sketch.github.io/ping-pong-3d/?v=2') },
+  { id:'pong', dim:'3d', plainBg:true, title:'פינג פונג', desc:'מול המחשב, מול חבר על אותו מחשב, או אונליין עם קוד חדר.', imgFile:'pong-logo.jpg', icon:'🏓', type:'SPORT', added:'2026-08-29', bg:'#00000f', mount:mountIframe('https://shachardorhaim-sketch.github.io/ping-pong-3d/?v=3') },
 ];
 
 const grid = document.getElementById('grid');
