@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800;900&display=swap">
-<link rel="stylesheet" href="style.css?v=hub-13">
+<link rel="stylesheet" href="style.css?v=hub-14">
 </head>
 <body class="site">
 
@@ -96,35 +96,29 @@
 
 
 <!-- ============ הקבצים ============ -->
-<!-- חשוב: הסדר חשוב! קודם הנתונים, אחר כך המשחקים, ובסוף הפלטפורמה -->
+<!-- חשוב: הסדר חשוב! קודם המשחקים ובסוף הפלטפורמה -->
 
-<!-- 1. הדמויות והתמונות (קובץ כבד — לא נוגעים בו) -->
-<script src="sprites.js"></script>
-
-<!-- 2. קטלוג הדמויות (שמות ומחירים) -->
-<script src="characters.js"></script>
-
-<!-- 3. המשחקים -->
+<!-- 1. המשחקים -->
 <!-- PeerJS — למשחק שחמט מרחוק (חינם, בלי שרת) -->
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game-dino.js?v=3"></script>
+<script src="game-dino.js?v=4"></script>
 <script src="game-star-catcher.js?v=3"></script>
 <script src="game-memory.js?v=2"></script>
 <script src="game-chess.js?v=2"></script>
 <script src="game-tetris.js?v=3"></script>
-<!-- 4. הפלטפורמה (חייב להיות אחרון!) -->
-<script src="platform.js?v=hub-14"></script>
+<!-- 2. הפלטפורמה (חייב להיות אחרון!) -->
+<script src="platform.js?v=hub-15"></script>
 
-<!-- 5. ההדגמה המונפשת (חייבת להיטען לפני downloads.js) -->
+<!-- 3. ההדגמה המונפשת (חייבת להיטען לפני downloads.js) -->
 <script src="demo.js"></script>
 
-<!-- 6. אזור ההורדות (אחרי הפלטפורמה — מאזין לשינוי שפה) -->
+<!-- 4. אזור ההורדות (אחרי הפלטפורמה — מאזין לשינוי שפה) -->
 <script src="downloads.js?v=hub-2"></script>
 
-<!-- 6. הזרקת כתובת ה-bookmarklet לקישור (חייב להיות אחרי downloads.js) -->
+<!-- 5. הזרקת כתובת ה-bookmarklet לקישור (חייב להיות אחרי downloads.js) -->
 <script src="bookmarklet.js"></script>
 
-<!-- 7. הקטגוריות: ניווט, אריחים וכותרות (אחרון — סופר את הכרטיסים של כולם) -->
+<!-- 6. הקטגוריות: ניווט, אריחים וכותרות (אחרון — סופר את הכרטיסים של כולם) -->
 <script src="hub.js?v=hub-8"></script>
 
 </body>

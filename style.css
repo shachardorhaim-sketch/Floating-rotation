@@ -144,32 +144,9 @@ body.side-hidden .side { width:0; opacity:0; border-left-width:0; }
 .dinoStage canvas { display:block; width:100%; height:auto; max-height:300px; }
 .dinoTop { display:flex; align-items:center; gap:16px; }
 .dinoTitle { font-size:22px; letter-spacing:3px; color:#ffd166; font-weight:800; }
-#shopBtn { font-family:inherit; font-size:14px; font-weight:700; padding:8px 16px; border:none; border-radius:8px; background:#ffd166; color:#0d1620; cursor:pointer; }
-#shopBtn:hover { filter:brightness(1.08); }
 .dinoHint { font-size:12px; color:#8ba0b5; letter-spacing:1px; text-align:center; }
-#nameScreen { position:absolute; inset:0; background:rgba(8,12,18,.95); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; z-index:10; }
-#nameScreen h2 { color:#ffd166; font-size:22px; }
-#nameInput { font-family:inherit; font-size:18px; padding:10px 16px; border-radius:8px; border:2px solid #2a3b4f; background:#172230; color:#e8eef5; text-align:center; width:220px; }
-#nameInput:focus { outline:none; border-color:#4fd1c5; }
-#nameErr { color:#d9856b; font-size:13px; min-height:16px; text-align:center; }
-.dbtn { font-family:inherit; font-size:16px; font-weight:700; padding:10px 24px; border:none; border-radius:8px; background:#4fd1c5; color:#0d1620; cursor:pointer; }
-.dbtn:hover { filter:brightness(1.1); }
-#shopScreen { position:absolute; inset:0; background:rgba(8,12,18,.97); display:none; flex-direction:column; z-index:20; padding:16px; }
-.shopHead { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-.shopHead h2 { color:#ffd166; font-size:18px; }
-.shopCoins { color:#ffd166; font-weight:700; font-size:18px; }
-#shopClose { font-family:inherit; font-size:14px; font-weight:700; padding:8px 16px; border:none; border-radius:8px; background:#d9856b; color:#0d1620; cursor:pointer; }
-#shopGrid { flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:10px; align-content:start; }
-.shopCard { background:#172230; border:2px solid #2a3b4f; border-radius:10px; padding:8px; display:flex; flex-direction:column; align-items:center; gap:5px; }
-.shopCard.current { border-color:#4fd1c5; }
-.shopCard.premium { border-color:#c9932f; background:#20242e; }
-.shopCard .thumb { height:80px; display:flex; align-items:center; justify-content:center; }
-.shopCard .thumb img { max-height:80px; max-width:70px; }
-.cname { font-size:13px; font-weight:700; text-align:center; }
-.sbtn { font-family:inherit; font-size:12px; font-weight:700; padding:6px 10px; border:none; border-radius:6px; cursor:pointer; width:100%; }
-.sbtn.buy { background:#ffd166; color:#0d1620; }
-.sbtn.use { background:#4fd1c5; color:#0d1620; }
-.sbtn.nope { background:#d9856b; color:#0d1620; }
+.dinoTouch { display:flex; gap:14px; justify-content:center; margin:12px auto 4px; width:100%; max-width:400px; }
+@media (hover: hover) and (pointer: fine) { .dinoTouch { display:none; } }
 .tag.sel { font-size:12px; font-weight:700; color:#4fd1c5; padding:6px; }
 #board { width:100%; max-width:340px; max-height:200px; overflow-y:auto; margin:12px auto 0; background:#141d28; border:1px solid #2a3b4f; border-radius:12px; padding:8px 12px; }
 #board h3 { position:sticky; top:0; background:#141d28; color:#ffd166; font-size:13px; margin-bottom:6px; padding:3px 0; letter-spacing:1px; text-align:center; }
