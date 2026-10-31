@@ -145,6 +145,35 @@ body.side-hidden .side { width:0; opacity:0; border-left-width:0; }
 .dinoTop { display:flex; align-items:center; gap:16px; }
 .dinoTitle { font-size:22px; letter-spacing:3px; color:#ffd166; font-weight:800; }
 .dinoHint { font-size:12px; color:#8ba0b5; letter-spacing:1px; text-align:center; }
+.dinoWrap { position:relative; }
+.dsDot { display:inline-block; width:13px; height:13px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff3b0,#ffc61a 55%,#f5a800); border:1.5px solid #8a5a00; box-sizing:border-box; vertical-align:-2px; flex-shrink:0; }
+.dinoShopBtn { padding:5px 12px; border:none; border-radius:9px; background:#ffd166; color:#0d1620; font-size:14px; font-weight:800; cursor:pointer; }
+.dinoShopBtn:hover { filter:brightness(1.08); }
+.dsShop { position:absolute; inset:0; z-index:5; display:flex; flex-direction:column; gap:10px; padding:14px 16px; background:#0b1320; color:#e8eef5; }
+.dsHead { display:flex; align-items:center; gap:14px; }
+.dsHead h3 { flex:1; margin:0; font-size:20px; font-weight:800; color:#ffd166; }
+.dsCount { font-size:13px; color:#8ba0b5; }
+.dsWallet { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:9px; background:#141d28; border:1px solid #2a3b4f; font-size:16px; font-weight:800; color:#ffd166; }
+.dsClose { width:34px; height:34px; padding:0; border:1px solid #2a3b4f; border-radius:9px; background:#141d28; color:#e8eef5; font-size:15px; cursor:pointer; }
+.dsPrev { display:flex; align-items:center; gap:18px; flex-shrink:0; padding:8px 12px; border:1px solid #2a3b4f; border-radius:12px; background:#141d28; }
+.dsPrev canvas { width:300px; height:120px; border-radius:8px; flex-shrink:0; }
+.dsInfo { display:flex; flex-direction:column; align-items:flex-start; gap:10px; }
+.dsName { font-size:24px; font-weight:800; }
+.dsAct { padding:9px 22px; border:none; border-radius:10px; background:#ffd166; color:#0d1620; font-size:15px; font-weight:800; cursor:pointer; }
+.dsAct:disabled { background:#2a3b4f; color:#a9bacb; cursor:default; }
+.dsGrid { flex:1; min-height:0; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill,minmax(112px,1fr)); gap:8px; align-content:start; padding:2px; }
+.dsGrid { scrollbar-color:#2a3b4f transparent; scrollbar-width:thin; }
+.dsGrid::-webkit-scrollbar { width:8px; }
+.dsGrid::-webkit-scrollbar-thumb { background:#2a3b4f; border-radius:4px; }
+.dsCard { display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 4px; border:2px solid #2a3b4f; border-radius:10px; background:#141d28; color:inherit; cursor:pointer; }
+.dsCard:hover { border-color:#4a6585; }
+.dsCard.on { background:#1b3a2a; }
+.dsCard.sel { border-color:#ffd166; }
+.dsCard canvas { width:100px; height:84px; }
+.dsCardName { min-height:2.3em; font-size:12px; font-weight:700; line-height:1.15; text-align:center; overflow-wrap:anywhere; }
+.dsPrice { display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:800; color:#ffd166; }
+.dsPrice.no { color:#8ba0b5; }
+.dsPrice.have { color:#57c97e; }
 .dinoTouch { display:flex; gap:14px; justify-content:center; margin:12px auto 4px; width:100%; max-width:400px; }
 @media (hover: hover) and (pointer: fine) { .dinoTouch { display:none; } }
 .tag.sel { font-size:12px; font-weight:700; color:#4fd1c5; padding:6px; }
