@@ -417,7 +417,9 @@ function mountDino(root) {
     if (!soundOn || !running) return;
     try {
       if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
-      if (audio.state === 'suspended') audio.resume();
+      if (audio.state === 'suspended') audio.resume().catch(() => {});
+      // הקול עוד לא התעורר: צליל שיחכה יישמע באיחור יחד עם כל השאר, אז מדלגים עליו
+      if (audio.currentTime === 0 && name !== 'start') return;
       DINO_SFX[name](audio, audio.destination, audio.currentTime+0.002, v);
     } catch(e){}
   }
